@@ -25,7 +25,7 @@ export class Game {
     canvas.style.height = `${GAME_HEIGHT * SCALE}px`;
 
     await loadAssets();
-    this.goto('title');
+    await this.goto('title');
 
     this.app.ticker.add(() => this.tick());
   }

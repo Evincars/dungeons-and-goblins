@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: '/dungeons-and-goblins/',
+  base: '/',
   build: { target: 'es2020' },
 });

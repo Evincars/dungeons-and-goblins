@@ -1,4 +1,4 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Sprite } from 'pixi.js';
 import { CompositeTilemap } from '@pixi/tilemap';
 import type { Level } from './Level';
 import { TileType, TILE_WIDTH, TILE_HEIGHT } from './TileType';
@@ -6,16 +6,21 @@ import { getTexture } from '../assets/AssetLoader';
 import { frameTexture } from '../render/Sheets';
 import { world } from '../world';
 
-const WALL_RISE = 24; // walltiles extend 24px above their tile
+const WALL_RISE = 24; // walltiles extend 24px above their tile row
 
 export function buildLevelView(level: Level): Container {
   const container = new Container();
+  container.sortableChildren = false;
 
+  // Black fill for holes
   const holes = new Graphics();
-  const floors = new CompositeTilemap([getTexture('floortiles').source]);
-  const walls = new CompositeTilemap([getTexture('walltiles').source]);
-  const bwalls = new CompositeTilemap([getTexture('breakwalls').source]);
-  container.addChild(holes, floors, walls, bwalls);
+
+  // Floor tiles via CompositeTilemap (single sheet, efficient)
+  const floorSheet = getTexture('floortiles');
+  const floors = new CompositeTilemap();
+
+  // Wall and breakable wall faces as plain sprites (less tiles, fine as sprites)
+  const wallLayer = new Container();
 
   for (let ty = 0; ty < level.height; ty++) {
     for (let tx = 0; tx < level.width; tx++) {
@@ -25,50 +30,38 @@ export function buildLevelView(level: Level): Container {
       const wx = tx * TILE_WIDTH;
       const wy = ty * TILE_HEIGHT;
 
-      switch (tile.type) {
-        case TileType.Hole:
-          holes.rect(wx, wy, TILE_WIDTH, TILE_HEIGHT).fill(0x000000);
-          break;
+      if (tile.type === TileType.Hole) {
+        holes.rect(wx, wy, TILE_WIDTH, TILE_HEIGHT).fill({ color: 0x000000 });
+        continue;
+      }
 
-        case TileType.Floor:
-          floors.tile(getTexture('floortiles'), wx, wy, {
-            u: (tile.imageVariant % 4) * TILE_WIDTH,
-            v: 0,
-            tileWidth: TILE_WIDTH,
-            tileHeight: TILE_HEIGHT,
-          });
-          break;
+      // Floor tile underneath everything
+      const fv = tile.imageVariant % 4;
+      floors.tile(floorSheet, wx, wy, {
+        u: fv * TILE_WIDTH,
+        v: 0,
+        tileWidth: TILE_WIDTH,
+        tileHeight: TILE_HEIGHT,
+      });
 
-        case TileType.Wall:
-          // Floor tile under the wall
-          floors.tile(getTexture('floortiles'), wx, wy, {
-            u: (tile.imageVariant % 4) * TILE_WIDTH, v: 0,
-            tileWidth: TILE_WIDTH, tileHeight: TILE_HEIGHT,
-          });
-          // Wall face drawn above
-          walls.tile(frameTexture('walltiles', tile.imageVariant % 4, 0),
-            wx, wy - WALL_RISE);
-          break;
-
-        case TileType.BreakableWall:
-          floors.tile(getTexture('floortiles'), wx, wy, {
-            u: (tile.imageVariant % 4) * TILE_WIDTH, v: 0,
-            tileWidth: TILE_WIDTH, tileHeight: TILE_HEIGHT,
-          });
-          bwalls.tile(frameTexture('breakwalls', tile.imageVariant % 2, 0),
-            wx, wy - WALL_RISE);
-          break;
+      if (tile.type === TileType.Wall || tile.type === TileType.BreakableWall) {
+        const sheet = tile.type === TileType.Wall ? 'walltiles' : 'breakwalls';
+        const col = tile.imageVariant % (tile.type === TileType.Wall ? 4 : 2);
+        const s = new Sprite(frameTexture(sheet, col, 0));
+        s.x = wx;
+        s.y = wy - WALL_RISE;
+        wallLayer.addChild(s);
       }
     }
   }
 
+  container.addChild(holes, floors, wallLayer);
   return container;
 }
 
 /** Spawn wall-tile entities for depth-sorting; walls at y > player.y draw in front. */
 export function syncWalls(level: Level): void {
-  // Remove old wall entities
-  for (const e of world.with('wallTile')) { world.remove(e); }
+  for (const e of world.with('wallTile')) world.remove(e);
 
   for (let ty = 0; ty < level.height; ty++) {
     for (let tx = 0; tx < level.width; tx++) {
@@ -87,5 +80,5 @@ export function syncWalls(level: Level): void {
 }
 
 export function resetWalls(): void {
-  for (const e of world.with('wallTile')) { world.remove(e); }
+  for (const e of world.with('wallTile')) world.remove(e);
 }

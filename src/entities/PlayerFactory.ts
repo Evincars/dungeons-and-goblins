@@ -54,6 +54,7 @@ export function createPlayer(x: number, y: number): Entity {
       kills: 0,
     },
     inventory: [],
+    equipped: {},
     swordCooldown: 0,
     minimapColor: 0x4080ff,
   });

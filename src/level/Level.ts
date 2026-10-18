@@ -80,6 +80,10 @@ export class Level {
     this.tilesDirty = true;
   }
 
+  clearDirty(): void {
+    this.tilesDirty = false;
+  }
+
   canPass(worldX: number, worldY: number): boolean {
     const tile = this.getTileAt(worldX, worldY);
     return tile === null ? false : tile.passable;

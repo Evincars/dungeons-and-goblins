@@ -6,10 +6,15 @@ export const enum Team { Neutral = 0, Player = 1 }
 
 export const enum Facing { North = 0, East = 1, South = 2, West = 3 }
 
+export type EquipSlot = 'weapon' | 'helmet' | 'chest' | 'gloves' | 'boots' | 'ring';
+
 export type InventoryItem = {
-  type: 'health_potion' | 'mana_potion' | 'sword_scroll' | 'armor_piece';
+  type: 'health_potion' | 'mana_potion' | 'weapon' | 'helmet' | 'chest' | 'gloves' | 'boots' | 'ring' | 'sword_scroll' | 'armor_piece';
   name: string;
   value: number;
+  slot?: EquipSlot;
+  icon?: number;   // column index in item icon sheet
+  stats?: { attack?: number; defense?: number; hp?: number };
 };
 
 export type Entity = {
@@ -111,6 +116,7 @@ export type Entity = {
     kills: number;
   };
   inventory?: InventoryItem[];
+  equipped?: Partial<Record<EquipSlot, InventoryItem>>;
 
   // --- sword melee ---
   /** Active swing hitbox: ticks remaining, direction, damage */

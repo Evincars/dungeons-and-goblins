@@ -215,140 +215,220 @@ export function genFighterSheet(): HTMLCanvasElement {
 }
 
 function drawFighter(ctx: CanvasRenderingContext2D, ox: number, oy: number, facing: number, frame: number): void {
-  const ARMOR_DARK  = 0x2a4a6a;
-  const ARMOR_MID   = 0x3a6a9a;
-  const ARMOR_LIGHT = 0x5a8aba;
-  const CHAIN_DARK  = 0x3a3a3a;
-  const CHAIN_MID   = 0x5a5a5a;
-  const SKIN        = 0xd4a07a;
-  const SKIN_DARK   = 0xa07840;
-  const SHADOW_COL  = 0x0a0a0a;
-  const BELT        = 0x6a4a22;
-  const VISOR       = 0x1a2a3a;
-  const SWORD_BLADE = 0xd0d8e8;
-  const SWORD_GOLD  = 0xd4a030;
-  const CAPE        = 0x8a2222;
-  const CAPE_DARK   = 0x5a1010;
+  // Catacomb-style bold palette — strong contrast, clear silhouette
+  const OUTLINE     = 0x080810;
+  const ARMOR_D     = 0x183050;
+  const ARMOR_M     = 0x2050a0;
+  const ARMOR_L     = 0x4080d0;
+  const ARMOR_HL    = 0x80c0ff;
+  const CHAIN_D     = 0x282428;
+  const CHAIN_M     = 0x504850;
+  const CHAIN_L     = 0x706870;
+  const SKIN        = 0xe8b882;
+  const BELT        = 0x9a6820;
+  const BUCKLE      = 0xf0c840;
+  const VISOR       = 0x081828;
+  const VISOR_GLOW  = 0x183860;
+  const SWORD_BL    = 0xe0e8f8;
+  const SWORD_HL    = 0xffffff;
+  const SWORD_GOLD  = 0xf0b830;
+  const CAPE_L      = 0xc83030;
+  const CAPE_D      = 0x781010;
+  const BOOT        = 0x382818;
+  const BOOT_L      = 0x504030;
 
-  // Walk animation: shift leg pixels on frames 1,3
-  const legShift = (frame === 1 || frame === 3) ? 1 : 0;
-  const legSwap  = (frame === 1 || frame === 3);
+  // Walk bob: frame 0/2 = neutral, frame 1/3 = step
+  const step = (frame === 1 || frame === 3);
+  const bob  = step ? 1 : 0;
+  // Body shift for walk cycle
+  const bodyY = oy + bob;
 
-  // Determine direction category
   const facingS = (facing === 4 || facing === 3 || facing === 5);
   const facingN = (facing === 0 || facing === 1 || facing === 7);
   const facingE = (facing === 2 || facing === 3 || facing === 1);
   const facingW = (facing === 6 || facing === 5 || facing === 7);
 
-  // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  // Ground shadow (always)
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.beginPath();
-  ctx.ellipse(ox + 16, oy + 29, 8, 3, 0, 0, Math.PI * 2);
+  ctx.ellipse(ox + 16, oy + 30, 8, 3, 0, 0, Math.PI * 2);
   ctx.fill();
 
   if (facingS || (!facingN && !facingW)) {
-    // South-facing (front view)
-    // Cape back
-    rect(ctx, ox + 9, oy + 14, 14, 12, CAPE_DARK);
-    // Legs
-    if (legSwap) {
-      rect(ctx, ox + 10, oy + 22, 4, 7, CHAIN_DARK);
-      rect(ctx, ox + 18, oy + 22, 4, 7, CHAIN_MID);
-    } else {
-      rect(ctx, ox + 10, oy + 22 + legShift, 4, 7 - legShift, CHAIN_MID);
-      rect(ctx, ox + 18, oy + 22 - legShift, 4, 7 + legShift, CHAIN_DARK);
-    }
-    // Torso armor
-    rect(ctx, ox + 9, oy + 14, 14, 10, ARMOR_MID);
-    rect(ctx, ox + 10, oy + 15, 12, 8, ARMOR_DARK);
-    rect(ctx, ox + 11, oy + 15, 4, 8, ARMOR_LIGHT);
+    // ═══ SOUTH / FRONT VIEW ══════════════════════════════════════════════════
+
+    // Legs (walk: alternate step up/down)
+    const lL = step ? 2 : 0;   // left leg step offset
+    const lR = step ? 0 : 2;   // right leg step offset
+    // Left leg
+    rect(ctx, ox + 10, bodyY + 21 + lL, 5, 8 - lL, CHAIN_M);
+    rect(ctx, ox + 11, bodyY + 21 + lL, 2, 8 - lL, CHAIN_L);
+    rect(ctx, ox +  8, bodyY + 27 + lL, 7, 3, BOOT);        // boot
+    rect(ctx, ox +  8, bodyY + 27 + lL, 7, 1, BOOT_L);
+    // Right leg
+    rect(ctx, ox + 17, bodyY + 21 + lR, 5, 8 - lR, CHAIN_D);
+    rect(ctx, ox + 18, bodyY + 21 + lR, 2, 8 - lR, CHAIN_M);
+    rect(ctx, ox + 17, bodyY + 27 + lR, 7, 3, BOOT);
+    rect(ctx, ox + 17, bodyY + 27 + lR, 7, 1, BOOT_L);
+
+    // Cape (behind torso)
+    rect(ctx, ox + 8,  bodyY + 14, 4, 10, CAPE_D);
+    rect(ctx, ox + 20, bodyY + 14, 4, 10, CAPE_D);
+    rect(ctx, ox + 9,  bodyY + 14, 3, 8,  CAPE_L);
+    rect(ctx, ox + 20, bodyY + 14, 3, 8,  CAPE_L);
+
+    // Arms / pauldrons
+    rect(ctx, ox + 7,  bodyY + 14, 3, 7, CHAIN_M);
+    rect(ctx, ox + 22, bodyY + 14, 3, 7, CHAIN_M);
+    rect(ctx, ox + 8,  bodyY + 14, 2, 2, ARMOR_M);   // shoulder cap L
+    rect(ctx, ox + 22, bodyY + 14, 2, 2, ARMOR_M);   // shoulder cap R
+
+    // Torso (plate) — outline first
+    rect(ctx, ox + 9,  bodyY + 13, 14, 9, OUTLINE);  // outline
+    rect(ctx, ox + 10, bodyY + 14, 12, 7, ARMOR_D);
+    rect(ctx, ox + 11, bodyY + 14, 10, 7, ARMOR_M);
+    rect(ctx, ox + 12, bodyY + 14, 5,  7, ARMOR_L);  // highlight band
+    rect(ctx, ox + 12, bodyY + 14, 2,  7, ARMOR_HL); // bright specular
+    // Chest center line
+    rect(ctx, ox + 15, bodyY + 15, 1, 5, ARMOR_D);
+
     // Belt
-    rect(ctx, ox + 9, oy + 22, 14, 2, BELT);
-    // Cape sides
-    rect(ctx, ox + 7, oy + 15, 2, 10, CAPE);
-    rect(ctx, ox + 23, oy + 15, 2, 10, CAPE);
-    // Arms
-    rect(ctx, ox + 7, oy + 15, 2, 7, CHAIN_MID);
-    rect(ctx, ox + 23, oy + 15, 2, 7, CHAIN_MID);
-    // Helmet
-    rect(ctx, ox + 10, oy + 6, 12, 8, ARMOR_DARK);
-    rect(ctx, ox + 11, oy + 5, 10, 8, ARMOR_MID);
-    rect(ctx, ox + 12, oy + 4, 8, 3, ARMOR_LIGHT);
-    // Visor
-    rect(ctx, ox + 11, oy + 9, 10, 4, VISOR);
-    rect(ctx, ox + 12, oy + 10, 8, 2, SKIN_DARK);
-    // Face (below visor)
-    rect(ctx, ox + 11, oy + 13, 10, 2, SKIN);
-    // Sword on right
-    if (facingE || facing === 4) {
-      ctx.fillStyle = hex(SWORD_GOLD);
-      ctx.fillRect(ox + 25, oy + 17, 2, 2);
-      ctx.fillStyle = hex(SWORD_BLADE);
-      ctx.fillRect(ox + 27, oy + 15, 1, 6);
-      ctx.fillRect(ox + 26, oy + 14, 3, 1);
-    }
-    // Highlight
-    ctx.fillStyle = 'rgba(255,255,255,0.07)';
-    ctx.fillRect(ox + 12, oy + 15, 2, 6);
-    // Drop shadow
-    ctx.fillStyle = hex(SHADOW_COL);
-    ctx.fillRect(ox + 10, oy + 29, 12, 2);
+    rect(ctx, ox + 9,  bodyY + 21, 14, 3, BELT);
+    rect(ctx, ox + 14, bodyY + 21, 4, 3, BUCKLE);    // buckle
+    rect(ctx, ox + 15, bodyY + 22, 2, 1, ARMOR_HL);
+
+    // Helmet — outline
+    rect(ctx, ox + 10, bodyY + 3,  12, 11, OUTLINE);
+    rect(ctx, ox + 11, bodyY + 2,  10, 11, OUTLINE);
+    rect(ctx, ox + 11, bodyY + 3,  10, 11, ARMOR_D);
+    rect(ctx, ox + 12, bodyY + 2,  8,  11, ARMOR_M);
+    // Crown highlight
+    rect(ctx, ox + 13, bodyY + 2,  5, 3, ARMOR_L);
+    rect(ctx, ox + 14, bodyY + 2,  3, 2, ARMOR_HL);
+    // Nasal guard
+    rect(ctx, ox + 15, bodyY + 6,  2, 5, ARMOR_D);
+    // Visor slit
+    rect(ctx, ox + 11, bodyY + 8,  10, 5, VISOR);
+    rect(ctx, ox + 12, bodyY + 9,  8,  2, VISOR_GLOW);
+    // Cheek
+    rect(ctx, ox + 11, bodyY + 12, 10, 2, SKIN);
+    // Ear guard
+    rect(ctx, ox +  9, bodyY + 8,  2, 5, ARMOR_M);
+    rect(ctx, ox + 21, bodyY + 8,  2, 5, ARMOR_M);
+
+    // Sword (raised when step)
+    const sy = step ? 3 : 5;
+    rect(ctx, ox + 24, bodyY + sy,      2, 12, SWORD_BL);
+    rect(ctx, ox + 24, bodyY + sy,      1, 12, SWORD_HL);
+    rect(ctx, ox + 22, bodyY + sy + 6,  6,  2, SWORD_GOLD);  // crossguard
+    rect(ctx, ox + 24, bodyY + sy - 1,  2,  3, SWORD_GOLD);  // pommel
+    // Arm holding sword
+    rect(ctx, ox + 23, bodyY + 15,      3,  6, CHAIN_M);
 
   } else if (facingN) {
-    // North-facing (back view)
-    rect(ctx, ox + 9, oy + 14, 14, 12, CAPE);
-    rect(ctx, ox + 10, oy + 15, 12, 10, CAPE_DARK);
+    // ═══ NORTH / BACK VIEW ═══════════════════════════════════════════════════
+
     // Legs
-    if (legSwap) {
-      rect(ctx, ox + 10, oy + 22, 4, 7, CHAIN_DARK);
-      rect(ctx, ox + 18, oy + 22, 4, 7, CHAIN_MID);
-    } else {
-      rect(ctx, ox + 10, oy + 22 + legShift, 4, 7 - legShift, CHAIN_MID);
-      rect(ctx, ox + 18, oy + 22 - legShift, 4, 7 + legShift, CHAIN_DARK);
-    }
+    const lL = step ? 2 : 0;
+    const lR = step ? 0 : 2;
+    rect(ctx, ox + 10, bodyY + 21 + lL, 5, 8 - lL, CHAIN_D);
+    rect(ctx, ox +  8, bodyY + 27 + lL, 7, 3, BOOT);
+    rect(ctx, ox + 17, bodyY + 21 + lR, 5, 8 - lR, CHAIN_M);
+    rect(ctx, ox + 17, bodyY + 27 + lR, 7, 3, BOOT);
+
+    // Cape (full back)
+    rect(ctx, ox + 9,  bodyY + 13, 14, 12, CAPE_L);
+    rect(ctx, ox + 10, bodyY + 14, 12, 10, CAPE_D);
+    // Cape highlight stripe
+    rect(ctx, ox + 10, bodyY + 14, 2, 8, CAPE_L);
+
+    // Arms
+    rect(ctx, ox + 7,  bodyY + 14, 3, 7, CHAIN_M);
+    rect(ctx, ox + 22, bodyY + 14, 3, 7, CHAIN_M);
+
+    // Back plate
+    rect(ctx, ox + 9,  bodyY + 13, 14, 9, OUTLINE);
+    rect(ctx, ox + 10, bodyY + 14, 12, 7, ARMOR_D);
+    rect(ctx, ox + 21, bodyY + 14, 2,  7, ARMOR_M);  // spine side
+    rect(ctx, ox + 10, bodyY + 14, 2,  7, ARMOR_M);
+
+    // Belt
+    rect(ctx, ox + 9, bodyY + 21, 14, 3, BELT);
+
     // Back of helmet
-    rect(ctx, ox + 10, oy + 5, 12, 10, ARMOR_DARK);
-    rect(ctx, ox + 11, oy + 4, 10, 10, ARMOR_MID);
-    rect(ctx, ox + 22, oy + 14, 2, 8, CHAIN_MID);
-    rect(ctx, ox + 8, oy + 14, 2, 8, CHAIN_MID);
-    // Sword
-    ctx.fillStyle = hex(SWORD_BLADE);
-    ctx.fillRect(ox + 24, oy + 14, 1, 8);
-    ctx.fillStyle = hex(SWORD_GOLD);
-    ctx.fillRect(ox + 23, oy + 17, 3, 2);
+    rect(ctx, ox + 10, bodyY + 3,  12, 11, OUTLINE);
+    rect(ctx, ox + 11, bodyY + 3,  10, 11, ARMOR_D);
+    rect(ctx, ox + 12, bodyY + 2,  8,  11, ARMOR_M);
+    rect(ctx, ox + 13, bodyY + 2,  5,   3, ARMOR_L);
+    rect(ctx, ox + 14, bodyY + 2,  3,   2, ARMOR_HL);
+    rect(ctx, ox +  9, bodyY + 8,  2,   5, ARMOR_M);
+    rect(ctx, ox + 21, bodyY + 8,  2,   5, ARMOR_M);
+
+    // Sword poking up behind
+    rect(ctx, ox + 23, bodyY + 2, 2, 14, SWORD_BL);
+    rect(ctx, ox + 23, bodyY + 2, 1, 14, SWORD_HL);
+    rect(ctx, ox + 21, bodyY + 9, 6,  2, SWORD_GOLD);
 
   } else {
-    // Side-facing (E or W)
+    // ═══ SIDE VIEW (E or W) ══════════════════════════════════════════════════
     const flip = facingW;
-    const sx = flip ? (x: number) => ox + 32 - x - 1 : (x: number) => ox + x;
+    // Mirror helper: maps a column offset from left to actual x
+    const mx = flip
+      ? (x: number, w2 = 1) => ox + 32 - x - w2
+      : (x: number)          => ox + x;
 
-    rect(ctx, sx(8), oy + 14, 2, 12, CAPE_DARK, 1);
-    // Leg (walking)
-    const legA = legSwap ? 14 : 16;
-    const legB = legSwap ? 16 : 14;
-    rect(ctx, sx(12), oy + 22, 4, legA - legShift, CHAIN_MID, 1);
-    rect(ctx, sx(16), oy + 22, 4, legB + legShift, CHAIN_DARK, 1);
-    // Torso
-    rect(ctx, sx(11), oy + 14, 10, 9, ARMOR_MID, 1);
-    rect(ctx, sx(12), oy + 15, 8, 7, ARMOR_DARK, 1);
-    rect(ctx, sx(12), oy + 15, 3, 7, ARMOR_LIGHT, 1);
-    rect(ctx, sx(11), oy + 22, 10, 2, BELT, 1);
-    // Cape
-    rect(ctx, sx(8), oy + 15, 4, 10, CAPE, 1);
-    // Arm
-    rect(ctx, sx(22), oy + 15, 2, 7, CHAIN_MID, 1);
+    // Legs (side walk)
+    const legFwd = step ? 6 : 2;   // forward leg x-offset
+    const legBwd = step ? 2 : 6;
+    // Front leg
+    rect(ctx, mx(10), bodyY + 21, 4, legFwd + 5, CHAIN_M);
+    rect(ctx, mx(11), bodyY + 21, 2, legFwd + 5, CHAIN_L);
+    rect(ctx, mx( 9), bodyY + 27,  6, 3, BOOT);
+    // Back leg (behind, darker)
+    rect(ctx, mx(14), bodyY + 23, 4, legBwd + 3, CHAIN_D);
+    rect(ctx, mx(13), bodyY + 27,  6, 3, CHAIN_D);
+
+    // Cape (side, billows back on walk)
+    const capeW = step ? 6 : 5;
+    rect(ctx, mx(6),  bodyY + 14, capeW, 10, CAPE_L);
+    rect(ctx, mx(7),  bodyY + 15, capeW - 2, 9, CAPE_D);
+
+    // Torso side outline
+    rect(ctx, mx(10), bodyY + 13, 11, 9, OUTLINE);
+    rect(ctx, mx(11), bodyY + 14,  9, 7, ARMOR_D);
+    rect(ctx, mx(12), bodyY + 14,  7, 7, ARMOR_M);
+    rect(ctx, mx(12), bodyY + 14,  3, 7, ARMOR_L);
+    rect(ctx, mx(12), bodyY + 14,  1, 7, ARMOR_HL);
+
+    // Belt
+    rect(ctx, mx(10), bodyY + 21, 11, 3, BELT);
+
+    // Arm (front)
+    const armX = facingE ? 21 : 10;
+    rect(ctx, mx(armX), bodyY + 14, 3, 7, CHAIN_M);
+    rect(ctx, mx(armX + 1), bodyY + 14, 1, 7, CHAIN_L);
+
     // Helmet side
-    rect(ctx, sx(11), oy + 5, 10, 9, ARMOR_DARK, 1);
-    rect(ctx, sx(12), oy + 4, 8, 9, ARMOR_MID, 1);
-    rect(ctx, sx(12), oy + 9, 8, 4, VISOR, 1);
-    // Face
-    rect(ctx, sx(11), oy + 13, 6, 2, SKIN, 1);
-    // Sword
-    const sx2 = facingE ? ox + 24 : ox + 4;
-    ctx.fillStyle = hex(SWORD_BLADE);
-    ctx.fillRect(sx2, oy + 12, 1, 10);
-    ctx.fillStyle = hex(SWORD_GOLD);
-    ctx.fillRect(sx2 - 1, oy + 17, 3, 2);
+    rect(ctx, mx(10), bodyY + 3,  11, 11, OUTLINE);
+    rect(ctx, mx(11), bodyY + 3,  9,  11, ARMOR_D);
+    rect(ctx, mx(12), bodyY + 2,  8,  11, ARMOR_M);
+    rect(ctx, mx(13), bodyY + 2,  5,   3, ARMOR_L);
+    rect(ctx, mx(14), bodyY + 2,  3,   2, ARMOR_HL);
+    // Visor (side)
+    rect(ctx, mx(12), bodyY + 8,  9,  4, VISOR);
+    rect(ctx, mx(13), bodyY + 9,  6,  2, VISOR_GLOW);
+    // Face sliver
+    rect(ctx, mx(12), bodyY + 12, 5, 2, SKIN);
+    // Nasal guard
+    rect(ctx, mx(12), bodyY + 6,  2, 6, ARMOR_D);
+
+    // Sword: extended forward
+    const swX = facingE ? 22 : 4;
+    const swY = step ? bodyY + 10 : bodyY + 12;
+    rect(ctx, mx(swX), swY,    2, 12, SWORD_BL);
+    rect(ctx, mx(swX), swY,    1, 12, SWORD_HL);
+    rect(ctx, mx(swX - 2), swY + 5, 6, 2, SWORD_GOLD);  // crossguard
+    rect(ctx, mx(swX), swY - 1,     2, 3, SWORD_GOLD);  // pommel
   }
 }
 

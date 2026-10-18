@@ -46,10 +46,11 @@ export class InGameScene {
     const { level, spawns } = buildDungeon();
     this.level = level;
 
-    // Terrain
+    // Terrain (clear dirty flag so it doesn't rebuild every frame)
     this.terrainContainer = buildLevelView(level);
     this.gameLayer.addChild(this.terrainContainer);
     syncWalls(level);
+    level.clearDirty();
 
     // Spawn player
     const { playerSpawn, torchPositions } = spawns;
@@ -98,6 +99,7 @@ export class InGameScene {
       tick: this.tick,
       gameLayer: this.gameLayer,
       rebuildTerrain: () => {
+        this.level.clearDirty();
         this.terrainContainer.destroy();
         this.terrainContainer = buildLevelView(this.level);
         this.gameLayer.addChildAt(this.terrainContainer, 0);

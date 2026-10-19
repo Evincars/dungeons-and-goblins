@@ -9,9 +9,13 @@ import { updateLoot } from './LootSystem';
 import { updateSpawners } from './SpawnerSystem';
 import { updateDeath } from './DeathSystem';
 import { updateHoles } from './HoleSystem';
+import { updateDoors } from './DoorSystem';
+import { updateExit } from './ExitSystem';
+import { updateShop } from './ShopSystem';
 import { updateRespawns } from './RespawnSystem';
 import { updateSprites } from './SpriteSystem';
 import { updateFx } from './FxSystem';
+import { updateCharAnim } from './CharAnimSystem';
 import { updateAnimation } from './AnimationSystem';
 import { updateRender } from './RenderSystem';
 import { updateBars } from './BarSystem';
@@ -42,18 +46,22 @@ export const SIMULATION: readonly System[] = [
   () => updateFootsteps(),
   () => updateEphemerals(),
   ({ dt }) => updateCombatTimers(dt),
-  ({ dt }) => updateContactDamage(dt),
+  ({ level, dt }) => updateContactDamage(level, dt),
   ({ dt }) => updateLoot(dt),
   ({ level, dt }) => updateSpawners(level, dt),
   ({ level, dt }) => updateDeath(level, dt),
   ({ level }) => updateHoles(level),
   ({ level }) => updateChests(level),
+  ({ level }) => updateDoors(level),
+  () => updateExit(),
+  () => updateShop(),
   (ctx) => { if (ctx.level.tilesDirty) ctx.rebuildTerrain(); },
 ];
 
 export const PRESENTATION: readonly System[] = [
   ({ gameLayer }) => updateSprites(gameLayer),
   () => updateFx(),
+  () => updateCharAnim(),
   ({ dt }) => updateAnimation(dt),
   ({ dt }) => updateRender(dt),
   ({ gameLayer }) => updateBars(gameLayer),

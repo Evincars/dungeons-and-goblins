@@ -14,7 +14,12 @@ import type { FrameContext } from '../systems/Simulation';
 import { clearSprites } from '../systems/SpriteSystem';
 import { HudPanel } from '../ui/HudPanel';
 import { InventoryPanel } from '../ui/InventoryPanel';
+import { ShopPanel } from '../ui/ShopPanel';
 import { isInventoryOpen } from '../systems/InventorySystem';
+import { isShopOpen, activeShopItems, closeShop } from '../systems/ShopSystem';
+import { isLevelComplete, resetLevelComplete } from '../systems/ExitSystem';
+import { PixelLabel } from '../ui/PixelText';
+import { GAME_WIDTH as VIEW_W, VIEW_HEIGHT as VIEW_H } from '../render/Camera';
 import type { Level } from '../level/Level';
 
 export class InGameScene {
@@ -27,13 +32,19 @@ export class InGameScene {
   private lights!: LightRenderer;
   private hud!: HudPanel;
   private inv!: InventoryPanel;
+  private shop!: ShopPanel;
+  private shopWasOpen = false;
+  private completeBanner!: PixelLabel;
+  private complete = false;
   private level!: Level;
   private tick = 0;
   private torchSources: LightSource[] = [];
   onQuit?: () => void;
+  onComplete?: () => void;
 
   async init(app: Application): Promise<void> {
     this.app = app;
+    resetLevelComplete();
 
     // Build layers
     this.gameLayer = new Container();
@@ -59,7 +70,7 @@ export class InGameScene {
     // Build torch light sources
     this.torchSources = torchPositions.map((p, i) => ({
       x: p.x, y: p.y,
-      radius: 90,
+      radius: 120,
       kind: 0 as const,
       flicker: i * 1.3,
     }));
@@ -77,7 +88,17 @@ export class InGameScene {
     // HUD
     this.hud = new HudPanel();
     this.inv = new InventoryPanel();
-    this.uiLayer.addChild(this.hud.container, this.inv.container);
+    this.shop = new ShopPanel();
+    this.uiLayer.addChild(this.hud.container, this.inv.container, this.shop.container);
+
+    // Level-complete banner (hidden until the exit button is pulled)
+    this.completeBanner = new PixelLabel('LEVEL COMPLETE\nPress ENTER', {
+      color: 0xffcc44, scale: 2, align: 'center', shadow: true,
+    });
+    this.completeBanner.x = Math.floor(VIEW_W / 2);
+    this.completeBanner.y = Math.floor(VIEW_H / 2) - 16;
+    this.completeBanner.visible = false;
+    this.uiLayer.addChild(this.completeBanner);
 
     // Input
     initInput(app.canvas as HTMLCanvasElement);
@@ -152,6 +173,27 @@ export class InGameScene {
     this.hud.update();
     this.inv.setVisible(isInventoryOpen());
     this.inv.update();
+
+    // Shop: refresh its rows on the open transition, then track visibility
+    const shopOpen = isShopOpen();
+    if (shopOpen && !this.shopWasOpen) this.shop.setItems(activeShopItems());
+    this.shopWasOpen = shopOpen;
+    this.shop.setVisible(shopOpen);
+    this.shop.update();
+
+    // Level complete
+    if (!this.complete && isLevelComplete()) {
+      this.complete = true;
+      closeShop();
+      this.completeBanner.visible = true;
+      const onKey = (e: KeyboardEvent) => {
+        if (e.code === 'Enter' || e.code === 'Space') {
+          window.removeEventListener('keydown', onKey);
+          this.onComplete?.();
+        }
+      };
+      window.addEventListener('keydown', onKey);
+    }
   }
 
   destroy(): void {

@@ -12,6 +12,7 @@ export class Level {
 
   private tileStacks: TileData[][];
   private spawnPoints: SpawnPoint[] = [];
+  private safeZoneSet = new Set<number>();  // packed tileX + tileY * width
 
   readonly seen: boolean[];
   tilesDirty = false;
@@ -24,6 +25,21 @@ export class Level {
       this.tileStacks[i] = [createTile(TileType.Floor, Math.floor(Math.random() * 4))];
     }
     this.seen = new Array((width + 1) * (height + 1)).fill(false);
+  }
+
+  markSafeZone(tx: number, ty: number): void {
+    this.safeZoneSet.add(tx + ty * this.width);
+  }
+
+  isSafeZone(tx: number, ty: number): boolean {
+    return this.safeZoneSet.has(tx + ty * this.width);
+  }
+
+  /** Returns true if world-space point is inside any safe zone tile. */
+  isWorldPosSafe(wx: number, wy: number): boolean {
+    const tx = Math.floor(wx / TILE_WIDTH);
+    const ty = Math.floor(wy / TILE_HEIGHT);
+    return this.isSafeZone(tx, ty);
   }
 
   isSeen(cx: number, cy: number): boolean {

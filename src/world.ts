@@ -50,7 +50,7 @@ export type Entity = {
   chasing?: boolean;
 
   // --- rendering ---
-  visual?: { sheet: string; col?: number; row?: number; scale?: number };
+  visual?: { sheet: string; col?: number; row?: number; scale?: number; flipX?: boolean };
   frame?: number;
   sprite?: Sprite;
   container?: Container;
@@ -74,6 +74,8 @@ export type Entity = {
     timer: number;
     loop: boolean;
   };
+  /** Current character animation state (idle/walk/attack), to detect transitions. */
+  animState?: string;
 
   // --- short-lived effects ---
   fx?: {
@@ -189,6 +191,25 @@ export type Entity = {
 
   // --- tile reference ---
   wallTile?: { tileX: number; tileY: number };
+
+  // --- dungeon room (ECS room metadata) ---
+  room?: {
+    id: number;
+    type: 'safe' | 'dungeon' | 'exit';
+    bounds: { x: number; y: number; w: number; h: number };
+  };
+
+  // --- safe zone (enemies can't attack inside) ---
+  safeZone?: true;
+
+  // --- exit button (players interact to end level) ---
+  exitButton?: { activated: boolean };
+
+  // --- shop NPC ---
+  shopNpc?: { items: import('./world').InventoryItem[] };
+
+  // --- door (seals the safe room once players leave) ---
+  door?: { tiles: Array<{ x: number; y: number }>; boundaryX: number; closed: boolean };
 
   // --- lifecycle ---
   removed?: true;

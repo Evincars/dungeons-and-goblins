@@ -18,6 +18,21 @@ export function updateSprites(gameLayer: Container): void {
     world.addComponent(entity, 'sprite', sprite);
   }
 
+  // Sync flipX for side-view sprites: mirror when moving left
+  for (const entity of world.with('visual', 'sprite', 'velocity')) {
+    const v = entity.visual!;
+    if (v.flipX === undefined) continue;
+    const vx = entity.velocity!.x;
+    if (vx < -0.05) v.flipX = true;
+    else if (vx > 0.05) v.flipX = false;
+    const sprite = entity.sprite!;
+    if (v.flipX) {
+      sprite.scale.x = -Math.abs(sprite.scale.x);
+    } else {
+      sprite.scale.x = Math.abs(sprite.scale.x);
+    }
+  }
+
   // Nests crack through four frames as they lose health
   for (const nest of world.with('spawner', 'visual', 'sprite', 'health')) {
     const v = nest.visual!;

@@ -1,27 +1,61 @@
 import { Texture, Rectangle } from 'pixi.js';
 import { getTexture } from '../assets/AssetLoader';
 
-export type SheetInfo = { frameWidth: number; frameHeight: number };
+export type SheetInfo = {
+  frameWidth: number;
+  frameHeight: number;
+  /** Optional sub-rect within each frame to crop to (strips transparent padding). */
+  trim?: { x: number; y: number; w: number; h: number };
+};
+
+// Characters are tiny pixel art centred in large transparent 100×100 frames.
+// These trims crop to the content (shared across every animation of a character),
+// kept horizontally centred on the character so left/right flipping stays symmetric.
+const SOLDIER_TRIM = { x: 33, y: 27, w: 46, h: 35 };
+const ORC_TRIM     = { x: 31, y: 30, w: 46, h: 38 };
 
 const SHEETS: Record<string, SheetInfo> = {
-  floortiles:         { frameWidth: 32,  frameHeight: 32  },
-  walltiles:          { frameWidth: 32,  frameHeight: 56  },
-  breakwalls:         { frameWidth: 32,  frameHeight: 56  },
-  dark:               { frameWidth: 32,  frameHeight: 32  },
-  fighter_sheet:      { frameWidth: 32,  frameHeight: 32  },
-  enemy_goblin_32:    { frameWidth: 32,  frameHeight: 32  },
-  enemy_skeleton_32:  { frameWidth: 32,  frameHeight: 32  },
-  enemy_orc_32:       { frameWidth: 32,  frameHeight: 32  },
-  enemy_troll_48:     { frameWidth: 48,  frameHeight: 48  },
-  torch_sheet:        { frameWidth: 16,  frameHeight: 32  },
+  // ── Real-asset sprite sheets (loaded from /public) ──────────────────────────
+  // Characters: single-row strips, 100×100 per frame, facing right (cropped via trim)
+  soldier_walk:       { frameWidth: 100, frameHeight: 100, trim: SOLDIER_TRIM },  // 8 frames
+  soldier_idle:       { frameWidth: 100, frameHeight: 100, trim: SOLDIER_TRIM },  // 6 frames
+  soldier_atk1:       { frameWidth: 100, frameHeight: 100, trim: SOLDIER_TRIM },  // 6 frames
+  soldier_atk2:       { frameWidth: 100, frameHeight: 100, trim: SOLDIER_TRIM },  // 6 frames
+  soldier_atk3:       { frameWidth: 100, frameHeight: 100, trim: SOLDIER_TRIM },  // 9 frames
+  soldier_death:      { frameWidth: 100, frameHeight: 100, trim: SOLDIER_TRIM },  // 4 frames
+  soldier_hurt:       { frameWidth: 100, frameHeight: 100, trim: SOLDIER_TRIM },  // 4 frames
+  orc_walk:           { frameWidth: 100, frameHeight: 100, trim: ORC_TRIM },
+  orc_idle:           { frameWidth: 100, frameHeight: 100, trim: ORC_TRIM },
+  orc_atk1:           { frameWidth: 100, frameHeight: 100, trim: ORC_TRIM },
+  orc_atk2:           { frameWidth: 100, frameHeight: 100, trim: ORC_TRIM },
+  orc_death:          { frameWidth: 100, frameHeight: 100, trim: ORC_TRIM },
+  orc_hurt:           { frameWidth: 100, frameHeight: 100, trim: ORC_TRIM },
+
+  // Tileset (16×16 base tile, used via tilesetRect())
+  tileset:            { frameWidth: 16, frameHeight: 16 },
+
+  // Baked walls (cap + brick face), composited from the tileset in AssetLoader
+  wall_main:          { frameWidth: 32, frameHeight: 48 },
+  wall_breakable:     { frameWidth: 32, frameHeight: 48 },
+
+  // Torch animation — 4 frames composited into one 64×16 strip
+  torch:              { frameWidth: 16, frameHeight: 16 },
+
+  // Decorative props (baked from decorative.png)
+  decor_pot1:         { frameWidth: 16, frameHeight: 16 },
+  decor_pot2:         { frameWidth: 16, frameHeight: 16 },
+
+  // ── Procedural UI / FX sheets ───────────────────────────────────────────────
   pickup_coin_16:     { frameWidth: 8,   frameHeight: 8   },
   pickup_potion:      { frameWidth: 12,  frameHeight: 16  },
   pickup_gem:         { frameWidth: 12,  frameHeight: 12  },
   spawner:            { frameWidth: 32,  frameHeight: 40  },
   chest:              { frameWidth: 32,  frameHeight: 32  },
+  exit_button:        { frameWidth: 32,  frameHeight: 32  },
   fx_sword_swing:     { frameWidth: 48,  frameHeight: 48  },
   fx_death:           { frameWidth: 48,  frameHeight: 48  },
   fx_dust:            { frameWidth: 16,  frameHeight: 16  },
+  dark:               { frameWidth: 32,  frameHeight: 32  },
   bar_green:          { frameWidth: 32,  frameHeight: 4   },
   bar_green_underlay: { frameWidth: 32,  frameHeight: 4   },
   bar_outline:        { frameWidth: 32,  frameHeight: 4   },
@@ -38,14 +72,12 @@ export function sheetInfo(key: string): SheetInfo {
 
 export function sheetCols(key: string): number {
   const base = getTexture(key);
-  const { frameWidth } = sheetInfo(key);
-  return Math.max(1, Math.floor(base.width / frameWidth));
+  return Math.max(1, Math.floor(base.width / sheetInfo(key).frameWidth));
 }
 
 export function sheetRows(key: string): number {
   const base = getTexture(key);
-  const { frameHeight } = sheetInfo(key);
-  return Math.max(1, Math.floor(base.height / frameHeight));
+  return Math.max(1, Math.floor(base.height / sheetInfo(key).frameHeight));
 }
 
 export function frameTexture(key: string, col: number, row: number): Texture {
@@ -56,16 +88,33 @@ export function frameTexture(key: string, col: number, row: number): Texture {
   const base = getTexture(key);
   if (!base.source || base.width === 0) return Texture.EMPTY;
 
-  const { frameWidth, frameHeight } = sheetInfo(key);
+  const { frameWidth, frameHeight, trim } = sheetInfo(key);
   const maxCol = Math.max(0, Math.floor(base.width / frameWidth) - 1);
   const maxRow = Math.max(0, Math.floor(base.height / frameHeight) - 1);
   const c = Math.min(Math.max(col, 0), maxCol);
   const r = Math.min(Math.max(row, 0), maxRow);
 
+  const fx = c * frameWidth + (trim?.x ?? 0);
+  const fy = r * frameHeight + (trim?.y ?? 0);
+  const fw = trim?.w ?? frameWidth;
+  const fh = trim?.h ?? frameHeight;
+
   const tex = new Texture({
     source: base.source,
-    frame: new Rectangle(c * frameWidth, r * frameHeight, frameWidth, frameHeight),
+    frame: new Rectangle(fx, fy, fw, fh),
   });
+  cache.set(id, tex);
+  return tex;
+}
+
+/** Build a Texture that crops a W×H pixel region at (px, py) from the tileset. */
+export function tilesetRect(px: number, py: number, w: number, h: number): Texture {
+  const id = `tileset:${px}:${py}:${w}:${h}`;
+  const hit = cache.get(id);
+  if (hit) return hit;
+  const base = getTexture('tileset');
+  if (!base.source || base.width === 0) return Texture.EMPTY;
+  const tex = new Texture({ source: base.source, frame: new Rectangle(px, py, w, h) });
   cache.set(id, tex);
   return tex;
 }
@@ -76,11 +125,9 @@ const whiteFrames = new Map<string, Texture>();
 function whiteSheet(key: string): Texture | null {
   const hit = whiteSheets.get(key);
   if (hit) return hit;
-
   const base = getTexture(key);
   const resource = base.source?.resource as CanvasImageSource | undefined;
   if (!resource || base.width === 0) return null;
-
   const canvas = document.createElement('canvas');
   canvas.width = base.source.pixelWidth;
   canvas.height = base.source.pixelHeight;
@@ -89,7 +136,6 @@ function whiteSheet(key: string): Texture | null {
   ctx.globalCompositeOperation = 'source-in';
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
   const tex = Texture.from(canvas);
   whiteSheets.set(key, tex);
   return tex;

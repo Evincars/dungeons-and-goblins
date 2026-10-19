@@ -16,22 +16,22 @@ type MobConfig = {
   yOffset: number;
 };
 
-const MOB_CONFIGS: Record<MobType, MobConfig> = {
+const MOB_CONFIGS: Record<MobType, MobConfig & { scale: number }> = {
   goblin: {
     health: 14, speed: 0.7, strength: 3, deathPoints: 5, limp: 4,
-    radius: { x: 8, y: 8 }, sheet: 'enemy_goblin_32', frameCount: 4, yOffset: 8,
+    radius: { x: 10, y: 10 }, sheet: 'orc_idle', frameCount: 6, yOffset: 24, scale: 1.3,
   },
   skeleton: {
     health: 18, speed: 0.6, strength: 4, deathPoints: 8, limp: 3,
-    radius: { x: 8, y: 8 }, sheet: 'enemy_skeleton_32', frameCount: 4, yOffset: 8,
+    radius: { x: 10, y: 10 }, sheet: 'orc_idle', frameCount: 6, yOffset: 24, scale: 1.4,
   },
   orc: {
     health: 30, speed: 0.5, strength: 6, deathPoints: 12, limp: 3,
-    radius: { x: 10, y: 10 }, sheet: 'enemy_orc_32', frameCount: 4, yOffset: 8,
+    radius: { x: 12, y: 12 }, sheet: 'orc_idle', frameCount: 6, yOffset: 26, scale: 1.6,
   },
   troll: {
     health: 120, speed: 0.4, strength: 12, deathPoints: 50, limp: 2,
-    radius: { x: 16, y: 14 }, sheet: 'enemy_troll_48', frameCount: 4, yOffset: 16,
+    radius: { x: 16, y: 14 }, sheet: 'orc_idle', frameCount: 6, yOffset: 30, scale: 2.0,
   },
 };
 
@@ -70,7 +70,7 @@ export function createMob(_level: Level, type: string, x: number, y: number): En
     bump: { x: 0, y: 0 },
     chasing: false,
     ai: { type: 'wander' },
-    visual: { sheet: cfg.sheet },
+    visual: { sheet: cfg.sheet, scale: cfg.scale, flipX: false },
     animation: {
       sheet: cfg.sheet,
       frameX: 0,

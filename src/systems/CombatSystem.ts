@@ -1,5 +1,6 @@
 import { world } from '../world';
 import type { Entity } from '../world';
+import type { Level } from '../level/Level';
 import { BB } from '../math/BB';
 import { sound } from '../audio/SoundPlayer';
 
@@ -29,8 +30,8 @@ export function updateCombatTimers(_dt: number): void {
   }
 }
 
-/** Mobs deal contact damage to the player. */
-export function updateContactDamage(_dt: number): void {
+/** Mobs deal contact damage to the player, except inside safe zones. */
+export function updateContactDamage(level: Level, _dt: number): void {
   const mobs = world.with('position', 'radius', 'ai', 'health');
   const players = world.with('position', 'radius', 'playerInput', 'health');
 
@@ -44,6 +45,7 @@ export function updateContactDamage(_dt: number): void {
       if (player.health!.current <= 0) continue;
       if ((player.hurtTime ?? 0) > 0) continue;
       const ppos = player.position!;
+      if (level.isWorldPosSafe(ppos.x, ppos.y)) continue;
       const prad = player.radius!;
       if (!mbb.intersects(BB.fromCenter(ppos.x, ppos.y, prad.x, prad.y))) continue;
       hurtPlayer(player, mob, mob.strength ?? 1);

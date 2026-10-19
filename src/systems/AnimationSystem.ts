@@ -7,7 +7,9 @@ export function updateAnimation(_dt: number): void {
     const anim = entity.animation!;
     const cols = sheetCols(anim.sheet);
 
-    if (entity.playerInput) {
+    // Player walk/idle follows the step cadence; everything else (and player attacks) is timer-driven.
+    const walkCycle = entity.playerInput && entity.animState !== 'attack';
+    if (walkCycle) {
       const walk = entity.walkTime ?? 0;
       anim.frameX = walk === 0 ? 0 : Math.floor(walk / 4) % anim.frameCount;
     } else {
@@ -21,10 +23,11 @@ export function updateAnimation(_dt: number): void {
       }
     }
 
-    // Player: 8 direction rows
-    let row = entity.facing ?? anim.frameY;
-    // Mob sheets: (facing + 1) & 3 same as source
-    if (entity.mobType && !entity.playerInput) {
+    // Side-view sprites (soldier/orc 100×100) live in a single row
+    const sideView = entity.visual?.flipX !== undefined;
+    let row = sideView ? 0 : (entity.facing ?? anim.frameY);
+    if (!sideView && entity.mobType && !entity.playerInput) {
+      // Legacy 4-direction mob sheets: row by facing
       row = ((entity.facing ?? 2) + 1) & 3;
     }
 

@@ -49,6 +49,8 @@ export class Game {
       this.currentScene = scene;
     } else if (id === 'ingame') {
       const scene = new InGameScene();
+      scene.onComplete = () => this.goto('ingame');
+      scene.onQuit = () => this.goto('title');
       await scene.init(this.app);
       this.app.stage.addChild(scene.container);
       this.currentScene = scene;

@@ -122,11 +122,11 @@ export class ShopPanel {
     if (!player) return;
     const stats = player.playerStats!;
     const inv = player.inventory!;
-    if (stats.gold < item.value) { sound.playSound('sword_miss'); return; }
-    if (inv.length >= MAX_INVENTORY) { sound.playSound('sword_miss'); return; }
+    if (stats.gold < item.value) { sound.playSound('fail'); return; }
+    if (inv.length >= MAX_INVENTORY) { sound.playSound('fail'); return; }
     stats.gold -= item.value;
     inv.push({ ...item });
-    sound.playSound('coin');
+    sound.playSound('buy');
   }
 
   setVisible(visible: boolean): void {

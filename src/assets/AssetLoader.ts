@@ -2,6 +2,7 @@ import { Assets, Texture } from 'pixi.js';
 import { buildCharacterAtlas, extractGlow } from './CharacterSheet';
 import type { CharacterSheetLayout } from './CharacterSheet';
 import { registerSheet } from '../render/Sheets';
+import { PROPS } from '../level/Props';
 import {
   genCoinSheet, genPotionSheet, genGemSheet,
   genSpawnerSheet, genChestSheet, genExitButtonSheet,
@@ -115,10 +116,13 @@ export async function loadAllAssets(_onProgress?: (f: number) => void): Promise<
   }
   await loadHero();
 
-  // Decorative props from decorative.png (clay pots)
+  // Props from decorative.png, each cut to its exact sprite bounds
   const decor = textures.get('decorative')!;
-  textures.set('decor_pot1', cropTexture(decor, 144, 128, 16, 16));
-  textures.set('decor_pot2', cropTexture(decor, 144, 176, 16, 16));
+  for (const [kind, def] of Object.entries(PROPS)) {
+    const { x, y, w, h } = def.rect;
+    textures.set(`prop_${kind}`, cropTexture(decor, x, y, w, h));
+    registerSheet(`prop_${kind}`, { frameWidth: w, frameHeight: h });
+  }
 
   // Composite the four 16×16 torch frames into one 64×16 animation strip
   const torchCanvas = document.createElement('canvas');

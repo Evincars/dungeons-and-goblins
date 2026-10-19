@@ -55,7 +55,7 @@ export function updateSword(_dt: number): void {
     }
 
     // Start a new swing
-    if (pi.intents.attack && player.swordCooldown === 0 && player.health!.current > 0 && !player.casting) {
+    if (pi.intents.attack && player.swordCooldown === 0 && player.health!.current > 0 && !player.casting && !player.falling) {
       pi.intents.attack = false;
       const aim = player.aimVector ?? { x: 0, y: 1 };
       const tier = stats.swordTier;

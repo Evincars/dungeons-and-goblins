@@ -4,7 +4,15 @@ import { BB } from '../math/BB';
 
 export type SpawnPoint = { x: number; y: number };
 
-const WALL_CLIP_RISE = 6;
+/**
+ * A wall with walkable floor directly north of it lets characters step this far
+ * into its tile; that wall row is drawn over them, so they appear to stand
+ * behind it with only their upper body showing, as in Catacomb Snatch.
+ */
+export const WALL_SINK = 26;
+
+/** Decoration painted onto the brick face of a wall tile (the tile directly above a floor). */
+export type WallDecor = 'niche0' | 'niche1';
 
 export class Level {
   readonly width: number;
@@ -13,6 +21,10 @@ export class Level {
   private tileStacks: TileData[][];
   private spawnPoints: SpawnPoint[] = [];
   private safeZoneSet = new Set<number>();  // packed tileX + tileY * width
+  /** Face decorations keyed by packed tile index. */
+  readonly wallDecor = new Map<number, WallDecor>();
+  /** Top-left tiles of 2×2 pits (each is four Hole tiles drawn as one framed pit). */
+  readonly pits: Array<{ x: number; y: number }> = [];
 
   readonly seen: boolean[];
   tilesDirty = false;
@@ -124,9 +136,10 @@ export class Level {
       for (let tx = tx0; tx <= tx1; tx++) {
         const tile = this.getTile(tx, ty);
         if (!tile || !tile.passable) {
-          const topInset = !tile || tile.type === TileType.Wall || tile.type === TileType.BreakableWall ? WALL_CLIP_RISE : 0;
+          const wall = tile?.type === TileType.Wall || tile?.type === TileType.BreakableWall;
+          const sink = wall && this.getTile(tx, ty - 1)?.passable ? WALL_SINK : 0;
           result.push(new BB(
-            tx * TILE_WIDTH, ty * TILE_HEIGHT - topInset,
+            tx * TILE_WIDTH, ty * TILE_HEIGHT + sink,
             (tx + 1) * TILE_WIDTH, (ty + 1) * TILE_HEIGHT,
           ));
         }

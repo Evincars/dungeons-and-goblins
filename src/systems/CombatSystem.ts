@@ -55,7 +55,7 @@ export function updateContactDamage(level: Level, _dt: number): void {
 
 export function hurtPlayer(player: Entity, source: Entity, damage: number): void {
   const h = player.health;
-  if (!h || player.respawnTicks !== undefined || h.current <= 0) return;
+  if (!h || player.falling || player.respawnTicks !== undefined || h.current <= 0) return;
 
   const armorMod = 1.0 - (player.playerStats?.armorTier ?? 0) * 0.1;
   const finalDamage = Math.max(1, Math.round(damage * armorMod));

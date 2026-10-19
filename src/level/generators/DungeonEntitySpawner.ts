@@ -9,6 +9,8 @@ import { createMob } from '../../entities/MobFactory';
 import type { Level } from '../Level';
 import type { DungeonLayout, RoomData } from './DungeonBuilder';
 import type { DungeonConfig } from './DungeonConfig';
+import { PROPS } from '../Props';
+import type { PropDef, PropPlacement } from '../Props';
 
 /** Torch mounts sit this far above the foot of their wall. */
 const TORCH_LIFT = 30;
@@ -27,10 +29,25 @@ function floorTilesIn(level: Level, room: RoomData): FloorSpot[] {
   return out;
 }
 
-function touchesWall(level: Level, tx: number, ty: number): boolean {
-  return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => {
-    const t = level.getTile(tx + dx, ty + dy)?.type;
-    return t === TileType.Wall || t === TileType.BreakableWall;
+/** Floor props rest just above their tile's bottom edge, so they depth-sort with whoever stands around them. */
+const PROP_GROUND = TILE_HEIGHT - 4;
+/** Wall props hang from just under the face's cap molding. */
+const HANG_TOP = 58;
+
+function spawnProp(p: PropPlacement): void {
+  const def: PropDef = PROPS[p.kind];
+  const x = p.tx * TILE_WIDTH + TILE_WIDTH / 2;
+  const h = def.rect.h;
+  if (def.mount === 'wall') {
+    // Stands at the foot of the wall like a torch, drawn up on the bricks.
+    world.add({ position: { x, y: p.ty * TILE_HEIGHT }, visual: { sheet: `prop_${p.kind}` }, yOffset: HANG_TOP - h / 2 });
+    return;
+  }
+  world.add({
+    position: { x, y: p.ty * TILE_HEIGHT + PROP_GROUND },
+    visual: { sheet: `prop_${p.kind}` },
+    yOffset: h / 2,
+    ...(def.glow ? { glow: { radius: def.glow } } : {}),
   });
 }
 
@@ -79,7 +96,10 @@ export function spawnDungeonEntities(layout: DungeonLayout, cfg: DungeonConfig):
     });
   }
 
-  // ── Enemies, items and props in dungeon rooms ─────────────────────────────
+  // ── Props: coffins, crates, urns and candles on the floor, hangings on faces ──
+  for (const p of layout.props) spawnProp(p);
+
+  // ── Enemies and chests in dungeon rooms (loot only drops from what you kill) ──
   const dungeonRooms = rooms.filter(r => r.type === 'dungeon');
   const rng = Math.random;
 
@@ -93,24 +113,6 @@ export function spawnDungeonEntities(layout: DungeonLayout, cfg: DungeonConfig):
     for (let i = 0; i < enemyCount && floors.length; i++) {
       const t = pick();
       createMob(level, rng() < 0.7 ? 'goblin' : 'orc', t.x, t.y);
-    }
-
-    const itemCount = Math.round(area * cfg.itemDensity / 100);
-    for (let i = 0; i < itemCount && floors.length; i++) {
-      const t = pick();
-      spawnItem(t.x, t.y);
-    }
-
-    // Urns stand against the walls, like in the catacombs reference maps
-    const wallSide = floors.filter(t => touchesWall(level, t.tx, t.ty));
-    const potCount = Math.round(rng() * 3);
-    for (let i = 0; i < potCount && wallSide.length; i++) {
-      const t = wallSide.splice(Math.floor(rng() * wallSide.length), 1)[0];
-      world.add({
-        position: { x: t.x, y: t.y },
-        visual: { sheet: rng() < 0.5 ? 'decor_pot1' : 'decor_pot2', scale: 1.4 },
-        yOffset: 10,
-      });
     }
 
     // Chest — 40% chance per room
@@ -156,37 +158,6 @@ export function spawnDungeonEntities(layout: DungeonLayout, cfg: DungeonConfig):
   });
 }
 
-function spawnItem(wx: number, wy: number): void {
-  const roll = Math.random();
-  if (roll < 0.4) {
-    world.add({
-      position: { x: wx, y: wy },
-      item: { type: 'health_potion', name: 'Health Potion', value: 30 },
-      radius: { x: 6, y: 6 },
-      visual: { sheet: 'pickup_potion', col: 0, row: 0 },
-      yOffset: 8,
-      minimapColor: 0xff2050,
-    });
-  } else if (roll < 0.7) {
-    world.add({
-      position: { x: wx, y: wy },
-      item: { type: 'sword_scroll', name: 'Sword Upgrade', value: 1 },
-      radius: { x: 6, y: 6 },
-      visual: { sheet: 'pickup_gem', col: 0, row: 0 },
-      yOffset: 8,
-      minimapColor: 0xd0d0ff,
-    });
-  } else {
-    world.add({
-      position: { x: wx, y: wy },
-      item: { type: 'armor_piece', name: 'Armor Piece', value: 1 },
-      radius: { x: 6, y: 6 },
-      visual: { sheet: 'pickup_gem', col: 0, row: 0 },
-      yOffset: 8,
-      minimapColor: 0xc0c0c0,
-    });
-  }
-}
 
 function buildShopInventory(): InventoryItem[] {
   return [

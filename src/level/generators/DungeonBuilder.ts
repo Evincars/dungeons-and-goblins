@@ -13,6 +13,11 @@ import { TileType, TILE_WIDTH, TILE_HEIGHT, createTile } from '../TileType';
 import type { DungeonConfig } from './DungeonConfig';
 import { bspTree, bspLeaves, type BspNode } from './BSPSplit';
 import { isPillarColumn } from '../TerrainAutotile';
+import { COFFINS, CRATES, HANGINGS, POSTS, SARCOPHAGI, URNS } from '../Props';
+import type { PropKind, PropPlacement } from '../Props';
+
+type TileChange = { x: number; y: number; prev: TileType };
+type Keep = (apply: () => TileChange[]) => boolean;
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -39,6 +44,8 @@ export type DungeonLayout = {
   playerSpawn: { x: number; y: number };
   /** World positions of torch flames (mounted on brick faces). */
   torchPositions: Array<{ x: number; y: number }>;
+  /** Decorative and obstacle props (coffins, crates, urns, candles, wall hangings). */
+  props: PropPlacement[];
   exitButtonPos: { x: number; y: number };
   shopPos: { x: number; y: number };
   safeDoor: DoorData;
@@ -68,6 +75,8 @@ export class DungeonBuilder {
   private rng: () => number = Math.random;
   private level!: Level;
   private roomIdSeq = 0;
+  /** Tiles already taken by a prop or pit ring, so features don't overlap. */
+  private readonly usedTiles = new Set<number>();
 
   constructor(cfg: DungeonConfig) {
     this.cfg = cfg;
@@ -162,12 +171,17 @@ export class DungeonBuilder {
     if (!this.reachable(playerTile, anchors())) return null;
 
     // ── Room features, each kept only if everything stays reachable ───────────
+    const props: PropPlacement[] = [];
+    this.usedTiles.clear();
+    const keepIfReachable = (apply: () => TileChange[]) => this.tryFeature(playerTile, anchors, apply);
     for (const room of dungeonRooms) {
+      let structured = false;
       if (room.w >= 9 && room.h >= 8 && this.rng() < cfg.pillarChance) {
-        this.tryFeature(playerTile, anchors, () => this.pillarBlocks(room));
-      } else if (room.w >= 8 && room.h >= 7 && this.rng() < cfg.pitChance) {
-        this.tryFeature(playerTile, anchors, () => this.pit(room));
+        structured = keepIfReachable(() => this.pillarBlocks(room));
+      } else if (room.w >= 6 && room.h >= 6 && this.rng() < cfg.pitChance) {
+        structured = this.pits(room, keepIfReachable);
       }
+      this.furnish(room, structured, props, keepIfReachable);
     }
 
     // ── Safe zones ────────────────────────────────────────────────────────────
@@ -177,6 +191,9 @@ export class DungeonBuilder {
       }
     }
 
+    const torchTiles = this.placeTorches();
+    this.placeHangings(torchTiles, props);
+
     return {
       level: this.level,
       rooms: [safe, ...dungeonRooms, exit],
@@ -185,7 +202,8 @@ export class DungeonBuilder {
         this.level.addSpawnPoint(p.x, p.y);
         return p;
       })(),
-      torchPositions: this.placeTorches(),
+      torchPositions: torchTiles.map((t) => ({ x: t.x * TILE_WIDTH + TILE_WIDTH / 2, y: t.y * TILE_HEIGHT - 30 })),
+      props,
       exitButtonPos: tileCenter(exitTile.x, exitTile.y),
       shopPos: tileCenter(safe.x + Math.floor(safe.w / 2), safe.y + 1),
       safeDoor: { tiles: doorTiles, boundaryX: (doorX + 1) * TILE_WIDTH + TILE_WIDTH / 2 },
@@ -311,50 +329,166 @@ export class DungeonBuilder {
 
   // ── Room features ───────────────────────────────────────────────────────────
 
+  /** Sets tiles and returns what they were, so a feature can be undone. */
+  private setTiles(cells: Array<[number, number]>, type: TileType): TileChange[] {
+    return cells.map(([x, y]) => {
+      const change = { x, y, prev: this.level.getTile(x, y)!.type };
+      this.level.setTile(x, y, createTile(type, 0));
+      return change;
+    });
+  }
+
+  private isFloor(tx: number, ty: number): boolean {
+    return this.level.getTile(tx, ty)?.type === TileType.Floor;
+  }
+
+  private free(tx: number, ty: number): boolean {
+    return this.isFloor(tx, ty) && !this.usedTiles.has(tx + ty * this.cfg.mapWidth);
+  }
+
+  private claim(tx: number, ty: number): void {
+    this.usedTiles.add(tx + ty * this.cfg.mapWidth);
+  }
+
+  private pick<T>(list: readonly T[]): T {
+    return list[Math.floor(this.rng() * list.length)];
+  }
+
   /** Two (or four) solid 2×3 wall blocks, mirrored across the room. */
-  private pillarBlocks(room: RoomData): Array<{ x: number; y: number; prev: TileType }> {
+  private pillarBlocks(room: RoomData): TileChange[] {
     const bw = 2, bh = 3;
     const xs = [room.x + 2, room.x + room.w - 2 - bw];
     const ys = room.h >= 12 ? [room.y + 2, room.y + room.h - 2 - bh] : [room.y + Math.floor((room.h - bh) / 2)];
-    const changes: Array<{ x: number; y: number; prev: TileType }> = [];
-    if (xs[1] - xs[0] < bw + 2) return changes;
+    if (xs[1] - xs[0] < bw + 2) return [];
+    const cells: Array<[number, number]> = [];
     for (const by of ys) for (const bx of xs) {
-      for (let ty = by; ty < by + bh; ty++) for (let tx = bx; tx < bx + bw; tx++) {
-        changes.push({ x: tx, y: ty, prev: this.level.getTile(tx, ty)!.type });
-        this.level.setTile(tx, ty, createTile(TileType.Wall, 0));
-      }
+      for (let ty = by; ty < by + bh; ty++) for (let tx = bx; tx < bx + bw; tx++) cells.push([tx, ty]);
     }
-    return changes;
+    return this.setTiles(cells, TileType.Wall);
   }
 
-  /** A rectangular or cross-shaped pit, kept 2 tiles clear of the room's edges. */
-  private pit(room: RoomData): Array<{ x: number; y: number; prev: TileType }> {
-    const changes: Array<{ x: number; y: number; prev: TileType }> = [];
-    const pw = this.randInt(2, Math.min(4, room.w - 4));
-    const ph = this.randInt(2, Math.min(3, room.h - 4));
-    const px = room.x + 2 + this.randInt(0, room.w - 4 - pw);
-    const py = room.y + 2 + this.randInt(0, room.h - 4 - ph);
-    const cross = pw >= 3 && ph >= 3 && this.rng() < 0.5;
-    for (let ty = py; ty < py + ph; ty++) {
-      for (let tx = px; tx < px + pw; tx++) {
-        const corner = (tx === px || tx === px + pw - 1) && (ty === py || ty === py + ph - 1);
-        if (cross && corner) continue;
-        changes.push({ x: tx, y: ty, prev: this.level.getTile(tx, ty)!.type });
-        this.level.setTile(tx, ty, createTile(TileType.Hole, 0));
+  /** One or two framed 2×2 pits, each with a ring of floor around it and 2 tiles clear of the walls. */
+  private pits(room: RoomData, keep: Keep): boolean {
+    let placed = false;
+    const count = room.w >= 10 && this.rng() < 0.5 ? 2 : 1;
+    const maxX = room.x + room.w - 4;
+    const maxY = room.y + room.h - 4;
+    for (let i = 0; i < count && maxX >= room.x + 2 && maxY >= room.y + 2; i++) {
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const px = this.randInt(room.x + 2, maxX);
+        const py = this.randInt(room.y + 2, maxY);
+        let ringClear = true;
+        for (let y = py - 1; y <= py + 2; y++) for (let x = px - 1; x <= px + 2; x++) if (!this.free(x, y)) ringClear = false;
+        if (!ringClear) continue;
+        if (keep(() => this.setTiles([[px, py], [px + 1, py], [px, py + 1], [px + 1, py + 1]], TileType.Hole))) {
+          this.level.pits.push({ x: px, y: py });
+          for (let y = py - 1; y <= py + 2; y++) for (let x = px - 1; x <= px + 2; x++) this.claim(x, y);
+          placed = true;
+          break;
+        }
       }
     }
-    return changes;
+    return placed;
+  }
+
+  /** Blocks the given tiles with props, if the dungeon stays connected. */
+  private placeSolid(cells: Array<[number, number]>, kinds: PropKind[], props: PropPlacement[], keep: Keep): boolean {
+    if (cells.length === 0 || !cells.every(([x, y]) => this.free(x, y))) return false;
+    if (!keep(() => this.setTiles(cells, TileType.Obstacle))) return false;
+    cells.forEach(([x, y], i) => { this.claim(x, y); props.push({ kind: kinds[i % kinds.length], tx: x, ty: y }); });
+    return true;
+  }
+
+  /** Dresses a dungeon room by theme: a crypt, a storeroom or a plain hall. */
+  private furnish(room: RoomData, structured: boolean, props: PropPlacement[], keep: Keep): void {
+    const roll = this.rng();
+    if (roll < 0.4) {
+      this.tombNiches(room, props, keep);
+      if (!structured && room.w >= 8 && room.h >= 7) this.sarcophagi(room, props, keep);
+    } else if (roll < 0.7) {
+      this.crateCorners(room, props, keep);
+    } else if (!structured && room.w >= 8 && room.h >= 8) {
+      const y = room.y + Math.floor(room.h / 2);
+      this.placeSolid([[room.x + 2, y]], [this.pick(POSTS)], props, keep);
+      this.placeSolid([[room.x + room.w - 3, y]], [this.pick(POSTS)], props, keep);
+    }
+    this.urnsAlongWalls(room, roll >= 0.4 && roll < 0.7 ? 4 : 2, props);
+  }
+
+  /**
+   * Skeleton niches in a room's north wall, each with a pair of coffins standing
+   * in front of it and candles beside them.
+   */
+  private tombNiches(room: RoomData, props: PropPlacement[], keep: Keep): void {
+    const ty = room.y;
+    let placed = 0;
+    for (let tx = room.x + 1; tx <= room.x + room.w - 3 && placed < 2; tx++) {
+      const segment = [tx, tx + 1];
+      const fullFace = segment.every((x) => this.isWall(x, ty - 1) && this.isWall(x, ty - 2) && !isPillarColumn(x));
+      if (!fullFace || !this.isWall(tx - 1, ty - 1) || !this.isWall(tx + 2, ty - 1) || this.rng() < 0.35) continue;
+      if (!this.placeSolid([[tx, ty], [tx + 1, ty]], [this.pick(COFFINS), this.pick(COFFINS)], props, keep)) continue;
+      const W = this.cfg.mapWidth;
+      this.level.wallDecor.set(tx + (ty - 1) * W, 'niche0');
+      this.level.wallDecor.set(tx + 1 + (ty - 1) * W, 'niche1');
+      for (const cx of [tx - 1, tx + 2]) {
+        if (this.free(cx, ty) && this.rng() < 0.7) {
+          this.claim(cx, ty);
+          props.push({ kind: this.rng() < 0.5 ? 'candles' : 'candle', tx: cx, ty });
+        }
+      }
+      placed++;
+      tx += 3;
+    }
+  }
+
+  /** A row of sarcophagi across the middle of the room, with gaps to walk between. */
+  private sarcophagi(room: RoomData, props: PropPlacement[], keep: Keep): void {
+    const ty = room.y + Math.floor(room.h / 2);
+    const cells: Array<[number, number]> = [];
+    for (let x = room.x + 2; x <= room.x + room.w - 3; x += 2) cells.push([x, ty]);
+    if (cells.length >= 2) this.placeSolid(cells, cells.map(() => this.pick(SARCOPHAGI)), props, keep);
+  }
+
+  /** Stacks of crates in one or two corners. */
+  private crateCorners(room: RoomData, props: PropPlacement[], keep: Keep): void {
+    const corners: Array<[number, number, number]> = [
+      [room.x, room.y, 1], [room.x + room.w - 1, room.y, -1],
+      [room.x, room.y + room.h - 1, 1], [room.x + room.w - 1, room.y + room.h - 1, -1],
+    ];
+    const count = 1 + (this.rng() < 0.5 ? 1 : 0);
+    for (let i = 0; i < count; i++) {
+      const [x, y, dir] = corners.splice(Math.floor(this.rng() * corners.length), 1)[0];
+      const cells: Array<[number, number]> = [[x, y], [x + dir, y]];
+      this.placeSolid(cells, cells.map(() => this.pick(CRATES)), props, keep);
+    }
+  }
+
+  /** Urns (non-blocking) standing against the walls. */
+  private urnsAlongWalls(room: RoomData, count: number, props: PropPlacement[]): void {
+    const spots: Array<[number, number]> = [];
+    for (let ty = room.y; ty < room.y + room.h; ty++) {
+      for (let tx = room.x; tx < room.x + room.w; tx++) {
+        if (!this.free(tx, ty)) continue;
+        if (this.isWall(tx - 1, ty) || this.isWall(tx + 1, ty) || this.isWall(tx, ty - 1)) spots.push([tx, ty]);
+      }
+    }
+    for (let i = 0; i < count && spots.length; i++) {
+      const [tx, ty] = spots.splice(Math.floor(this.rng() * spots.length), 1)[0];
+      this.claim(tx, ty);
+      props.push({ kind: this.pick(URNS), tx, ty });
+    }
   }
 
   private tryFeature(
     from: { x: number; y: number },
     anchors: () => Array<{ x: number; y: number }>,
-    apply: () => Array<{ x: number; y: number; prev: TileType }>,
-  ): void {
+    apply: () => TileChange[],
+  ): boolean {
     const changes = apply();
-    if (changes.length && !this.reachable(from, anchors())) {
-      for (const c of changes) this.level.setTile(c.x, c.y, createTile(c.prev, 0));
-    }
+    if (changes.length === 0) return false;
+    if (this.reachable(from, anchors())) return true;
+    for (const c of changes) this.level.setTile(c.x, c.y, createTile(c.prev, 0));
+    return false;
   }
 
   private anyFloor(room: RoomData): { x: number; y: number } | null {
@@ -393,24 +527,40 @@ export class DungeonBuilder {
 
   // ── Torches ─────────────────────────────────────────────────────────────────
 
-  /** Torches hang on full-height brick faces (two wall tiles above a floor tile). */
+  /** A plain stretch of full-height brick face above floor tile (tx, ty), free for wall fixtures. */
+  private mountable(tx: number, ty: number): boolean {
+    const W = this.cfg.mapWidth;
+    return this.isFloor(tx, ty)
+      && this.isWall(tx, ty - 1) && this.isWall(tx, ty - 2)
+      && this.isWall(tx - 1, ty - 1) && this.isWall(tx + 1, ty - 1)
+      && !isPillarColumn(tx) && !this.level.wallDecor.has(tx + (ty - 1) * W);
+  }
+
+  /** Torches hang on full-height brick faces; returns the floor tiles below them. */
   private placeTorches(): Array<{ x: number; y: number }> {
     const { cfg } = this;
     const out: Array<{ x: number; y: number }> = [];
     for (let ty = 2; ty < cfg.mapHeight; ty++) {
       let last = -Infinity;
       for (let tx = 1; tx < cfg.mapWidth - 1; tx++) {
-        const mountable = this.level.getTile(tx, ty)?.type === TileType.Floor
-          && this.isWall(tx, ty - 1) && this.isWall(tx, ty - 2)
-          && this.isWall(tx - 1, ty - 1) && this.isWall(tx + 1, ty - 1)
-          && !isPillarColumn(tx);
-        if (!mountable) continue;
-        if (tx - last < cfg.torchSpacing) continue;
-        if (this.rng() < 0.25) continue;
+        if (!this.mountable(tx, ty) || tx - last < cfg.torchSpacing || this.rng() < 0.25) continue;
         last = tx;
-        out.push({ x: tx * TILE_WIDTH + TILE_WIDTH / 2, y: ty * TILE_HEIGHT - 30 });
+        out.push({ x: tx, y: ty });
       }
     }
     return out;
+  }
+
+  /** Cauldrons and chains hung on faces between the torches. */
+  private placeHangings(torches: Array<{ x: number; y: number }>, props: PropPlacement[]): void {
+    const { cfg } = this;
+    const nearTorch = (tx: number, ty: number) => torches.some((t) => t.y === ty && Math.abs(t.x - tx) < 2);
+    for (let ty = 2; ty < cfg.mapHeight; ty++) {
+      for (let tx = 1; tx < cfg.mapWidth - 1; tx++) {
+        if (!this.mountable(tx, ty) || nearTorch(tx, ty) || this.level.isSafeZone(tx, ty) || this.rng() > 0.12) continue;
+        props.push({ kind: this.pick(HANGINGS), tx, ty });
+        tx += 2;
+      }
+    }
   }
 }

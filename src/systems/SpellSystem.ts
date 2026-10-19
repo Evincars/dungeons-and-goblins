@@ -29,7 +29,7 @@ function spawnBolt(caster: Entity, dx: number, dy: number): void {
     yOffset: BOLT_HEIGHT,
     glow: { radius: 56 },
   });
-  sound.playSound('gem', p.x, p.y);
+  sound.playSound('spell', p.x, p.y);
 }
 
 function burst(bolt: Entity): void {

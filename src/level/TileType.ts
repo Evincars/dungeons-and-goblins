@@ -3,6 +3,8 @@ export const enum TileType {
   Wall          = 1,
   BreakableWall = 2,
   Hole          = 3,
+  /** Floor occupied by a solid prop (coffin, crate, post…): blocks movement, drawn as floor. */
+  Obstacle      = 4,
 }
 
 export const TILE_WIDTH  = 32;
@@ -47,6 +49,8 @@ export function createTile(type: TileType, imageVariant = 0): TileData {
       return { ...base, solid: true, passable: false, castsShadow: true, destroyable: true };
     case TileType.Hole:
       return { ...base };
+    case TileType.Obstacle:
+      return { ...base, solid: true, passable: false };
     default:
       return base;
   }

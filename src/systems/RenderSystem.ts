@@ -1,7 +1,10 @@
-import { Sprite } from 'pixi.js';
+import { Graphics, Sprite } from 'pixi.js';
 import { world } from '../world';
 import type { Entity } from '../world';
+import type { Level } from '../level/Level';
+import { TileType, TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
 import { whiteFrame } from '../render/Sheets';
+import { FALL_DEPTH } from './HoleSystem';
 
 type Overlay = { color: number; alpha: number };
 
@@ -47,7 +50,38 @@ function syncOverlay(entity: Entity, sprite: Sprite): void {
   layer.visible = true;
 }
 
-export function updateRender(_dt: number): void {
+/** A falling entity sinks into its pit; the floor in front of the pit hides what's below it. */
+function syncFall(entity: Entity, sprite: Sprite, level: Level): void {
+  if (!entity.falling) {
+    if (entity.fallMask) {
+      sprite.mask = null;
+      if (entity.hurtOverlay) entity.hurtOverlay.mask = null;
+      entity.fallMask.destroy();
+      world.removeComponent(entity, 'fallMask');
+    }
+    return;
+  }
+  const t = Math.min(1, entity.falling.age / entity.falling.duration);
+  sprite.y += Math.round(FALL_DEPTH * t);
+
+  const pos = entity.position!;
+  const tx = Math.floor(pos.x / TILE_WIDTH);
+  let ty = Math.floor(pos.y / TILE_HEIGHT) + 1;
+  while (level.getTile(tx, ty)?.type === TileType.Hole) ty++;
+  const clipBottom = ty * TILE_HEIGHT;
+
+  let mask = entity.fallMask;
+  if (!mask) {
+    mask = new Graphics();
+    sprite.parent?.addChild(mask);
+    world.addComponent(entity, 'fallMask', mask);
+  }
+  mask.clear().rect(0, 0, level.width * TILE_WIDTH, clipBottom).fill(0xffffff);
+  sprite.mask = mask;
+  if (entity.hurtOverlay) entity.hurtOverlay.mask = mask;
+}
+
+export function updateRender(level: Level): void {
   for (const entity of world.with('position', 'sprite')) {
     const pos = entity.position!;
     const sprite = entity.sprite!;
@@ -60,6 +94,7 @@ export function updateRender(_dt: number): void {
     sprite.x = Math.round(pos.x);
     sprite.y = Math.round(pos.y - yOff);
     sprite.zIndex = pos.y;
+    syncFall(entity, sprite, level);
 
     syncOverlay(entity, sprite);
   }

@@ -3,6 +3,7 @@ import { loadAllAssets as loadAssets } from '../assets/AssetLoader';
 import { GAME_WIDTH, GAME_HEIGHT, SCALE } from '../render/Camera';
 import { TitleScene } from '../scenes/TitleScene';
 import { InGameScene } from '../scenes/InGameScene';
+import { sound } from '../audio/SoundPlayer';
 
 type SceneId = 'title' | 'ingame';
 
@@ -24,7 +25,8 @@ export class Game {
     canvas.style.width  = `${GAME_WIDTH * SCALE}px`;
     canvas.style.height = `${GAME_HEIGHT * SCALE}px`;
 
-    await loadAssets();
+    sound.autoStart();
+    await Promise.all([loadAssets(), sound.load()]);
     await this.goto('title');
 
     this.app.ticker.add(() => this.tick());

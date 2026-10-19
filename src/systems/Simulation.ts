@@ -10,7 +10,7 @@ import { updateSword } from './SwordSystem';
 import { updateLoot } from './LootSystem';
 import { updateSpawners } from './SpawnerSystem';
 import { updateDeath } from './DeathSystem';
-import { updateHoles } from './HoleSystem';
+import { updateHoles, updateFalling } from './HoleSystem';
 import { updateDoors } from './DoorSystem';
 import { updateExit } from './ExitSystem';
 import { updateShop } from './ShopSystem';
@@ -55,6 +55,7 @@ export const SIMULATION: readonly System[] = [
   ({ level, dt }) => updateSpawners(level, dt),
   ({ level, dt }) => updateDeath(level, dt),
   ({ level }) => updateHoles(level),
+  ({ level }) => updateFalling(level),
   ({ level }) => updateChests(level),
   ({ level }) => updateDoors(level),
   () => updateExit(),
@@ -67,7 +68,7 @@ export const PRESENTATION: readonly System[] = [
   () => updateFx(),
   () => updateCharAnim(),
   ({ dt }) => updateAnimation(dt),
-  ({ dt }) => updateRender(dt),
+  ({ level }) => updateRender(level),
   ({ gameLayer }) => updateBars(gameLayer),
 ];
 

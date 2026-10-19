@@ -22,8 +22,6 @@ export type DungeonConfig = {
   pitChance: number;
   /** Enemies per 100 floor tiles in dungeon rooms. */
   enemyDensity: number;
-  /** Items per 100 floor tiles in dungeon rooms. */
-  itemDensity: number;
   /** Minimum tiles between torches along a wall. */
   torchSpacing: number;
   /** Optional deterministic RNG seed (uses Date.now() if omitted). */
@@ -40,8 +38,7 @@ export const DEFAULT_CONFIG: DungeonConfig = {
   corridorW:     2,
   splitDepth:    4,
   pillarChance: 0.45,
-  pitChance:    0.35,
+  pitChance:    0.5,
   enemyDensity:  3,
-  itemDensity:   2,
   torchSpacing:  5,
 };

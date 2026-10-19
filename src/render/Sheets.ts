@@ -33,10 +33,6 @@ const SHEETS: Record<string, SheetInfo> = {
   // Torch animation — 4 frames composited into one 64×16 strip
   torch:              { frameWidth: 16, frameHeight: 16 },
 
-  // Decorative props (baked from decorative.png)
-  decor_pot1:         { frameWidth: 16, frameHeight: 16 },
-  decor_pot2:         { frameWidth: 16, frameHeight: 16 },
-
   // ── Procedural UI / FX sheets ───────────────────────────────────────────────
   pickup_coin_16:     { frameWidth: 8,   frameHeight: 8   },
   pickup_potion:      { frameWidth: 12,  frameHeight: 16  },

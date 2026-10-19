@@ -30,10 +30,10 @@ function collect(coin: Entity, player: Entity): void {
     sound.playSound('potion', coin.position!.x, coin.position!.y);
   } else if (ld.kind === 'gem') {
     stats.gold += ld.value;
-    sound.playSound('gem', coin.position!.x, coin.position!.y);
+    sound.playSound(ld.value >= 100 ? 'gem_big' : 'gem', coin.position!.x, coin.position!.y);
   } else {
     stats.gold += ld.value;
-    sound.playSound('coin', coin.position!.x, coin.position!.y);
+    sound.playSound(ld.value >= 20 ? 'coin_big' : 'coin', coin.position!.x, coin.position!.y);
   }
 
   world.removeComponent(coin, 'loot');

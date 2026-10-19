@@ -2,6 +2,7 @@ import { Application, Container } from 'pixi.js';
 import { world } from '../world';
 import { buildDungeon } from '../level/DungeonGenerator';
 import { buildLevelView } from '../level/TileRenderer';
+import type { LevelView } from '../level/TileRenderer';
 import { DarknessRenderer } from '../level/DarknessRenderer';
 import { LightRenderer } from '../level/LightRenderer';
 import type { LightSource } from '../level/LightRenderer';
@@ -20,6 +21,7 @@ import { isShopOpen, activeShopItems, closeShop } from '../systems/ShopSystem';
 import { isLevelComplete, resetLevelComplete } from '../systems/ExitSystem';
 import { PixelLabel } from '../ui/PixelText';
 import { Crosshair } from '../ui/Crosshair';
+import { sound } from '../audio/SoundPlayer';
 import { GAME_WIDTH as VIEW_W, VIEW_HEIGHT as VIEW_H } from '../render/Camera';
 import type { Level } from '../level/Level';
 
@@ -28,7 +30,7 @@ export class InGameScene {
   private app!: Application;
   private gameLayer!: Container;
   private uiLayer!: Container;
-  private terrainContainer!: Container;
+  private terrain: LevelView | null = null;
   private darkness!: DarknessRenderer;
   private lights!: LightRenderer;
   private hud!: HudPanel;
@@ -60,9 +62,7 @@ export class InGameScene {
     this.level = level;
 
     // Terrain (clear dirty flag so it doesn't rebuild every frame)
-    this.terrainContainer = buildLevelView(level);
-    this.terrainContainer.zIndex = -1;
-    this.gameLayer.addChild(this.terrainContainer);
+    this.mountTerrain();
     level.clearDirty();
 
     // Spawn player
@@ -119,6 +119,18 @@ export class InGameScene {
     );
   }
 
+  /** (Re)builds the terrain: flat layer at the bottom, wall rows/arches depth-sorted with entities. */
+  private mountTerrain(): void {
+    if (this.terrain) {
+      this.terrain.base.destroy({ children: true });
+      for (const o of this.terrain.occluders) o.destroy();
+    }
+    this.terrain = buildLevelView(this.level);
+    this.terrain.base.zIndex = -1;
+    this.gameLayer.addChildAt(this.terrain.base, 0);
+    for (const o of this.terrain.occluders) this.gameLayer.addChild(o);
+  }
+
   update(): void {
     this.tick++;
 
@@ -129,10 +141,7 @@ export class InGameScene {
       gameLayer: this.gameLayer,
       rebuildTerrain: () => {
         this.level.clearDirty();
-        this.terrainContainer.destroy();
-        this.terrainContainer = buildLevelView(this.level);
-        this.terrainContainer.zIndex = -1;
-        this.gameLayer.addChildAt(this.terrainContainer, 0);
+        this.mountTerrain();
       },
     };
 
@@ -142,6 +151,7 @@ export class InGameScene {
     // Camera follow player
     for (const player of world.with('position', 'playerInput')) {
       const pos = player.position!;
+      sound.setListener(pos.x, pos.y);
       camera.x = Math.max(0, Math.min(
         this.level.width * TILE_WIDTH - GAME_WIDTH,
         Math.round(pos.x - GAME_WIDTH / 2),

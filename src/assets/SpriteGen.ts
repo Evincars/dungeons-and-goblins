@@ -281,26 +281,6 @@ export function genDustSheet(): HTMLCanvasElement {
   return c;
 }
 
-// ── HUD BARS ─────────────────────────────────────────────────────────────────
-
-export function genBarSheet(color: number): HTMLCanvasElement {
-  const [c, ctx] = mkCanvas(32 * 21, 4);
-  for (let step = 0; step < 21; step++) {
-    const w = step * 1.5;
-    ctx.fillStyle = hex(color);
-    ctx.fillRect(step * 32, 0, w > 0 ? w : 0, 4);
-  }
-  return c;
-}
-
-export function genBarOverlay(): HTMLCanvasElement {
-  const [c, ctx] = mkCanvas(32, 4);
-  ctx.strokeStyle = '#000000';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(0.5, 0.5, 31, 3);
-  return c;
-}
-
 // ── DARKNESS / FOG ───────────────────────────────────────────────────────────
 
 export function genDarkSheet(): HTMLCanvasElement {

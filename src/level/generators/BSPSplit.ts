@@ -1,47 +1,34 @@
-/** Generic BSP (Binary Space Partition) rectangle splitter.
- *  Returns the leaf rects of the BSP tree — one leaf per potential room.
- */
+/** Generic BSP (Binary Space Partition) rectangle splitter. */
 
 export type Rect = { x: number; y: number; w: number; h: number };
 
-export function bspSplit(
-  area: Rect,
-  minSize: number,
-  depth: number,
-  rng: () => number,
-): Rect[] {
-  const leaves: Rect[] = [];
-  _split(area, minSize, depth, rng, leaves);
-  return leaves;
-}
+export type BspNode = { rect: Rect; left?: BspNode; right?: BspNode };
 
-function _split(rect: Rect, minSize: number, depth: number, rng: () => number, out: Rect[]): void {
-  if (depth <= 0) { out.push(rect); return; }
+/** Builds the BSP tree; leaves are the partitions rooms get placed in. */
+export function bspTree(area: Rect, minSize: number, depth: number, rng: () => number): BspNode {
+  const node: BspNode = { rect: area };
+  if (depth <= 0) return node;
 
-  const canH = rect.h >= minSize * 2 + 1;
-  const canV = rect.w >= minSize * 2 + 1;
+  const canH = area.h >= minSize * 2;
+  const canV = area.w >= minSize * 2;
+  if (!canH && !canV) return node;
 
-  if (!canH && !canV) { out.push(rect); return; }
-
-  if (canH && (!canV || rng() < 0.5)) {
-    // horizontal split
-    const cut = minSize + Math.floor(rng() * (rect.h - minSize * 2 - 1)) + 1;
-    _split({ ...rect, h: cut },                         minSize, depth - 1, rng, out);
-    _split({ ...rect, y: rect.y + cut, h: rect.h - cut }, minSize, depth - 1, rng, out);
+  // Prefer cutting across the longer side so partitions stay roughly square.
+  const horizontal = canH && (!canV || (area.h > area.w * 1.25) || (area.w <= area.h * 1.25 && rng() < 0.5));
+  if (horizontal) {
+    const cut = minSize + Math.floor(rng() * (area.h - minSize * 2 + 1));
+    node.left = bspTree({ ...area, h: cut }, minSize, depth - 1, rng);
+    node.right = bspTree({ ...area, y: area.y + cut, h: area.h - cut }, minSize, depth - 1, rng);
   } else {
-    // vertical split
-    const cut = minSize + Math.floor(rng() * (rect.w - minSize * 2 - 1)) + 1;
-    _split({ ...rect, w: cut },                         minSize, depth - 1, rng, out);
-    _split({ ...rect, x: rect.x + cut, w: rect.w - cut }, minSize, depth - 1, rng, out);
+    const cut = minSize + Math.floor(rng() * (area.w - minSize * 2 + 1));
+    node.left = bspTree({ ...area, w: cut }, minSize, depth - 1, rng);
+    node.right = bspTree({ ...area, x: area.x + cut, w: area.w - cut }, minSize, depth - 1, rng);
   }
+  return node;
 }
 
-/** Shrink a BSP leaf by a margin to get the actual room rect inside the partition. */
-export function leafToRoom(leaf: Rect, margin: number, minSize: number): Rect | null {
-  const x = leaf.x + margin;
-  const y = leaf.y + margin;
-  const w = leaf.w - margin * 2;
-  const h = leaf.h - margin * 2;
-  if (w < minSize || h < minSize) return null;
-  return { x, y, w, h };
+export function bspLeaves(node: BspNode, out: BspNode[] = []): BspNode[] {
+  if (!node.left || !node.right) out.push(node);
+  else { bspLeaves(node.left, out); bspLeaves(node.right, out); }
+  return out;
 }

@@ -3,6 +3,8 @@ import { GAME_WIDTH, VIEW_HEIGHT, camera } from '../render/Camera';
 
 const FLICKER_SPEED = 0.05;
 const FLICKER_AMOUNT = 5;
+/** Light level everywhere before torches/lantern add to it (multiplied over the scene). */
+const AMBIENT = 0x9a94a2;
 
 /** Cached Pixi Textures keyed by radius (positive = torch, negative = player). */
 const lightTexCache = new Map<number, Texture>();
@@ -67,7 +69,7 @@ export class LightRenderer {
     this.ambientGfx = new Graphics();
     this.lightContainer = new Container();
     // Pre-warm common radii so there's no stutter on first torch render
-    for (const r of [60, 70, 80, 90, 95]) {
+    for (const r of [110, 115, 120, 125]) {
       getLightTexture(r, true);
       getLightTexture(r, false);
     }
@@ -80,7 +82,7 @@ export class LightRenderer {
 
     // Draw solid dark background into lightmap
     this.ambientGfx.clear();
-    this.ambientGfx.rect(0, 0, w, h).fill({ color: 0x080503, alpha: 1 });
+    this.ambientGfx.rect(0, 0, w, h).fill({ color: AMBIENT, alpha: 1 });
     app.renderer.render({ container: this.ambientGfx, target: this.lightmap, clear: true });
 
     // Reuse sprite pool for lights

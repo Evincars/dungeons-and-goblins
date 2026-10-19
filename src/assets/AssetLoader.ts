@@ -3,7 +3,7 @@ import {
   genCoinSheet, genPotionSheet, genGemSheet,
   genSpawnerSheet, genChestSheet, genExitButtonSheet,
   genSwordSwingSheet, genDeathFxSheet, genDustSheet,
-  genBarSheet, genBarOverlay, genDarkSheet,
+  genDarkSheet,
   genFontSheet, genButtonSheet, genPanelBg, genPortrait, genMinimapIcons,
 } from './SpriteGen';
 
@@ -44,6 +44,15 @@ const PNG_ASSETS = [
 
   // Decorative objects (props)
   { alias: 'decorative', src: '/catacombs/decorative.png' },
+
+  // Bars (from Catacomb Snatch): world bars are 21 steps of 32×4,
+  // HUD panel bars are 101 steps of 100×6 (step 0 = full).
+  { alias: 'bar_green',          src: '/ui/bar_green.png' },
+  { alias: 'bar_green_underlay', src: '/ui/bar_green_underlay.png' },
+  { alias: 'bar_outline',        src: '/ui/bar_outline.png' },
+  { alias: 'sprint_bar',         src: '/ui/sprint_bar.png' },
+  { alias: 'panel_healthbar',    src: '/ui/panel_healthbar.png' },
+  { alias: 'panel_xpbar',        src: '/ui/panel_xpbar.png' },
 ];
 
 /** Crop a pixel region from a loaded texture's image into its own nearest-filtered Texture. */
@@ -65,11 +74,6 @@ export async function loadAllAssets(_onProgress?: (f: number) => void): Promise<
     tex.source.scaleMode = 'nearest';
     textures.set(alias, tex);
   }
-
-  // Bake wall sprites (cap molding row + brick face) from the tileset
-  const tileset = textures.get('tileset')!;
-  textures.set('wall_main', cropTexture(tileset, 80, 112, 32, 48));
-  textures.set('wall_breakable', cropTexture(tileset, 176, 112, 32, 48));
 
   // Decorative props from decorative.png (clay pots)
   const decor = textures.get('decorative')!;
@@ -100,10 +104,6 @@ export async function loadAllAssets(_onProgress?: (f: number) => void): Promise<
     fx_death:           genDeathFxSheet,
     fx_dust:            genDustSheet,
     dark:               genDarkSheet,
-    bar_green:          () => genBarSheet(0x40c030),
-    bar_green_underlay: () => genBarSheet(0x204018),
-    bar_outline:        genBarOverlay,
-    sprint_bar:         () => genBarSheet(0x2040c0),
     font_default:       genFontSheet,
     button:             genButtonSheet,
     portrait:           genPortrait,

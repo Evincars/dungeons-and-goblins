@@ -1,17 +1,18 @@
 /** Generic procedural dungeon builder.
  *
  * Layout (left → right):
- *   [safe room] | [dungeon area – BSP rooms] | [exit room]
+ *   [safe room] ─door─ [dungeon: BSP rooms joined along the tree] ── [exit room]
  *
- * Returns a DungeonLayout that callers use to populate the Level grid and
- * create ECS entities.  No direct world.add() calls happen here so this
- * class is fully reusable and testable in isolation.
+ * Everything outside rooms and corridors stays solid wall, which the terrain
+ * autotiler renders as black void with stone outlines and south-facing brick.
+ * No world.add() calls happen here, so the builder is reusable and testable.
  */
 
 import { Level } from '../Level';
 import { TileType, TILE_WIDTH, TILE_HEIGHT, createTile } from '../TileType';
 import type { DungeonConfig } from './DungeonConfig';
-import { bspSplit, leafToRoom, type Rect } from './BSPSplit';
+import { bspTree, bspLeaves, type BspNode } from './BSPSplit';
+import { isPillarColumn } from '../TerrainAutotile';
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -36,196 +37,380 @@ export type DungeonLayout = {
   level: Level;
   rooms: RoomData[];
   playerSpawn: { x: number; y: number };
+  /** World positions of torch flames (mounted on brick faces). */
   torchPositions: Array<{ x: number; y: number }>;
   exitButtonPos: { x: number; y: number };
   shopPos: { x: number; y: number };
   safeDoor: DoorData;
 };
 
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const tileCenter = (tx: number, ty: number) => ({
+  x: tx * TILE_WIDTH + TILE_WIDTH / 2,
+  y: ty * TILE_HEIGHT + TILE_HEIGHT / 2,
+});
+
 // ── Builder ───────────────────────────────────────────────────────────────────
 
 export class DungeonBuilder {
-  private cfg: DungeonConfig;
-  private rng: () => number;
+  private readonly cfg: DungeonConfig;
+  private readonly baseSeed: number;
+  private rng: () => number = Math.random;
+  private level!: Level;
   private roomIdSeq = 0;
 
   constructor(cfg: DungeonConfig) {
     this.cfg = cfg;
-    let seed = (cfg.seed ?? Date.now()) >>> 0;
-    this.rng = () => {
-      seed = Math.imul(seed ^ (seed >>> 16), 0x45d9f3b);
-      seed = Math.imul(seed ^ (seed >>> 16), 0x45d9f3b);
-      seed ^= seed >>> 16;
-      return (seed >>> 0) / 0x100000000;
-    };
+    this.baseSeed = (cfg.seed ?? Date.now()) >>> 0;
   }
 
   build(): DungeonLayout {
+    for (let attempt = 0; attempt < 25; attempt++) {
+      const layout = this.buildOnce(this.baseSeed + attempt * 7919);
+      if (layout) return layout;
+    }
+    throw new Error('Dungeon generation failed after 25 attempts');
+  }
+
+  private buildOnce(seed: number): DungeonLayout | null {
     const { cfg } = this;
-    const level = new Level(cfg.mapWidth, cfg.mapHeight);
+    const W = cfg.mapWidth;
+    const H = cfg.mapHeight;
+    const cw = cfg.corridorW;
+    this.rng = mulberry32(seed);
+    this.roomIdSeq = 0;
+    this.level = new Level(W, H);
+    this.fill(0, 0, W, H, TileType.Wall);
 
-    // Fill everything with walls initially
-    this.fill(level, 0, 0, cfg.mapWidth, cfg.mapHeight, TileType.Wall);
+    // ── Safe room (left) and exit room (right), vertically centred ────────────
+    const sideW = cfg.safeRoomW - 6;
+    const sideH = Math.min(10, H - 8);
+    const safe = this.carveRoom(2, Math.floor((H - sideH) / 2), sideW, sideH, 'safe');
+    const exitW = cfg.exitRoomW - 6;
+    const exit = this.carveRoom(W - 2 - exitW, Math.floor((H - sideH) / 2), exitW, sideH, 'exit');
 
-    // ── Safe room (left) ──────────────────────────────────────────────────────
-    const safeInner = this.carveRoom(level, 1, 1, cfg.safeRoomW - 2, cfg.mapHeight - 2, 'safe');
+    // ── Dungeon rooms, one per BSP leaf ───────────────────────────────────────
+    const area = { x: cfg.safeRoomW, y: 1, w: W - cfg.safeRoomW - cfg.exitRoomW, h: H - 2 };
+    const tree = bspTree(area, cfg.minRoomSize + 3, cfg.splitDepth, this.rng);
+    const leafRooms = new Map<BspNode, RoomData>();
+    for (const leaf of bspLeaves(tree)) {
+      const r = leaf.rect;
+      // 1-tile margin left/right/bottom, 2 on top so north walls are thick
+      // enough for a full brick face.
+      const maxW = Math.min(cfg.maxRoomSize, r.w - 2);
+      const maxH = Math.min(cfg.maxRoomSize, r.h - 3);
+      if (maxW < cfg.minRoomSize || maxH < cfg.minRoomSize) continue;
+      const w = this.randInt(cfg.minRoomSize, maxW);
+      const h = this.randInt(cfg.minRoomSize, maxH);
+      const x = r.x + 1 + this.randInt(0, r.w - 2 - w);
+      const y = r.y + 2 + this.randInt(0, r.h - 3 - h);
+      leafRooms.set(leaf, this.carveRoom(x, y, w, h, 'dungeon'));
+    }
+    const dungeonRooms = [...leafRooms.values()];
+    if (dungeonRooms.length < 4) return null;
 
-    // Mark safe zone tiles
-    for (let ty = safeInner.y; ty < safeInner.y + safeInner.h; ty++) {
-      for (let tx = safeInner.x; tx < safeInner.x + safeInner.w; tx++) {
-        level.markSafeZone(tx, ty);
+    // ── Join siblings up the BSP tree, so corridors follow the partitioning ───
+    const join = (node: BspNode): RoomData[] => {
+      if (!node.left || !node.right) {
+        const room = leafRooms.get(node);
+        return room ? [room] : [];
       }
-    }
-
-    // ── Exit room (right) ─────────────────────────────────────────────────────
-    const exitX = cfg.mapWidth - cfg.exitRoomW;
-    const exitInner = this.carveRoom(level, exitX + 1, 1, cfg.exitRoomW - 2, cfg.mapHeight - 2, 'exit');
-    for (let ty = exitInner.y; ty < exitInner.y + exitInner.h; ty++) {
-      for (let tx = exitInner.x; tx < exitInner.x + exitInner.w; tx++) {
-        level.markSafeZone(tx, ty);
+      const a = join(node.left);
+      const b = join(node.right);
+      if (a.length && b.length) {
+        let best: [RoomData, RoomData] = [a[0], b[0]];
+        let bestGap = Infinity;
+        for (const ra of a) for (const rb of b) {
+          const gap = this.rectGap(ra, rb);
+          if (gap < bestGap) { bestGap = gap; best = [ra, rb]; }
+        }
+        this.corridor(best[0], best[1]);
       }
-    }
+      return [...a, ...b];
+    };
+    join(tree);
 
-    // ── Dungeon middle area (BSP) ─────────────────────────────────────────────
-    const dungeonX = cfg.safeRoomW;
-    const dungeonW = cfg.mapWidth - cfg.safeRoomW - cfg.exitRoomW;
-    const area: Rect = { x: dungeonX, y: 1, w: dungeonW, h: cfg.mapHeight - 2 };
-    const leaves = bspSplit(area, cfg.minRoomSize + 2, cfg.splitDepth, this.rng);
+    // ── Safe door → nearest dungeon room; nearest dungeon room → exit ─────────
+    const doorX = safe.x + safe.w;
+    const doorY = safe.y + Math.floor((safe.h - cw) / 2);
+    const firstRoom = this.nearestRoom(dungeonRooms, doorX, doorY + cw / 2);
+    this.corridorFromPoint(doorX, doorY, firstRoom, 1);
+    const exitDoorX = exit.x - 1;
+    const exitDoorY = exit.y + Math.floor((exit.h - cw) / 2);
+    const lastRoom = this.nearestRoom(dungeonRooms, exitDoorX, exitDoorY + cw / 2);
+    this.corridorFromPoint(exitDoorX, exitDoorY, lastRoom, -1);
 
-    const dungeonRooms: RoomData[] = [];
-    for (const leaf of leaves) {
-      const r = leafToRoom(leaf, 1, cfg.minRoomSize);
-      if (!r) continue;
-      // Optionally shrink to maxRoomSize
-      const rx = r.x + Math.floor(this.rng() * Math.max(0, r.w - cfg.maxRoomSize));
-      const ry = r.y + Math.floor(this.rng() * Math.max(0, r.h - cfg.maxRoomSize));
-      const rw = Math.min(r.w, cfg.minRoomSize + Math.floor(this.rng() * (cfg.maxRoomSize - cfg.minRoomSize + 1)));
-      const rh = Math.min(r.h, cfg.minRoomSize + Math.floor(this.rng() * (cfg.maxRoomSize - cfg.minRoomSize + 1)));
-      dungeonRooms.push(this.carveRoom(level, rx, ry, rw, rh, 'dungeon'));
-    }
-
-    // Connect dungeon rooms with corridors
-    this.connectRoomsSequentially(level, [safeInner, ...dungeonRooms, exitInner]);
-
-    // ── Safe-room door ──────────────────────────────────────────────────────
-    // A one-tile gate in the wall column between the safe room and the dungeon,
-    // aligned with the corridor so it is open on spawn and seals once players leave.
-    const doorCol = cfg.safeRoomW - 1;
-    const doorMidY = safeInner.y + Math.floor(safeInner.h / 2);
-    const doorHalf = Math.floor(cfg.corridorW / 2);
     const doorTiles: Array<{ x: number; y: number }> = [];
-    for (let ty = doorMidY - doorHalf; ty <= doorMidY + doorHalf; ty++) {
-      level.setTile(doorCol, ty, createTile(TileType.Floor, 0));
-      doorTiles.push({ x: doorCol, y: ty });
+    for (let i = 0; i < cw; i++) doorTiles.push({ x: doorX, y: doorY + i });
+
+    this.removeSlivers();
+
+    const playerTile = { x: safe.x + 2, y: safe.y + Math.floor(safe.h / 2) };
+    const exitTile = { x: exit.x + Math.floor(exit.w / 2), y: exit.y + Math.floor(exit.h / 2) };
+    const anchors = () => [exitTile, ...dungeonRooms.map((r) => this.anyFloor(r))
+      .filter((p): p is { x: number; y: number } => p !== null)];
+    if (!this.reachable(playerTile, anchors())) return null;
+
+    // ── Room features, each kept only if everything stays reachable ───────────
+    for (const room of dungeonRooms) {
+      if (room.w >= 9 && room.h >= 8 && this.rng() < cfg.pillarChance) {
+        this.tryFeature(playerTile, anchors, () => this.pillarBlocks(room));
+      } else if (room.w >= 8 && room.h >= 7 && this.rng() < cfg.pitChance) {
+        this.tryFeature(playerTile, anchors, () => this.pit(room));
+      }
     }
-    const safeDoor = {
-      tiles: doorTiles,
-      boundaryX: cfg.safeRoomW * TILE_WIDTH,
-    };
 
-    // ── Torches ───────────────────────────────────────────────────────────────
-    const torchPositions: Array<{ x: number; y: number }> = [];
-    const allRooms = [safeInner, ...dungeonRooms, exitInner];
-    for (const room of allRooms) {
-      this.placeTorchesInRoom(room, torchPositions);
+    // ── Safe zones ────────────────────────────────────────────────────────────
+    for (const room of [safe, exit]) {
+      for (let ty = room.y; ty < room.y + room.h; ty++) {
+        for (let tx = room.x; tx < room.x + room.w; tx++) this.level.markSafeZone(tx, ty);
+      }
     }
-
-    // ── Spawn points ──────────────────────────────────────────────────────────
-    const playerSpawn = {
-      x: (safeInner.x + 2) * TILE_WIDTH + TILE_WIDTH / 2,
-      y: (safeInner.y + Math.floor(safeInner.h / 2)) * TILE_HEIGHT + TILE_HEIGHT / 2,
-    };
-    level.addSpawnPoint(playerSpawn.x, playerSpawn.y);
-
-    const shopPos = {
-      x: (safeInner.x + safeInner.w - 3) * TILE_WIDTH + TILE_WIDTH / 2,
-      y: (safeInner.y + Math.floor(safeInner.h / 2)) * TILE_HEIGHT + TILE_HEIGHT / 2,
-    };
-
-    const exitButtonPos = {
-      x: (exitInner.x + Math.floor(exitInner.w / 2)) * TILE_WIDTH + TILE_WIDTH / 2,
-      y: (exitInner.y + Math.floor(exitInner.h / 2)) * TILE_HEIGHT + TILE_HEIGHT / 2,
-    };
 
     return {
-      level,
-      rooms: allRooms,
-      playerSpawn,
-      torchPositions,
-      exitButtonPos,
-      shopPos,
-      safeDoor,
+      level: this.level,
+      rooms: [safe, ...dungeonRooms, exit],
+      playerSpawn: (() => {
+        const p = tileCenter(playerTile.x, playerTile.y);
+        this.level.addSpawnPoint(p.x, p.y);
+        return p;
+      })(),
+      torchPositions: this.placeTorches(),
+      exitButtonPos: tileCenter(exitTile.x, exitTile.y),
+      shopPos: tileCenter(safe.x + Math.floor(safe.w / 2), safe.y + 1),
+      safeDoor: { tiles: doorTiles, boundaryX: (doorX + 1) * TILE_WIDTH + TILE_WIDTH / 2 },
     };
   }
 
-  // ── Private helpers ──────────────────────────────────────────────────────────
+  // ── Carving ─────────────────────────────────────────────────────────────────
 
-  private nextId(): number { return this.roomIdSeq++; }
+  private randInt(min: number, max: number): number {
+    return min + Math.floor(this.rng() * (max - min + 1));
+  }
 
-  private fill(level: Level, x: number, y: number, w: number, h: number, type: TileType): void {
+  private isWall(tx: number, ty: number): boolean {
+    const t = this.level.getTile(tx, ty);
+    return !t || t.type === TileType.Wall || t.type === TileType.BreakableWall;
+  }
+
+  private fill(x: number, y: number, w: number, h: number, type: TileType): void {
     for (let ty = y; ty < y + h; ty++) {
       for (let tx = x; tx < x + w; tx++) {
-        level.setTile(tx, ty, createTile(type, Math.floor(this.rng() * 4)));
+        // Never carve the outermost ring, so the map always has a wall border.
+        if (type !== TileType.Wall && (tx <= 0 || ty <= 0 || tx >= this.cfg.mapWidth - 1 || ty >= this.cfg.mapHeight - 1)) continue;
+        this.level.setTile(tx, ty, createTile(type, Math.floor(this.rng() * 4)));
       }
     }
   }
 
-  private carveRoom(level: Level, x: number, y: number, w: number, h: number, type: RoomType): RoomData {
-    this.fill(level, x, y, w, h, TileType.Floor);
-    const id = this.nextId();
+  private carveRoom(x: number, y: number, w: number, h: number, type: RoomType): RoomData {
+    this.fill(x, y, w, h, TileType.Floor);
     return {
-      id, type, x, y, w, h,
+      id: this.roomIdSeq++, type, x, y, w, h,
       centerX: (x + Math.floor(w / 2)) * TILE_WIDTH + TILE_WIDTH / 2,
       centerY: (y + Math.floor(h / 2)) * TILE_HEIGHT + TILE_HEIGHT / 2,
     };
   }
 
-  private connectRoomsSequentially(level: Level, rooms: RoomData[]): void {
-    for (let i = 0; i < rooms.length - 1; i++) {
-      this.connectTwoRooms(level, rooms[i], rooms[i + 1]);
-    }
+  private rectGap(a: RoomData, b: RoomData): number {
+    const gx = Math.max(0, Math.max(a.x, b.x) - Math.min(a.x + a.w, b.x + b.w));
+    const gy = Math.max(0, Math.max(a.y, b.y) - Math.min(a.y + a.h, b.y + b.h));
+    return gx + gy;
   }
 
-  private connectTwoRooms(level: Level, a: RoomData, b: RoomData): void {
+  private nearestRoom(rooms: RoomData[], tx: number, ty: number): RoomData {
+    let best = rooms[0];
+    let bestD = Infinity;
+    for (const r of rooms) {
+      const cx = Math.max(r.x, Math.min(tx, r.x + r.w - 1));
+      const cy = Math.max(r.y, Math.min(ty, r.y + r.h - 1));
+      const d = Math.abs(cx - tx) + Math.abs(cy - ty) * 1.5;
+      if (d < bestD) { bestD = d; best = r; }
+    }
+    return best;
+  }
+
+  /** Straight corridor where the rooms overlap on an axis, otherwise an L. */
+  private corridor(a: RoomData, b: RoomData): void {
     const cw = this.cfg.corridorW;
-    // Center-point of each room in tile coords
-    const ax = a.x + Math.floor(a.w / 2);
-    const ay = a.y + Math.floor(a.h / 2);
-    const bx = b.x + Math.floor(b.w / 2);
-    const by = b.y + Math.floor(b.h / 2);
-
-    // L-shaped corridor: horizontal first, then vertical
-    const hx0 = Math.min(ax, bx);
-    const hx1 = Math.max(ax, bx);
-    const offY = Math.floor(-cw / 2);
-    this.fill(level, hx0, ay + offY, hx1 - hx0 + 1, cw, TileType.Floor);
-
-    const vy0 = Math.min(ay, by);
-    const vy1 = Math.max(ay, by);
-    const offX = Math.floor(-cw / 2);
-    this.fill(level, bx + offX, vy0, cw, vy1 - vy0 + 1, TileType.Floor);
+    const oy0 = Math.max(a.y, b.y);
+    const oy1 = Math.min(a.y + a.h, b.y + b.h);
+    if (oy1 - oy0 >= cw) {
+      const y = this.randInt(oy0, oy1 - cw);
+      const [l, r] = a.x < b.x ? [a, b] : [b, a];
+      const x0 = l.x + l.w;
+      this.fill(x0, y, Math.max(0, r.x - x0), cw, TileType.Floor);
+      return;
+    }
+    const ox0 = Math.max(a.x, b.x);
+    const ox1 = Math.min(a.x + a.w, b.x + b.w);
+    if (ox1 - ox0 >= cw) {
+      const x = this.randInt(ox0, ox1 - cw);
+      const [t, btm] = a.y < b.y ? [a, b] : [b, a];
+      const y0 = t.y + t.h;
+      this.fill(x, y0, cw, Math.max(0, btm.y - y0), TileType.Floor);
+      return;
+    }
+    const px = this.randInt(a.x, a.x + a.w - cw);
+    const py = this.randInt(a.y, a.y + a.h - cw);
+    const qx = this.randInt(b.x, b.x + b.w - cw);
+    const qy = this.randInt(b.y, b.y + b.h - cw);
+    if (this.rng() < 0.5) {
+      this.fill(Math.min(px, qx), py, Math.abs(qx - px) + cw, cw, TileType.Floor);
+      this.fill(qx, Math.min(py, qy), cw, Math.abs(qy - py) + cw, TileType.Floor);
+    } else {
+      this.fill(px, Math.min(py, qy), cw, Math.abs(qy - py) + cw, TileType.Floor);
+      this.fill(Math.min(px, qx), qy, Math.abs(qx - px) + cw, cw, TileType.Floor);
+    }
   }
 
-  private placeTorchesInRoom(room: RoomData, out: Array<{ x: number; y: number }>): void {
-    const { torchSpacing } = this.cfg;
-    // Place torches on the inner perimeter of the room every torchSpacing tiles
-    const perim: [number, number][] = [];
-    for (let tx = room.x; tx < room.x + room.w; tx++) {
-      perim.push([tx, room.y]);
-      perim.push([tx, room.y + room.h - 1]);
+  /** Corridor from a door column (heading `dir` = ±1 on x) into a room. */
+  private corridorFromPoint(x: number, y: number, room: RoomData, dir: 1 | -1): void {
+    const cw = this.cfg.corridorW;
+    if (room.y <= y && room.y + room.h >= y + cw) {
+      const end = dir > 0 ? room.x : room.x + room.w - 1;
+      this.fill(Math.min(x, end), y, Math.abs(end - x) + 1, cw, TileType.Floor);
+      return;
     }
-    for (let ty = room.y + 1; ty < room.y + room.h - 1; ty++) {
-      perim.push([room.x, ty]);
-      perim.push([room.x + room.w - 1, ty]);
+    const cx = room.x + Math.floor((room.w - cw) / 2);
+    const cy = room.y + Math.floor((room.h - cw) / 2);
+    this.fill(Math.min(x, cx), y, Math.abs(cx - x) + cw, cw, TileType.Floor);
+    this.fill(cx, Math.min(y, cy), cw, Math.abs(cy - y) + cw, TileType.Floor);
+  }
+
+  /** Turns 1-tile wall slivers (open on both sides vertically) and lone posts into floor. */
+  private removeSlivers(): void {
+    const { cfg } = this;
+    const open = (tx: number, ty: number) => !this.isWall(tx, ty);
+    for (let pass = 0; pass < 3; pass++) {
+      let changed = false;
+      for (let ty = 1; ty < cfg.mapHeight - 1; ty++) {
+        for (let tx = cfg.safeRoomW; tx < cfg.mapWidth - cfg.exitRoomW; tx++) {
+          if (!this.isWall(tx, ty)) continue;
+          const ns = open(tx, ty - 1) && open(tx, ty + 1);
+          const lone = ns && open(tx - 1, ty) && open(tx + 1, ty);
+          if (ns || lone) {
+            this.level.setTile(tx, ty, createTile(TileType.Floor, Math.floor(this.rng() * 4)));
+            changed = true;
+          }
+        }
+      }
+      if (!changed) break;
     }
-    // Sample every torchSpacing perim tiles (offset randomly per room)
-    const offset = Math.floor(this.rng() * torchSpacing);
-    for (let i = offset; i < perim.length; i += torchSpacing) {
-      const [tx, ty] = perim[i];
-      out.push({
-        x: tx * TILE_WIDTH + TILE_WIDTH / 2,
-        y: ty * TILE_HEIGHT + TILE_HEIGHT / 2,
-      });
+  }
+
+  // ── Room features ───────────────────────────────────────────────────────────
+
+  /** Two (or four) solid 2×3 wall blocks, mirrored across the room. */
+  private pillarBlocks(room: RoomData): Array<{ x: number; y: number; prev: TileType }> {
+    const bw = 2, bh = 3;
+    const xs = [room.x + 2, room.x + room.w - 2 - bw];
+    const ys = room.h >= 12 ? [room.y + 2, room.y + room.h - 2 - bh] : [room.y + Math.floor((room.h - bh) / 2)];
+    const changes: Array<{ x: number; y: number; prev: TileType }> = [];
+    if (xs[1] - xs[0] < bw + 2) return changes;
+    for (const by of ys) for (const bx of xs) {
+      for (let ty = by; ty < by + bh; ty++) for (let tx = bx; tx < bx + bw; tx++) {
+        changes.push({ x: tx, y: ty, prev: this.level.getTile(tx, ty)!.type });
+        this.level.setTile(tx, ty, createTile(TileType.Wall, 0));
+      }
     }
+    return changes;
+  }
+
+  /** A rectangular or cross-shaped pit, kept 2 tiles clear of the room's edges. */
+  private pit(room: RoomData): Array<{ x: number; y: number; prev: TileType }> {
+    const changes: Array<{ x: number; y: number; prev: TileType }> = [];
+    const pw = this.randInt(2, Math.min(4, room.w - 4));
+    const ph = this.randInt(2, Math.min(3, room.h - 4));
+    const px = room.x + 2 + this.randInt(0, room.w - 4 - pw);
+    const py = room.y + 2 + this.randInt(0, room.h - 4 - ph);
+    const cross = pw >= 3 && ph >= 3 && this.rng() < 0.5;
+    for (let ty = py; ty < py + ph; ty++) {
+      for (let tx = px; tx < px + pw; tx++) {
+        const corner = (tx === px || tx === px + pw - 1) && (ty === py || ty === py + ph - 1);
+        if (cross && corner) continue;
+        changes.push({ x: tx, y: ty, prev: this.level.getTile(tx, ty)!.type });
+        this.level.setTile(tx, ty, createTile(TileType.Hole, 0));
+      }
+    }
+    return changes;
+  }
+
+  private tryFeature(
+    from: { x: number; y: number },
+    anchors: () => Array<{ x: number; y: number }>,
+    apply: () => Array<{ x: number; y: number; prev: TileType }>,
+  ): void {
+    const changes = apply();
+    if (changes.length && !this.reachable(from, anchors())) {
+      for (const c of changes) this.level.setTile(c.x, c.y, createTile(c.prev, 0));
+    }
+  }
+
+  private anyFloor(room: RoomData): { x: number; y: number } | null {
+    const cx = room.x + Math.floor(room.w / 2);
+    const cy = room.y + Math.floor(room.h / 2);
+    if (this.level.getTile(cx, cy)?.type === TileType.Floor) return { x: cx, y: cy };
+    for (let ty = room.y; ty < room.y + room.h; ty++) {
+      for (let tx = room.x; tx < room.x + room.w; tx++) {
+        if (this.level.getTile(tx, ty)?.type === TileType.Floor) return { x: tx, y: ty };
+      }
+    }
+    return null;
+  }
+
+  /** Flood-fills walkable floor (holes excluded) and checks every target is reached. */
+  private reachable(from: { x: number; y: number }, targets: Array<{ x: number; y: number }>): boolean {
+    const W = this.cfg.mapWidth;
+    const H = this.cfg.mapHeight;
+    const seen = new Uint8Array(W * H);
+    const stack = [from.x + from.y * W];
+    seen[stack[0]] = 1;
+    while (stack.length) {
+      const i = stack.pop()!;
+      const x = i % W;
+      const y = (i - x) / W;
+      for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        const j = nx + ny * W;
+        if (seen[j] || this.level.getTile(nx, ny)?.type !== TileType.Floor) continue;
+        seen[j] = 1;
+        stack.push(j);
+      }
+    }
+    return targets.every((t) => seen[t.x + t.y * W] === 1);
+  }
+
+  // ── Torches ─────────────────────────────────────────────────────────────────
+
+  /** Torches hang on full-height brick faces (two wall tiles above a floor tile). */
+  private placeTorches(): Array<{ x: number; y: number }> {
+    const { cfg } = this;
+    const out: Array<{ x: number; y: number }> = [];
+    for (let ty = 2; ty < cfg.mapHeight; ty++) {
+      let last = -Infinity;
+      for (let tx = 1; tx < cfg.mapWidth - 1; tx++) {
+        const mountable = this.level.getTile(tx, ty)?.type === TileType.Floor
+          && this.isWall(tx, ty - 1) && this.isWall(tx, ty - 2)
+          && this.isWall(tx - 1, ty - 1) && this.isWall(tx + 1, ty - 1)
+          && !isPillarColumn(tx);
+        if (!mountable) continue;
+        if (tx - last < cfg.torchSpacing) continue;
+        if (this.rng() < 0.25) continue;
+        last = tx;
+        out.push({ x: tx * TILE_WIDTH + TILE_WIDTH / 2, y: ty * TILE_HEIGHT - 30 });
+      }
+    }
+    return out;
   }
 }

@@ -74,6 +74,8 @@ export class Level {
       const tile = this.getTile(xx, yy);
       if (tile?.type === TileType.Wall || tile?.type === TileType.BreakableWall) {
         this.markSeen(xx, yy);
+        // South faces are two tiles tall, so reveal the cap row as well.
+        if (yy > 0) this.markSeen(xx, yy - 1);
         return;
       }
       this.markSeen(xx, yy);
@@ -153,6 +155,11 @@ export class Level {
 
   addSpawnPoint(x: number, y: number): void {
     this.spawnPoints.push({ x, y });
+  }
+
+  /** Replaces all respawn points with a single one. */
+  setSpawnPoint(x: number, y: number): void {
+    this.spawnPoints = [{ x, y }];
   }
 
   getRandomSpawnPoint(): SpawnPoint | null {

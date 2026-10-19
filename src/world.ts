@@ -189,9 +189,6 @@ export type Entity = {
   // --- minimap ---
   minimapColor?: number;
 
-  // --- tile reference ---
-  wallTile?: { tileX: number; tileY: number };
-
   // --- dungeon room (ECS room metadata) ---
   room?: {
     id: number;
@@ -228,7 +225,6 @@ export const q = {
   loot:        world.with('position', 'loot'),
   spawners:    world.with('position', 'spawner'),
   torches:     world.with('position', 'torch'),
-  walls:       world.with('position', 'wallTile'),
   chests:      world.with('position', 'chest'),
   items:       world.with('position', 'item'),
   ephemerals:  world.with('position', 'ephemeral'),

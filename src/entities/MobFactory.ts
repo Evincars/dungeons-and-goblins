@@ -4,6 +4,9 @@ import type { Level } from '../level/Level';
 
 export type MobType = 'goblin' | 'skeleton' | 'orc' | 'troll';
 
+/** In idle/walk frames the orc's head sits ~8 source px above the centre of its trimmed frame. */
+const ORC_HEAD_ABOVE_CENTER = 8;
+
 type MobConfig = {
   health: number;
   speed: number;
@@ -51,7 +54,8 @@ export function createMob(_level: Level, type: string, x: number, y: number): En
     team: Team.Neutral,
     mobType: type,
     health: { current: cfg.health, max: cfg.health },
-    healthBarOffset: cfg.yOffset + 4,
+    // Above the head: feet → sprite centre (yOffset) → top of the head, plus a small gap.
+    healthBarOffset: -Math.round(cfg.yOffset + ORC_HEAD_ABOVE_CENTER * cfg.scale + 6),
     hurtTime: 0,
     freezeTime: 0,
     bounceWallTime: 0,

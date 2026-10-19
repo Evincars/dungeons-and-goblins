@@ -1,7 +1,7 @@
 import { Application, Container } from 'pixi.js';
 import { world } from '../world';
 import { buildDungeon } from '../level/DungeonGenerator';
-import { buildLevelView, syncWalls } from '../level/TileRenderer';
+import { buildLevelView } from '../level/TileRenderer';
 import { DarknessRenderer } from '../level/DarknessRenderer';
 import { LightRenderer } from '../level/LightRenderer';
 import type { LightSource } from '../level/LightRenderer';
@@ -59,8 +59,8 @@ export class InGameScene {
 
     // Terrain (clear dirty flag so it doesn't rebuild every frame)
     this.terrainContainer = buildLevelView(level);
+    this.terrainContainer.zIndex = -1;
     this.gameLayer.addChild(this.terrainContainer);
-    syncWalls(level);
     level.clearDirty();
 
     // Spawn player
@@ -77,6 +77,8 @@ export class InGameScene {
 
     // Fog of war
     this.darkness = new DarknessRenderer();
+    // Fog of war must cover entities in unexplored areas, not just the terrain.
+    this.darkness.container.zIndex = 1e7;
     this.gameLayer.addChild(this.darkness.container);
 
     // Lights overlay
@@ -123,8 +125,8 @@ export class InGameScene {
         this.level.clearDirty();
         this.terrainContainer.destroy();
         this.terrainContainer = buildLevelView(this.level);
+        this.terrainContainer.zIndex = -1;
         this.gameLayer.addChildAt(this.terrainContainer, 0);
-        syncWalls(this.level);
       },
     };
 
@@ -164,7 +166,7 @@ export class InGameScene {
     // Add player lantern
     for (const player of world.with('position', 'playerInput')) {
       const pos = player.position!;
-      lights.push({ x: pos.x, y: pos.y, radius: 70, kind: 1 });
+      lights.push({ x: pos.x, y: pos.y - 16, radius: 110, kind: 1 });
       break;
     }
     this.lights.update(this.app, lights, this.tick);

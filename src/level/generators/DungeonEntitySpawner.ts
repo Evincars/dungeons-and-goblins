@@ -4,10 +4,35 @@
 
 import { world } from '../../world';
 import type { InventoryItem } from '../../world';
-import { TILE_WIDTH, TILE_HEIGHT } from '../TileType';
+import { TILE_WIDTH, TILE_HEIGHT, TileType } from '../TileType';
 import { createMob } from '../../entities/MobFactory';
-import type { DungeonLayout } from './DungeonBuilder';
+import type { Level } from '../Level';
+import type { DungeonLayout, RoomData } from './DungeonBuilder';
 import type { DungeonConfig } from './DungeonConfig';
+
+/** Torch mounts sit this far above the foot of their wall. */
+const TORCH_LIFT = 30;
+
+type FloorSpot = { tx: number; ty: number; x: number; y: number };
+
+/** Walkable floor tiles inside a room (pits and pillar blocks excluded). */
+function floorTilesIn(level: Level, room: RoomData): FloorSpot[] {
+  const out: FloorSpot[] = [];
+  for (let ty = room.y; ty < room.y + room.h; ty++) {
+    for (let tx = room.x; tx < room.x + room.w; tx++) {
+      if (level.getTile(tx, ty)?.type !== TileType.Floor) continue;
+      out.push({ tx, ty, x: tx * TILE_WIDTH + TILE_WIDTH / 2, y: ty * TILE_HEIGHT + TILE_HEIGHT / 2 });
+    }
+  }
+  return out;
+}
+
+function touchesWall(level: Level, tx: number, ty: number): boolean {
+  return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => {
+    const t = level.getTile(tx + dx, ty + dy)?.type;
+    return t === TileType.Wall || t === TileType.BreakableWall;
+  });
+}
 
 export function spawnDungeonEntities(layout: DungeonLayout, cfg: DungeonConfig): void {
   const { level, rooms, torchPositions, exitButtonPos, shopPos, safeDoor } = layout;
@@ -33,11 +58,13 @@ export function spawnDungeonEntities(layout: DungeonLayout, cfg: DungeonConfig):
     });
   }
 
-  // ── Torches ───────────────────────────────────────────────────────────────
+  // ── Torches, hung on brick faces ──────────────────────────────────────────
+  // The entity stands at the foot of the wall (so anyone in front of the wall
+  // draws over it); the sprite is lifted up onto the bricks.
   for (const tp of torchPositions) {
     world.add({
-      position: { x: tp.x, y: tp.y },
-      torch: { radius: 110, color: 0xffcc66, flicker: Math.random() * Math.PI * 2 },
+      position: { x: tp.x, y: tp.y + TORCH_LIFT },
+      torch: { radius: 120, color: 0xffcc66, flicker: Math.random() * Math.PI * 2 },
       visual: { sheet: 'torch', scale: 1.5 },
       animation: {
         sheet: 'torch',
@@ -48,49 +75,47 @@ export function spawnDungeonEntities(layout: DungeonLayout, cfg: DungeonConfig):
         timer: Math.floor(Math.random() * 4),
         loop: true,
       },
-      yOffset: 12,
+      yOffset: TORCH_LIFT,
     });
   }
 
-  // ── Enemy spawners in dungeon rooms ───────────────────────────────────────
+  // ── Enemies, items and props in dungeon rooms ─────────────────────────────
   const dungeonRooms = rooms.filter(r => r.type === 'dungeon');
   const rng = Math.random;
 
   for (const room of dungeonRooms) {
-    const area = room.w * room.h;
+    const floors = floorTilesIn(level, room);
+    if (floors.length === 0) continue;
+    const pick = () => floors.splice(Math.floor(rng() * floors.length), 1)[0];
+    const area = floors.length;
+
     const enemyCount = Math.max(1, Math.round(area * cfg.enemyDensity / 100));
-
-    for (let i = 0; i < enemyCount; i++) {
-      const ex = (room.x + 1 + Math.floor(rng() * (room.w - 2))) * TILE_WIDTH + TILE_WIDTH / 2;
-      const ey = (room.y + 1 + Math.floor(rng() * (room.h - 2))) * TILE_HEIGHT + TILE_HEIGHT / 2;
-      const mobType = rng() < 0.7 ? 'goblin' : 'orc';
-      createMob(level, mobType, ex, ey);
+    for (let i = 0; i < enemyCount && floors.length; i++) {
+      const t = pick();
+      createMob(level, rng() < 0.7 ? 'goblin' : 'orc', t.x, t.y);
     }
 
-    // Items
-    const itemCount = Math.max(0, Math.round(area * cfg.itemDensity / 100));
-    for (let i = 0; i < itemCount; i++) {
-      const ix = (room.x + 1 + Math.floor(rng() * (room.w - 2))) * TILE_WIDTH + TILE_WIDTH / 2;
-      const iy = (room.y + 1 + Math.floor(rng() * (room.h - 2))) * TILE_HEIGHT + TILE_HEIGHT / 2;
-      spawnItem(ix, iy);
+    const itemCount = Math.round(area * cfg.itemDensity / 100);
+    for (let i = 0; i < itemCount && floors.length; i++) {
+      const t = pick();
+      spawnItem(t.x, t.y);
     }
 
-    // Decorative pots along the room (non-blocking visual flavour)
+    // Urns stand against the walls, like in the catacombs reference maps
+    const wallSide = floors.filter(t => touchesWall(level, t.tx, t.ty));
     const potCount = Math.round(rng() * 3);
-    for (let i = 0; i < potCount; i++) {
-      const dx = (room.x + 1 + Math.floor(rng() * (room.w - 2))) * TILE_WIDTH + TILE_WIDTH / 2;
-      const dy = (room.y + 1 + Math.floor(rng() * (room.h - 2))) * TILE_HEIGHT + TILE_HEIGHT / 2;
+    for (let i = 0; i < potCount && wallSide.length; i++) {
+      const t = wallSide.splice(Math.floor(rng() * wallSide.length), 1)[0];
       world.add({
-        position: { x: dx, y: dy },
+        position: { x: t.x, y: t.y },
         visual: { sheet: rng() < 0.5 ? 'decor_pot1' : 'decor_pot2', scale: 1.4 },
         yOffset: 10,
       });
     }
 
-    // Chest — one per room, 40% chance
-    if (rng() < 0.4) {
-      const cx = (room.x + Math.floor(room.w / 2)) * TILE_WIDTH + TILE_WIDTH / 2;
-      const cy = (room.y + Math.floor(room.h / 2)) * TILE_HEIGHT + TILE_HEIGHT / 2;
+    // Chest — 40% chance per room
+    if (rng() < 0.4 && floors.length) {
+      const { x: cx, y: cy } = pick();
       world.add({
         position: { x: cx, y: cy },
         chest: { opened: false, disappearTicks: -1 },

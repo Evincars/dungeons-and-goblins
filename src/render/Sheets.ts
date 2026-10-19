@@ -34,9 +34,9 @@ const SHEETS: Record<string, SheetInfo> = {
   // Tileset (16×16 base tile, used via tilesetRect())
   tileset:            { frameWidth: 16, frameHeight: 16 },
 
-  // Baked walls (cap + brick face), composited from the tileset in AssetLoader
-  wall_main:          { frameWidth: 32, frameHeight: 48 },
-  wall_breakable:     { frameWidth: 32, frameHeight: 48 },
+  // HUD panel bars: 101 rows of 100×6, row 0 = full, row 100 = empty
+  panel_healthbar:    { frameWidth: 100, frameHeight: 6 },
+  panel_xpbar:        { frameWidth: 100, frameHeight: 6 },
 
   // Torch animation — 4 frames composited into one 64×16 strip
   torch:              { frameWidth: 16, frameHeight: 16 },

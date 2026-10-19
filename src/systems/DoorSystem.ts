@@ -1,6 +1,6 @@
 import { world } from '../world';
 import type { Level } from '../level/Level';
-import { createTile, TileType } from '../level/TileType';
+import { createTile, TileType, TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
 import { sound } from '../audio/SoundPlayer';
 
 /** Seals each safe-room door once every living player has crossed into the dungeon. */
@@ -19,6 +19,9 @@ export function updateDoors(level: Level): void {
     for (const t of d.tiles) {
       level.setTile(t.x, t.y, createTile(TileType.Wall, 0));
     }
+    // The safe room is now unreachable, so respawn just past the door instead.
+    const mid = d.tiles[Math.floor(d.tiles.length / 2)];
+    level.setSpawnPoint((mid.x + 2) * TILE_WIDTH + TILE_WIDTH / 2, mid.y * TILE_HEIGHT + TILE_HEIGHT / 2);
     d.closed = true;
     sound.playSound('door_open', door.position!.x, door.position!.y);
   }

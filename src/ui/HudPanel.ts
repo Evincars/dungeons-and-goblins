@@ -16,8 +16,8 @@ export class HudPanel {
   private levelLabel!: PixelLabel;
   private swordLabel!: PixelLabel;
   private killsLabel!: PixelLabel;
-  private hpBar!: Graphics;
-  private xpBar!: Graphics;
+  private hpBar!: Sprite;
+  private xpBar!: Sprite;
 
   constructor() {
     this.build();
@@ -26,14 +26,18 @@ export class HudPanel {
   private build(): void {
     // Dark HUD panel background
     const bg = new Graphics();
-    bg.rect(0, 0, GAME_WIDTH, 80).fill({ color: 0x0a0608, alpha: 0.92 });
+    bg.rect(0, 0, GAME_WIDTH, 80).fill({ color: 0x0a0608 });
     bg.rect(0, 0, GAME_WIDTH, 2).fill({ color: 0x4a3520 });
     this.container.addChild(bg);
 
-    this.hpBar = new Graphics();
-    this.container.addChild(this.hpBar);
-    this.xpBar = new Graphics();
-    this.container.addChild(this.xpBar);
+    // Panel bars hold 101 fill steps, row 0 = full, row 100 = empty.
+    this.hpBar = new Sprite(frameTexture('panel_healthbar', 0, 0));
+    this.hpBar.x = 8; this.hpBar.y = 50;
+    this.hpBar.scale.set(1.2, 1);
+    this.xpBar = new Sprite(frameTexture('panel_xpbar', 0, 100));
+    this.xpBar.x = 8; this.xpBar.y = 62;
+    this.xpBar.scale.set(1.2, 1);
+    this.container.addChild(this.hpBar, this.xpBar);
 
     this.hpLabel    = new PixelLabel('HP: 100/100', { color: 0xff6666, shadow: true });
     this.goldLabel  = new PixelLabel('Gold: 0',     { color: 0xffcc00, shadow: true });
@@ -61,18 +65,10 @@ export class HudPanel {
       this.swordLabel.text = `Sword+${s.swordTier} Armor+${s.armorTier}`;
       this.killsLabel.text = `Kills: ${s.kills}`;
 
-      // HP bar: 120px wide, 6px tall
-      const fraction = Math.max(0, h.current / h.max);
-      const barColor = fraction > 0.6 ? 0x44cc44 : fraction > 0.3 ? 0xddaa00 : 0xcc2222;
-      this.hpBar.clear()
-        .rect(8, 50, 120, 7).fill({ color: 0x111111 })
-        .rect(8, 50, Math.round(120 * fraction), 7).fill({ color: barColor });
-
-      // XP bar
-      const xpFraction = s.exp / xpForLevel(s.level);
-      this.xpBar.clear()
-        .rect(8, 62, 120, 4).fill({ color: 0x111111 })
-        .rect(8, 62, Math.round(120 * xpFraction), 4).fill({ color: 0x4488ff });
+      const hpPct = Math.round(100 * Math.max(0, Math.min(1, h.current / h.max)));
+      this.hpBar.texture = frameTexture('panel_healthbar', 0, 100 - hpPct);
+      const xpPct = Math.round(100 * Math.max(0, Math.min(1, s.exp / xpForLevel(s.level))));
+      this.xpBar.texture = frameTexture('panel_xpbar', 0, 100 - xpPct);
       break;
     }
   }

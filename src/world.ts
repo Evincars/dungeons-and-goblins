@@ -1,6 +1,7 @@
 import { World } from 'miniplex';
 import type { Sprite, Container, Graphics } from 'pixi.js';
 import type { PixelLabel } from './ui/PixelText';
+import type { CharacterState } from './characters/CharacterDef';
 
 export const enum Team { Neutral = 0, Player = 1 }
 
@@ -50,11 +51,7 @@ export type Entity = {
   chasing?: boolean;
 
   // --- rendering ---
-  /**
-   * `flipX` mirrors the sprite. `directional` means the sheet's rows are facing
-   * directions (S, SE, E, N) chosen from `facing`, with west mirrored.
-   */
-  visual?: { sheet: string; col?: number; row?: number; scale?: number; flipX?: boolean; directional?: boolean };
+  visual?: { sheet: string; col?: number; row?: number; scale?: number };
   frame?: number;
   sprite?: Sprite;
   container?: Container;
@@ -78,8 +75,21 @@ export type Entity = {
     timer: number;
     loop: boolean;
   };
-  /** Current character animation state (idle/walk/attack), to detect transitions. */
-  animState?: string;
+  /**
+   * Side-view character driven by a CharacterDef (see characters/ and the Character*System files):
+   * the state picks the clip, `flipX` mirrors it to face left.
+   */
+  character?: {
+    def: string;
+    state: CharacterState;
+    frame: number;
+    timer: number;
+    /** The current clip has shown its last frame (one-shot and hold clips). */
+    finished: boolean;
+    /** A one-shot state that has played out while its trigger still holds; it can't replay until the trigger lets go. */
+    spent?: CharacterState;
+    flipX: boolean;
+  };
 
   // --- short-lived effects ---
   fx?: {
@@ -234,6 +244,7 @@ export const q = {
   physical:    world.with('position', 'velocity', 'radius'),
   renderable:  world.with('position', 'sprite'),
   animated:    world.with('animation', 'sprite'),
+  characters:  world.with('character', 'visual', 'sprite'),
   needsSprite: world.with('visual', 'position').without('sprite'),
   players:     world.with('position', 'playerInput', 'playerStats', 'health'),
   mobs:        world.with('position', 'health', 'ai'),

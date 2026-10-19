@@ -1,7 +1,6 @@
 import { world } from '../world';
 import type { Level } from '../level/Level';
 import { BB } from '../math/BB';
-import { Mth } from '../math/Mth';
 import { screenToWorld } from '../render/Camera';
 import { TileType } from '../level/TileType';
 
@@ -118,13 +117,15 @@ export function updateMovement(level: Level, _dt: number): void {
   for (const entity of world.with('position', 'playerInput', 'playerStats', 'health', 'velocity')) {
     const { playerInput: pi, velocity: vel, position: pos, playerStats } = entity;
     if (!pi || !vel || !pos || !playerStats) continue;
-    if (entity.respawnTicks !== undefined || entity.health!.current <= 0) continue;
+    if (entity.respawnTicks !== undefined || entity.health!.current <= 0) {
+      entity.walkTime = 0;
+      continue;
+    }
     if ((entity.freezeTime ?? 0) > 0) continue;
 
-    // Casting roots the caster, facing where the spell was aimed.
+    // Casting roots the caster.
     if (entity.casting) {
       entity.walkTime = 0;
-      entity.facing = Mth.aimToFacing8(entity.casting.dirX, entity.casting.dirY);
       continue;
     }
 
@@ -159,13 +160,6 @@ export function updateMovement(level: Level, _dt: number): void {
       const dy = target.y - (pos.y - AIM_HEIGHT);
       const len = Math.hypot(dx, dy);
       if (len > 0) { entity.aimVector.x = dx / len; entity.aimVector.y = dy / len; }
-    }
-
-    const aim = entity.aimVector;
-    if (aim && (aim.x !== 0 || aim.y !== 0)) {
-      entity.facing = Mth.aimToFacing8(aim.x, aim.y);
-    } else if (moving) {
-      entity.facing = Mth.aimToFacing8(vel.x, vel.y);
     }
   }
 }

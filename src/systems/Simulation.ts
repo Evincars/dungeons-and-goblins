@@ -17,7 +17,9 @@ import { updateShop } from './ShopSystem';
 import { updateRespawns } from './RespawnSystem';
 import { updateSprites } from './SpriteSystem';
 import { updateFx } from './FxSystem';
-import { updateCharAnim } from './CharAnimSystem';
+import { updateCharacterFacing } from './CharacterFacingSystem';
+import { updateCharacterState } from './CharacterStateSystem';
+import { updateCharacterAnimation } from './CharacterAnimationSystem';
 import { updateAnimation } from './AnimationSystem';
 import { updateRender } from './RenderSystem';
 import { updateBars } from './BarSystem';
@@ -66,7 +68,9 @@ export const SIMULATION: readonly System[] = [
 export const PRESENTATION: readonly System[] = [
   ({ gameLayer }) => updateSprites(gameLayer),
   () => updateFx(),
-  () => updateCharAnim(),
+  () => updateCharacterFacing(),
+  () => updateCharacterState(),
+  () => updateCharacterAnimation(),
   ({ dt }) => updateAnimation(dt),
   ({ level }) => updateRender(level),
   ({ gameLayer }) => updateBars(gameLayer),

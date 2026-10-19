@@ -8,20 +8,9 @@ export type SheetInfo = {
   trim?: { x: number; y: number; w: number; h: number };
 };
 
-// Orcs are tiny pixel art centred in large transparent 100×100 frames. This trim
-// crops to the content (shared across every orc animation), kept horizontally
-// centred on the character so left/right flipping stays symmetric.
-const ORC_TRIM     = { x: 31, y: 30, w: 46, h: 38 };
-
 const SHEETS: Record<string, SheetInfo> = {
   // ── Real-asset sprite sheets (loaded from /public) ──────────────────────────
-  // Orcs: single-row strips, 100×100 per frame, facing right (cropped via trim)
-  orc_walk:           { frameWidth: 100, frameHeight: 100, trim: ORC_TRIM },
-  orc_idle:           { frameWidth: 100, frameHeight: 100, trim: ORC_TRIM },
-  orc_atk1:           { frameWidth: 100, frameHeight: 100, trim: ORC_TRIM },
-  orc_atk2:           { frameWidth: 100, frameHeight: 100, trim: ORC_TRIM },
-  orc_death:          { frameWidth: 100, frameHeight: 100, trim: ORC_TRIM },
-  orc_hurt:           { frameWidth: 100, frameHeight: 100, trim: ORC_TRIM },
+  // Character strips are registered from their CharacterDef (see characters/Characters.ts).
 
   // Tileset (16×16 base tile, used via tilesetRect())
   tileset:            { frameWidth: 16, frameHeight: 16 },
@@ -37,6 +26,7 @@ const SHEETS: Record<string, SheetInfo> = {
   pickup_coin_16:     { frameWidth: 8,   frameHeight: 8   },
   pickup_potion:      { frameWidth: 12,  frameHeight: 16  },
   pickup_gem:         { frameWidth: 12,  frameHeight: 12  },
+  spell_bolt:         { frameWidth: 16,  frameHeight: 16  },
   spawner:            { frameWidth: 32,  frameHeight: 40  },
   chest:              { frameWidth: 32,  frameHeight: 32  },
   exit_button:        { frameWidth: 32,  frameHeight: 32  },

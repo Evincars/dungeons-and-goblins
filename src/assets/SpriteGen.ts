@@ -50,6 +50,18 @@ export function genCoinSheet(): HTMLCanvasElement {
   return c;
 }
 
+/** Glowing spell orb: a bright core inside two fading halos. */
+export function genSpellBoltSheet(): HTMLCanvasElement {
+  const [c, ctx] = mkCanvas(16, 16);
+  rect(ctx, 4, 4, 8, 8, 0xb8800c);
+  rect(ctx, 3, 5, 10, 6, 0xb8800c);
+  rect(ctx, 5, 5, 6, 6, 0xffd840);
+  rect(ctx, 4, 6, 8, 4, 0xffd840);
+  rect(ctx, 6, 6, 4, 4, 0xfff0a0);
+  rect(ctx, 7, 7, 2, 2, 0xffffff);
+  return c;
+}
+
 export function genPotionSheet(): HTMLCanvasElement {
   const [c, ctx] = mkCanvas(12, 16);
   rect(ctx, 4, 0, 4, 3, 0x8a6030);

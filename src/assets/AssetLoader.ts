@@ -1,10 +1,9 @@
 import { Assets, Texture } from 'pixi.js';
-import { buildCharacterAtlas, extractGlow } from './CharacterSheet';
-import type { CharacterSheetLayout } from './CharacterSheet';
 import { registerSheet } from '../render/Sheets';
+import { characterAssets, registerCharacterSheets } from '../characters/Characters';
 import { PROPS } from '../level/Props';
 import {
-  genCoinSheet, genPotionSheet, genGemSheet,
+  genCoinSheet, genPotionSheet, genGemSheet, genSpellBoltSheet,
   genSpawnerSheet, genChestSheet, genExitButtonSheet,
   genSwordSwingSheet, genDeathFxSheet, genDustSheet,
   genDarkSheet,
@@ -23,13 +22,8 @@ const PNG_ASSETS = [
   // Tileset
   { alias: 'tileset',       src: '/catacombs/mainlevbuild.png' },
 
-  // Orc (enemy) — 100×100/frame, single row facing right
-  { alias: 'orc_walk',  src: '/Orc/Orc/Orc_Walk.png'    },
-  { alias: 'orc_idle',  src: '/Orc/Orc/Orc_Idle.png'    },
-  { alias: 'orc_atk1',  src: '/Orc/Orc/Orc_Attack01.png' },
-  { alias: 'orc_atk2',  src: '/Orc/Orc/Orc_Attack02.png' },
-  { alias: 'orc_death', src: '/Orc/Orc/Orc_Death.png'   },
-  { alias: 'orc_hurt',  src: '/Orc/Orc/Orc_Hurt.png'    },
+  // Character strips (fighter, orc, …) come from their CharacterDefs
+  ...characterAssets(),
 
   // Torch frames (16×16 each) — composited into a single 'torch' strip below
   { alias: 'torch_1', src: '/catacombs/torch_1.png' },
@@ -50,51 +44,6 @@ const PNG_ASSETS = [
   { alias: 'panel_xpbar',        src: '/ui/panel_xpbar.png' },
 ];
 
-// ── Player character sheet ───────────────────────────────────────────────────
-// test-character-1.png: 5 direction columns × 16 frame rows. Columns 0–3 are
-// S, SE, E, N; column 4 flips between back and side views from frame to frame,
-// so it's skipped (up-diagonals use the back view). West is mirrored east.
-const HERO_SRC = '/test-character-1.png';
-const HERO_LAYOUT: CharacterSheetLayout = {
-  cols: 5,
-  directions: [0, 1, 2, 3],
-  rows: 16,
-  animations: {
-    idle:  [0, 1],   /* CCC */
-    walk:  [1, 2, 3, 4],
-    sword: [5, 6, 7, 8],
-    cast:  [11, 12, 13, 14, 15],
-  },
-  cellHeight: 58,
-};
-/** The glowing orb in the south-east cast frame (row 14), used as the spell bolt. */
-const HERO_BOLT_RECT = { x: 346, y: 3672, w: 62, h: 72 };
-
-/** Ground point inside a hero cell, filled in once the atlas is built. */
-export const heroMeta = { cellW: 0, cellH: 0, groundY: 0 };
-
-async function loadHero(): Promise<void> {
-  const src = await Assets.load<Texture>(HERO_SRC);
-  const image = src.source.resource as CanvasImageSource;
-  const atlas = buildCharacterAtlas(image, src.width, src.height, HERO_LAYOUT);
-  for (const [name, canvas] of Object.entries(atlas.sheets)) {
-    const key = `hero_${name}`;
-    const tex = Texture.from(canvas);
-    tex.source.scaleMode = 'nearest';
-    textures.set(key, tex);
-    registerSheet(key, { frameWidth: atlas.cellW, frameHeight: atlas.cellH });
-  }
-  Object.assign(heroMeta, { cellW: atlas.cellW, cellH: atlas.cellH, groundY: atlas.groundY });
-
-  const b = HERO_BOLT_RECT;
-  const bolt = Texture.from(extractGlow(image, b.x, b.y, b.w, b.h, 16));
-  textures.set('spell_bolt', bolt);
-  registerSheet('spell_bolt', { frameWidth: bolt.width, frameHeight: bolt.height });
-
-  // The source is taller than some GPUs' texture limit and only needed for slicing.
-  await Assets.unload(HERO_SRC);
-}
-
 /** Crop a pixel region from a loaded texture's image into its own nearest-filtered Texture. */
 function cropTexture(src: Texture, sx: number, sy: number, sw: number, sh: number): Texture {
   const res = src.source.resource as CanvasImageSource;
@@ -114,7 +63,7 @@ export async function loadAllAssets(_onProgress?: (f: number) => void): Promise<
     tex.source.scaleMode = 'nearest';
     textures.set(alias, tex);
   }
-  await loadHero();
+  registerCharacterSheets();
 
   // Props from decorative.png, each cut to its exact sprite bounds
   const decor = textures.get('decorative')!;
@@ -141,6 +90,7 @@ export async function loadAllAssets(_onProgress?: (f: number) => void): Promise<
     pickup_coin_16:     genCoinSheet,
     pickup_potion:      genPotionSheet,
     pickup_gem:         genGemSheet,
+    spell_bolt:         genSpellBoltSheet,
     spawner:            genSpawnerSheet,
     chest:              genChestSheet,
     exit_button:        genExitButtonSheet,

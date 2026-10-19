@@ -7,10 +7,18 @@ import { sound } from '../audio/SoundPlayer';
 
 type SceneId = 'title' | 'ingame';
 
+/** The simulation is tick-based (speeds, timers, animations), so it always runs at this rate. */
+const TICK_MS = 1000 / 60;
+/** Longest stall to catch up on, so a hidden tab doesn't fast-forward the game on return. */
+const MAX_CATCH_UP_TICKS = 5;
+/** Frame times jitter around 16.67ms; this keeps a 60Hz display from skipping or doubling ticks. */
+const TICK_SLACK_MS = 1;
+
 export class Game {
   private app!: Application;
   private currentScene?: TitleScene | InGameScene;
   private currentId?: SceneId;
+  private tickDebt = 0;
 
   async init(canvas: HTMLCanvasElement): Promise<void> {
     this.app = new Application();
@@ -32,9 +40,14 @@ export class Game {
     this.app.ticker.add(() => this.tick());
   }
 
+  /** Runs fixed 60Hz steps, so 144Hz displays don't play faster than 60Hz ones. */
   private tick(): void {
     if (!this.currentScene) return;
-    this.currentScene.update();
+    this.tickDebt = Math.min(this.tickDebt + this.app.ticker.deltaMS, TICK_MS * MAX_CATCH_UP_TICKS);
+    while (this.tickDebt >= TICK_MS - TICK_SLACK_MS && this.currentScene) {
+      this.tickDebt -= TICK_MS;
+      this.currentScene.update();
+    }
   }
 
   private async goto(id: SceneId): Promise<void> {

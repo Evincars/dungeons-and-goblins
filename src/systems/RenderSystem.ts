@@ -44,6 +44,7 @@ function syncOverlay(entity: Entity, sprite: Sprite): void {
   layer.x = sprite.x;
   layer.y = sprite.y;
   layer.zIndex = sprite.zIndex + 0.01;
+  layer.scale.copyFrom(sprite.scale);
   layer.texture = whiteFrame(sheet, sprite.texture.frame);
   layer.tint = overlay.color;
   layer.alpha = overlay.alpha;
@@ -85,10 +86,6 @@ export function updateRender(level: Level): void {
   for (const entity of world.with('position', 'sprite')) {
     const pos = entity.position!;
     const sprite = entity.sprite!;
-
-    if (entity.playerInput) {
-      sprite.visible = entity.respawnTicks === undefined;
-    }
 
     const yOff = entity.yOffset ?? 0;
     sprite.x = Math.round(pos.x);

@@ -16,10 +16,6 @@ export class Mth {
     return 0;
   }
 
-  static aimToFacing8(ax: number, ay: number): number {
-    return Math.trunc((Math.atan2(-ax, ay) * 8) / (Math.PI * 2) + 8.5) & 7;
-  }
-
   static facingToVector(facing: number): { x: number; y: number } {
     switch (facing) {
       case 0: return { x: 0, y: -1 };

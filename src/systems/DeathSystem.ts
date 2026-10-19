@@ -4,7 +4,7 @@ import { dropLoot } from '../entities/LootFactory';
 import { createDeathFx } from '../entities/FxFactory';
 import { sound } from '../audio/SoundPlayer';
 import { destroyAttachments } from './BarSystem';
-import { respawnPlayer } from './HoleSystem';
+import { startDying } from './RespawnSystem';
 import { xpForLevel } from '../ui/HudPanel';
 
 const DEATH_SOUNDS: Record<string, 'enemy_death'> = {
@@ -42,7 +42,7 @@ export function updateDeath(level: Level, _dt: number): void {
 
     if (entity.playerInput) {
       sound.playSound('death');
-      respawnPlayer(entity, level, 'death');
+      startDying(entity, level);
       continue;
     } else if (entity.spawner) {
       sound.playSound('enemy_death', pos.x, pos.y);

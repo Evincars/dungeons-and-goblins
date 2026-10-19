@@ -1,6 +1,8 @@
 import type { Container } from 'pixi.js';
 import type { Level } from '../level/Level';
 import { updateInput } from './InputSystem';
+import { updateTargeting } from './TargetSystem';
+import { updateSpells } from './SpellSystem';
 import { updateAI } from './AISystem';
 import { updateMovement } from './MovementSystem';
 import { updateCombatTimers, updateContactDamage } from './CombatSystem';
@@ -38,9 +40,11 @@ export type System = (ctx: FrameContext) => void;
 export const SIMULATION: readonly System[] = [
   ({ level, dt }) => updateRespawns(level, dt),
   ({ dt }) => updateInput(dt),
+  () => updateTargeting(),
   () => updateInventory(),
   ({ level, dt }) => updateAI(level, dt),
   ({ dt }) => updateSword(dt),
+  ({ level }) => updateSpells(level),
   ({ level, dt }) => updateMovement(level, dt),
   () => updateDust(),
   () => updateFootsteps(),

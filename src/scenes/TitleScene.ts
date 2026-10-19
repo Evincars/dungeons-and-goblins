@@ -31,9 +31,9 @@ export class TitleScene {
 
     // Controls hint
     const controls = new PixelLabel(
-      'WASD - Move    SPACE/Click - Sword\n' +
-      'E - Use        TAB - Inventory\n' +
-      'SHIFT - Sprint',
+      'WASD - Move      Mouse - Aim\n' +
+      'Left click - Sword   Right click/Q - Spell\n' +
+      'E/Click - Use   TAB - Inventory   SHIFT - Sprint',
       { color: 0x887766, align: 'center' }
     );
     controls.x = Math.floor(GAME_WIDTH / 2);

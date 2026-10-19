@@ -18,10 +18,11 @@ export function updateSprites(gameLayer: Container): void {
     world.addComponent(entity, 'sprite', sprite);
   }
 
-  // Sync flipX for side-view sprites: mirror when moving left
+  // Sync flipX for side-view sprites: mirror when moving left. Directional
+  // sprites face their aim instead (see AnimationSystem).
   for (const entity of world.with('visual', 'sprite', 'velocity')) {
     const v = entity.visual!;
-    if (v.flipX === undefined) continue;
+    if (v.flipX === undefined || v.directional) continue;
     const vx = entity.velocity!.x;
     if (vx < -0.05) v.flipX = true;
     else if (vx > 0.05) v.flipX = false;

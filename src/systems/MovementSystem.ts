@@ -6,6 +6,8 @@ import { screenToWorld } from '../render/Camera';
 import { TileType } from '../level/TileType';
 
 const EPSILON = 0.01;
+/** Height above the feet that the player aims from (also where spell bolts fly). */
+export const AIM_HEIGHT = 22;
 
 function partMove(
   pos: { x: number; y: number },
@@ -119,6 +121,13 @@ export function updateMovement(level: Level, _dt: number): void {
     if (entity.respawnTicks !== undefined || entity.health!.current <= 0) continue;
     if ((entity.freezeTime ?? 0) > 0) continue;
 
+    // Casting roots the caster, facing where the spell was aimed.
+    if (entity.casting) {
+      entity.walkTime = 0;
+      entity.facing = Mth.aimToFacing8(entity.casting.dirX, entity.casting.dirY);
+      continue;
+    }
+
     let spd = entity.speed ?? 1.0;
     const moving = pi.up || pi.down || pi.left || pi.right;
 
@@ -144,9 +153,10 @@ export function updateMovement(level: Level, _dt: number): void {
 
     // Aim vector from mouse
     if (pi.mouseAiming && entity.aimVector) {
+      // Aim from hand height, so swings and spell bolts (drawn that high) pass through the crosshair.
       const target = screenToWorld(pi.mouseX, pi.mouseY);
       const dx = target.x - pos.x;
-      const dy = target.y - pos.y;
+      const dy = target.y - (pos.y - AIM_HEIGHT);
       const len = Math.hypot(dx, dy);
       if (len > 0) { entity.aimVector.x = dx / len; entity.aimVector.y = dy / len; }
     }

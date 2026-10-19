@@ -7,6 +7,7 @@ export const Settings = {
     left:      { key: 'KeyA' },
     right:     { key: 'KeyD' },
     attack:    { key: 'Space' },
+    cast:      { key: 'KeyQ' },
     use:       { key: 'KeyE' },
     sprint:    { key: 'ShiftLeft' },
     inventory: { key: 'Tab' },

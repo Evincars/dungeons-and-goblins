@@ -50,7 +50,11 @@ export type Entity = {
   chasing?: boolean;
 
   // --- rendering ---
-  visual?: { sheet: string; col?: number; row?: number; scale?: number; flipX?: boolean };
+  /**
+   * `flipX` mirrors the sprite. `directional` means the sheet's rows are facing
+   * directions (S, SE, E, N) chosen from `facing`, with west mirrored.
+   */
+  visual?: { sheet: string; col?: number; row?: number; scale?: number; flipX?: boolean; directional?: boolean };
   frame?: number;
   sprite?: Sprite;
   container?: Container;
@@ -103,8 +107,19 @@ export type Entity = {
     mouseAiming: boolean;
     keyAim: { x: number; y: number } | null;
     /** One-shot requests raised for a single tick by key presses. */
-    intents: { use: boolean; attack: boolean; inventoryOpen: boolean; inventoryUse: boolean };
+    intents: { use: boolean; attack: boolean; cast: boolean; inventoryOpen: boolean; inventoryUse: boolean };
   };
+
+  // --- spellcasting ---
+  /** Active cast: ticks elapsed, aim locked at the start, whether the bolt has left the hand. */
+  casting?: { ticks: number; dirX: number; dirY: number; released: boolean };
+  castCooldown?: number;
+
+  // --- projectiles ---
+  projectile?: { damage: number; life: number; team: number };
+
+  /** Point light this entity emits (spell bolts, …). */
+  glow?: { radius: number };
   playerStats?: {
     level: number;
     exp: number;

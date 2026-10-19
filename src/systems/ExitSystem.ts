@@ -1,8 +1,7 @@
 import { world } from '../world';
 import { setVisualFrame } from '../render/AnimatedVisual';
 import { sound } from '../audio/SoundPlayer';
-
-const USE_RANGE = 24;
+import { REACH } from './TargetSystem';
 
 let levelComplete = false;
 
@@ -18,7 +17,7 @@ export function updateExit(): void {
     for (const player of world.with('position', 'playerInput', 'health')) {
       if (player.health!.current <= 0) continue;
       const pp = player.position!;
-      if (Math.hypot(pp.x - bpos.x, pp.y - bpos.y) > USE_RANGE) continue;
+      if (Math.hypot(pp.x - bpos.x, pp.y - bpos.y) > REACH) continue;
       if (!player.playerInput!.intents.use) continue;
 
       if (!eb.activated) {

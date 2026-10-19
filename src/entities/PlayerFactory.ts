@@ -1,5 +1,6 @@
 import { world, Team, Facing } from '../world';
 import type { Entity } from '../world';
+import { heroMeta } from '../assets/AssetLoader';
 
 export function createPlayer(x: number, y: number): Entity {
   return world.add({
@@ -21,15 +22,16 @@ export function createPlayer(x: number, y: number): Entity {
     facing: Facing.South,
     aimVector: { x: 0, y: 1 },
     walkTime: 0,
-    yOffset: 25,
+    // Centre-anchored sprite: lift it so the sheet's ground point sits on the entity position.
+    yOffset: Math.round(heroMeta.groundY - heroMeta.cellH / 2),
     flashTime: 0,
-    visual: { sheet: 'soldier_idle', scale: 1.7, flipX: false },
+    visual: { sheet: 'hero_idle', directional: true, flipX: false },
     animation: {
-      sheet: 'soldier_idle',
+      sheet: 'hero_idle',
       frameX: 0,
       frameY: 0,
-      frameCount: 6,
-      frameTime: 8,
+      frameCount: 2,
+      frameTime: 30,
       timer: 0,
       loop: true,
     },
@@ -39,7 +41,7 @@ export function createPlayer(x: number, y: number): Entity {
       mouseX: 0, mouseY: 0,
       mouseAiming: true,
       keyAim: null,
-      intents: { use: false, attack: false, inventoryOpen: false, inventoryUse: false },
+      intents: { use: false, attack: false, cast: false, inventoryOpen: false, inventoryUse: false },
     },
     playerStats: {
       level: 1,

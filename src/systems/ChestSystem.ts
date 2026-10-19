@@ -2,7 +2,9 @@ import { world } from '../world';
 import type { Level } from '../level/Level';
 import { createPotion } from '../entities/LootFactory';
 import { sound } from '../audio/SoundPlayer';
+import { REACH } from './TargetSystem';
 
+/** Walking into a chest opens it; "use" (E or clicking it) works from further away. */
 const OPEN_RADIUS = 24;
 
 export function updateChests(_level: Level): void {
@@ -13,7 +15,9 @@ export function updateChests(_level: Level): void {
     for (const player of world.with('position', 'playerInput', 'health')) {
       if (player.health!.current <= 0) continue;
       const pp = player.position!;
-      if (Math.hypot(pp.x - cp.x, pp.y - cp.y) > OPEN_RADIUS) continue;
+      const dist = Math.hypot(pp.x - cp.x, pp.y - cp.y);
+      const using = player.playerInput!.intents.use && dist <= REACH;
+      if (dist > OPEN_RADIUS && !using) continue;
 
       chest.chest!.opened = true;
       sound.playSound('chest_open', cp.x, cp.y);

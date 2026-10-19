@@ -8,6 +8,9 @@ let pressed = new Set<string>();
 let mouseX = 0;
 let mouseY = 0;
 let mouseDown = false;
+let rightDown = false;
+let clickPending = false;
+let clicked = false;
 let bound = false;
 let captured = false;
 
@@ -19,6 +22,15 @@ export function setInputCaptured(on: boolean): void {
 
 export function pointer(): { x: number; y: number } {
   return { x: mouseX, y: mouseY };
+}
+
+/** True on the tick the left mouse button went down. */
+export function wasClicked(): boolean {
+  return clicked;
+}
+
+export function isMouseDown(): boolean {
+  return mouseDown;
 }
 
 export function isKeyDown(code: string): boolean {
@@ -58,14 +70,23 @@ export function initInput(canvas: HTMLCanvasElement): void {
     mouseX = ((e.clientX - rect.left) / rect.width) * GAME_WIDTH;
     mouseY = ((e.clientY - rect.top) / rect.height) * GAME_HEIGHT;
   });
-  canvas.addEventListener('mousedown', (e) => { if (e.button === 0) mouseDown = true; });
-  window.addEventListener('mouseup', (e) => { if (e.button === 0) mouseDown = false; });
+  canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 0) { mouseDown = true; clickPending = true; }
+    if (e.button === 2) rightDown = true;
+  });
+  window.addEventListener('mouseup', (e) => {
+    if (e.button === 0) mouseDown = false;
+    if (e.button === 2) rightDown = false;
+  });
+  window.addEventListener('blur', () => { mouseDown = false; rightDown = false; });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
 export function updateInput(_dt: number): void {
   pressed = new Set(pending);
   pending.clear();
+  clicked = clickPending && !captured;
+  clickPending = false;
 
   for (const entity of q.players) {
     const pi = entity.playerInput!;
@@ -81,7 +102,8 @@ export function updateInput(_dt: number): void {
     pi.mouseAiming = true;
 
     const it = pi.intents;
-    it.attack       = wasActionPressed('attack') || mouseDown;
+    it.attack       = !captured && (wasActionPressed('attack') || mouseDown);
+    it.cast         = !captured && (wasActionPressed('cast') || rightDown);
     it.use          = wasActionPressed('use');
     it.inventoryOpen = wasActionPressed('inventory');
     it.inventoryUse  = false;

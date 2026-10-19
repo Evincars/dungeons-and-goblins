@@ -8,22 +8,14 @@ export type SheetInfo = {
   trim?: { x: number; y: number; w: number; h: number };
 };
 
-// Characters are tiny pixel art centred in large transparent 100×100 frames.
-// These trims crop to the content (shared across every animation of a character),
-// kept horizontally centred on the character so left/right flipping stays symmetric.
-const SOLDIER_TRIM = { x: 33, y: 27, w: 46, h: 35 };
+// Orcs are tiny pixel art centred in large transparent 100×100 frames. This trim
+// crops to the content (shared across every orc animation), kept horizontally
+// centred on the character so left/right flipping stays symmetric.
 const ORC_TRIM     = { x: 31, y: 30, w: 46, h: 38 };
 
 const SHEETS: Record<string, SheetInfo> = {
   // ── Real-asset sprite sheets (loaded from /public) ──────────────────────────
-  // Characters: single-row strips, 100×100 per frame, facing right (cropped via trim)
-  soldier_walk:       { frameWidth: 100, frameHeight: 100, trim: SOLDIER_TRIM },  // 8 frames
-  soldier_idle:       { frameWidth: 100, frameHeight: 100, trim: SOLDIER_TRIM },  // 6 frames
-  soldier_atk1:       { frameWidth: 100, frameHeight: 100, trim: SOLDIER_TRIM },  // 6 frames
-  soldier_atk2:       { frameWidth: 100, frameHeight: 100, trim: SOLDIER_TRIM },  // 6 frames
-  soldier_atk3:       { frameWidth: 100, frameHeight: 100, trim: SOLDIER_TRIM },  // 9 frames
-  soldier_death:      { frameWidth: 100, frameHeight: 100, trim: SOLDIER_TRIM },  // 4 frames
-  soldier_hurt:       { frameWidth: 100, frameHeight: 100, trim: SOLDIER_TRIM },  // 4 frames
+  // Orcs: single-row strips, 100×100 per frame, facing right (cropped via trim)
   orc_walk:           { frameWidth: 100, frameHeight: 100, trim: ORC_TRIM },
   orc_idle:           { frameWidth: 100, frameHeight: 100, trim: ORC_TRIM },
   orc_atk1:           { frameWidth: 100, frameHeight: 100, trim: ORC_TRIM },
@@ -65,6 +57,11 @@ const SHEETS: Record<string, SheetInfo> = {
 };
 
 const cache = new Map<string, Texture>();
+
+/** Registers a sheet whose frame size is only known at load time (e.g. built atlases). */
+export function registerSheet(key: string, info: SheetInfo): void {
+  SHEETS[key] = info;
+}
 
 export function sheetInfo(key: string): SheetInfo {
   return SHEETS[key] ?? { frameWidth: 32, frameHeight: 32 };

@@ -4,9 +4,10 @@ import type { Entity } from '../world';
 type AnimDef = { sheet: string; frames: number; frameTime: number; loop: boolean };
 
 const PLAYER: Record<string, AnimDef> = {
-  idle:   { sheet: 'soldier_idle', frames: 6, frameTime: 8, loop: true },
-  walk:   { sheet: 'soldier_walk', frames: 8, frameTime: 4, loop: true },
-  attack: { sheet: 'soldier_atk1', frames: 6, frameTime: 3, loop: false },
+  idle:   { sheet: 'hero_idle',  frames: 2, frameTime: 30, loop: true },
+  walk:   { sheet: 'hero_walk',  frames: 4, frameTime: 4, loop: true },
+  attack: { sheet: 'hero_sword', frames: 4, frameTime: 4, loop: false },
+  cast:   { sheet: 'hero_cast',  frames: 5, frameTime: 5, loop: false },
 };
 
 const ORC: Record<string, AnimDef> = {
@@ -35,7 +36,7 @@ export function updateCharAnim(): void {
   for (const p of world.with('playerInput', 'animation', 'velocity')) {
     const attacking = !!p.swordSwing || (p.swordCooldown ?? 0) > 30 - ATTACK_HOLD;
     const moving = (p.walkTime ?? 0) > 0;
-    const state = attacking ? 'attack' : moving ? 'walk' : 'idle';
+    const state = p.casting ? 'cast' : attacking ? 'attack' : moving ? 'walk' : 'idle';
     apply(p, PLAYER[state], state);
   }
 

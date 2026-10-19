@@ -1,7 +1,6 @@
 import { world } from '../world';
 import type { InventoryItem } from '../world';
-
-const USE_RANGE = 28;
+import { REACH } from './TargetSystem';
 
 let shopOpen = false;
 let activeItems: InventoryItem[] = [];
@@ -19,7 +18,7 @@ export function updateShop(): void {
     for (const player of world.with('position', 'playerInput', 'health')) {
       if (player.health!.current <= 0) continue;
       const pp = player.position!;
-      if (Math.hypot(pp.x - npos.x, pp.y - npos.y) > USE_RANGE) continue;
+      if (Math.hypot(pp.x - npos.x, pp.y - npos.y) > REACH) continue;
       nearNpc = true;
       if (player.playerInput!.intents.use) {
         player.playerInput!.intents.use = false;

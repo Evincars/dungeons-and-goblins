@@ -19,6 +19,7 @@ import { isInventoryOpen } from '../systems/InventorySystem';
 import { isShopOpen, activeShopItems, closeShop } from '../systems/ShopSystem';
 import { isLevelComplete, resetLevelComplete } from '../systems/ExitSystem';
 import { PixelLabel } from '../ui/PixelText';
+import { Crosshair } from '../ui/Crosshair';
 import { GAME_WIDTH as VIEW_W, VIEW_HEIGHT as VIEW_H } from '../render/Camera';
 import type { Level } from '../level/Level';
 
@@ -34,6 +35,7 @@ export class InGameScene {
   private inv!: InventoryPanel;
   private shop!: ShopPanel;
   private shopWasOpen = false;
+  private crosshair = new Crosshair();
   private completeBanner!: PixelLabel;
   private complete = false;
   private level!: Level;
@@ -102,6 +104,10 @@ export class InGameScene {
     this.completeBanner.visible = false;
     this.uiLayer.addChild(this.completeBanner);
 
+    // The crosshair replaces the OS pointer and is the player's focus in the world.
+    this.uiLayer.addChild(this.crosshair.graphics);
+    (app.canvas as HTMLCanvasElement).style.cursor = 'none';
+
     // Input
     initInput(app.canvas as HTMLCanvasElement);
 
@@ -169,7 +175,12 @@ export class InGameScene {
       lights.push({ x: pos.x, y: pos.y - 16, radius: 110, kind: 1 });
       break;
     }
+    // Glowing entities (spell bolts, …)
+    for (const e of world.with('position', 'glow')) {
+      lights.push({ x: e.position!.x, y: e.position!.y - (e.yOffset ?? 0), radius: e.glow!.radius, kind: 0 });
+    }
     this.lights.update(this.app, lights, this.tick);
+    this.crosshair.update();
 
     // HUD update
     this.hud.update();
@@ -199,6 +210,8 @@ export class InGameScene {
   }
 
   destroy(): void {
+    (this.app.canvas as HTMLCanvasElement).style.cursor = '';
+    this.crosshair.destroy();
     clearSprites();
     this.darkness.destroy();
     this.lights.destroy();

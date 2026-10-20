@@ -1,159 +1,28 @@
-import { world } from '../world';
-import type { Entity } from '../world';
-import { findPath } from '../level/AStar';
+import { q } from '../world';
+import type { Mob } from '../world';
 import type { Level } from '../level/Level';
-import { TILE_WIDTH, TILE_HEIGHT, TileType } from '../level/TileType';
+import { formSquads, droppedThisTick } from '../ai/decision/squads';
+import { assignRoles } from '../ai/decision/tactics';
+import { agentOf } from '../ai/decision/states';
+import { limping } from '../ai/execution/locomotion';
 
-const WALK_SPEED = 0.8;
-const CHASE_RANGE = 4 * TILE_WIDTH;
-const GIVE_UP_FACTOR = 1.5;
-export const MAX_CHASERS = 4;
-const DROPPED_COOLDOWN = 180;
-const REPATH_TICKS = 20;
-const RETARGET_TICKS = 15;
-const WANDER_TURN_TICKS = 60;
-const PIT_LOOKAHEAD = 16;
-
-function distSqr(a: { x: number; y: number }, b: { x: number; y: number }): number {
-  return (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
+/** Whether the enemy gets to act this tick: alive, not stunned by a hit, and not on the lame beat of its limp. */
+function canAct(mob: Mob): boolean {
+  if (mob.removed || mob.health.current <= 0 || (mob.freezeTime ?? 0) > 0) return false;
+  return !limping(mob);
 }
 
-function nearestPlayer(from: { x: number; y: number }): Entity | null {
-  let nearest: Entity | null = null;
-  let nearestDist = Infinity;
-  for (const candidate of world.with('position', 'health', 'playerInput')) {
-    if (candidate.health!.current <= 0) continue;
-    const d = distSqr(from, candidate.position!);
-    if (d < nearestDist) { nearestDist = d; nearest = candidate; }
-  }
-  return nearest;
-}
-
-function walkTowards(level: Level, entity: Entity, dx: number, dy: number): boolean {
-  const pos = entity.position!;
-  const vel = entity.velocity!;
-  const speed = entity.speed ?? WALK_SPEED;
-  const len = Math.hypot(dx, dy) || 1;
-  const ahead = level.getTileAt(pos.x + (dx / len) * PIT_LOOKAHEAD, pos.y + (dy / len) * PIT_LOOKAHEAD);
-  if (ahead?.type === TileType.Hole) return false;
-  vel.x += (dx / len) * speed;
-  vel.y += (dy / len) * speed;
-  return true;
-}
-
-const FACING_STEPS: ReadonlyArray<readonly [number, number]> = [[0, -1], [1, 0], [0, 1], [-1, 0]];
-
-function limitChasers(): Map<number, number> {
-  const byTarget = new Map<number, Array<{ entity: Entity; dist: number }>>();
-  for (const entity of world.with('position', 'ai')) {
-    const ai = entity.ai!;
-    if (ai.type !== 'chase' || ai.targetId === undefined) continue;
-    const target = world.entity(ai.targetId);
-    if (!target?.position) continue;
-    let list = byTarget.get(ai.targetId);
-    if (!list) byTarget.set(ai.targetId, list = []);
-    list.push({ entity, dist: distSqr(entity.position!, target.position) });
-  }
-
-  const counts = new Map<number, number>();
-  for (const [targetId, list] of byTarget) {
-    list.sort((a, b) => a.dist - b.dist);
-    for (const { entity } of list.slice(MAX_CHASERS)) {
-      const ai = entity.ai!;
-      ai.type = 'wander';
-      ai.path = undefined;
-      ai.retargetIn = DROPPED_COOLDOWN;
-      entity.chasing = false;
-    }
-    counts.set(targetId, Math.min(list.length, MAX_CHASERS));
-  }
-  return counts;
-}
-
-export function updateAI(level: Level, _dt: number): void {
-  const chasers = limitChasers();
-  for (const entity of world.with('position', 'velocity', 'ai', 'radius')) {
-    const ai = entity.ai!;
-    const pos = entity.position!;
-    const vel = entity.velocity!;
-
-    if ((entity.freezeTime ?? 0) > 0) continue;
-
-    entity.walkTime = (entity.walkTime ?? 0) + 1;
-    const limp = entity.limp ?? 0;
-    if (limp > 0 && Math.floor(entity.walkTime / 12) % limp === 0) continue;
-
-    if (ai.type === 'wander') {
-      if (entity.walkTime % WANDER_TURN_TICKS === 0 || entity.facing === undefined) {
-        entity.facing = Math.floor(Math.random() * 4);
-      }
-      const facing = entity.facing ?? 0;
-      if (!walkTowards(level, entity, FACING_STEPS[facing][0], FACING_STEPS[facing][1])) {
-        const clear = [0, 1, 2, 3].filter((f) => f !== facing
-          && walkTowards(level, entity, FACING_STEPS[f][0], FACING_STEPS[f][1]));
-        if (clear.length > 0) entity.facing = clear[Math.floor(Math.random() * clear.length)];
-      }
-
-      ai.retargetIn = (ai.retargetIn ?? 0) - 1;
-      if (ai.retargetIn <= 0) {
-        ai.retargetIn = RETARGET_TICKS;
-        const target = nearestPlayer(pos);
-        const targetId = target ? world.id(target) : undefined;
-        if (target && targetId !== undefined && distSqr(pos, target.position!) < CHASE_RANGE ** 2
-          && (chasers.get(targetId) ?? 0) < MAX_CHASERS) {
-          chasers.set(targetId, (chasers.get(targetId) ?? 0) + 1);
-          ai.type = 'chase';
-          ai.targetId = targetId;
-          ai.repathIn = 0;
-          ai.path = undefined;
-        }
-      }
-      void vel;
-      continue;
-    }
-
-    if (ai.type !== 'chase') continue;
-    const target = ai.targetId !== undefined ? world.entity(ai.targetId) : null;
-    if (!target?.position || (target.health?.current ?? 0) <= 0) {
-      ai.type = 'wander';
-      ai.path = undefined;
-      continue;
-    }
-
-    if (distSqr(pos, target.position) > (CHASE_RANGE * GIVE_UP_FACTOR) ** 2) {
-      ai.type = 'wander';
-      ai.path = undefined;
-      entity.chasing = false;
-      continue;
-    }
-
-    ai.repathIn = (ai.repathIn ?? 0) - 1;
-    if (ai.repathIn <= 0) {
-      ai.repathIn = REPATH_TICKS;
-      const route = findPath(level, pos, target.position);
-      ai.path = route.success ? route.nodes.slice(1) : undefined;
-    }
-
-    entity.chasing = true;
-    const path = ai.path;
-    if (path && path.length > 0) {
-      const next = path[0];
-      const nx = next.x * TILE_WIDTH + TILE_WIDTH / 2;
-      const ny = next.y * TILE_HEIGHT + TILE_HEIGHT / 2;
-      const dx = nx - pos.x;
-      const dy = ny - pos.y;
-      const len = Math.hypot(dx, dy);
-      if (len < 4) {
-        path.shift();
-      } else {
-        if (!walkTowards(level, entity, dx, dy)) ai.repathIn = 0;
-        entity.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0);
-      }
-    } else {
-      const dx = target.position.x - pos.x;
-      const dy = target.position.y - pos.y;
-      walkTowards(level, entity, dx, dy);
-      entity.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0);
-    }
+/**
+ * Enemy AI, in three steps: squads form around the players being fought (sharing what they see),
+ * squad tactics hand out roles (Yuka Think), then every enemy runs a tick of its state machine
+ * (Yuka StateMachine), which senses, decides and steers (Yuka Vehicle).
+ */
+export function updateAI(level: Level, tick: number): void {
+  const squads = formSquads();
+  for (const mob of droppedThisTick()) agentOf(mob).go('idle');
+  assignRoles(squads, tick);
+  for (const mob of q.walkingMobs) {
+    if (!canAct(mob)) continue;
+    agentOf(mob).think(level, tick);
   }
 }

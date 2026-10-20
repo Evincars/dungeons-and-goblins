@@ -4,8 +4,22 @@
  * synthesised.
  */
 import { assetUrl } from '../assets/assetUrl';
+import { hasKey } from '../core/guards';
+import { LoadError, attemptAsync, report, reportRejection } from '../core/errors';
+import { createLog } from '../core/log';
 
+const log = createLog('audio');
+
+/** Sounds farther than this from the listener are not played; nearer ones fade and pan with distance. */
 const EARSHOT = 320;
+const DEFAULT_SFX_VOLUME = 0.6;
+/** Synthesised effects fade out over this many seconds. */
+const SYNTH_TAIL = 1.5;
+const SYNTH_GAIN = 0.8;
+/** Exponential ramps cannot reach zero, so they fade to this. */
+const SILENT = 0.001;
+/** Oscillators stop a moment after their envelope ends, so the fade is never cut. */
+const OSC_STOP_PAD = 0.05;
 
 /** Clips played from files; several entries means one is picked at random. */
 const CLIPS = {
@@ -30,150 +44,149 @@ type ClipName = keyof typeof CLIPS;
 type SynthName = 'sword_swing' | 'sword_miss' | 'boss_death' | 'potion' | 'chest_open' | 'door_open' | 'spell';
 export type SfxName = ClipName | SynthName;
 
+function isClip(name: SfxName): name is ClipName {
+  return hasKey(CLIPS, name);
+}
+
+/** One synthesised voice: a tone or a burst of noise with a falling envelope. */
+type Voice =
+  | { kind: 'osc'; freq: number; wave: OscillatorType; dur: number; vol: number }
+  | { kind: 'noise'; dur: number; vol: number };
+
+const osc = (freq: number, wave: OscillatorType, dur: number, vol: number): Voice => ({ kind: 'osc', freq, wave, dur, vol });
+const noise = (dur: number, vol: number): Voice => ({ kind: 'noise', dur, vol });
+
+const SYNTHS = {
+  sword_swing: [noise(0.08, 0.3), osc(400, 'sawtooth', 0.07, 0.2)],
+  sword_miss: [noise(0.05, 0.15)],
+  boss_death: [osc(80, 'sawtooth', 1.0, 0.5), osc(160, 'square', 0.8, 0.3), noise(0.5, 0.4)],
+  potion: [osc(440, 'sine', 0.15, 0.25), osc(550, 'sine', 0.1, 0.2), noise(0.1, 0.1)],
+  spell: [osc(520, 'triangle', 0.25, 0.25), osc(780, 'sine', 0.2, 0.15), noise(0.12, 0.08)],
+  chest_open: [osc(220, 'sine', 0.2, 0.2), osc(330, 'sine', 0.15, 0.25), osc(440, 'sine', 0.1, 0.3)],
+  door_open: [noise(0.2, 0.3), osc(100, 'sawtooth', 0.3, 0.2)],
+} as const satisfies Record<SynthName, readonly Voice[]>;
+
 class SoundPlayer {
   private ctx: AudioContext | null = null;
-  private sfxGain!: GainNode;
+  private sfxGain: GainNode | null = null;
   private listener = { x: 0, y: 0 };
   private buffers = new Map<string, AudioBuffer>();
 
-  sfxVolume = 0.6;
+  sfxVolume = DEFAULT_SFX_VOLUME;
   muteInterface = false;
 
-  private context(): AudioContext {
-    if (!this.ctx) {
-      this.ctx = new AudioContext();
-      this.sfxGain = this.ctx.createGain();
-      this.sfxGain.gain.value = this.sfxVolume;
-      this.sfxGain.connect(this.ctx.destination);
-    }
+  /** The audio context, made on first use; null where there is no Web Audio (tests, old browsers). */
+  private context(): AudioContext | null {
+    if (this.ctx || typeof AudioContext === 'undefined') return this.ctx;
+    this.ctx = new AudioContext();
+    this.sfxGain = this.ctx.createGain();
+    this.sfxGain.gain.value = this.sfxVolume;
+    this.sfxGain.connect(this.ctx.destination);
     return this.ctx;
   }
 
-  /** Decodes every clip up front; safe before any user gesture. */
+  private async loadClip(ctx: AudioContext, path: string): Promise<void> {
+    const res = await fetch(assetUrl(path));
+    if (!res.ok) throw new LoadError(`Sound "${path}" could not be fetched`, { context: { path, status: res.status } });
+    this.buffers.set(path, await ctx.decodeAudioData(await res.arrayBuffer()));
+  }
+
+  /** Decodes every clip up front; safe before any user gesture. One unplayable clip must not break the game. */
   async load(): Promise<void> {
     const ctx = this.context();
+    if (!ctx) return;
     const paths = [...new Set(Object.values(CLIPS).flat())];
-    await Promise.all(paths.map(async (path) => {
-      try {
-        const res = await fetch(assetUrl(path));
-        if (res.ok) this.buffers.set(path, await ctx.decodeAudioData(await res.arrayBuffer()));
-      } catch {
-        // One unplayable clip must not break the game.
-      }
-    }));
+    const results = await Promise.all(paths.map((path) => attemptAsync(() => this.loadClip(ctx, path), 'load-failed')));
+    for (const result of results) {
+      if (!result.ok) report(result.error, 'A sound clip failed to load; it will be silent', 'audio');
+    }
   }
 
   /** Browsers start audio suspended; resume it on the first key press or click. */
   autoStart(): void {
     const ctx = this.context();
+    if (!ctx) return;
     const events = ['pointerdown', 'keydown', 'touchend'] as const;
     const unlock = () => {
-      void ctx.resume();
+      reportRejection(ctx.resume(), 'Audio could not be resumed', 'audio');
       if (ctx.state === 'running') events.forEach((e) => window.removeEventListener(e, unlock, true));
     };
     events.forEach((e) => window.addEventListener(e, unlock, true));
-    void ctx.resume().catch(() => {});
+    // Until a gesture, browsers refuse to start audio; that refusal is expected, so it is only noted.
+    ctx.resume().catch((thrown: unknown) => log.debug('Audio is waiting for a user gesture', { reason: String(thrown) }));
   }
 
   setListener(x: number, y: number): void { this.listener.x = x; this.listener.y = y; }
 
-  playSound(name: SfxName, x?: number, y?: number): void {
-    try {
-      const ctx = this.context();
-      if (ctx.state !== 'running') return;
-      let out: AudioNode = this.sfxGain;
-      if (x !== undefined && y !== undefined) {
-        const dx = x - this.listener.x;
-        const dy = y - this.listener.y;
-        const dist = Math.hypot(dx, dy);
-        if (dist > EARSHOT) return;
-        const gain = ctx.createGain();
-        gain.gain.value = 1 - dist / EARSHOT;
-        const pan = ctx.createStereoPanner();
-        pan.pan.value = Math.max(-1, Math.min(1, dx / EARSHOT));
-        gain.connect(pan);
-        pan.connect(this.sfxGain);
-        out = gain;
-      }
-      if (name in CLIPS) {
-        const options = CLIPS[name as ClipName];
-        const buffer = this.buffers.get(options[Math.floor(Math.random() * options.length)]);
-        if (!buffer) return;
-        const src = ctx.createBufferSource();
-        src.buffer = buffer;
-        src.connect(out);
-        src.start();
-      } else {
-        this.synth(ctx, name as SynthName, out);
-      }
-    } catch { /* audio blocked */ }
+  /** Where a sound at (x, y) plays: through a distance fade and pan, straight to the mix, or nowhere (out of earshot). */
+  private outputFor(ctx: AudioContext, mix: GainNode, x?: number, y?: number): AudioNode | null {
+    if (x === undefined || y === undefined) return mix;
+    const dx = x - this.listener.x;
+    const dist = Math.hypot(dx, y - this.listener.y);
+    if (dist > EARSHOT) return null;
+    const gain = ctx.createGain();
+    gain.gain.value = 1 - dist / EARSHOT;
+    const pan = ctx.createStereoPanner();
+    pan.pan.value = Math.max(-1, Math.min(1, dx / EARSHOT));
+    gain.connect(pan);
+    pan.connect(mix);
+    return gain;
   }
 
-  private synth(ctx: AudioContext, name: SynthName, out: AudioNode): void {
+  playSound(name: SfxName, x?: number, y?: number): void {
+    const ctx = this.context();
+    const mix = this.sfxGain;
+    if (!ctx || !mix || ctx.state !== 'running') return;
+    try {
+      const out = this.outputFor(ctx, mix, x, y);
+      if (!out) return;
+      if (isClip(name)) this.playClip(ctx, name, out);
+      else this.synth(ctx, SYNTHS[name], out);
+    } catch (thrown) {
+      report(thrown, `Sound "${name}" could not be played`, 'audio');
+    }
+  }
+
+  private playClip(ctx: AudioContext, name: ClipName, out: AudioNode): void {
+    const options = CLIPS[name];
+    const buffer = this.buffers.get(options[Math.floor(Math.random() * options.length)]);
+    if (!buffer) return;
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(out);
+    src.start();
+  }
+
+  private voice(ctx: AudioContext, v: Voice, out: AudioNode, now: number): void {
+    const gn = ctx.createGain();
+    gn.gain.setValueAtTime(v.vol, now);
+    gn.gain.exponentialRampToValueAtTime(SILENT, now + v.dur);
+    gn.connect(out);
+    if (v.kind === 'osc') {
+      const o = ctx.createOscillator();
+      o.type = v.wave;
+      o.frequency.setValueAtTime(v.freq, now);
+      o.connect(gn);
+      o.start(now);
+      o.stop(now + v.dur + OSC_STOP_PAD);
+      return;
+    }
+    const buffer = ctx.createBuffer(1, ctx.sampleRate * v.dur, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(gn);
+    src.start(now);
+  }
+
+  private synth(ctx: AudioContext, voices: readonly Voice[], out: AudioNode): void {
     const now = ctx.currentTime;
     const g = ctx.createGain();
     g.connect(out);
-
-    const osc = (freq: number, type: OscillatorType, dur: number, vol: number) => {
-      const o = ctx.createOscillator();
-      const gn = ctx.createGain();
-      o.type = type;
-      o.frequency.setValueAtTime(freq, now);
-      gn.gain.setValueAtTime(vol, now);
-      gn.gain.exponentialRampToValueAtTime(0.001, now + dur);
-      o.connect(gn); gn.connect(g);
-      o.start(now); o.stop(now + dur + 0.05);
-    };
-
-    const buf = (dur: number, vol: number) => {
-      const buf2 = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
-      const data = buf2.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
-      const src = ctx.createBufferSource();
-      const gn = ctx.createGain();
-      src.buffer = buf2;
-      gn.gain.setValueAtTime(vol, now);
-      gn.gain.exponentialRampToValueAtTime(0.001, now + dur);
-      src.connect(gn); gn.connect(g);
-      src.start(now);
-    };
-
-    switch (name) {
-      case 'sword_swing':
-        buf(0.08, 0.3);
-        osc(400, 'sawtooth', 0.07, 0.2);
-        break;
-      case 'sword_miss':
-        buf(0.05, 0.15);
-        break;
-      case 'boss_death':
-        osc(80, 'sawtooth', 1.0, 0.5);
-        osc(160, 'square', 0.8, 0.3);
-        buf(0.5, 0.4);
-        break;
-      case 'potion':
-        osc(440, 'sine', 0.15, 0.25);
-        osc(550, 'sine', 0.1, 0.2);
-        buf(0.1, 0.1);
-        break;
-      case 'spell':
-        osc(520, 'triangle', 0.25, 0.25);
-        osc(780, 'sine', 0.2, 0.15);
-        buf(0.12, 0.08);
-        break;
-      case 'chest_open':
-        osc(220, 'sine', 0.2, 0.2);
-        osc(330, 'sine', 0.15, 0.25);
-        osc(440, 'sine', 0.1, 0.3);
-        break;
-      case 'door_open':
-        buf(0.2, 0.3);
-        osc(100, 'sawtooth', 0.3, 0.2);
-        break;
-    }
-
-    g.gain.setValueAtTime(0.8, now);
-    g.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+    for (const v of voices) this.voice(ctx, v, g, now);
+    g.gain.setValueAtTime(SYNTH_GAIN, now);
+    g.gain.exponentialRampToValueAtTime(SILENT, now + SYNTH_TAIL);
   }
 }
 

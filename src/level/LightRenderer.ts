@@ -1,8 +1,14 @@
-import { Container, Graphics, RenderTexture, Sprite, Texture, Application } from 'pixi.js';
+import { Container, Graphics, RenderTexture, Sprite, Texture } from 'pixi.js';
+import type { Application } from 'pixi.js';
 import { GAME_WIDTH, VIEW_HEIGHT, camera } from '../render/Camera';
+import { context2d, createCanvas } from '../render/canvas';
 
 const FLICKER_SPEED = 0.05;
 const FLICKER_AMOUNT = 5;
+/** Frequencies of the two waves a torch flickers with, and the smallest a flickering light gets. */
+const FLICKER_FAST = 3.7;
+const FLICKER_FASTER = 7.1;
+const MIN_FLICKER_RADIUS = 20;
 /** Light level everywhere before torches/lantern add to it (multiplied over the scene). */
 const AMBIENT = 0x9a94a2;
 
@@ -11,9 +17,8 @@ const lightTexCache = new Map<number, Texture>();
 
 function makeLightTexture(radius: number, warm: boolean): Texture {
   const size = radius * 2;
-  const c = document.createElement('canvas');
-  c.width = size; c.height = size;
-  const ctx = c.getContext('2d')!;
+  const c = createCanvas(size, size);
+  const ctx = context2d(c);
   const grad = ctx.createRadialGradient(radius, radius, 0, radius, radius, radius);
   if (warm) {
     grad.addColorStop(0,   'rgba(255, 220, 160, 1.0)');
@@ -63,7 +68,7 @@ export class LightRenderer {
     this.overlay.blendMode = 'multiply';
   }
 
-  init(_app: Application): void {
+  init(): void {
     this.lightmap = RenderTexture.create({ width: GAME_WIDTH, height: VIEW_HEIGHT });
     this.overlay.texture = this.lightmap;
     this.ambientGfx = new Graphics();
@@ -75,50 +80,52 @@ export class LightRenderer {
     }
   }
 
-  update(app: Application, lights: LightSource[], tick: number): void {
+  /** A torch's radius this frame: two out-of-step sine waves make the flame breathe. */
+  private flickeredRadius(light: LightSource): number {
+    if (light.kind !== 0 || light.flicker === undefined) return light.radius;
+    const flick = Math.sin(this.flickerTime * FLICKER_FAST + light.flicker) * FLICKER_AMOUNT
+      + Math.sin(this.flickerTime * FLICKER_FASTER + light.flicker * 2) * (FLICKER_AMOUNT / 2);
+    return Math.max(MIN_FLICKER_RADIUS, light.radius + flick);
+  }
+
+  /** The pooled additive sprite for the i-th light drawn this frame. */
+  private lightSprite(i: number): Sprite {
+    let sprite = this.lightSprites[i];
+    if (!sprite) {
+      sprite = new Sprite();
+      sprite.blendMode = 'add';
+      this.lightContainer.addChild(sprite);
+      this.lightSprites.push(sprite);
+    }
+    return sprite;
+  }
+
+  /** Whether a light at screen position (sx, sy) reaches into the view at all. */
+  private static onScreen(sx: number, sy: number, radius: number): boolean {
+    return sx >= -radius && sx <= GAME_WIDTH + radius && sy >= -radius && sy <= VIEW_HEIGHT + radius;
+  }
+
+  update(app: Application, lights: readonly LightSource[], tick: number): void {
     this.flickerTime = tick * FLICKER_SPEED;
-    const w = GAME_WIDTH;
-    const h = VIEW_HEIGHT;
 
     // Draw solid dark background into lightmap
     this.ambientGfx.clear();
-    this.ambientGfx.rect(0, 0, w, h).fill({ color: AMBIENT, alpha: 1 });
+    this.ambientGfx.rect(0, 0, GAME_WIDTH, VIEW_HEIGHT).fill({ color: AMBIENT, alpha: 1 });
     app.renderer.render({ container: this.ambientGfx, target: this.lightmap, clear: true });
 
-    // Reuse sprite pool for lights
-    let spriteIdx = 0;
+    let used = 0;
     for (const light of lights) {
       const sx = light.x - camera.x;
       const sy = light.y - camera.y;
-      if (sx < -light.radius || sx > w + light.radius || sy < -light.radius || sy > h + light.radius) continue;
-
-      let r = light.radius;
-      if (light.kind === 0 && light.flicker !== undefined) {
-        const flick = Math.sin(this.flickerTime * 3.7 + light.flicker) * FLICKER_AMOUNT
-          + Math.sin(this.flickerTime * 7.1 + light.flicker * 2) * (FLICKER_AMOUNT / 2);
-        r = Math.max(20, light.radius + flick);
-      }
-
-      const rounded = Math.round(r);
-      const tex = getLightTexture(rounded, light.kind === 0);
-
-      let sprite = this.lightSprites[spriteIdx];
-      if (!sprite) {
-        sprite = new Sprite();
-        sprite.blendMode = 'add';
-        this.lightContainer.addChild(sprite);
-        this.lightSprites.push(sprite);
-      }
-      sprite.texture = tex;
+      if (!LightRenderer.onScreen(sx, sy, light.radius)) continue;
+      const rounded = Math.round(this.flickeredRadius(light));
+      const sprite = this.lightSprite(used++);
+      sprite.texture = getLightTexture(rounded, light.kind === 0);
       sprite.x = Math.round(sx - rounded);
       sprite.y = Math.round(sy - rounded);
       sprite.visible = true;
-      spriteIdx++;
     }
-    // Hide unused pool sprites
-    for (let i = spriteIdx; i < this.lightSprites.length; i++) {
-      this.lightSprites[i].visible = false;
-    }
+    for (let i = used; i < this.lightSprites.length; i++) this.lightSprites[i].visible = false;
 
     app.renderer.render({ container: this.lightContainer, target: this.lightmap, clear: false });
   }

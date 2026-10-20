@@ -1,6 +1,6 @@
-import { Container, Graphics, Sprite } from 'pixi.js';
-import { world } from '../world';
-import type { InventoryItem, EquipSlot, Entity } from '../world';
+import { Container, Graphics, Rectangle, Sprite } from 'pixi.js';
+import { firstPlayer, isEquipSlot } from '../world';
+import type { InventoryItem, EquipSlot, Player } from '../world';
 import { PixelLabel } from './PixelText';
 import { GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
 
@@ -79,9 +79,7 @@ export class InventoryPanel {
 
     // Capture pointer events over entire panel to track mouse during drag
     this.container.eventMode = 'static';
-    this.container.hitArea = {
-      contains: (x: number, y: number) => x >= px0 && y >= py0 && x < px0 + PW && y < py0 + PH,
-    } as any;
+    this.container.hitArea = new Rectangle(px0, py0, PW, PH);
     this.container.on('pointermove', (e) => {
       this.pointerX = e.global.x;
       this.pointerY = e.global.y;
@@ -349,8 +347,8 @@ export class InventoryPanel {
 
   private resolveView(key: string): SlotView | null {
     if (key.startsWith('equip:')) {
-      const id = key.slice(6) as EquipSlot;
-      return this.equipContainers.get(id) ?? null;
+      const id = key.slice(6);
+      return isEquipSlot(id) ? this.equipContainers.get(id) ?? null : null;
     }
     if (key.startsWith('bag:')) {
       const idx = parseInt(key.slice(4), 10);
@@ -361,12 +359,11 @@ export class InventoryPanel {
 
   // ─── Sync to/from entity ───────────────────────────────────────────────────
 
-  private getPlayer(): Entity | null {
-    for (const p of world.with('inventory', 'equipped', 'playerStats')) return p;
-    return null;
+  private getPlayer(): Player | null {
+    return firstPlayer() ?? null;
   }
 
-  private syncFromEntity(player: Entity): void {
+  private syncFromEntity(player: Player): void {
     const inv = player.inventory ?? [];
     const eq  = player.equipped  ?? {};
 
@@ -381,7 +378,7 @@ export class InventoryPanel {
     }
   }
 
-  private syncToEntity(player: Entity): void {
+  private syncToEntity(player: Player): void {
     const newEquipped: Partial<Record<EquipSlot, InventoryItem>> = {};
     for (const [id, view] of this.equipContainers) {
       const item = view.getItem();
@@ -397,7 +394,7 @@ export class InventoryPanel {
     player.inventory = newInv;
 
     // Recalculate stats bonuses
-    const stats = player.playerStats!;
+    const stats = player.playerStats;
     let atk = 0, def = 0;
     for (const item of Object.values(newEquipped)) {
       atk += item?.stats?.attack  ?? 0;
@@ -504,9 +501,7 @@ class SlotView {
     // Interactivity
     this.container.eventMode = 'static';
     this.container.cursor = 'pointer';
-    this.container.hitArea = {
-      contains: (x: number, y: number) => x >= 0 && y >= 0 && x < w && y < h,
-    } as any;
+    this.container.hitArea = new Rectangle(0, 0, w, h);
     this.container.on('pointerdown', () => {
       if (this.item && this.onDragStart) this.onDragStart(this.item);
     });

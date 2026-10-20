@@ -1,10 +1,12 @@
 import type { Container } from 'pixi.js';
 import type { Level } from '../level/Level';
+import { beginPerception } from '../ai/perception/spatial';
 import { updateInput } from './InputSystem';
 import { updateTargeting } from './TargetSystem';
 import { updateSpells } from './SpellSystem';
 import { updateAI } from './AISystem';
 import { updateMovement } from './MovementSystem';
+import { updateTrails } from './TrailSystem';
 import { updateCombatTimers, updateContactDamage } from './CombatSystem';
 import { updateSword } from './SwordSystem';
 import { updateLoot } from './LootSystem';
@@ -39,26 +41,33 @@ export type FrameContext = {
 
 export type System = (ctx: FrameContext) => void;
 
+/**
+ * Gameplay, one fixed tick at a time, in this order. The spatial index is marked stale at the start
+ * of the tick and again once everything has moved, so each phase's proximity checks read one snapshot.
+ */
 export const SIMULATION: readonly System[] = [
+  () => beginPerception(),
   ({ level, dt }) => updateRespawns(level, dt),
-  ({ dt }) => updateInput(dt),
+  () => updateInput(),
   () => updateTargeting(),
   () => updateInventory(),
-  ({ level, dt }) => updateAI(level, dt),
-  ({ dt }) => updateSword(dt),
+  ({ level, tick }) => updateAI(level, tick),
+  () => updateSword(),
   ({ level }) => updateSpells(level),
-  ({ level, dt }) => updateMovement(level, dt),
+  ({ level }) => updateMovement(level),
+  () => beginPerception(),
+  ({ level, tick }) => updateTrails(level, tick),
   () => updateDust(),
   () => updateFootsteps(),
   () => updateEphemerals(),
-  ({ dt }) => updateCombatTimers(dt),
-  ({ level, dt }) => updateContactDamage(level, dt),
-  ({ dt }) => updateLoot(dt),
-  ({ level, dt }) => updateSpawners(level, dt),
-  ({ level, dt }) => updateDeath(level, dt),
+  () => updateCombatTimers(),
+  ({ level }) => updateContactDamage(level),
+  () => updateLoot(),
+  ({ level }) => updateSpawners(level),
+  ({ level }) => updateDeath(level),
   ({ level }) => updateHoles(level),
   ({ level }) => updateFalling(level),
-  ({ level }) => updateChests(level),
+  () => updateChests(),
   ({ level }) => updateDoors(level),
   () => updateExit(),
   () => updateShop(),
@@ -71,7 +80,7 @@ export const PRESENTATION: readonly System[] = [
   () => updateCharacterFacing(),
   () => updateCharacterState(),
   () => updateCharacterAnimation(),
-  ({ dt }) => updateAnimation(dt),
+  () => updateAnimation(),
   ({ level }) => updateRender(level),
   ({ gameLayer }) => updateBars(gameLayer),
 ];

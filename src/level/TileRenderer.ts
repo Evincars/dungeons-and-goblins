@@ -1,8 +1,9 @@
 import { Container } from 'pixi.js';
-import { CompositeTilemap } from '@pixi/tilemap';
 import type { Level } from './Level';
 import { buildTerrainPieces } from './TerrainAutotile';
+import type { TerrainPiece } from './TerrainAutotile';
 import { tilesetRect } from '../render/Sheets';
+import { StaticTileLayer } from '../render/StaticTileLayer';
 
 export type LevelView = {
   /** Floors, faces and wall tops that lie beneath every entity. */
@@ -14,16 +15,27 @@ export type LevelView = {
   occluders: Container[];
 };
 
+/** The batch a piece belongs to: the flat base, or the occluder layer for its depth (made on first use). */
+function layerFor(piece: TerrainPiece, base: StaticTileLayer, byZ: Map<number, StaticTileLayer>): StaticTileLayer {
+  if (piece.z === undefined) return base;
+  let layer = byZ.get(piece.z);
+  if (!layer) {
+    layer = new StaticTileLayer();
+    layer.zIndex = piece.z;
+    byZ.set(piece.z, layer);
+  }
+  return layer;
+}
+
+/**
+ * Batches the autotiled terrain into Pixi v8 ParticleContainers (see StaticTileLayer): the terrain never
+ * moves, so it is uploaded once and drawn as a handful of batches instead of thousands of sprites.
+ */
 export function buildLevelView(level: Level): LevelView {
-  const base = new CompositeTilemap();
-  const byZ = new Map<number, CompositeTilemap>();
+  const base = new StaticTileLayer();
+  const byZ = new Map<number, StaticTileLayer>();
   for (const p of buildTerrainPieces(level)) {
-    let map = base;
-    if (p.z !== undefined) {
-      map = byZ.get(p.z) ?? new CompositeTilemap();
-      if (!byZ.has(p.z)) { map.zIndex = p.z; byZ.set(p.z, map); }
-    }
-    map.tile(tilesetRect(p.sx, p.sy, p.w, p.h), p.dx, p.dy);
+    layerFor(p, base, byZ).addTile(tilesetRect(p.sx, p.sy, p.w, p.h), p.dx, p.dy);
   }
   const container = new Container();
   container.addChild(base);

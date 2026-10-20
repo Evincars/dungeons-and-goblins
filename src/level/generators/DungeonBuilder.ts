@@ -10,6 +10,11 @@
 
 import { Level } from '../Level';
 import { TileType, TILE_WIDTH, TILE_HEIGHT, createTile } from '../TileType';
+import { firstTile, forEachTile, someTile } from '../Grid';
+import { tileGraphOf } from '../TileGraph';
+import type { StepCost } from '../TileGraph';
+import { reachableTiles } from '../TileSearch';
+import { StateError } from '../../core/errors';
 import type { DungeonConfig } from './DungeonConfig';
 import { bspTree, bspLeaves, type BspNode } from './BSPSplit';
 import { isPillarColumn } from '../TerrainAutotile';
@@ -18,6 +23,42 @@ import type { PropKind, PropPlacement } from '../Props';
 
 type TileChange = { x: number; y: number; prev: TileType };
 type Keep = (apply: () => TileChange[]) => boolean;
+type TilePos = { x: number; y: number };
+
+/** Layouts that come out unusable (too few rooms, cut-off areas) are rerolled up to this many times. */
+const MAX_ATTEMPTS = 25;
+/** Seed step between attempts (a prime, so rerolls don't fall into a pattern). */
+const ATTEMPT_SEED_STEP = 7919;
+/** A dungeon with fewer rooms than this is rerolled. */
+const MIN_DUNGEON_ROOMS = 4;
+/** Floor tiles have this many image variants. */
+const FLOOR_VARIANTS = 4;
+/** The side rooms are at most this tall (tiles), and keep this much wall above and below. */
+const SIDE_ROOM_MAX_H = 10;
+const SIDE_ROOM_MARGIN = 8;
+/** Width taken off the reserved side strip, so a wall band stays between the side room and the dungeon. */
+const SIDE_ROOM_INSET = 6;
+/** Moving across rooms is cheaper than moving up and down when choosing the room a door corridor leads to. */
+const DOOR_VERTICAL_WEIGHT = 1.5;
+/** Sliver removal repeats until nothing changes, but no more than this. */
+const SLIVER_PASSES = 3;
+/** Pillar blocks are this many tiles wide and tall. */
+const PILLAR_W = 2;
+const PILLAR_H = 3;
+/** Rooms at least this tall get four pillar blocks instead of two. */
+const FOUR_PILLAR_ROOM_H = 12;
+/** Tries to find a free spot for each pit. */
+const PIT_ATTEMPTS = 6;
+/** Chance a tomb niche spot is skipped, and that a candle stands beside a niche coffin. */
+const NICHE_SKIP_CHANCE = 0.35;
+const CANDLE_CHANCE = 0.7;
+/** Chance a torch spot is left dark, and that a free face gets a wall hanging. */
+const TORCH_SKIP_CHANCE = 0.25;
+const HANGING_CHANCE = 0.12;
+/** Torch flames hang this far above the foot of their wall. */
+const TORCH_FLAME_LIFT = 30;
+/** Rows above which walls are too thin for wall fixtures. */
+const FIXTURE_MIN_ROW = 2;
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -84,11 +125,11 @@ export class DungeonBuilder {
   }
 
   build(): DungeonLayout {
-    for (let attempt = 0; attempt < 25; attempt++) {
-      const layout = this.buildOnce(this.baseSeed + attempt * 7919);
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      const layout = this.buildOnce(this.baseSeed + attempt * ATTEMPT_SEED_STEP);
       if (layout) return layout;
     }
-    throw new Error('Dungeon generation failed after 25 attempts');
+    throw new StateError('Dungeon generation failed', { seed: this.baseSeed, attempts: MAX_ATTEMPTS });
   }
 
   private buildOnce(seed: number): DungeonLayout | null {
@@ -102,10 +143,10 @@ export class DungeonBuilder {
     this.fill(0, 0, W, H, TileType.Wall);
 
     // ── Safe room (left) and exit room (right), vertically centred ────────────
-    const sideW = cfg.safeRoomW - 6;
-    const sideH = Math.min(10, H - 8);
+    const sideW = cfg.safeRoomW - SIDE_ROOM_INSET;
+    const sideH = Math.min(SIDE_ROOM_MAX_H, H - SIDE_ROOM_MARGIN);
     const safe = this.carveRoom(2, Math.floor((H - sideH) / 2), sideW, sideH, 'safe');
-    const exitW = cfg.exitRoomW - 6;
+    const exitW = cfg.exitRoomW - SIDE_ROOM_INSET;
     const exit = this.carveRoom(W - 2 - exitW, Math.floor((H - sideH) / 2), exitW, sideH, 'exit');
 
     // ── Dungeon rooms, one per BSP leaf ───────────────────────────────────────
@@ -126,28 +167,10 @@ export class DungeonBuilder {
       leafRooms.set(leaf, this.carveRoom(x, y, w, h, 'dungeon'));
     }
     const dungeonRooms = [...leafRooms.values()];
-    if (dungeonRooms.length < 4) return null;
+    if (dungeonRooms.length < MIN_DUNGEON_ROOMS) return null;
 
     // ── Join siblings up the BSP tree, so corridors follow the partitioning ───
-    const join = (node: BspNode): RoomData[] => {
-      if (!node.left || !node.right) {
-        const room = leafRooms.get(node);
-        return room ? [room] : [];
-      }
-      const a = join(node.left);
-      const b = join(node.right);
-      if (a.length && b.length) {
-        let best: [RoomData, RoomData] = [a[0], b[0]];
-        let bestGap = Infinity;
-        for (const ra of a) for (const rb of b) {
-          const gap = this.rectGap(ra, rb);
-          if (gap < bestGap) { bestGap = gap; best = [ra, rb]; }
-        }
-        this.corridor(best[0], best[1]);
-      }
-      return [...a, ...b];
-    };
-    join(tree);
+    this.joinTree(tree, leafRooms);
 
     // ── Safe door → nearest dungeon room; nearest dungeon room → exit ─────────
     const doorX = safe.x + safe.w;
@@ -167,7 +190,7 @@ export class DungeonBuilder {
     const playerTile = { x: safe.x + 2, y: safe.y + Math.floor(safe.h / 2) };
     const exitTile = { x: exit.x + Math.floor(exit.w / 2), y: exit.y + Math.floor(exit.h / 2) };
     const anchors = () => [exitTile, ...dungeonRooms.map((r) => this.anyFloor(r))
-      .filter((p): p is { x: number; y: number } => p !== null)];
+      .filter((p): p is TilePos => p !== null)];
     if (!this.reachable(playerTile, anchors())) return null;
 
     // ── Room features, each kept only if everything stays reachable ───────────
@@ -186,23 +209,19 @@ export class DungeonBuilder {
 
     // ── Safe zones ────────────────────────────────────────────────────────────
     for (const room of [safe, exit]) {
-      for (let ty = room.y; ty < room.y + room.h; ty++) {
-        for (let tx = room.x; tx < room.x + room.w; tx++) this.level.markSafeZone(tx, ty);
-      }
+      forEachTile(room.x, room.y, room.x + room.w - 1, room.y + room.h - 1, (tx, ty) => this.level.markSafeZone(tx, ty));
     }
 
     const torchTiles = this.placeTorches();
     this.placeHangings(torchTiles, props);
 
+    const playerSpawn = tileCenter(playerTile.x, playerTile.y);
+    this.level.addSpawnPoint(playerSpawn.x, playerSpawn.y);
     return {
       level: this.level,
       rooms: [safe, ...dungeonRooms, exit],
-      playerSpawn: (() => {
-        const p = tileCenter(playerTile.x, playerTile.y);
-        this.level.addSpawnPoint(p.x, p.y);
-        return p;
-      })(),
-      torchPositions: torchTiles.map((t) => ({ x: t.x * TILE_WIDTH + TILE_WIDTH / 2, y: t.y * TILE_HEIGHT - 30 })),
+      playerSpawn,
+      torchPositions: torchTiles.map((t) => ({ x: t.x * TILE_WIDTH + TILE_WIDTH / 2, y: t.y * TILE_HEIGHT - TORCH_FLAME_LIFT })),
       props,
       exitButtonPos: tileCenter(exitTile.x, exitTile.y),
       shopPos: tileCenter(safe.x + Math.floor(safe.w / 2), safe.y + 1),
@@ -222,13 +241,58 @@ export class DungeonBuilder {
   }
 
   private fill(x: number, y: number, w: number, h: number, type: TileType): void {
-    for (let ty = y; ty < y + h; ty++) {
-      for (let tx = x; tx < x + w; tx++) {
-        // Never carve the outermost ring, so the map always has a wall border.
-        if (type !== TileType.Wall && (tx <= 0 || ty <= 0 || tx >= this.cfg.mapWidth - 1 || ty >= this.cfg.mapHeight - 1)) continue;
-        this.level.setTile(tx, ty, createTile(type, Math.floor(this.rng() * 4)));
-      }
+    forEachTile(x, y, x + w - 1, y + h - 1, (tx, ty) => this.fillTile(tx, ty, type));
+  }
+
+  private fillTile(tx: number, ty: number, type: TileType): void {
+    // Never carve the outermost ring, so the map always has a wall border.
+    const border = tx <= 0 || ty <= 0 || tx >= this.cfg.mapWidth - 1 || ty >= this.cfg.mapHeight - 1;
+    if (type !== TileType.Wall && border) return;
+    this.level.setTile(tx, ty, createTile(type, this.floorVariant()));
+  }
+
+  private floorVariant(): number {
+    return Math.floor(this.rng() * FLOOR_VARIANTS);
+  }
+
+  /** Joins the rooms under each BSP node to their sibling's with one corridor; returns the rooms under `node`. */
+  private joinTree(node: BspNode, leafRooms: Map<BspNode, RoomData>): RoomData[] {
+    if (!node.left || !node.right) {
+      const room = leafRooms.get(node);
+      return room ? [room] : [];
     }
+    const a = this.joinTree(node.left, leafRooms);
+    const b = this.joinTree(node.right, leafRooms);
+    if (a.length && b.length) {
+      const [ra, rb] = this.closestPair(a, b);
+      this.corridor(ra, rb);
+    }
+    return [...a, ...b];
+  }
+
+  /** The pair of rooms, one from each list, with the smallest gap between them (first found wins ties). */
+  private closestPair(a: RoomData[], b: RoomData[]): [RoomData, RoomData] {
+    let best: [RoomData, RoomData] = [a[0], b[0]];
+    let bestGap = Infinity;
+    for (const ra of a) {
+      const [rb, gap] = this.nearestTo(ra, b);
+      if (gap >= bestGap) continue;
+      bestGap = gap;
+      best = [ra, rb];
+    }
+    return best;
+  }
+
+  private nearestTo(room: RoomData, others: RoomData[]): [RoomData, number] {
+    let best = others[0];
+    let bestGap = Infinity;
+    for (const other of others) {
+      const gap = this.rectGap(room, other);
+      if (gap >= bestGap) continue;
+      bestGap = gap;
+      best = other;
+    }
+    return [best, bestGap];
   }
 
   private carveRoom(x: number, y: number, w: number, h: number, type: RoomType): RoomData {
@@ -252,7 +316,7 @@ export class DungeonBuilder {
     for (const r of rooms) {
       const cx = Math.max(r.x, Math.min(tx, r.x + r.w - 1));
       const cy = Math.max(r.y, Math.min(ty, r.y + r.h - 1));
-      const d = Math.abs(cx - tx) + Math.abs(cy - ty) * 1.5;
+      const d = Math.abs(cx - tx) + Math.abs(cy - ty) * DOOR_VERTICAL_WEIGHT;
       if (d < bestD) { bestD = d; best = r; }
     }
     return best;
@@ -308,23 +372,26 @@ export class DungeonBuilder {
 
   /** Turns 1-tile wall slivers (open on both sides vertically) and lone posts into floor. */
   private removeSlivers(): void {
-    const { cfg } = this;
-    const open = (tx: number, ty: number) => !this.isWall(tx, ty);
-    for (let pass = 0; pass < 3; pass++) {
-      let changed = false;
-      for (let ty = 1; ty < cfg.mapHeight - 1; ty++) {
-        for (let tx = cfg.safeRoomW; tx < cfg.mapWidth - cfg.exitRoomW; tx++) {
-          if (!this.isWall(tx, ty)) continue;
-          const ns = open(tx, ty - 1) && open(tx, ty + 1);
-          const lone = ns && open(tx - 1, ty) && open(tx + 1, ty);
-          if (ns || lone) {
-            this.level.setTile(tx, ty, createTile(TileType.Floor, Math.floor(this.rng() * 4)));
-            changed = true;
-          }
-        }
-      }
-      if (!changed) break;
+    for (let pass = 0; pass < SLIVER_PASSES; pass++) {
+      if (!this.sliverPass()) break;
     }
+  }
+
+  /** One sweep of sliver removal over the dungeon area; returns whether any wall was opened. */
+  private sliverPass(): boolean {
+    const { cfg } = this;
+    let changed = false;
+    forEachTile(cfg.safeRoomW, 1, cfg.mapWidth - cfg.exitRoomW - 1, cfg.mapHeight - 2, (tx, ty) => {
+      if (!this.isSliver(tx, ty)) return;
+      this.level.setTile(tx, ty, createTile(TileType.Floor, this.floorVariant()));
+      changed = true;
+    });
+    return changed;
+  }
+
+  /** A wall tile with open floor both north and south of it (a lone post is one of those too). */
+  private isSliver(tx: number, ty: number): boolean {
+    return this.isWall(tx, ty) && !this.isWall(tx, ty - 1) && !this.isWall(tx, ty + 1);
   }
 
   // ── Room features ───────────────────────────────────────────────────────────
@@ -332,7 +399,7 @@ export class DungeonBuilder {
   /** Sets tiles and returns what they were, so a feature can be undone. */
   private setTiles(cells: Array<[number, number]>, type: TileType): TileChange[] {
     return cells.map(([x, y]) => {
-      const change = { x, y, prev: this.level.getTile(x, y)!.type };
+      const change = { x, y, prev: this.level.getTile(x, y)?.type ?? TileType.Wall };
       this.level.setTile(x, y, createTile(type, 0));
       return change;
     });
@@ -356,13 +423,13 @@ export class DungeonBuilder {
 
   /** Two (or four) solid 2×3 wall blocks, mirrored across the room. */
   private pillarBlocks(room: RoomData): TileChange[] {
-    const bw = 2, bh = 3;
+    const bw = PILLAR_W, bh = PILLAR_H;
     const xs = [room.x + 2, room.x + room.w - 2 - bw];
-    const ys = room.h >= 12 ? [room.y + 2, room.y + room.h - 2 - bh] : [room.y + Math.floor((room.h - bh) / 2)];
+    const ys = room.h >= FOUR_PILLAR_ROOM_H ? [room.y + 2, room.y + room.h - 2 - bh] : [room.y + Math.floor((room.h - bh) / 2)];
     if (xs[1] - xs[0] < bw + 2) return [];
     const cells: Array<[number, number]> = [];
-    for (const by of ys) for (const bx of xs) {
-      for (let ty = by; ty < by + bh; ty++) for (let tx = bx; tx < bx + bw; tx++) cells.push([tx, ty]);
+    for (const by of ys) {
+      for (const bx of xs) forEachTile(bx, by, bx + bw - 1, by + bh - 1, (tx, ty) => cells.push([tx, ty]));
     }
     return this.setTiles(cells, TileType.Wall);
   }
@@ -374,21 +441,23 @@ export class DungeonBuilder {
     const maxX = room.x + room.w - 4;
     const maxY = room.y + room.h - 4;
     for (let i = 0; i < count && maxX >= room.x + 2 && maxY >= room.y + 2; i++) {
-      for (let attempt = 0; attempt < 6; attempt++) {
-        const px = this.randInt(room.x + 2, maxX);
-        const py = this.randInt(room.y + 2, maxY);
-        let ringClear = true;
-        for (let y = py - 1; y <= py + 2; y++) for (let x = px - 1; x <= px + 2; x++) if (!this.free(x, y)) ringClear = false;
-        if (!ringClear) continue;
-        if (keep(() => this.setTiles([[px, py], [px + 1, py], [px, py + 1], [px + 1, py + 1]], TileType.Hole))) {
-          this.level.pits.push({ x: px, y: py });
-          for (let y = py - 1; y <= py + 2; y++) for (let x = px - 1; x <= px + 2; x++) this.claim(x, y);
-          placed = true;
-          break;
-        }
-      }
+      if (this.placePit(room, maxX, maxY, keep)) placed = true;
     }
     return placed;
+  }
+
+  /** Tries a few random spots for one pit; returns whether one was dug. */
+  private placePit(room: RoomData, maxX: number, maxY: number, keep: Keep): boolean {
+    for (let attempt = 0; attempt < PIT_ATTEMPTS; attempt++) {
+      const px = this.randInt(room.x + 2, maxX);
+      const py = this.randInt(room.y + 2, maxY);
+      if (someTile(px - 1, py - 1, px + 2, py + 2, (x, y) => !this.free(x, y))) continue;
+      if (!keep(() => this.setTiles([[px, py], [px + 1, py], [px, py + 1], [px + 1, py + 1]], TileType.Hole))) continue;
+      this.level.pits.push({ x: px, y: py });
+      forEachTile(px - 1, py - 1, px + 2, py + 2, (x, y) => this.claim(x, y));
+      return true;
+    }
+    return false;
   }
 
   /** Blocks the given tiles with props, if the dungeon stays connected. */
@@ -425,20 +494,22 @@ export class DungeonBuilder {
     for (let tx = room.x + 1; tx <= room.x + room.w - 3 && placed < 2; tx++) {
       const segment = [tx, tx + 1];
       const fullFace = segment.every((x) => this.isWall(x, ty - 1) && this.isWall(x, ty - 2) && !isPillarColumn(x));
-      if (!fullFace || !this.isWall(tx - 1, ty - 1) || !this.isWall(tx + 2, ty - 1) || this.rng() < 0.35) continue;
+      if (!fullFace || !this.isWall(tx - 1, ty - 1) || !this.isWall(tx + 2, ty - 1) || this.rng() < NICHE_SKIP_CHANCE) continue;
       if (!this.placeSolid([[tx, ty], [tx + 1, ty]], [this.pick(COFFINS), this.pick(COFFINS)], props, keep)) continue;
       const W = this.cfg.mapWidth;
       this.level.wallDecor.set(tx + (ty - 1) * W, 'niche0');
       this.level.wallDecor.set(tx + 1 + (ty - 1) * W, 'niche1');
-      for (const cx of [tx - 1, tx + 2]) {
-        if (this.free(cx, ty) && this.rng() < 0.7) {
-          this.claim(cx, ty);
-          props.push({ kind: this.rng() < 0.5 ? 'candles' : 'candle', tx: cx, ty });
-        }
-      }
+      for (const cx of [tx - 1, tx + 2]) this.placeCandle(cx, ty, props);
       placed++;
       tx += 3;
     }
+  }
+
+  /** Sometimes stands a candle (or a cluster of them) on a free floor tile. */
+  private placeCandle(tx: number, ty: number, props: PropPlacement[]): void {
+    if (!this.free(tx, ty) || this.rng() >= CANDLE_CHANCE) return;
+    this.claim(tx, ty);
+    props.push({ kind: this.rng() < 0.5 ? 'candles' : 'candle', tx, ty });
   }
 
   /** A row of sarcophagi across the middle of the room, with gaps to walk between. */
@@ -466,12 +537,10 @@ export class DungeonBuilder {
   /** Urns (non-blocking) standing against the walls. */
   private urnsAlongWalls(room: RoomData, count: number, props: PropPlacement[]): void {
     const spots: Array<[number, number]> = [];
-    for (let ty = room.y; ty < room.y + room.h; ty++) {
-      for (let tx = room.x; tx < room.x + room.w; tx++) {
-        if (!this.free(tx, ty)) continue;
-        if (this.isWall(tx - 1, ty) || this.isWall(tx + 1, ty) || this.isWall(tx, ty - 1)) spots.push([tx, ty]);
-      }
-    }
+    const againstWall = (tx: number, ty: number) => this.isWall(tx - 1, ty) || this.isWall(tx + 1, ty) || this.isWall(tx, ty - 1);
+    forEachTile(room.x, room.y, room.x + room.w - 1, room.y + room.h - 1, (tx, ty) => {
+      if (this.free(tx, ty) && againstWall(tx, ty)) spots.push([tx, ty]);
+    });
     for (let i = 0; i < count && spots.length; i++) {
       const [tx, ty] = spots.splice(Math.floor(this.rng() * spots.length), 1)[0];
       this.claim(tx, ty);
@@ -491,38 +560,22 @@ export class DungeonBuilder {
     return false;
   }
 
-  private anyFloor(room: RoomData): { x: number; y: number } | null {
+  private anyFloor(room: RoomData): TilePos | null {
     const cx = room.x + Math.floor(room.w / 2);
     const cy = room.y + Math.floor(room.h / 2);
-    if (this.level.getTile(cx, cy)?.type === TileType.Floor) return { x: cx, y: cy };
-    for (let ty = room.y; ty < room.y + room.h; ty++) {
-      for (let tx = room.x; tx < room.x + room.w; tx++) {
-        if (this.level.getTile(tx, ty)?.type === TileType.Floor) return { x: tx, y: ty };
-      }
-    }
-    return null;
+    if (this.isFloor(cx, cy)) return { x: cx, y: cy };
+    return firstTile(room.x, room.y, room.x + room.w - 1, room.y + room.h - 1, (tx, ty) => this.isFloor(tx, ty));
   }
 
-  /** Flood-fills walkable floor (holes excluded) and checks every target is reached. */
-  private reachable(from: { x: number; y: number }, targets: Array<{ x: number; y: number }>): boolean {
-    const W = this.cfg.mapWidth;
-    const H = this.cfg.mapHeight;
-    const seen = new Uint8Array(W * H);
-    const stack = [from.x + from.y * W];
-    seen[stack[0]] = 1;
-    while (stack.length) {
-      const i = stack.pop()!;
-      const x = i % W;
-      const y = (i - x) / W;
-      for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
-        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
-        const j = nx + ny * W;
-        if (seen[j] || this.level.getTile(nx, ny)?.type !== TileType.Floor) continue;
-        seen[j] = 1;
-        stack.push(j);
-      }
-    }
-    return targets.every((t) => seen[t.x + t.y * W] === 1);
+  /** Only plain floor counts while checking connectivity: holes and obstacles cut a way off. */
+  private readonly floorStep: StepCost = (_from, to) =>
+    this.level.getTile(to % this.level.width, Math.floor(to / this.level.width))?.type === TileType.Floor ? 1 : Infinity;
+
+  /** Whether every target can be walked to from `from` over plain floor, by Yuka's BFS over the tile graph. */
+  private reachable(from: TilePos, targets: TilePos[]): boolean {
+    const W = this.level.width;
+    const reached = reachableTiles(tileGraphOf(this.level), from.x + from.y * W, this.floorStep);
+    return targets.every((t) => reached[t.x + t.y * W] === 1);
   }
 
   // ── Torches ─────────────────────────────────────────────────────────────────
@@ -537,30 +590,33 @@ export class DungeonBuilder {
   }
 
   /** Torches hang on full-height brick faces; returns the floor tiles below them. */
-  private placeTorches(): Array<{ x: number; y: number }> {
-    const { cfg } = this;
-    const out: Array<{ x: number; y: number }> = [];
-    for (let ty = 2; ty < cfg.mapHeight; ty++) {
-      let last = -Infinity;
-      for (let tx = 1; tx < cfg.mapWidth - 1; tx++) {
-        if (!this.mountable(tx, ty) || tx - last < cfg.torchSpacing || this.rng() < 0.25) continue;
-        last = tx;
-        out.push({ x: tx, y: ty });
-      }
-    }
+  private placeTorches(): TilePos[] {
+    const out: TilePos[] = [];
+    for (let ty = FIXTURE_MIN_ROW; ty < this.cfg.mapHeight; ty++) this.torchRow(ty, out);
     return out;
   }
 
+  /** Torches along one row of faces, at least `torchSpacing` apart. */
+  private torchRow(ty: number, out: TilePos[]): void {
+    let last = -Infinity;
+    for (let tx = 1; tx < this.cfg.mapWidth - 1; tx++) {
+      if (!this.mountable(tx, ty) || tx - last < this.cfg.torchSpacing || this.rng() < TORCH_SKIP_CHANCE) continue;
+      last = tx;
+      out.push({ x: tx, y: ty });
+    }
+  }
+
   /** Cauldrons and chains hung on faces between the torches. */
-  private placeHangings(torches: Array<{ x: number; y: number }>, props: PropPlacement[]): void {
-    const { cfg } = this;
-    const nearTorch = (tx: number, ty: number) => torches.some((t) => t.y === ty && Math.abs(t.x - tx) < 2);
-    for (let ty = 2; ty < cfg.mapHeight; ty++) {
-      for (let tx = 1; tx < cfg.mapWidth - 1; tx++) {
-        if (!this.mountable(tx, ty) || nearTorch(tx, ty) || this.level.isSafeZone(tx, ty) || this.rng() > 0.12) continue;
-        props.push({ kind: this.pick(HANGINGS), tx, ty });
-        tx += 2;
-      }
+  private placeHangings(torches: TilePos[], props: PropPlacement[]): void {
+    for (let ty = FIXTURE_MIN_ROW; ty < this.cfg.mapHeight; ty++) this.hangingRow(ty, torches, props);
+  }
+
+  private hangingRow(ty: number, torches: TilePos[], props: PropPlacement[]): void {
+    const nearTorch = (tx: number) => torches.some((t) => t.y === ty && Math.abs(t.x - tx) < 2);
+    for (let tx = 1; tx < this.cfg.mapWidth - 1; tx++) {
+      if (!this.mountable(tx, ty) || nearTorch(tx) || this.level.isSafeZone(tx, ty) || this.rng() > HANGING_CHANCE) continue;
+      props.push({ kind: this.pick(HANGINGS), tx, ty });
+      tx += 2;
     }
   }
 }

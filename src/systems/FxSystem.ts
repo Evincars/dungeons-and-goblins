@@ -1,20 +1,27 @@
 import { world } from '../world';
 import { setVisualFrame } from '../render/AnimatedVisual';
 
-export function updateFx(): void {
-  for (const entity of world.with('fx', 'visual')) {
-    if (entity.removed) continue;
-    const fx = entity.fx!;
-    const visual = entity.visual!;
-    const frame = fx.cycle
-      ? fx.age % fx.frames
-      : Math.min(fx.frames - 1, Math.floor((fx.age * fx.frames) / fx.duration));
+const effects = world.with('fx', 'visual', 'position');
+type Effect = (typeof effects)['entities'][number];
 
-    if (visual.col !== frame) {
-      visual.col = frame;
-      if (entity.sprite) setVisualFrame(entity.sprite, visual.sheet, frame);
-    }
-    if (fx.rise) entity.position!.y -= fx.rise;
+/** The frame an effect shows at its age: cycling, or played once across its duration. */
+function frameOf(fx: Effect['fx']): number {
+  if (fx.cycle) return fx.age % fx.frames;
+  return Math.min(fx.frames - 1, Math.floor((fx.age * fx.frames) / fx.duration));
+}
+
+function showFrame(entity: Effect, frame: number): void {
+  if (entity.visual.col === frame) return;
+  entity.visual.col = frame;
+  if (entity.sprite) setVisualFrame(entity.sprite, entity.visual.sheet, frame);
+}
+
+export function updateFx(): void {
+  for (const entity of effects) {
+    if (entity.removed) continue;
+    const fx = entity.fx;
+    showFrame(entity, frameOf(fx));
+    if (fx.rise) entity.position.y -= fx.rise;
     if (++fx.age >= fx.duration) world.addComponent(entity, 'removed', true);
   }
 }

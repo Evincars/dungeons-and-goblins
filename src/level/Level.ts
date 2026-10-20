@@ -1,6 +1,8 @@
+import type { Rectangle } from 'pixi.js';
 import { createTile, TileType, TILE_WIDTH, TILE_HEIGHT } from './TileType';
 import type { TileData } from './TileType';
-import { BB } from '../math/BB';
+import { BoxPool } from '../core/geometry';
+import { forEachTile } from './Grid';
 
 export type SpawnPoint = { x: number; y: number };
 
@@ -11,8 +13,15 @@ export type SpawnPoint = { x: number; y: number };
  */
 export const WALL_SINK = 26;
 
+/** Floor tiles come in this many image variants. */
+const FLOOR_VARIANTS = 4;
+
 /** Decoration painted onto the brick face of a wall tile (the tile directly above a floor). */
 export type WallDecor = 'niche0' | 'niche1';
+
+function isWallType(tile: TileData | null): boolean {
+  return tile?.type === TileType.Wall || tile?.type === TileType.BreakableWall;
+}
 
 export class Level {
   readonly width: number;
@@ -28,15 +37,40 @@ export class Level {
 
   readonly seen: boolean[];
   tilesDirty = false;
+  /** Bumped on every tile change, so caches built from the tiles (enemy step costs) know to rebuild. */
+  revision = 0;
+
+  /** Collision boxes handed out by getClipBBs, reused call after call (an object pool). */
+  private readonly clipPool = new BoxPool();
+  private readonly clipBoxes: Rectangle[] = [];
 
   constructor(width: number, height: number) {
     this.width = width;
     this.height = height;
     this.tileStacks = [];
     for (let i = 0; i < width * height; i++) {
-      this.tileStacks[i] = [createTile(TileType.Floor, Math.floor(Math.random() * 4))];
+      this.tileStacks[i] = [createTile(TileType.Floor, Math.floor(Math.random() * FLOOR_VARIANTS))];
     }
     this.seen = new Array((width + 1) * (height + 1)).fill(false);
+  }
+
+  /** Packed index of a tile, as the tile graph numbers it. */
+  tileIndex(tx: number, ty: number): number {
+    return tx + ty * this.width;
+  }
+
+  /** Packed index of the tile under a world-space point. */
+  tileIndexAt(worldX: number, worldY: number): number {
+    return this.tileIndex(Math.floor(worldX / TILE_WIDTH), Math.floor(worldY / TILE_HEIGHT));
+  }
+
+  /** World-space centre of a packed tile index. */
+  tileCentreX(index: number): number {
+    return (index % this.width) * TILE_WIDTH + TILE_WIDTH / 2;
+  }
+
+  tileCentreY(index: number): number {
+    return Math.floor(index / this.width) * TILE_HEIGHT + TILE_HEIGHT / 2;
   }
 
   markSafeZone(tx: number, ty: number): void {
@@ -76,6 +110,7 @@ export class Level {
     }
   }
 
+  /** Marks tiles seen along a ray until it leaves the map, the radius, or meets a wall (which is seen too). */
   private revealLine(x0: number, y0: number, x1: number, y1: number, radius: number): void {
     for (let i = 0; i <= radius; i++) {
       const xx = x0 + Math.trunc(((x1 - x0) * i) / radius);
@@ -83,14 +118,11 @@ export class Level {
       if (xx < 0 || yy < 0 || xx >= this.width || yy >= this.height) return;
       const dx = xx - x0; const dy = yy - y0;
       if (dx * dx + dy * dy > radius * radius) return;
-      const tile = this.getTile(xx, yy);
-      if (tile?.type === TileType.Wall || tile?.type === TileType.BreakableWall) {
-        this.markSeen(xx, yy);
-        // South faces are two tiles tall, so reveal the cap row as well.
-        if (yy > 0) this.markSeen(xx, yy - 1);
-        return;
-      }
       this.markSeen(xx, yy);
+      if (!isWallType(this.getTile(xx, yy))) continue;
+      // South faces are two tiles tall, so reveal the cap row as well.
+      if (yy > 0) this.markSeen(xx, yy - 1);
+      return;
     }
   }
 
@@ -108,6 +140,7 @@ export class Level {
     if (x < 0 || y < 0 || x >= this.width || y >= this.height) return;
     this.tileStacks[x + y * this.width] = [tile];
     this.tilesDirty = true;
+    this.revision++;
   }
 
   clearDirty(): void {
@@ -119,34 +152,41 @@ export class Level {
     return tile === null ? false : tile.passable;
   }
 
-  getClipBBs(cx: number, cy: number, rx: number, ry: number): BB[] {
+  /**
+   * Collision boxes of the map's edges and of every solid tile around the box centred at (cx, cy). The
+   * array and its boxes are reused by the next call: use them at once, never keep them.
+   */
+  getClipBBs(cx: number, cy: number, rx: number, ry: number): readonly Rectangle[] {
     const W = this.width * TILE_WIDTH;
     const H = this.height * TILE_HEIGHT;
-    const result: BB[] = [
-      new BB(-TILE_WIDTH, 0, 0, H),
-      new BB(0, -TILE_HEIGHT, W, 0),
-      new BB(W, 0, W + TILE_WIDTH, H),
-      new BB(0, H, W, H + TILE_HEIGHT),
-    ];
+    const pool = this.clipPool;
+    const result = this.clipBoxes;
+    pool.reset();
+    result.length = 0;
+    result.push(
+      pool.between(-TILE_WIDTH, 0, 0, H),
+      pool.between(0, -TILE_HEIGHT, W, 0),
+      pool.between(W, 0, W + TILE_WIDTH, H),
+      pool.between(0, H, W, H + TILE_HEIGHT),
+    );
     const tx0 = Math.floor((cx - rx) / TILE_WIDTH) - 1;
     const ty0 = Math.floor((cy - ry) / TILE_HEIGHT) - 1;
     const tx1 = Math.ceil((cx + rx) / TILE_WIDTH) + 1;
     const ty1 = Math.ceil((cy + ry) / TILE_HEIGHT) + 1;
-    for (let ty = ty0; ty <= ty1; ty++) {
-      for (let tx = tx0; tx <= tx1; tx++) {
-        const tile = this.getTile(tx, ty);
-        if (!tile || !tile.passable) {
-          const wall = tile?.type === TileType.Wall || tile?.type === TileType.BreakableWall;
-          const sink = wall && this.getTile(tx, ty - 1)?.passable ? WALL_SINK : 0;
-          result.push(new BB(
-            tx * TILE_WIDTH, ty * TILE_HEIGHT + sink,
-            (tx + 1) * TILE_WIDTH, (ty + 1) * TILE_HEIGHT,
-          ));
-        }
-      }
-    }
+    forEachTile(tx0, ty0, tx1, ty1, this.addTileClip);
     return result;
   }
+
+  /** Adds the collision box of one tile, if it blocks; a wall with floor north of it lets feet sink in. */
+  private readonly addTileClip = (tx: number, ty: number): void => {
+    const tile = this.getTile(tx, ty);
+    if (tile && tile.passable) return;
+    const sink = isWallType(tile) && this.getTile(tx, ty - 1)?.passable ? WALL_SINK : 0;
+    this.clipBoxes.push(this.clipPool.between(
+      tx * TILE_WIDTH, ty * TILE_HEIGHT + sink,
+      (tx + 1) * TILE_WIDTH, (ty + 1) * TILE_HEIGHT,
+    ));
+  };
 
   checkLineOfSight(x0: number, y0: number, x1: number, y1: number): boolean {
     let tx0 = Math.floor(x0 / TILE_WIDTH);

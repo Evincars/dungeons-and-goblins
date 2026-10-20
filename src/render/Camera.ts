@@ -6,6 +6,9 @@ export const VIEW_HEIGHT  = GAME_HEIGHT - PANEL_HEIGHT;
 
 export const camera = { x: 0, y: 0 };
 
-export function screenToWorld(sx: number, sy: number): { x: number; y: number } {
-  return { x: sx + camera.x, y: sy + camera.y };
+/** The world point under a screen point; written into `out` when given, so per-tick callers allocate nothing. */
+export function screenToWorld(sx: number, sy: number, out = { x: 0, y: 0 }): { x: number; y: number } {
+  out.x = sx + camera.x;
+  out.y = sy + camera.y;
+  return out;
 }

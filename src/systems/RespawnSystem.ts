@@ -7,6 +7,8 @@ import { respawnPlayer } from './HoleSystem';
 /** Ticks the fallen player lies there after the death clip has finished. */
 const DEATH_LINGER = 45;
 
+const dying = world.with('playerInput', 'respawnTicks');
+
 /** Starts a player's death: plays the death clip out, then {@link updateRespawns} brings them back. */
 export function startDying(player: Entity, level: Level): void {
   const clipTicks = player.character ? stateDuration(player.character.def, 'death') : 0;
@@ -22,12 +24,11 @@ export function startDying(player: Entity, level: Level): void {
 }
 
 export function updateRespawns(level: Level, dt: number): void {
-  for (const player of world.with('playerInput', 'respawnTicks')) {
-    player.respawnTicks = Math.max(0, player.respawnTicks! - dt);
-    if (player.respawnTicks === 0) {
-      world.removeComponent(player, 'respawnTicks');
-      respawnPlayer(player, level, 'death');
-      player.hurtTime = 0;
-    }
+  for (const player of dying) {
+    player.respawnTicks = Math.max(0, player.respawnTicks - dt);
+    if (player.respawnTicks > 0) continue;
+    world.removeComponent(player, 'respawnTicks');
+    respawnPlayer(player, level, 'death');
+    player.hurtTime = 0;
   }
 }

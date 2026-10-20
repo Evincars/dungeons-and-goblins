@@ -1,12 +1,17 @@
 import { q } from '../world';
 import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
 import { Settings } from '../game/Settings';
+import type { ActionName } from '../game/Settings';
+
+const LEFT_BUTTON = 0;
+const RIGHT_BUTTON = 2;
 
 const keys = new Set<string>();
 const pending = new Set<string>();
-let pressed = new Set<string>();
-let mouseX = 0;
-let mouseY = 0;
+/** Keys first pressed since the previous tick; refilled from `pending` each tick (never reallocated). */
+const pressed = new Set<string>();
+/** Pointer position in game pixels; handed out read-only so callers allocate nothing. */
+const mouse = { x: 0, y: 0 };
 let mouseDown = false;
 let rightDown = false;
 let clickPending = false;
@@ -20,8 +25,8 @@ export function setInputCaptured(on: boolean): void {
   resetInput();
 }
 
-export function pointer(): { x: number; y: number } {
-  return { x: mouseX, y: mouseY };
+export function pointer(): Readonly<{ x: number; y: number }> {
+  return mouse;
 }
 
 /** True on the tick the left mouse button went down. */
@@ -37,14 +42,12 @@ export function isKeyDown(code: string): boolean {
   return keys.has(code);
 }
 
-function isActionDown(action: string): boolean {
-  const b = Settings.bindings[action];
-  return b !== undefined && keys.has(b.key);
+function isActionDown(action: ActionName): boolean {
+  return keys.has(Settings.bindings[action].key);
 }
 
-function wasActionPressed(action: string): boolean {
-  const b = Settings.bindings[action];
-  return b !== undefined && pressed.has(b.key);
+function wasActionPressed(action: ActionName): boolean {
+  return pressed.has(Settings.bindings[action].key);
 }
 
 export function resetInput(): void {
@@ -52,44 +55,52 @@ export function resetInput(): void {
   pressed.clear();
 }
 
+function onKeyDown(e: KeyboardEvent): void {
+  if (e.code === 'Space' || e.code === 'Tab') e.preventDefault();
+  if (captured) return;
+  keys.add(e.code);
+  if (!e.repeat) pending.add(e.code);
+}
+
+function onMouseDown(e: MouseEvent): void {
+  if (e.button === LEFT_BUTTON) { mouseDown = true; clickPending = true; }
+  if (e.button === RIGHT_BUTTON) rightDown = true;
+}
+
+function onMouseUp(e: MouseEvent): void {
+  if (e.button === LEFT_BUTTON) mouseDown = false;
+  if (e.button === RIGHT_BUTTON) rightDown = false;
+}
+
 export function initInput(canvas: HTMLCanvasElement): void {
   if (bound) return;
   bound = true;
 
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space' || e.code === 'Tab') e.preventDefault();
-    if (captured) return;
-    keys.add(e.code);
-    if (!e.repeat) pending.add(e.code);
-  });
+  window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', (e) => keys.delete(e.code));
   window.addEventListener('blur', () => keys.clear());
 
   canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
-    mouseX = ((e.clientX - rect.left) / rect.width) * GAME_WIDTH;
-    mouseY = ((e.clientY - rect.top) / rect.height) * GAME_HEIGHT;
+    mouse.x = ((e.clientX - rect.left) / rect.width) * GAME_WIDTH;
+    mouse.y = ((e.clientY - rect.top) / rect.height) * GAME_HEIGHT;
   });
-  canvas.addEventListener('mousedown', (e) => {
-    if (e.button === 0) { mouseDown = true; clickPending = true; }
-    if (e.button === 2) rightDown = true;
-  });
-  window.addEventListener('mouseup', (e) => {
-    if (e.button === 0) mouseDown = false;
-    if (e.button === 2) rightDown = false;
-  });
+  canvas.addEventListener('mousedown', onMouseDown);
+  window.addEventListener('mouseup', onMouseUp);
   window.addEventListener('blur', () => { mouseDown = false; rightDown = false; });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
-export function updateInput(_dt: number): void {
-  pressed = new Set(pending);
+/** Turns the keyboard and mouse into each player's input and one-tick intents (the Command pattern). */
+export function updateInput(): void {
+  pressed.clear();
+  for (const code of pending) pressed.add(code);
   pending.clear();
   clicked = clickPending && !captured;
   clickPending = false;
 
   for (const entity of q.players) {
-    const pi = entity.playerInput!;
+    const pi = entity.playerInput;
     pi.up    = isActionDown('up');
     pi.down  = isActionDown('down');
     pi.left  = isActionDown('left');
@@ -97,8 +108,8 @@ export function updateInput(_dt: number): void {
     pi.sprint = isActionDown('sprint');
     pi.attack = !captured && (mouseDown || isActionDown('attack'));
     pi.use    = !captured && isActionDown('use');
-    pi.mouseX = mouseX;
-    pi.mouseY = mouseY;
+    pi.mouseX = mouse.x;
+    pi.mouseY = mouse.y;
     pi.mouseAiming = true;
 
     const it = pi.intents;

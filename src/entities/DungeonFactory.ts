@@ -1,0 +1,124 @@
+import { world } from '../world';
+import type { Entity, InventoryItem } from '../world';
+import { TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
+import { PROPS } from '../level/Props';
+import type { PropDef, PropPlacement } from '../level/Props';
+import type { DoorData, RoomData } from '../level/generators/DungeonBuilder';
+
+/** The fixtures of a generated dungeon: rooms, the safe-room door, torches, props, chests, exit and shop. */
+
+/** Torch mounts sit this far above the foot of their wall. */
+const TORCH_LIFT = 30;
+const TORCH_LIGHT_RADIUS = 120;
+const TORCH_COLOR = 0xffcc66;
+const TORCH_SCALE = 1.5;
+const TORCH_FRAMES = 4;
+const TORCH_FRAME_TICKS = 7;
+/** Floor props rest just above their tile's bottom edge, so they depth-sort with whoever stands around them. */
+const PROP_GROUND = TILE_HEIGHT - 4;
+/** Wall props hang from just under the face's cap molding. */
+const HANG_TOP = 58;
+const CHEST_HEALTH = 20;
+
+export const SHOP_ITEMS: readonly InventoryItem[] = [
+  { type: 'weapon', name: 'Short Sword',  value: 50,  slot: 'weapon', icon: 0, stats: { attack: 2 } },
+  { type: 'weapon', name: 'Long Sword',   value: 120, slot: 'weapon', icon: 0, stats: { attack: 4 } },
+  { type: 'helmet', name: 'Iron Helm',    value: 40,  slot: 'helmet', icon: 1, stats: { defense: 1 } },
+  { type: 'chest',  name: 'Chain Mail',   value: 80,  slot: 'chest',  icon: 2, stats: { defense: 2 } },
+  { type: 'boots',  name: 'Leather Boots',value: 30,  slot: 'boots',  icon: 4, stats: { defense: 1 } },
+  { type: 'health_potion', name: 'Health Potion', value: 20, icon: 6, stats: { hp: 30 } },
+  { type: 'health_potion', name: 'Big Potion',    value: 50, icon: 6, stats: { hp: 80 } },
+];
+
+/** ECS metadata for a room of the layout. */
+export function createRoom(room: RoomData): Entity {
+  return world.add({ room: { id: room.id, type: room.type, bounds: { x: room.x, y: room.y, w: room.w, h: room.h } } });
+}
+
+/** The door that seals the safe room once every player has left it. */
+export function createSafeDoor(door: DoorData): Entity {
+  const first = door.tiles[0];
+  const middle = door.tiles[Math.floor(door.tiles.length / 2)] ?? first;
+  return world.add({
+    position: { x: first.x * TILE_WIDTH + TILE_WIDTH / 2, y: middle.y * TILE_HEIGHT + TILE_HEIGHT / 2 },
+    door: { tiles: door.tiles, boundaryX: door.boundaryX, closed: false },
+  });
+}
+
+/**
+ * A torch hung on a brick face. The entity stands at the foot of the wall (so anyone in front of the
+ * wall draws over it); the sprite is lifted up onto the bricks.
+ */
+export function createTorch(x: number, y: number): Entity {
+  return world.add({
+    position: { x, y: y + TORCH_LIFT },
+    torch: { radius: TORCH_LIGHT_RADIUS, color: TORCH_COLOR, flicker: Math.random() * Math.PI * 2 },
+    visual: { sheet: 'torch', scale: TORCH_SCALE },
+    animation: {
+      sheet: 'torch',
+      frameX: 0,
+      frameY: 0,
+      frameCount: TORCH_FRAMES,
+      frameTime: TORCH_FRAME_TICKS,
+      timer: Math.floor(Math.random() * TORCH_FRAMES),
+      loop: true,
+    },
+    yOffset: TORCH_LIFT,
+  });
+}
+
+/** A decorative prop: standing on its tile, or hung on the brick face above it. */
+export function createProp(p: PropPlacement): Entity {
+  const def: PropDef = PROPS[p.kind];
+  const x = p.tx * TILE_WIDTH + TILE_WIDTH / 2;
+  const h = def.rect.h;
+  if (def.mount === 'wall') {
+    // Stands at the foot of the wall like a torch, drawn up on the bricks.
+    return world.add({ position: { x, y: p.ty * TILE_HEIGHT }, visual: { sheet: `prop_${p.kind}` }, yOffset: HANG_TOP - h / 2 });
+  }
+  return world.add({
+    position: { x, y: p.ty * TILE_HEIGHT + PROP_GROUND },
+    visual: { sheet: `prop_${p.kind}` },
+    yOffset: h / 2,
+    ...(def.glow ? { glow: { radius: def.glow } } : {}),
+  });
+}
+
+export function createChest(x: number, y: number): Entity {
+  return world.add({
+    position: { x, y },
+    chest: { opened: false, disappearTicks: -1 },
+    health: { current: CHEST_HEALTH, max: CHEST_HEALTH },
+    hurtTime: 0, freezeTime: 0,
+    radius: { x: 12, y: 10 },
+    blocking: true,
+    physicsSlide: true,
+    visual: { sheet: 'chest', col: 0, row: 0 },
+    yOffset: 8,
+    healthBarOffset: 14,
+    minimapColor: 0xffd040,
+  });
+}
+
+export function createExitButton(x: number, y: number): Entity {
+  return world.add({
+    position: { x, y },
+    exitButton: { activated: false },
+    radius: { x: 14, y: 12 },
+    visual: { sheet: 'exit_button', col: 0, row: 0 },
+    yOffset: 16,
+    minimapColor: 0x00ff44,
+  });
+}
+
+export function createShopNpc(x: number, y: number): Entity {
+  return world.add({
+    position: { x, y },
+    shopNpc: { items: SHOP_ITEMS.map((item) => ({ ...item })) },
+    radius: { x: 10, y: 10 },
+    blocking: true,
+    visual: { sheet: 'spawner', col: 0, row: 0 },
+    yOffset: 8,
+    minimapColor: 0xffaa00,
+  });
+}

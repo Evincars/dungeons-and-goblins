@@ -1,4 +1,6 @@
 import type { Level } from './Level';
+import type { TileData } from './TileType';
+import { forEachTile } from './Grid';
 import { TileType, TILE_WIDTH, TILE_HEIGHT } from './TileType';
 
 /**
@@ -93,220 +95,277 @@ function noise(x: number, y: number, scale: number): number {
   return top + (bot - top) * sy;
 }
 
-export function buildTerrainPieces(level: Level): TerrainPiece[] {
-  const W = level.width * 2;
-  const H = level.height * 2;
+/** A sub-tile of plain black wall-top void (inside the framed block at col 6, row 5). */
+const VOID = [96, 80] as const;
 
-  const tileAt = (sx: number, sy: number) =>
-    sx < 0 || sy < 0 || sx >= W || sy >= H ? null : level.getTile(sx >> 1, sy >> 1);
-  const solid = (sx: number, sy: number) => {
-    const t = tileAt(sx, sy);
+/** Tallest a south face gets, in sub-tiles: a cap over three brick rows. */
+const FACE_MAX = 4;
+/** Sub-tiles of a framed 2×2 pit along each side. */
+const PIT_SUBTILES = 4;
+/** Floor value-noise scale in tiles, and the noise levels above which patches and rough earth show. */
+const FLOOR_NOISE_SCALE = 6;
+const FLOOR_ROUGH_LEVEL = 0.82;
+const FLOOR_PATCH_LEVEL = 0.64;
+/** One floor tile in this many (by hash) is a drain grate. */
+const GRATE_EVERY = 53;
+/** One plain full-height face column in this many (by hash) shows an arched window. */
+const WINDOW_EVERY = 9;
+/** The void that covers characters behind a wall row sorts just under the wall row itself. */
+const VOID_BELOW_WALL = 0.5;
+
+type FaceStyle = 'left' | 'right' | 'mid' | 'pillarL' | 'pillarR' | 'window' | 'cracked' | 'niche';
+type Src = readonly [number, number];
+
+function quad(out: TerrainPiece[], dx: number, dy: number, s: Src, w: number, h: number, z?: number): void {
+  out.push(z === undefined ? { dx, dy, sx: s[0], sy: s[1], w, h } : { dx, dy, sx: s[0], sy: s[1], w, h, z });
+}
+
+/** Plinth strip under a face sub-tile of the given style. */
+function plinthX(style: FaceStyle): number {
+  if (style === 'left') return FACE_LEFT_X;
+  if (style === 'right') return FACE_RIGHT_X;
+  if (style === 'pillarL') return PILLAR_X[0];
+  if (style === 'pillarR') return PILLAR_X[1];
+  return FACE_MID_X[1];
+}
+
+/**
+ * Autotiles one level on the 16px sub-tile grid. Each pass appends to one of three lists, drawn in
+ * order: floors, then walls and faces, then overlays (plinths, pit rims, lintels, behind-the-wall void).
+ */
+class TerrainBuilder {
+  private readonly W: number;
+  private readonly H: number;
+  /** For each face sub-tile: its row counted up from the face's foot (1 = lowest), and the face's height. */
+  private readonly faceK: Int8Array;
+  private readonly faceH: Int8Array;
+  /** Sub-tiles covered by a framed pit's art, which loose-hole art must not draw over. */
+  private readonly framed = new Set<number>();
+  readonly floorPieces: TerrainPiece[] = [];
+  readonly wallPieces: TerrainPiece[] = [];
+  readonly overlayPieces: TerrainPiece[] = [];
+
+  constructor(private readonly level: Level) {
+    this.W = level.width * 2;
+    this.H = level.height * 2;
+    this.faceK = new Int8Array(this.W * this.H);
+    this.faceH = new Int8Array(this.W * this.H);
+  }
+
+  build(): TerrainPiece[] {
+    forEachTile(0, 1, this.W - 1, this.H - 1, this.markFace);
+    forEachTile(0, 0, this.level.width - 1, this.level.height - 1, this.addFloor);
+    for (const p of this.level.pits) this.addPit(p);
+    forEachTile(0, 0, this.W - 1, this.H - 1, this.addSubTile);
+    forEachTile(0, 0, this.W - 3, this.H - 1, this.addArch);
+    return [...this.floorPieces, ...this.wallPieces, ...this.overlayPieces];
+  }
+
+  // ── Sub-tile queries ───────────────────────────────────────────────────────
+
+  private tileAt(sx: number, sy: number): TileData | null {
+    return sx < 0 || sy < 0 || sx >= this.W || sy >= this.H ? null : this.level.getTile(sx >> 1, sy >> 1);
+  }
+
+  private solid(sx: number, sy: number): boolean {
+    const t = this.tileAt(sx, sy);
     return !t || t.type === TileType.Wall || t.type === TileType.BreakableWall;
-  };
-  const hole = (sx: number, sy: number) => tileAt(sx, sy)?.type === TileType.Hole;
+  }
+
+  private hole(sx: number, sy: number): boolean {
+    return this.tileAt(sx, sy)?.type === TileType.Hole;
+  }
+
+  private isFace(sx: number, sy: number): boolean {
+    return sx >= 0 && sy >= 0 && sx < this.W && sy < this.H && this.faceK[sx + sy * this.W] > 0;
+  }
 
   /** Depth of a wall sub-tile whose tile has walkable floor directly north (drawn over characters there). */
-  const occluderZ = (sx: number, sy: number): number | undefined => {
+  private occluderZ(sx: number, sy: number): number | undefined {
     const tx = sx >> 1, ty = sy >> 1;
-    if (!level.getTile(tx, ty - 1)?.passable) return undefined;
+    if (!this.level.getTile(tx, ty - 1)?.passable) return undefined;
     return (ty + 1) * TILE_HEIGHT;
-  };
+  }
 
   // ── Faces: up to 4 solid sub-tiles directly above an open one ──────────────
-  const faceK = new Int8Array(W * H);
-  const faceH = new Int8Array(W * H);
-  for (let sx = 0; sx < W; sx++) {
-    for (let sy = 1; sy < H; sy++) {
-      if (solid(sx, sy) || !solid(sx, sy - 1)) continue;
-      let t = 0;
-      while (t < 4 && solid(sx, sy - 1 - t)) t++;
-      for (let k = 1; k <= t; k++) {
-        const y = sy - k;
-        if (y < 0) break;
-        faceK[sx + y * W] = k;
-        faceH[sx + y * W] = t;
-      }
-    }
-  }
-  const isFace = (sx: number, sy: number) =>
-    sx >= 0 && sy >= 0 && sx < W && sy < H && faceK[sx + sy * W] > 0;
 
-  type FaceStyle = 'left' | 'right' | 'mid' | 'pillarL' | 'pillarR' | 'window' | 'cracked' | 'niche';
-  const faceStyle = (sx: number, sy: number): FaceStyle => {
-    const i = sx + sy * W;
-    const h = faceH[i];
-    const k = faceK[i];
-    const bottom = sy + k - 1;
-    if (!solid(sx - 1, sy)) return 'left';
-    if (!solid(sx + 1, sy)) return 'right';
-    if (tileAt(sx, sy)?.type === TileType.BreakableWall) return 'cracked';
-    const tx = sx >> 1;
-    if (h === 4 && level.wallDecor.get(tx + (bottom >> 1) * level.width)?.startsWith('niche')) return 'niche';
-    if (h === 4 && tx % PILLAR_EVERY === PILLAR_PHASE) {
-      // A pillar needs both halves of the tile to be plain full-height face.
-      const lx = tx * 2, rx = lx + 1;
-      const ok = [lx, rx].every((x) => isFace(x, bottom) && faceH[x + bottom * W] === 4
-        && solid(x - 1, bottom) && solid(x + 1, bottom));
-      if (ok) return sx === lx ? 'pillarL' : 'pillarR';
+  private readonly markFace = (sx: number, sy: number): void => {
+    if (this.solid(sx, sy) || !this.solid(sx, sy - 1)) return;
+    let t = 0;
+    while (t < FACE_MAX && this.solid(sx, sy - 1 - t)) t++;
+    for (let k = 1; k <= t; k++) {
+      const y = sy - k;
+      if (y < 0) break;
+      this.faceK[sx + y * this.W] = k;
+      this.faceH[sx + y * this.W] = t;
     }
-    if (h === 4 && hash(tx, bottom) % 9 === 0) return 'window';
-    return 'mid';
   };
 
-  const floorPieces: TerrainPiece[] = [];
-  const wallPieces: TerrainPiece[] = [];
-  const overlayPieces: TerrainPiece[] = [];
-  const quad = (out: TerrainPiece[], dx: number, dy: number, s: readonly [number, number], w: number, h: number, z?: number) =>
-    out.push(z === undefined ? { dx, dy, sx: s[0], sy: s[1], w, h } : { dx, dy, sx: s[0], sy: s[1], w, h, z });
+  /** A pillar needs both halves of the tile to be plain full-height face. */
+  private pillarFits(tx: number, bottom: number): boolean {
+    const lx = tx * 2;
+    return [lx, lx + 1].every((x) => this.isFace(x, bottom) && this.faceH[x + bottom * this.W] === FACE_MAX
+      && this.solid(x - 1, bottom) && this.solid(x + 1, bottom));
+  }
+
+  private faceStyle(sx: number, sy: number): FaceStyle {
+    const i = sx + sy * this.W;
+    const h = this.faceH[i];
+    const bottom = sy + this.faceK[i] - 1;
+    if (!this.solid(sx - 1, sy)) return 'left';
+    if (!this.solid(sx + 1, sy)) return 'right';
+    if (this.tileAt(sx, sy)?.type === TileType.BreakableWall) return 'cracked';
+    const tx = sx >> 1;
+    const full = h === FACE_MAX;
+    if (full && this.level.wallDecor.get(tx + (bottom >> 1) * this.level.width)?.startsWith('niche')) return 'niche';
+    if (full && tx % PILLAR_EVERY === PILLAR_PHASE && this.pillarFits(tx, bottom)) return sx === tx * 2 ? 'pillarL' : 'pillarR';
+    if (full && hash(tx, bottom) % WINDOW_EVERY === 0) return 'window';
+    return 'mid';
+  }
 
   // ── Floors (per 32px game tile; obstacles stand on floor) ──────────────────
-  for (let ty = 0; ty < level.height; ty++) {
-    for (let tx = 0; tx < level.width; tx++) {
-      const t = level.getTile(tx, ty);
-      if (!t || (t.type !== TileType.Floor && t.type !== TileType.Obstacle)) continue;
-      const v = hash(tx, ty);
-      let src: [number, number];
-      if (level.isSafeZone(tx, ty)) {
-        src = FLOOR_SAFE[v % FLOOR_SAFE.length];
-      } else {
-        const n = noise(tx, ty, 6);
-        if (v % 53 === 0 && t.type === TileType.Floor) src = FLOOR_GRATE;
-        else if (n > 0.82) src = FLOOR_ROUGH[v % FLOOR_ROUGH.length];
-        else if (n > 0.64) src = FLOOR_PATCH[v % FLOOR_PATCH.length];
-        else src = FLOOR_MAIN[v % FLOOR_MAIN.length];
-      }
-      quad(floorPieces, tx * TILE_WIDTH, ty * TILE_HEIGHT, src, TILE_WIDTH, TILE_HEIGHT);
-    }
+
+  private readonly addFloor = (tx: number, ty: number): void => {
+    const t = this.level.getTile(tx, ty);
+    if (!t || (t.type !== TileType.Floor && t.type !== TileType.Obstacle)) return;
+    quad(this.floorPieces, tx * TILE_WIDTH, ty * TILE_HEIGHT, this.floorSource(t, tx, ty), TILE_WIDTH, TILE_HEIGHT);
+  };
+
+  private floorSource(t: TileData, tx: number, ty: number): Src {
+    const v = hash(tx, ty);
+    if (this.level.isSafeZone(tx, ty)) return FLOOR_SAFE[v % FLOOR_SAFE.length];
+    const n = noise(tx, ty, FLOOR_NOISE_SCALE);
+    if (v % GRATE_EVERY === 0 && t.type === TileType.Floor) return FLOOR_GRATE;
+    if (n > FLOOR_ROUGH_LEVEL) return FLOOR_ROUGH[v % FLOOR_ROUGH.length];
+    if (n > FLOOR_PATCH_LEVEL) return FLOOR_PATCH[v % FLOOR_PATCH.length];
+    return FLOOR_MAIN[v % FLOOR_MAIN.length];
   }
 
   // ── Framed pits (2×2 holes) — rims spill onto the surrounding floor ────────
-  const framed = new Set<number>();
-  for (const p of level.pits) {
-    for (let dy = 0; dy < 4; dy++) for (let dx = 0; dx < 4; dx++) framed.add(p.x * 2 + dx + (p.y * 2 + dy) * W);
-    overlayPieces.push({
+
+  private addPit(p: { x: number; y: number }): void {
+    forEachTile(0, 0, PIT_SUBTILES - 1, PIT_SUBTILES - 1, (dx, dy) => this.framed.add(p.x * 2 + dx + (p.y * 2 + dy) * this.W));
+    this.overlayPieces.push({
       dx: p.x * TILE_WIDTH - PIT.rim, dy: p.y * TILE_HEIGHT - PIT.rim,
       sx: PIT.x, sy: PIT.y, w: PIT.w, h: PIT.h,
     });
   }
 
   // ── Walls, loose holes and plinths (per 16px sub-tile) ─────────────────────
-  for (let sy = 0; sy < H; sy++) {
-    for (let sx = 0; sx < W; sx++) {
-      const dx = sx * SUB;
-      const dy = sy * SUB;
 
-      if (!solid(sx, sy)) {
-        // Plinth along the foot of a face, laid over the floor
-        if (!hole(sx, sy) && isFace(sx, sy - 1) && faceK[sx + (sy - 1) * W] === 1) {
-          const style = faceStyle(sx, sy - 1);
-          const bx = style === 'left' ? FACE_LEFT_X : style === 'right' ? FACE_RIGHT_X
-            : style === 'pillarL' ? PILLAR_X[0] : style === 'pillarR' ? PILLAR_X[1] : FACE_MID_X[1];
-          quad(overlayPieces, dx, dy, [bx, BASE_Y], SUB, Q);
-        }
-        // A hole outside a framed pit: dark brick lip under open floor, then black
-        if (hole(sx, sy) && !framed.has(sx + sy * W)) {
-          if (!solid(sx, sy - 1) && !hole(sx, sy - 1)) quad(wallPieces, dx, dy, PIT_WALL[0], SUB, SUB);
-          else if (hole(sx, sy - 1) && !solid(sx, sy - 2) && !hole(sx, sy - 2)) quad(wallPieces, dx, dy, PIT_WALL[1], SUB, SUB);
-        }
-        continue;
-      }
-
-      const z = occluderZ(sx, sy);
-      const i = sx + sy * W;
-      if (faceK[i] > 0) {
-        const k = faceK[i];
-        const h = faceH[i];
-        const style = faceStyle(sx, sy);
-        const cap = k === h;
-        let src: [number, number];
-        switch (style) {
-          case 'left': src = [FACE_LEFT_X, cap ? FACE_CAP_Y : FACE_BRICK_Y[k - 1]]; break;
-          case 'right': src = [FACE_RIGHT_X, cap ? FACE_CAP_Y : FACE_BRICK_Y[k - 1]]; break;
-          case 'pillarL': src = [PILLAR_X[0], cap ? FACE_CAP_Y : FACE_BRICK_Y[k - 1]]; break;
-          case 'pillarR': src = [PILLAR_X[1], cap ? FACE_CAP_Y : FACE_BRICK_Y[k - 1]]; break;
-          case 'niche': {
-            const wallRow = (sy + k - 1) >> 1;
-            const decor = level.wallDecor.get((sx >> 1) + wallRow * level.width);
-            const right = decor === 'niche1';
-            const col = (right ? 2 : 0) + (sx & 1);
-            // Both tiles of a niche pick the same art, keyed by the segment's left tile.
-            const base = NICHE_X[hash((sx >> 1) - (right ? 1 : 0), wallRow) % NICHE_X.length];
-            src = [base + col * SUB, cap ? NICHE_CAP_Y : NICHE_Y[k - 1]];
-            break;
-          }
-          case 'window':
-            src = cap ? [FACE_MID_X[sx % 4], FACE_CAP_Y] : [WINDOW_X[(sx >> 1) % WINDOW_X.length], WINDOW_Y[k - 1]];
-            break;
-          case 'cracked':
-            src = cap ? [FACE_MID_X[sx % 4], FACE_CAP_Y] : [272 + (sx % 8) * 16, CRACKED_Y[k - 1]];
-            break;
-          default:
-            src = [FACE_MID_X[sx % 4], cap ? FACE_CAP_Y : FACE_BRICK_Y[k - 1]];
-        }
-        quad(wallPieces, dx, dy, src, SUB, SUB, z);
-        continue;
-      }
-
-      // Wall top: void with a stone outline toward open floor (or a face beside it)
-      const openN = !solid(sx, sy - 1);
-      const sideW = !solid(sx - 1, sy) || isFace(sx - 1, sy);
-      const sideE = !solid(sx + 1, sy) || isFace(sx + 1, sy);
-      const diagNW = !solid(sx - 1, sy - 1);
-      const diagNE = !solid(sx + 1, sy - 1);
-
-      // upper-left quarter
-      if (sideW && openN) quad(wallPieces, dx, dy, OUTER_TL, Q, Q, z);
-      else if (sideW) quad(wallPieces, dx, dy, EDGE_LEFT[0], Q, Q, z);
-      else if (openN) quad(wallPieces, dx, dy, EDGE_TOP_L, Q, Q, z);
-      else if (diagNW) quad(wallPieces, dx, dy, EDGE_LEFT[0], Q, Q, z);
-      // upper-right quarter
-      if (sideE && openN) quad(wallPieces, dx + Q, dy, OUTER_TR, Q, Q, z);
-      else if (sideE) quad(wallPieces, dx + Q, dy, EDGE_RIGHT[0], Q, Q, z);
-      else if (openN) quad(wallPieces, dx + Q, dy, EDGE_TOP_R, Q, Q, z);
-      else if (diagNE) quad(wallPieces, dx + Q, dy, EDGE_RIGHT[0], Q, Q, z);
-      // lower quarters (south is never open here — that would make this a face)
-      if (sideW) quad(wallPieces, dx, dy + Q, EDGE_LEFT[1], Q, Q, z);
-      if (sideE) quad(wallPieces, dx + Q, dy + Q, EDGE_RIGHT[1], Q, Q, z);
-      // The void itself must also cover anyone standing behind this wall row.
-      if (z !== undefined) overlayPieces.push({ dx, dy, sx: VOID[0], sy: VOID[1], w: SUB, h: SUB, z: z - 0.5 });
+  private readonly addSubTile = (sx: number, sy: number): void => {
+    const dx = sx * SUB;
+    const dy = sy * SUB;
+    if (!this.solid(sx, sy)) {
+      this.addOpenSubTile(sx, sy, dx, dy);
+      return;
     }
+    const z = this.occluderZ(sx, sy);
+    if (this.faceK[sx + sy * this.W] > 0) quad(this.wallPieces, dx, dy, this.faceSource(sx, sy), SUB, SUB, z);
+    else this.addWallTop(sx, sy, dx, dy, z);
+  };
+
+  private addOpenSubTile(sx: number, sy: number, dx: number, dy: number): void {
+    // Plinth along the foot of a face, laid over the floor
+    if (!this.hole(sx, sy) && this.isFace(sx, sy - 1) && this.faceK[sx + (sy - 1) * this.W] === 1) {
+      quad(this.overlayPieces, dx, dy, [plinthX(this.faceStyle(sx, sy - 1)), BASE_Y], SUB, Q);
+    }
+    // A hole outside a framed pit: dark brick lip under open floor, then black
+    if (!this.hole(sx, sy) || this.framed.has(sx + sy * this.W)) return;
+    const floorAbove = (y: number) => !this.solid(sx, y) && !this.hole(sx, y);
+    if (floorAbove(sy - 1)) quad(this.wallPieces, dx, dy, PIT_WALL[0], SUB, SUB);
+    else if (this.hole(sx, sy - 1) && floorAbove(sy - 2)) quad(this.wallPieces, dx, dy, PIT_WALL[1], SUB, SUB);
+  }
+
+  private faceSource(sx: number, sy: number): Src {
+    const i = sx + sy * this.W;
+    const k = this.faceK[i];
+    const cap = k === this.faceH[i];
+    const brick = cap ? FACE_CAP_Y : FACE_BRICK_Y[k - 1];
+    switch (this.faceStyle(sx, sy)) {
+      case 'left': return [FACE_LEFT_X, brick];
+      case 'right': return [FACE_RIGHT_X, brick];
+      case 'pillarL': return [PILLAR_X[0], brick];
+      case 'pillarR': return [PILLAR_X[1], brick];
+      case 'niche': return this.nicheSource(sx, sy, k, cap);
+      case 'window': return cap ? [FACE_MID_X[sx % 4], FACE_CAP_Y] : [WINDOW_X[(sx >> 1) % WINDOW_X.length], WINDOW_Y[k - 1]];
+      case 'cracked': return cap ? [FACE_MID_X[sx % 4], FACE_CAP_Y] : [272 + (sx % 8) * 16, CRACKED_Y[k - 1]];
+      default: return [FACE_MID_X[sx % 4], brick];
+    }
+  }
+
+  private nicheSource(sx: number, sy: number, k: number, cap: boolean): Src {
+    const wallRow = (sy + k - 1) >> 1;
+    const decor = this.level.wallDecor.get((sx >> 1) + wallRow * this.level.width);
+    const right = decor === 'niche1';
+    const col = (right ? 2 : 0) + (sx & 1);
+    // Both tiles of a niche pick the same art, keyed by the segment's left tile.
+    const base = NICHE_X[hash((sx >> 1) - (right ? 1 : 0), wallRow) % NICHE_X.length];
+    return [base + col * SUB, cap ? NICHE_CAP_Y : NICHE_Y[k - 1]];
+  }
+
+  /** Wall top: void with a stone outline toward open floor (or a face beside it). */
+  private addWallTop(sx: number, sy: number, dx: number, dy: number, z: number | undefined): void {
+    const out = this.wallPieces;
+    const openN = !this.solid(sx, sy - 1);
+    const sideW = !this.solid(sx - 1, sy) || this.isFace(sx - 1, sy);
+    const sideE = !this.solid(sx + 1, sy) || this.isFace(sx + 1, sy);
+    const diagNW = !this.solid(sx - 1, sy - 1);
+    const diagNE = !this.solid(sx + 1, sy - 1);
+
+    // upper-left quarter
+    if (sideW && openN) quad(out, dx, dy, OUTER_TL, Q, Q, z);
+    else if (sideW) quad(out, dx, dy, EDGE_LEFT[0], Q, Q, z);
+    else if (openN) quad(out, dx, dy, EDGE_TOP_L, Q, Q, z);
+    else if (diagNW) quad(out, dx, dy, EDGE_LEFT[0], Q, Q, z);
+    // upper-right quarter
+    if (sideE && openN) quad(out, dx + Q, dy, OUTER_TR, Q, Q, z);
+    else if (sideE) quad(out, dx + Q, dy, EDGE_RIGHT[0], Q, Q, z);
+    else if (openN) quad(out, dx + Q, dy, EDGE_TOP_R, Q, Q, z);
+    else if (diagNE) quad(out, dx + Q, dy, EDGE_RIGHT[0], Q, Q, z);
+    // lower quarters (south is never open here — that would make this a face)
+    if (sideW) quad(out, dx, dy + Q, EDGE_LEFT[1], Q, Q, z);
+    if (sideE) quad(out, dx + Q, dy + Q, EDGE_RIGHT[1], Q, Q, z);
+    // The void itself must also cover anyone standing behind this wall row.
+    if (z !== undefined) this.overlayPieces.push({ dx, dy, sx: VOID[0], sy: VOID[1], w: SUB, h: SUB, z: z - VOID_BELOW_WALL });
   }
 
   // ── Arches over openings: corridors through a south face, or out of a room's bottom wall ──
-  const lintel = (x0: number, x1: number, sy: number, z: number) => {
-    const y = sy * SUB - LINTEL_LIFT;
-    quad(overlayPieces, x0 * SUB, y, LINTEL_LEFT, SUB, LINTEL_END_H, z);
-    for (let x = x0 + 1; x < x1; x++) {
-      quad(overlayPieces, x * SUB, y, [LINTEL_MID_X[(x - x0 - 1) % LINTEL_MID_X.length], LINTEL_Y], SUB, LINTEL_BAR_H, z);
-    }
-    quad(overlayPieces, x1 * SUB, y, LINTEL_RIGHT, SUB, LINTEL_END_H, z);
-  };
-  for (let sy = 0; sy < H; sy++) {
-    for (let sx = 0; sx < W - 2; sx++) {
-      if (!solid(sx, sy) || solid(sx + 1, sy)) continue;
-      let n = 0;
-      while (sx + 1 + n < W && !solid(sx + 1 + n, sy)) n++;
-      const ex = sx + 1 + n;
-      if (n < ARCH_MIN || n > ARCH_MAX || !solid(ex, sy)) continue;
-      const a = sx + sy * W, b = ex + sy * W;
-      // Opening in a south face, at the cap row of both sides
-      const capRow = faceK[a] > 0 && faceK[a] === faceH[a] && faceK[b] === faceH[b] && faceH[a] === faceH[b] && faceH[a] === 4;
-      // Opening in a wall mass's top edge (room floor directly above both sides)
-      const topRow = faceK[a] === 0 && faceK[b] === 0 && !solid(sx, sy - 1) && !solid(ex, sy - 1)
-        && !solid(sx + 1, sy - 1) && !solid(sx + n, sy - 1);
-      if (!capRow && !topRow) continue;
-      // Only openings that lead on (a corridor), not a notch.
-      if (capRow && solid(sx + 1, sy - 1)) continue;
-      if (topRow && solid(sx + 1, sy + 1)) continue;
-      lintel(sx, ex, sy, OVERHEAD_Z);
-    }
-  }
 
-  return [...floorPieces, ...wallPieces, ...overlayPieces];
+  private readonly addArch = (sx: number, sy: number): void => {
+    if (!this.solid(sx, sy) || this.solid(sx + 1, sy)) return;
+    let n = 0;
+    while (sx + 1 + n < this.W && !this.solid(sx + 1 + n, sy)) n++;
+    const ex = sx + 1 + n;
+    if (n < ARCH_MIN || n > ARCH_MAX || !this.solid(ex, sy)) return;
+    const a = sx + sy * this.W, b = ex + sy * this.W;
+    const { faceK, faceH } = this;
+    // Opening in a south face, at the cap row of both sides
+    const capRow = faceK[a] > 0 && faceK[a] === faceH[a] && faceK[b] === faceH[b] && faceH[a] === faceH[b] && faceH[a] === FACE_MAX;
+    // Opening in a wall mass's top edge (room floor directly above both sides)
+    const topRow = faceK[a] === 0 && faceK[b] === 0 && !this.solid(sx, sy - 1) && !this.solid(ex, sy - 1)
+      && !this.solid(sx + 1, sy - 1) && !this.solid(sx + n, sy - 1);
+    if (!capRow && !topRow) return;
+    // Only openings that lead on (a corridor), not a notch.
+    if (capRow && this.solid(sx + 1, sy - 1)) return;
+    if (topRow && this.solid(sx + 1, sy + 1)) return;
+    this.lintel(sx, ex, sy, OVERHEAD_Z);
+  };
+
+  private lintel(x0: number, x1: number, sy: number, z: number): void {
+    const out = this.overlayPieces;
+    const y = sy * SUB - LINTEL_LIFT;
+    quad(out, x0 * SUB, y, LINTEL_LEFT, SUB, LINTEL_END_H, z);
+    for (let x = x0 + 1; x < x1; x++) {
+      quad(out, x * SUB, y, [LINTEL_MID_X[(x - x0 - 1) % LINTEL_MID_X.length], LINTEL_Y], SUB, LINTEL_BAR_H, z);
+    }
+    quad(out, x1 * SUB, y, LINTEL_RIGHT, SUB, LINTEL_END_H, z);
+  }
 }
 
-/** A sub-tile of plain black wall-top void (inside the framed block at col 6, row 5). */
-const VOID = [96, 80] as const;
+export function buildTerrainPieces(level: Level): TerrainPiece[] {
+  return new TerrainBuilder(level).build();
+}
 
 /** World-space tile columns where a full-height face shows a pillar (no torch there). */
 export function isPillarColumn(tx: number): boolean {

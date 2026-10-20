@@ -1,85 +1,82 @@
-import { world, Team } from '../world';
-import type { Entity } from '../world';
+import { world, q, isMob } from '../world';
+import type { Entity, Player } from '../world';
 import type { Level } from '../level/Level';
 import { hitMob } from './SwordSystem';
-import { AIM_HEIGHT } from './MovementSystem';
 import { createDustFx } from '../entities/FxFactory';
+import { createSpellBolt } from '../entities/ProjectileFactory';
+import { SPELL_STATS } from '../entities/WeaponStats';
+import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 import { sound } from '../audio/SoundPlayer';
+import { nearby, Sense } from '../ai/perception/spatial';
 
-/** The cast clip is 5 frames × 5 ticks; the bolt leaves the hand on its 4th frame. */
-const CAST_TICKS = 25;
-const RELEASE_TICK = 15;
-const CAST_COOLDOWN = 45;
+const bolts = world.with('projectile', 'position', 'velocity');
+type Bolt = (typeof bolts)['entities'][number];
 
-const BOLT_SPEED = 4.5;
-const BOLT_DAMAGE = 14;
-const BOLT_LIFE = 80;
-/** Bolts travel at hand height above the ground they're tracked on. */
-const BOLT_HEIGHT = AIM_HEIGHT;
-const BOLT_REACH_X = 6;
-const BOLT_REACH_Y = 14;
-
-function spawnBolt(caster: Entity, dx: number, dy: number): void {
-  const p = caster.position!;
-  world.add({
-    position: { x: p.x + dx * 14, y: p.y + dy * 14 },
-    velocity: { x: dx * BOLT_SPEED, y: dy * BOLT_SPEED },
-    projectile: { damage: BOLT_DAMAGE, life: BOLT_LIFE, team: Team.Player },
-    visual: { sheet: 'spell_bolt' },
-    yOffset: BOLT_HEIGHT,
-    glow: { radius: 56 },
-  });
-  sound.playSound('spell', p.x, p.y);
-}
+/** Bolts reach this far at most beyond their own position to touch a body. */
+const BOLT_QUERY_RADIUS = MAX_MOB_RADIUS + SPELL_STATS.reachY;
+const victims: Entity[] = [];
 
 function burst(bolt: Entity): void {
-  const p = bolt.position!;
-  for (let i = 0; i < 3; i++) createDustFx(p.x, p.y);
+  const p = bolt.position;
+  for (let i = 0; p && i < SPELL_STATS.burstPuffs; i++) createDustFx(p.x, p.y);
   world.addComponent(bolt, 'removed', true);
+}
+
+function canCast(caster: Player): boolean {
+  return caster.health.current > 0 && caster.respawnTicks === undefined
+    && !caster.swordSwing && !caster.falling && !(caster.castCooldown ?? 0);
+}
+
+/** Starts a cast toward the crosshair, or plays the one under way and lets the bolt fly on its release frame. */
+function updateCaster(caster: Player): void {
+  if ((caster.castCooldown ?? 0) > 0) caster.castCooldown = (caster.castCooldown ?? 0) - 1;
+  const cast = caster.casting;
+  if (!cast) {
+    if (!caster.playerInput.intents.cast || !canCast(caster)) return;
+    const aim = caster.aimVector ?? { x: 0, y: 1 };
+    world.addComponent(caster, 'casting', { ticks: 0, dirX: aim.x, dirY: aim.y, released: false });
+    caster.castCooldown = SPELL_STATS.cooldown;
+    return;
+  }
+  cast.ticks++;
+  if (!cast.released && cast.ticks >= SPELL_STATS.releaseTick) {
+    cast.released = true;
+    createSpellBolt(caster.position.x, caster.position.y, cast.dirX, cast.dirY);
+    sound.playSound('spell', caster.position.x, caster.position.y);
+  }
+  if (cast.ticks >= SPELL_STATS.castTicks) world.removeComponent(caster, 'casting');
+}
+
+/** The first enemy (not of the bolt's team) whose body the bolt touches. */
+function boltVictim(bolt: Bolt): Entity | null {
+  const pos = bolt.position;
+  for (const mob of nearby(pos.x, pos.y, BOLT_QUERY_RADIUS, Sense.mob, victims)) {
+    if (!isMob(mob) || mob.health.current <= 0 || mob.team === bolt.projectile.team) continue;
+    const near = Math.abs(mob.position.x - pos.x) <= mob.radius.x + SPELL_STATS.reachX
+      && Math.abs(mob.position.y - pos.y) <= mob.radius.y + SPELL_STATS.reachY;
+    if (near) return mob;
+  }
+  return null;
+}
+
+function flyBolt(level: Level, bolt: Bolt): void {
+  const pos = bolt.position;
+  pos.x += bolt.velocity.x;
+  pos.y += bolt.velocity.y;
+  if (--bolt.projectile.life <= 0 || !level.canPass(pos.x, pos.y)) {
+    burst(bolt);
+    return;
+  }
+  const victim = boltVictim(bolt);
+  if (!victim) return;
+  hitMob(victim, bolt, bolt.projectile.damage);
+  burst(bolt);
 }
 
 /** Casting (right mouse / Q) toward the crosshair, and flying spell bolts. */
 export function updateSpells(level: Level): void {
-  for (const caster of world.with('playerInput', 'position', 'health')) {
-    if ((caster.castCooldown ?? 0) > 0) caster.castCooldown!--;
-    const pi = caster.playerInput!;
-
-    if (!caster.casting) {
-      const able = caster.health!.current > 0 && caster.respawnTicks === undefined
-        && !caster.swordSwing && !caster.falling && !(caster.castCooldown ?? 0);
-      if (pi.intents.cast && able) {
-        const aim = caster.aimVector ?? { x: 0, y: 1 };
-        world.addComponent(caster, 'casting', { ticks: 0, dirX: aim.x, dirY: aim.y, released: false });
-        caster.castCooldown = CAST_COOLDOWN;
-      }
-      continue;
-    }
-
-    const cast = caster.casting;
-    cast.ticks++;
-    if (!cast.released && cast.ticks >= RELEASE_TICK) {
-      cast.released = true;
-      spawnBolt(caster, cast.dirX, cast.dirY);
-    }
-    if (cast.ticks >= CAST_TICKS) world.removeComponent(caster, 'casting');
-  }
-
-  for (const bolt of world.with('projectile', 'position', 'velocity')) {
-    if (bolt.removed) continue;
-    const pos = bolt.position!;
-    pos.x += bolt.velocity!.x;
-    pos.y += bolt.velocity!.y;
-    const pr = bolt.projectile!;
-    if (--pr.life <= 0 || !level.canPass(pos.x, pos.y)) { burst(bolt); continue; }
-
-    for (const mob of world.with('ai', 'position', 'health', 'radius')) {
-      if (mob.removed || mob.health!.current <= 0 || mob.team === pr.team) continue;
-      const mp = mob.position!;
-      const r = mob.radius!;
-      if (Math.abs(mp.x - pos.x) > r.x + BOLT_REACH_X || Math.abs(mp.y - pos.y) > r.y + BOLT_REACH_Y) continue;
-      hitMob(mob, bolt, pr.damage);
-      burst(bolt);
-      break;
-    }
+  for (const caster of q.players) updateCaster(caster);
+  for (const bolt of bolts) {
+    if (!bolt.removed) flyBolt(level, bolt);
   }
 }

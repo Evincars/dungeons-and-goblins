@@ -2,10 +2,11 @@
  *  Tiles and characters are loaded from /public assets.
  */
 
+import { context2d, createCanvas } from '../render/canvas';
+
 function mkCanvas(w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
-  const c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  const ctx = c.getContext('2d')!;
+  const c = createCanvas(w, h);
+  const ctx = context2d(c);
   ctx.imageSmoothingEnabled = false;
   return [c, ctx];
 }
@@ -164,18 +165,25 @@ export function genChestSheet(): HTMLCanvasElement {
     ctx.fillStyle = hex(GOLD);
     ctx.fillRect(ox + 14, 13, 4, 5);
     ctx.fillRect(ox + 13, 14, 6, 3);
-    if (state === 0) {
-      ctx.fillStyle = hex(GEM_C);
-      ctx.fillRect(ox + 8, lidY + 2, 4, 4);
-      ctx.fillRect(ox + 20, lidY + 2, 4, 4);
-    } else {
-      ctx.fillStyle = 'rgba(255,200,0,0.6)';
-      ctx.fillRect(ox + 6, 16, 20, 10);
-      ctx.fillStyle = hex(0xffd030);
-      for (let i = 0; i < 5; i++) ctx.fillRect(ox + 7 + i * 4, 15, 3, 3);
-    }
+    if (state === 0) drawChestGems(ctx, ox, lidY, GEM_C);
+    else drawChestGold(ctx, ox);
   }
   return c;
+}
+
+/** A closed chest's lid studs. */
+function drawChestGems(ctx: CanvasRenderingContext2D, ox: number, lidY: number, color: number): void {
+  ctx.fillStyle = hex(color);
+  ctx.fillRect(ox + 8, lidY + 2, 4, 4);
+  ctx.fillRect(ox + 20, lidY + 2, 4, 4);
+}
+
+/** An open chest's glow and the row of coins inside. */
+function drawChestGold(ctx: CanvasRenderingContext2D, ox: number): void {
+  ctx.fillStyle = 'rgba(255,200,0,0.6)';
+  ctx.fillRect(ox + 6, 16, 20, 10);
+  ctx.fillStyle = hex(0xffd030);
+  for (let i = 0; i < 5; i++) ctx.fillRect(ox + 7 + i * 4, 15, 3, 3);
 }
 
 // ── EXIT BUTTON (lever/pull) ──────────────────────────────────────────────────
@@ -258,19 +266,21 @@ export function genDeathFxSheet(): HTMLCanvasElement {
     ctx.globalAlpha = alpha;
     ctx.fillStyle = hex(COLORS[f]);
     ctx.beginPath(); ctx.arc(ox + 24, 24, radius, 0, Math.PI * 2); ctx.fill();
-    if (f < 4) {
-      const sparkCount = 8 - f * 2;
-      for (let s = 0; s < sparkCount; s++) {
-        const angle = (s / sparkCount) * Math.PI * 2 + f * 0.3;
-        const dist = radius + 4 + f * 2;
-        ctx.fillStyle = hex(f === 0 ? 0xffffff : COLORS[Math.max(0, f - 1)]);
-        ctx.fillRect(ox + 24 + Math.cos(angle) * dist - 1,
-                     24 + Math.sin(angle) * dist - 1, 2, 2);
-      }
-    }
+    if (f < 4) drawSparks(ctx, ox, f, radius, f === 0 ? 0xffffff : COLORS[Math.max(0, f - 1)]);
     ctx.globalAlpha = 1;
   }
   return c;
+}
+
+/** Sparks flung out around a death burst's frame `f`, fewer as it fades. */
+function drawSparks(ctx: CanvasRenderingContext2D, ox: number, f: number, radius: number, color: number): void {
+  const sparkCount = 8 - f * 2;
+  ctx.fillStyle = hex(color);
+  for (let s = 0; s < sparkCount; s++) {
+    const angle = (s / sparkCount) * Math.PI * 2 + f * 0.3;
+    const dist = radius + 4 + f * 2;
+    ctx.fillRect(ox + 24 + Math.cos(angle) * dist - 1, 24 + Math.sin(angle) * dist - 1, 2, 2);
+  }
 }
 
 // ── DUST FX ──────────────────────────────────────────────────────────────────

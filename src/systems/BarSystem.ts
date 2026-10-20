@@ -5,7 +5,14 @@ import { frameTexture, whiteFrameTexture } from '../render/Sheets';
 
 const BAR_STEPS = 20;
 const BAR_HALF_WIDTH = 16;
+/** Bars sort just in front of the entity they belong to. */
+const BAR_DEPTH_BIAS = 0.5;
 
+const barred = world.with('position', 'health', 'healthBarOffset');
+type Barred = (typeof barred)['entities'][number];
+type HealthBar = NonNullable<Entity['healthBar']>;
+
+/** Green when healthy, through yellow and orange, to red near death. */
 function fillColor(value: number, max: number): number {
   const tenth = max / 10;
   if (value < tenth * 3) return 0xf62800;
@@ -14,7 +21,7 @@ function fillColor(value: number, max: number): number {
   return 0x8af116;
 }
 
-function createHealthBar(gameLayer: Container): { container: Container; fill: Sprite } {
+function createHealthBar(gameLayer: Container): HealthBar {
   const container = new Container();
   const fill = new Sprite();
   container.addChild(
@@ -26,30 +33,35 @@ function createHealthBar(gameLayer: Container): { container: Container; fill: Sp
   return { container, fill };
 }
 
+/** Bars show only while hurt, and never for the dead or respawning. */
+function showsBar(entity: Barred): boolean {
+  const { current, max } = entity.health;
+  return !entity.removed && entity.respawnTicks === undefined && current < max && Math.trunc(max) > 0;
+}
+
+function drawBar(entity: Barred, bar: HealthBar): void {
+  const maxValue = Math.trunc(entity.health.max);
+  const value = Math.max(0, Math.trunc(entity.health.current));
+  const pos = entity.position;
+  bar.fill.texture = whiteFrameTexture('bar_green', Math.trunc((value * BAR_STEPS) / maxValue), 0);
+  bar.fill.tint = fillColor(value, maxValue);
+  bar.container.x = Math.round(pos.x) - BAR_HALF_WIDTH;
+  bar.container.y = Math.round(pos.y) + entity.healthBarOffset;
+  bar.container.zIndex = pos.y + BAR_DEPTH_BIAS;
+  bar.container.visible = true;
+}
+
+function barOf(entity: Barred, gameLayer: Container): HealthBar {
+  if (entity.healthBar) return entity.healthBar;
+  const bar = createHealthBar(gameLayer);
+  world.addComponent(entity, 'healthBar', bar);
+  return bar;
+}
+
 export function updateBars(gameLayer: Container): void {
-  for (const entity of world.with('position', 'health', 'healthBarOffset')) {
-    const { current, max } = entity.health!;
-    const maxValue = Math.trunc(max);
-    const visible = !entity.removed && entity.respawnTicks === undefined && current < max && maxValue > 0;
-
-    let bar = entity.healthBar;
-    if (!visible) {
-      if (bar) bar.container.visible = false;
-      continue;
-    }
-    if (!bar) {
-      bar = createHealthBar(gameLayer);
-      world.addComponent(entity, 'healthBar', bar);
-    }
-
-    const pos = entity.position!;
-    const value = Math.max(0, Math.trunc(current));
-    bar.fill.texture = whiteFrameTexture('bar_green', Math.trunc((value * BAR_STEPS) / maxValue), 0);
-    bar.fill.tint = fillColor(value, maxValue);
-    bar.container.x = Math.round(pos.x) - BAR_HALF_WIDTH;
-    bar.container.y = Math.round(pos.y) + entity.healthBarOffset!;
-    bar.container.zIndex = pos.y + 0.5;
-    bar.container.visible = true;
+  for (const entity of barred) {
+    if (showsBar(entity)) drawBar(entity, barOf(entity, gameLayer));
+    else if (entity.healthBar) entity.healthBar.container.visible = false;
   }
 }
 

@@ -1,5 +1,8 @@
 export type Binding = { key: string; gamepad?: number };
 
+export const ACTIONS = ['up', 'down', 'left', 'right', 'attack', 'cast', 'use', 'sprint', 'inventory'] as const;
+export type ActionName = (typeof ACTIONS)[number];
+
 export const Settings = {
   bindings: {
     up:        { key: 'KeyW' },
@@ -11,7 +14,7 @@ export const Settings = {
     use:       { key: 'KeyE' },
     sprint:    { key: 'ShiftLeft' },
     inventory: { key: 'Tab' },
-  } as Record<string, Binding>,
+  } satisfies Record<ActionName, Binding>,
 
   musicVolume: 0.5,
   sfxVolume: 1.0,

@@ -1,31 +1,34 @@
-import { world } from '../world';
+import { world, isPlayer } from '../world';
+import type { Entity } from '../world';
 import { setVisualFrame } from '../render/AnimatedVisual';
 import { sound } from '../audio/SoundPlayer';
 import { REACH } from './TargetSystem';
+import { nearby, Sense } from '../ai/perception/spatial';
 
 let levelComplete = false;
 
 export function isLevelComplete(): boolean { return levelComplete; }
 export function resetLevelComplete(): void { levelComplete = false; }
 
-/** A living player standing on the exit button and pressing "use" ends the level. */
+const buttons = world.with('position', 'exitButton');
+const pressers: Entity[] = [];
+
+/** Whether a living player within reach of the point pressed "use" this tick. */
+function usedNear(x: number, y: number): boolean {
+  for (const e of nearby(x, y, REACH, Sense.player, pressers)) {
+    if (isPlayer(e) && e.health.current > 0 && e.playerInput.intents.use) return true;
+  }
+  return false;
+}
+
+/** A living player standing at the exit button and pressing "use" ends the level. */
 export function updateExit(): void {
-  for (const button of world.with('position', 'exitButton')) {
-    const bpos = button.position!;
-    const eb = button.exitButton!;
-
-    for (const player of world.with('position', 'playerInput', 'health')) {
-      if (player.health!.current <= 0) continue;
-      const pp = player.position!;
-      if (Math.hypot(pp.x - bpos.x, pp.y - bpos.y) > REACH) continue;
-      if (!player.playerInput!.intents.use) continue;
-
-      if (!eb.activated) {
-        eb.activated = true;
-        if (button.visual && button.sprite) setVisualFrame(button.sprite, button.visual.sheet, 1, 0);
-        sound.playSound('level_up', bpos.x, bpos.y);
-        levelComplete = true;
-      }
-    }
+  for (const button of buttons) {
+    const { x, y } = button.position;
+    if (button.exitButton.activated || !usedNear(x, y)) continue;
+    button.exitButton.activated = true;
+    if (button.visual && button.sprite) setVisualFrame(button.sprite, button.visual.sheet, 1, 0);
+    sound.playSound('level_up', x, y);
+    levelComplete = true;
   }
 }

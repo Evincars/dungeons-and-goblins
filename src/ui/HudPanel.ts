@@ -1,11 +1,19 @@
 import { Container, Sprite, Graphics } from 'pixi.js';
-import { world } from '../world';
+import { firstPlayer } from '../world';
 import { frameTexture } from '../render/Sheets';
 import { GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
 import { PixelLabel } from './PixelText';
 
 export function xpForLevel(level: number): number {
   return level * 100;
+}
+
+/** Panel bars hold this many fill steps below full: row 0 is full, the last row empty. */
+const BAR_ROWS = 100;
+
+/** The panel-bar row showing a fill fraction. */
+function barRow(fraction: number): number {
+  return BAR_ROWS - Math.round(BAR_ROWS * Math.max(0, Math.min(1, fraction)));
 }
 
 export class HudPanel {
@@ -56,21 +64,17 @@ export class HudPanel {
   }
 
   update(): void {
-    for (const player of world.with('health', 'playerStats')) {
-      const h = player.health!;
-      const s = player.playerStats!;
-      this.hpLabel.text    = `HP: ${Math.max(0, Math.floor(h.current))}/${h.max}`;
-      this.goldLabel.text  = `Gold: ${s.gold}`;
-      this.levelLabel.text = `Lv.${s.level} (${s.exp}/${xpForLevel(s.level)} xp)`;
-      this.swordLabel.text = `Sword+${s.swordTier} Armor+${s.armorTier}`;
-      this.killsLabel.text = `Kills: ${s.kills}`;
-
-      const hpPct = Math.round(100 * Math.max(0, Math.min(1, h.current / h.max)));
-      this.hpBar.texture = frameTexture('panel_healthbar', 0, 100 - hpPct);
-      const xpPct = Math.round(100 * Math.max(0, Math.min(1, s.exp / xpForLevel(s.level))));
-      this.xpBar.texture = frameTexture('panel_xpbar', 0, 100 - xpPct);
-      break;
-    }
+    const player = firstPlayer();
+    if (!player) return;
+    const h = player.health;
+    const s = player.playerStats;
+    this.hpLabel.text    = `HP: ${Math.max(0, Math.floor(h.current))}/${h.max}`;
+    this.goldLabel.text  = `Gold: ${s.gold}`;
+    this.levelLabel.text = `Lv.${s.level} (${s.exp}/${xpForLevel(s.level)} xp)`;
+    this.swordLabel.text = `Sword+${s.swordTier} Armor+${s.armorTier}`;
+    this.killsLabel.text = `Kills: ${s.kills}`;
+    this.hpBar.texture = frameTexture('panel_healthbar', 0, barRow(h.current / h.max));
+    this.xpBar.texture = frameTexture('panel_xpbar', 0, barRow(s.exp / xpForLevel(s.level)));
   }
 
   destroy(): void {

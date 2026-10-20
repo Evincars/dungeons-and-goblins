@@ -1,4 +1,5 @@
 import type { Entity } from '../world';
+import { StateError } from '../core/errors';
 import { registerSheet, sheetCols } from '../render/Sheets';
 import type { CharacterDef, CharacterState, ClipDef } from './CharacterDef';
 import { FIGHTER } from './Fighter';
@@ -10,7 +11,7 @@ const REGISTRY = new Map<string, CharacterDef>(
 
 export function characterDef(id: string): CharacterDef {
   const def = REGISTRY.get(id);
-  if (!def) throw new Error(`Unknown character "${id}"`);
+  if (!def) throw new StateError(`Unknown character "${id}"`, { id });
   return def;
 }
 
@@ -40,10 +41,29 @@ export function registerCharacterSheets(): void {
 
 export type CharacterComponent = NonNullable<Entity['character']>;
 
-/** The clip a character state plays, with the sheet key it is loaded under. */
-export function stateClip(def: CharacterDef, state: CharacterState): { clip: ClipDef; sheet: string } | undefined {
+export type StateClip = { readonly clip: ClipDef; readonly sheet: string };
+
+/** Resolved state clips per character, so the per-frame character systems look them up without allocating. */
+const clipCache = new Map<CharacterDef, Map<CharacterState, StateClip | null>>();
+
+function resolveClip(def: CharacterDef, state: CharacterState): StateClip | null {
   const name = def.states[state];
-  return name ? { clip: def.clips[name], sheet: clipSheetKey(def, name) } : undefined;
+  return name ? { clip: def.clips[name], sheet: clipSheetKey(def, name) } : null;
+}
+
+/** The clip a character state plays, with the sheet key it is loaded under. */
+export function stateClip(def: CharacterDef, state: CharacterState): StateClip | undefined {
+  let byState = clipCache.get(def);
+  if (!byState) {
+    byState = new Map();
+    clipCache.set(def, byState);
+  }
+  let found = byState.get(state);
+  if (found === undefined) {
+    found = resolveClip(def, state);
+    byState.set(state, found);
+  }
+  return found ?? undefined;
 }
 
 /** Ticks a state's clip takes to play once through (0 if the character has no clip for it). */

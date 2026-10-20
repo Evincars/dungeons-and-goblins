@@ -7,15 +7,89 @@ export const enum Team { Neutral = 0, Player = 1 }
 
 export const enum Facing { North = 0, East = 1, South = 2, West = 3 }
 
-export type EquipSlot = 'weapon' | 'helmet' | 'chest' | 'gloves' | 'boots' | 'ring';
+export const EQUIP_SLOTS = ['weapon', 'helmet', 'chest', 'gloves', 'boots', 'ring'] as const;
+export type EquipSlot = (typeof EQUIP_SLOTS)[number];
+
+export function isEquipSlot(value: string): value is EquipSlot {
+  return EQUIP_SLOTS.some((slot) => slot === value);
+}
+
+export type ItemType =
+  | 'health_potion' | 'mana_potion' | 'weapon' | 'helmet' | 'chest' | 'gloves' | 'boots' | 'ring'
+  | 'sword_scroll' | 'armor_piece';
 
 export type InventoryItem = {
-  type: 'health_potion' | 'mana_potion' | 'weapon' | 'helmet' | 'chest' | 'gloves' | 'boots' | 'ring' | 'sword_scroll' | 'armor_piece';
+  type: ItemType;
   name: string;
   value: number;
   slot?: EquipSlot;
   icon?: number;   // column index in item icon sheet
   stats?: { attack?: number; defense?: number; hp?: number };
+};
+
+export const MOB_TYPES = ['goblin', 'skeleton', 'orc', 'troll'] as const;
+export type MobType = (typeof MOB_TYPES)[number];
+
+export function isMobType(value: string): value is MobType {
+  return MOB_TYPES.some((type) => type === value);
+}
+
+/**
+ * What an enemy is doing (its Yuka StateMachine state): ambling about unaware, the beat after it
+ * spots someone, the fight itself, and the hunt along the player's trail once it has lost sight of them.
+ */
+export const MOB_STATES = ['idle', 'alert', 'engage', 'search'] as const;
+export type MobState = (typeof MOB_STATES)[number];
+
+/**
+ * How an engaged enemy fights as part of its squad: straight at the player, round the block to take
+ * them from behind, or over to an ally that needs help.
+ */
+export const TACTIC_ROLES = ['direct', 'flank', 'support'] as const;
+export type TacticRole = (typeof TACTIC_ROLES)[number];
+
+/** Enemy brain state; the decisions themselves live in src/ai. */
+export type MobAI = {
+  state: MobState;
+  role: TacticRole;
+  /** Player being hunted. */
+  targetId?: number;
+  /** Ally being helped while in the support role. */
+  allyId?: number;
+  /** Tiles still to walk, as `tx + ty * width`; `step` is the next one. */
+  route: number[];
+  step: number;
+  /** Tile the route leads to (-1 when there is none). */
+  routeGoal: number;
+  /** Ticks until the route is planned again. */
+  repathIn: number;
+  /** Ticks until it next looks around for players. */
+  senseIn: number;
+  /** Ticks spent in the current state. */
+  stateTicks: number;
+  /** Ticks during which it ignores players after being dropped from a crowded squad. */
+  calmTicks: number;
+  /** Where the target was last seen (by it or by its squad), and on which tick. */
+  lastSeenX: number;
+  lastSeenY: number;
+  lastSeenTick: number;
+  /** Tick of the newest trail crumb it has already walked past while searching. */
+  trailTick: number;
+};
+
+/**
+ * The way a player walked, as a ring of the tile centres they entered, oldest overwritten first.
+ * Enemies that lose sight of a player follow it to where they went.
+ */
+export type Trail = {
+  xs: Float32Array;
+  ys: Float32Array;
+  ticks: Float64Array;
+  /** Next slot to write. */
+  head: number;
+  count: number;
+  /** Tile the newest crumb was dropped on. */
+  lastTile: number;
 };
 
 export type Entity = {
@@ -61,7 +135,7 @@ export type Entity = {
   healthBar?: { container: Container; fill: Sprite };
   hurtOverlay?: Sprite;
   fallMask?: Graphics;
-  mobType?: string;
+  mobType?: MobType;
   /** Runtime display label (price etc.) */
   priceLabel?: PixelLabel;
 
@@ -119,6 +193,8 @@ export type Entity = {
     /** One-shot requests raised for a single tick by key presses. */
     intents: { use: boolean; attack: boolean; cast: boolean; inventoryOpen: boolean; inventoryUse: boolean };
   };
+  /** Breadcrumbs of where this player walked, for enemies to follow. */
+  trail?: Trail;
 
   // --- spellcasting ---
   /** Active cast: ticks elapsed, aim locked at the start, whether the bolt has left the hand. */
@@ -171,14 +247,14 @@ export type Entity = {
   };
 
   // --- world item (picked up to inventory) ---
-  item?: { type: InventoryItem['type']; name: string; value: number };
+  item?: { type: ItemType; name: string; value: number };
 
   // --- chest ---
   chest?: { opened: boolean; disappearTicks: number };
 
   // --- spawner / nest ---
   spawner?: {
-    mobType: string;
+    mobType: MobType;
     interval: number;
     timer: number;
     spawnCount: number;
@@ -190,13 +266,7 @@ export type Entity = {
   torch?: { radius: number; color: number; flicker: number };
 
   // --- AI ---
-  ai?: {
-    type: 'wander' | 'chase';
-    targetId?: number;
-    path?: Array<{ x: number; y: number }>;
-    repathIn?: number;
-    retargetIn?: number;
-  };
+  ai?: MobAI;
 
   // --- falling ---
   falling?: { age: number; duration: number };
@@ -228,7 +298,7 @@ export type Entity = {
   exitButton?: { activated: boolean };
 
   // --- shop NPC ---
-  shopNpc?: { items: import('./world').InventoryItem[] };
+  shopNpc?: { items: InventoryItem[] };
 
   // --- door (seals the safe room once players leave) ---
   door?: { tiles: Array<{ x: number; y: number }>; boundaryX: number; closed: boolean };
@@ -239,6 +309,7 @@ export type Entity = {
 
 export const world = new World<Entity>();
 
+/** Queries shared by several systems; declared once, because resolving one scans every registered query. */
 export const q = {
   positioned:  world.with('position'),
   physical:    world.with('position', 'velocity', 'radius'),
@@ -248,10 +319,34 @@ export const q = {
   needsSprite: world.with('visual', 'position').without('sprite'),
   players:     world.with('position', 'playerInput', 'playerStats', 'health'),
   mobs:        world.with('position', 'health', 'ai'),
+  walkingMobs: world.with('position', 'velocity', 'radius', 'health', 'ai'),
   loot:        world.with('position', 'loot'),
   spawners:    world.with('position', 'spawner'),
   torches:     world.with('position', 'torch'),
   chests:      world.with('position', 'chest'),
   items:       world.with('position', 'item'),
   ephemerals:  world.with('position', 'ephemeral'),
+  glowing:     world.with('position', 'glow'),
+  removed:     world.with('removed'),
 };
+
+export type Player = (typeof q.players)['entities'][number];
+export type Mob = (typeof q.walkingMobs)['entities'][number];
+
+/** The local player (the first one), for the camera, HUD and panels; undefined between levels. */
+export function firstPlayer(): Player | undefined {
+  return q.players.first;
+}
+
+export function isPlayer(e: Entity | undefined): e is Player {
+  return !!e && !!e.position && !!e.playerInput && !!e.playerStats && !!e.health;
+}
+
+export function isMob(e: Entity | undefined): e is Mob {
+  return !!e && !!e.position && !!e.velocity && !!e.radius && !!e.health && !!e.ai;
+}
+
+/** Whether a player can be hurt, hunted or interact right now. */
+export function isActivePlayer(player: Player): boolean {
+  return player.health.current > 0 && player.respawnTicks === undefined && !player.removed;
+}

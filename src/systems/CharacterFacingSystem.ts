@@ -13,11 +13,10 @@ function lookX(e: Entity): number | undefined {
 export function updateCharacterFacing(): void {
   for (const entity of q.characters) {
     const c = entity.character;
-    const { clip } = stateClip(characterDef(c.def), c.state)!;
-    if (clip.mode === 'hold' || (clip.mode === 'once' && !c.finished)) continue;
-
+    const clip = stateClip(characterDef(c.def), c.state)?.clip;
+    const midAction = !clip || clip.mode === 'hold' || (clip.mode === 'once' && !c.finished);
     const x = lookX(entity);
-    if (x === undefined) continue;
+    if (midAction || x === undefined) continue;
     if (x < -LOOK_DEADZONE) c.flipX = true;
     else if (x > LOOK_DEADZONE) c.flipX = false;
   }

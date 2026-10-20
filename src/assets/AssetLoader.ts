@@ -1,7 +1,10 @@
 import { Assets, Texture } from 'pixi.js';
 import { registerSheet } from '../render/Sheets';
+import { context2d, createCanvas, imageOf } from '../render/canvas';
 import { characterAssets, registerCharacterSheets } from '../characters/Characters';
 import { PROPS } from '../level/Props';
+import { LoadError } from '../core/errors';
+import { getTexture, hasTexture, setTexture } from './Textures';
 import {
   genCoinSheet, genPotionSheet, genGemSheet, genSpellBoltSheet,
   genSpawnerSheet, genChestSheet, genExitButtonSheet,
@@ -10,11 +13,12 @@ import {
   genFontSheet, genButtonSheet, genPanelBg, genPortrait, genMinimapIcons,
 } from './SpriteGen';
 
-const textures = new Map<string, Texture>();
-
-function fromCanvas(canvas: HTMLCanvasElement): Texture {
-  return Texture.from(canvas);
-}
+/** The torch animation is four separate 16×16 images, composited into one strip. */
+const TORCH_FRAMES = 4;
+const TORCH_FRAME_SIZE = 16;
+/** Sizes of the generated HUD and inventory panel backgrounds. */
+const HUD_PANEL = { w: 512, h: 80 };
+const INVENTORY_PANEL = { w: 320, h: 240 };
 
 // ── PNG assets loaded from /public ───────────────────────────────────────────
 
@@ -44,76 +48,79 @@ const PNG_ASSETS = [
   { alias: 'panel_xpbar',        src: '/ui/panel_xpbar.png' },
 ];
 
-/** Crop a pixel region from a loaded texture's image into its own nearest-filtered Texture. */
-function cropTexture(src: Texture, sx: number, sy: number, sw: number, sh: number): Texture {
-  const res = src.source.resource as CanvasImageSource;
-  const c = document.createElement('canvas');
-  c.width = sw; c.height = sh;
-  c.getContext('2d')!.drawImage(res, sx, sy, sw, sh, 0, 0, sw, sh);
-  const tex = Texture.from(c);
-  tex.source.scaleMode = 'nearest';
-  return tex;
+/** Procedural UI/FX textures, drawn on canvases at load time. */
+const PROCEDURAL: Record<string, () => HTMLCanvasElement> = {
+  pickup_coin_16:     genCoinSheet,
+  pickup_potion:      genPotionSheet,
+  pickup_gem:         genGemSheet,
+  spell_bolt:         genSpellBoltSheet,
+  spawner:            genSpawnerSheet,
+  chest:              genChestSheet,
+  exit_button:        genExitButtonSheet,
+  fx_sword_swing:     genSwordSwingSheet,
+  fx_death:           genDeathFxSheet,
+  fx_dust:            genDustSheet,
+  dark:               genDarkSheet,
+  font_default:       genFontSheet,
+  button:             genButtonSheet,
+  portrait:           genPortrait,
+  mapicons:           genMinimapIcons,
+};
+
+function nearest(texture: Texture): Texture {
+  texture.source.scaleMode = 'nearest';
+  return texture;
 }
 
-export async function loadAllAssets(_onProgress?: (f: number) => void): Promise<void> {
-  // Load all PNGs
-  await Assets.load(PNG_ASSETS);
-  for (const { alias } of PNG_ASSETS) {
-    const tex = Assets.get(alias) as Texture;
-    tex.source.scaleMode = 'nearest';
-    textures.set(alias, tex);
-  }
-  registerCharacterSheets();
+/** A loaded image as a drawable source; missing art is a load failure, not something to draw around. */
+function imageFor(alias: string): CanvasImageSource {
+  const image = hasTexture(alias) ? imageOf(getTexture(alias)) : null;
+  if (!image) throw new LoadError(`Image "${alias}" did not load`, { context: { alias } });
+  return image;
+}
 
-  // Props from decorative.png, each cut to its exact sprite bounds
-  const decor = textures.get('decorative')!;
+/** Crop a pixel region from a loaded image into its own nearest-filtered Texture. */
+function cropTexture(alias: string, sx: number, sy: number, sw: number, sh: number): Texture {
+  const canvas = createCanvas(sw, sh);
+  context2d(canvas).drawImage(imageFor(alias), sx, sy, sw, sh, 0, 0, sw, sh);
+  return nearest(Texture.from(canvas));
+}
+
+async function loadImages(): Promise<void> {
+  try {
+    await Assets.load(PNG_ASSETS);
+  } catch (cause) {
+    throw new LoadError('Could not load the game art', { cause });
+  }
+  for (const { alias } of PNG_ASSETS) setTexture(alias, nearest(Assets.get<Texture>(alias)));
+}
+
+/** Props from decorative.png, each cut to its exact sprite bounds. */
+function cutProps(): void {
   for (const [kind, def] of Object.entries(PROPS)) {
     const { x, y, w, h } = def.rect;
-    textures.set(`prop_${kind}`, cropTexture(decor, x, y, w, h));
+    setTexture(`prop_${kind}`, cropTexture('decorative', x, y, w, h));
     registerSheet(`prop_${kind}`, { frameWidth: w, frameHeight: h });
   }
-
-  // Composite the four 16×16 torch frames into one 64×16 animation strip
-  const torchCanvas = document.createElement('canvas');
-  torchCanvas.width = 64; torchCanvas.height = 16;
-  const tctx = torchCanvas.getContext('2d')!;
-  for (let i = 0; i < 4; i++) {
-    const frame = textures.get(`torch_${i + 1}`)!;
-    tctx.drawImage(frame.source.resource as CanvasImageSource, i * 16, 0);
-  }
-  const torchTex = Texture.from(torchCanvas);
-  torchTex.source.scaleMode = 'nearest';
-  textures.set('torch', torchTex);
-
-  // Procedural UI/FX textures
-  const proc: Record<string, () => HTMLCanvasElement> = {
-    pickup_coin_16:     genCoinSheet,
-    pickup_potion:      genPotionSheet,
-    pickup_gem:         genGemSheet,
-    spell_bolt:         genSpellBoltSheet,
-    spawner:            genSpawnerSheet,
-    chest:              genChestSheet,
-    exit_button:        genExitButtonSheet,
-    fx_sword_swing:     genSwordSwingSheet,
-    fx_death:           genDeathFxSheet,
-    fx_dust:            genDustSheet,
-    dark:               genDarkSheet,
-    font_default:       genFontSheet,
-    button:             genButtonSheet,
-    portrait:           genPortrait,
-    mapicons:           genMinimapIcons,
-  };
-
-  for (const [key, fn] of Object.entries(proc)) {
-    textures.set(key, fromCanvas(fn()));
-  }
-
-  textures.set('panel_hud', fromCanvas(genPanelBg(512, 80)));
-  textures.set('panel_inv', fromCanvas(genPanelBg(320, 240)));
-
-  _onProgress?.(1);
 }
 
-export function getTexture(key: string): Texture {
-  return textures.get(key) ?? Texture.EMPTY;
+/** Composite the four 16×16 torch frames into one 64×16 animation strip. */
+function buildTorchStrip(): void {
+  const canvas = createCanvas(TORCH_FRAMES * TORCH_FRAME_SIZE, TORCH_FRAME_SIZE);
+  const ctx = context2d(canvas);
+  for (let i = 0; i < TORCH_FRAMES; i++) ctx.drawImage(imageFor(`torch_${i + 1}`), i * TORCH_FRAME_SIZE, 0);
+  setTexture('torch', nearest(Texture.from(canvas)));
 }
+
+export async function loadAllAssets(onProgress?: (fraction: number) => void): Promise<void> {
+  await loadImages();
+  registerCharacterSheets();
+  cutProps();
+  buildTorchStrip();
+  for (const [key, draw] of Object.entries(PROCEDURAL)) setTexture(key, Texture.from(draw()));
+  setTexture('panel_hud', Texture.from(genPanelBg(HUD_PANEL.w, HUD_PANEL.h)));
+  setTexture('panel_inv', Texture.from(genPanelBg(INVENTORY_PANEL.w, INVENTORY_PANEL.h)));
+  onProgress?.(1);
+}
+
+export { getTexture };

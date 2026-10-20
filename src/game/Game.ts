@@ -1,9 +1,10 @@
 import { Application } from 'pixi.js';
-import { loadAllAssets as loadAssets } from '../assets/AssetLoader';
+import { loadAllAssets } from '../assets/AssetLoader';
 import { GAME_WIDTH, GAME_HEIGHT, SCALE } from '../render/Camera';
 import { TitleScene } from '../scenes/TitleScene';
 import { InGameScene } from '../scenes/InGameScene';
 import { sound } from '../audio/SoundPlayer';
+import { reportRejection } from '../core/errors';
 
 type SceneId = 'title' | 'ingame';
 
@@ -13,20 +14,22 @@ const TICK_MS = 1000 / 60;
 const MAX_CATCH_UP_TICKS = 5;
 /** Frame times jitter around 16.67ms; this keeps a 60Hz display from skipping or doubling ticks. */
 const TICK_SLACK_MS = 1;
+const BACKGROUND = 0x0a0608;
 
 export class Game {
   private app!: Application;
+  private canvas!: HTMLCanvasElement;
   private currentScene?: TitleScene | InGameScene;
-  private currentId?: SceneId;
   private tickDebt = 0;
 
   async init(canvas: HTMLCanvasElement): Promise<void> {
+    this.canvas = canvas;
     this.app = new Application();
     await this.app.init({
       canvas,
       width: GAME_WIDTH,
       height: GAME_HEIGHT,
-      backgroundColor: 0x0a0608,
+      backgroundColor: BACKGROUND,
       antialias: false,
     });
 
@@ -34,7 +37,7 @@ export class Game {
     canvas.style.height = `${GAME_HEIGHT * SCALE}px`;
 
     sound.autoStart();
-    await Promise.all([loadAssets(), sound.load()]);
+    await Promise.all([loadAllAssets(), sound.load()]);
     await this.goto('title');
 
     this.app.ticker.add(() => this.tick());
@@ -50,25 +53,29 @@ export class Game {
     }
   }
 
+  /** Switches scenes from a scene's callback; a failure to build the next one is logged, not lost. */
+  private switchTo(id: SceneId): void {
+    reportRejection(this.goto(id), `Could not open the ${id} scene`, 'game');
+  }
+
   private async goto(id: SceneId): Promise<void> {
     if (this.currentScene) {
       this.app.stage.removeChild(this.currentScene.container);
       this.currentScene.destroy();
+      this.currentScene = undefined;
     }
-    this.currentId = id;
-
     if (id === 'title') {
       const scene = new TitleScene();
-      scene.onStart = () => this.goto('ingame');
+      scene.onStart = () => this.switchTo('ingame');
       this.app.stage.addChild(scene.container);
       this.currentScene = scene;
-    } else if (id === 'ingame') {
-      const scene = new InGameScene();
-      scene.onComplete = () => this.goto('ingame');
-      scene.onQuit = () => this.goto('title');
-      await scene.init(this.app);
-      this.app.stage.addChild(scene.container);
-      this.currentScene = scene;
+      return;
     }
+    const scene = new InGameScene();
+    scene.onComplete = () => this.switchTo('ingame');
+    scene.onQuit = () => this.switchTo('title');
+    await scene.init(this.app, this.canvas);
+    this.app.stage.addChild(scene.container);
+    this.currentScene = scene;
   }
 }

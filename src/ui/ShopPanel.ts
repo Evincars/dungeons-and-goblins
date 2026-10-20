@@ -1,6 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
-import { world } from '../world';
-import type { InventoryItem, Entity } from '../world';
+import { firstPlayer } from '../world';
+import type { InventoryItem, Player } from '../world';
 import { PixelLabel } from './PixelText';
 import { GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
 import { sound } from '../audio/SoundPlayer';
@@ -112,16 +112,15 @@ export class ShopPanel {
       .rect(0, 0, PW, h).stroke({ color: BORDER, width: 2 });
   }
 
-  private player(): Entity | null {
-    for (const p of world.with('playerStats', 'inventory', 'health')) return p;
-    return null;
+  private player(): Player | null {
+    return firstPlayer() ?? null;
   }
 
   private buy(item: InventoryItem): void {
     const player = this.player();
     if (!player) return;
-    const stats = player.playerStats!;
-    const inv = player.inventory!;
+    const stats = player.playerStats;
+    const inv = player.inventory ?? (player.inventory = []);
     if (stats.gold < item.value) { sound.playSound('fail'); return; }
     if (inv.length >= MAX_INVENTORY) { sound.playSound('fail'); return; }
     stats.gold -= item.value;
@@ -136,7 +135,7 @@ export class ShopPanel {
   update(): void {
     if (!this.container.visible) return;
     const player = this.player();
-    if (player) this.goldLabel.text = `Gold: ${player.playerStats!.gold}`;
+    if (player) this.goldLabel.text = `Gold: ${player.playerStats.gold}`;
   }
 
   destroy(): void {

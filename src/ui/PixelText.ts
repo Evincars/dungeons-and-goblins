@@ -1,7 +1,9 @@
 import { Container, Sprite } from 'pixi.js';
 import type { Texture } from 'pixi.js';
 import { frameTexture } from '../render/Sheets';
-import { getTexture } from '../assets/AssetLoader';
+import { getTexture } from '../assets/Textures';
+import { context2d, createCanvas, imageOf } from '../render/canvas';
+import { forEachTile } from '../level/Grid';
 
 export type PixelTextAlign = 'left' | 'center' | 'right';
 
@@ -10,40 +12,41 @@ const GLYPH = 8;
 const SPACE_WIDTH = 4;
 const GLYPH_GAP = 1;
 const LINE_HEIGHT = 9;
+/** The font sheet is 16 glyphs wide and covers character codes 0–255. */
+const FONT_COLS = 16;
+const GLYPH_COUNT = 256;
 
 type Ink = { left: number; width: number };
 let inkCache: Ink[] | null = null;
+
+/** Columns of the 8×8 glyph at (cx, cy) in the font image that have any paint in them. */
+function measureGlyph(data: Uint8ClampedArray, width: number, cx: number, cy: number): Ink {
+  let min = GLYPH;
+  let max = -1;
+  forEachTile(0, 0, GLYPH - 1, GLYPH - 1, (x, y) => {
+    if (data[((cy + y) * width + cx + x) * 4 + 3] === 0) return;
+    min = Math.min(min, x);
+    max = Math.max(max, x);
+  });
+  return max < 0 ? { left: 0, width: SPACE_WIDTH - GLYPH_GAP } : { left: min, width: max - min + 1 };
+}
 
 /** Measures the painted columns of every glyph so text can be set proportionally. */
 function glyphInk(): Ink[] {
   if (inkCache) return inkCache;
 
   const tex = getTexture(FONT);
-  const resource = tex.source?.resource as CanvasImageSource | undefined;
-  if (!resource || tex.width === 0) return new Array<Ink>(256).fill({ left: 0, width: 5 });
+  const image = imageOf(tex);
+  if (!image || tex.width === 0) return new Array<Ink>(GLYPH_COUNT).fill({ left: 0, width: 5 });
 
-  const canvas = document.createElement('canvas');
-  canvas.width = tex.source.pixelWidth;
-  canvas.height = tex.source.pixelHeight;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-  ctx.drawImage(resource, 0, 0);
+  const canvas = createCanvas(tex.source.pixelWidth, tex.source.pixelHeight);
+  const ctx = context2d(canvas, { willReadFrequently: true });
+  ctx.drawImage(image, 0, 0);
   const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 
   const ink: Ink[] = [];
-  for (let code = 0; code < 256; code++) {
-    const cx = (code % 16) * GLYPH;
-    const cy = Math.floor(code / 16) * GLYPH;
-    let min = GLYPH;
-    let max = -1;
-    for (let y = 0; y < GLYPH; y++) {
-      for (let x = 0; x < GLYPH; x++) {
-        if (data[((cy + y) * canvas.width + cx + x) * 4 + 3] > 0) {
-          if (x < min) min = x;
-          if (x > max) max = x;
-        }
-      }
-    }
-    ink.push(max < 0 ? { left: 0, width: SPACE_WIDTH - GLYPH_GAP } : { left: min, width: max - min + 1 });
+  for (let code = 0; code < GLYPH_COUNT; code++) {
+    ink.push(measureGlyph(data, canvas.width, (code % FONT_COLS) * GLYPH, Math.floor(code / FONT_COLS) * GLYPH));
   }
   inkCache = ink;
   return ink;

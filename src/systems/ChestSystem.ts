@@ -1,34 +1,45 @@
-import { world } from '../world';
-import type { Level } from '../level/Level';
+import { q, isPlayer } from '../world';
+import type { Entity } from '../world';
 import { createPotion } from '../entities/LootFactory';
 import { sound } from '../audio/SoundPlayer';
 import { REACH } from './TargetSystem';
+import { nearby, Sense } from '../ai/perception/spatial';
 
 /** Walking into a chest opens it; "use" (E or clicking it) works from further away. */
 const OPEN_RADIUS = 24;
+/** A chest holds two or three potions, flung out at this speed. */
+const MIN_POTIONS = 2;
+const EXTRA_POTIONS = 2;
+const POTION_FLING = 0.6;
 
-export function updateChests(_level: Level): void {
-  for (const chest of world.with('position', 'chest')) {
-    if (chest.removed || chest.chest!.opened) continue;
-    const cp = chest.position!;
+type Chest = (typeof q.chests)['entities'][number];
+const openers: Entity[] = [];
 
-    for (const player of world.with('position', 'playerInput', 'health')) {
-      if (player.health!.current <= 0) continue;
-      const pp = player.position!;
-      const dist = Math.hypot(pp.x - cp.x, pp.y - cp.y);
-      const using = player.playerInput!.intents.use && dist <= REACH;
-      if (dist > OPEN_RADIUS && !using) continue;
+/** Whether a living player is touching the chest, or within reach and pressing "use". */
+function opened(chest: Chest): boolean {
+  const cp = chest.position;
+  for (const e of nearby(cp.x, cp.y, Math.max(REACH, OPEN_RADIUS), Sense.player, openers)) {
+    if (!isPlayer(e) || e.health.current <= 0) continue;
+    const dist = Math.hypot(e.position.x - cp.x, e.position.y - cp.y);
+    if (dist <= OPEN_RADIUS || (e.playerInput.intents.use && dist <= REACH)) return true;
+  }
+  return false;
+}
 
-      chest.chest!.opened = true;
-      sound.playSound('chest_open', cp.x, cp.y);
+function spill(chest: Chest): void {
+  const cp = chest.position;
+  chest.chest.opened = true;
+  sound.playSound('chest_open', cp.x, cp.y);
+  const count = MIN_POTIONS + Math.floor(Math.random() * EXTRA_POTIONS);
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2;
+    createPotion(cp.x, cp.y, Math.cos(angle) * POTION_FLING, Math.sin(angle) * POTION_FLING);
+  }
+}
 
-      // Spawn a few potions
-      const count = 2 + Math.floor(Math.random() * 2);
-      for (let i = 0; i < count; i++) {
-        const angle = (i / count) * Math.PI * 2;
-        createPotion(cp.x, cp.y, Math.cos(angle) * 0.6, Math.sin(angle) * 0.6);
-      }
-      break;
-    }
+export function updateChests(): void {
+  for (const chest of q.chests) {
+    if (chest.removed || chest.chest.opened) continue;
+    if (opened(chest)) spill(chest);
   }
 }

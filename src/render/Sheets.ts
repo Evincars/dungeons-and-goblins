@@ -1,5 +1,6 @@
 import { Texture, Rectangle } from 'pixi.js';
-import { getTexture } from '../assets/AssetLoader';
+import { getTexture } from '../assets/Textures';
+import { context2d, createCanvas, imageOf } from './canvas';
 
 export type SheetInfo = {
   frameWidth: number;
@@ -42,80 +43,79 @@ const SHEETS: Record<string, SheetInfo> = {
   button:             { frameWidth: 128, frameHeight: 24  },
 };
 
-const cache = new Map<string, Texture>();
+const DEFAULT_SHEET: SheetInfo = { frameWidth: 32, frameHeight: 32 };
+
+/** Frame textures by sheet, indexed `row * cols + col`, made on first use; lookups allocate nothing. */
+const frames = new Map<string, Array<Texture | undefined>>();
+const rects = new Map<string, Texture>();
 
 /** Registers a sheet whose frame size is only known at load time (e.g. built atlases). */
 export function registerSheet(key: string, info: SheetInfo): void {
   SHEETS[key] = info;
+  frames.delete(key);
 }
 
 export function sheetInfo(key: string): SheetInfo {
-  return SHEETS[key] ?? { frameWidth: 32, frameHeight: 32 };
+  return SHEETS[key] ?? DEFAULT_SHEET;
 }
 
 export function sheetCols(key: string): number {
-  const base = getTexture(key);
-  return Math.max(1, Math.floor(base.width / sheetInfo(key).frameWidth));
+  return Math.max(1, Math.floor(getTexture(key).width / sheetInfo(key).frameWidth));
 }
 
 export function sheetRows(key: string): number {
+  return Math.max(1, Math.floor(getTexture(key).height / sheetInfo(key).frameHeight));
+}
+
+function makeFrame(key: string, col: number, row: number): Texture {
   const base = getTexture(key);
-  return Math.max(1, Math.floor(base.height / sheetInfo(key).frameHeight));
+  const { frameWidth, frameHeight, trim } = sheetInfo(key);
+  const fx = col * frameWidth + (trim?.x ?? 0);
+  const fy = row * frameHeight + (trim?.y ?? 0);
+  return new Texture({ source: base.source, frame: new Rectangle(fx, fy, trim?.w ?? frameWidth, trim?.h ?? frameHeight) });
 }
 
 export function frameTexture(key: string, col: number, row: number): Texture {
-  const id = `${key}:${col}:${row}`;
-  const hit = cache.get(id);
-  if (hit) return hit;
-
   const base = getTexture(key);
   if (!base.source || base.width === 0) return Texture.EMPTY;
-
-  const { frameWidth, frameHeight, trim } = sheetInfo(key);
-  const maxCol = Math.max(0, Math.floor(base.width / frameWidth) - 1);
-  const maxRow = Math.max(0, Math.floor(base.height / frameHeight) - 1);
-  const c = Math.min(Math.max(col, 0), maxCol);
-  const r = Math.min(Math.max(row, 0), maxRow);
-
-  const fx = c * frameWidth + (trim?.x ?? 0);
-  const fy = r * frameHeight + (trim?.y ?? 0);
-  const fw = trim?.w ?? frameWidth;
-  const fh = trim?.h ?? frameHeight;
-
-  const tex = new Texture({
-    source: base.source,
-    frame: new Rectangle(fx, fy, fw, fh),
-  });
-  cache.set(id, tex);
-  return tex;
+  const cols = sheetCols(key);
+  const c = Math.min(Math.max(col, 0), cols - 1);
+  const r = Math.min(Math.max(row, 0), sheetRows(key) - 1);
+  let sheet = frames.get(key);
+  if (!sheet) {
+    sheet = [];
+    frames.set(key, sheet);
+  }
+  const i = r * cols + c;
+  return sheet[i] ?? (sheet[i] = makeFrame(key, c, r));
 }
 
-/** Build a Texture that crops a W×H pixel region at (px, py) from the tileset. */
+/** Build a Texture that crops a W×H pixel region at (px, py) from the tileset (terrain building only). */
 export function tilesetRect(px: number, py: number, w: number, h: number): Texture {
-  const id = `tileset:${px}:${py}:${w}:${h}`;
-  const hit = cache.get(id);
+  const id = `${px}:${py}:${w}:${h}`;
+  const hit = rects.get(id);
   if (hit) return hit;
   const base = getTexture('tileset');
   if (!base.source || base.width === 0) return Texture.EMPTY;
   const tex = new Texture({ source: base.source, frame: new Rectangle(px, py, w, h) });
-  cache.set(id, tex);
+  rects.set(id, tex);
   return tex;
 }
 
 const whiteSheets = new Map<string, Texture>();
-const whiteFrames = new Map<string, Texture>();
+/** White silhouettes keyed by the frame texture they copy (frame textures are cached, so each has one). */
+const whiteFrames = new WeakMap<Texture, Texture>();
 
+/** The whole sheet as a white silhouette, for hurt and flash overlays. */
 function whiteSheet(key: string): Texture | null {
   const hit = whiteSheets.get(key);
   if (hit) return hit;
   const base = getTexture(key);
-  const resource = base.source?.resource as CanvasImageSource | undefined;
-  if (!resource || base.width === 0) return null;
-  const canvas = document.createElement('canvas');
-  canvas.width = base.source.pixelWidth;
-  canvas.height = base.source.pixelHeight;
-  const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(resource, 0, 0);
+  const image = imageOf(base);
+  if (!image || base.width === 0) return null;
+  const canvas = createCanvas(base.source.pixelWidth, base.source.pixelHeight);
+  const ctx = context2d(canvas);
+  ctx.drawImage(image, 0, 0);
   ctx.globalCompositeOperation = 'source-in';
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -124,18 +124,19 @@ function whiteSheet(key: string): Texture | null {
   return tex;
 }
 
-export function whiteFrame(key: string, frame: Rectangle): Texture {
-  const id = `${key}:${frame.x}:${frame.y}:${frame.width}:${frame.height}`;
-  const hit = whiteFrames.get(id);
+/** A white silhouette of the given frame of a sheet. */
+export function whiteFrame(key: string, frame: Texture): Texture {
+  const hit = whiteFrames.get(frame);
   if (hit) return hit;
   const sheet = whiteSheet(key);
   if (!sheet) return Texture.EMPTY;
-  const tex = new Texture({ source: sheet.source, frame: new Rectangle(frame.x, frame.y, frame.width, frame.height) });
-  whiteFrames.set(id, tex);
+  const f = frame.frame;
+  const tex = new Texture({ source: sheet.source, frame: new Rectangle(f.x, f.y, f.width, f.height) });
+  whiteFrames.set(frame, tex);
   return tex;
 }
 
 export function whiteFrameTexture(key: string, col: number, row: number): Texture {
   const base = frameTexture(key, col, row);
-  return base === Texture.EMPTY ? Texture.EMPTY : whiteFrame(key, base.frame);
+  return base === Texture.EMPTY ? Texture.EMPTY : whiteFrame(key, base);
 }

@@ -1,5 +1,5 @@
 import { Graphics, Sprite } from 'pixi.js';
-import { world } from '../world';
+import { world, q } from '../world';
 import type { Entity } from '../world';
 import type { Level } from '../level/Level';
 import { TileType, TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
@@ -8,91 +8,112 @@ import { FALL_DEPTH } from './HoleSystem';
 
 type Overlay = { color: number; alpha: number };
 
+/** Players blink red on alternate ticks while hurt. */
+const PLAYER_HURT: Overlay = { color: 0xff0000, alpha: 0.5 };
+/** A freshly hit mob flashes white for its first few hurt ticks. */
+const MOB_HIT_FLASH: Overlay = { color: 0xffffff, alpha: 160 / 256 };
+const MOB_HIT_FLASH_AFTER = 34;
+/** Hurt mobs glow red, deeper the more health they have lost, fading over the last few ticks. */
+const MOB_WOUND_MAX = 180;
+const MOB_WOUND_FADE_TICKS = 10;
+const PLAYER_FLASH: Overlay = { color: 0xffff80, alpha: 0.18 };
+const MOB_FLASH: Overlay = { color: 0xffff80, alpha: 0.5 };
+/** Varying red overlay, reused every frame. */
+const wound: Overlay = { color: 0xff0000, alpha: 0 };
+
+const renderable = q.renderable;
+
+function mobWound(entity: Entity, t: number): Overlay | null {
+  if (t > MOB_HIT_FLASH_AFTER && Math.floor(t / 2) % 2 === 0) return MOB_HIT_FLASH;
+  const h = entity.health;
+  const hp = Math.max(0, h?.current ?? 0);
+  let strength = Math.trunc(MOB_WOUND_MAX - (hp * MOB_WOUND_MAX) / (h?.max || 1));
+  if (t < MOB_WOUND_FADE_TICKS) strength = Math.trunc((strength * t) / MOB_WOUND_FADE_TICKS);
+  if (strength <= 0) return null;
+  wound.alpha = strength / 256;
+  return wound;
+}
+
 function overlayFor(entity: Entity): Overlay | null {
   const t = entity.hurtTime ?? 0;
-  if (t > 0) {
-    if (entity.playerInput) return t % 2 !== 0 ? { color: 0xff0000, alpha: 0.5 } : null;
-    if (t > 34 && Math.floor(t / 2) % 2 === 0) return { color: 0xffffff, alpha: 160 / 256 };
-    const h = entity.health;
-    const hp = Math.max(0, h?.current ?? 0);
-    let strength = Math.trunc(180 - (hp * 180) / (h?.max || 1));
-    if (t < 10) strength = Math.trunc((strength * t) / 10);
-    return strength > 0 ? { color: 0xff0000, alpha: strength / 256 } : null;
-  }
-  if ((entity.flashTime ?? 0) > 0) return { color: 0xffff80, alpha: entity.playerInput ? 0.18 : 0.5 };
+  if (t > 0 && entity.playerInput) return t % 2 !== 0 ? PLAYER_HURT : null;
+  if (t > 0) return mobWound(entity, t);
+  if ((entity.flashTime ?? 0) > 0) return entity.playerInput ? PLAYER_FLASH : MOB_FLASH;
   return null;
 }
 
+function overlayLayer(entity: Entity, sprite: Sprite): Sprite {
+  if (entity.hurtOverlay) return entity.hurtOverlay;
+  const layer = new Sprite();
+  layer.anchor.set(0.5, 0.5);
+  sprite.parent?.addChild(layer);
+  world.addComponent(entity, 'hurtOverlay', layer);
+  return layer;
+}
+
+/** Tints a white silhouette of the sprite over it while the entity is hurt or flashing. */
 function syncOverlay(entity: Entity, sprite: Sprite): void {
   const overlay = sprite.visible ? overlayFor(entity) : null;
-  if (!overlay) {
+  const sheet = entity.animation?.sheet ?? entity.visual?.sheet;
+  if (!overlay || !sheet) {
     if (entity.hurtOverlay) entity.hurtOverlay.visible = false;
     return;
   }
-
-  const sheet = entity.animation?.sheet ?? entity.visual?.sheet;
-  if (!sheet) return;
-
-  let layer = entity.hurtOverlay;
-  if (!layer) {
-    layer = new Sprite();
-    layer.anchor.set(0.5, 0.5);
-    sprite.parent?.addChild(layer);
-    world.addComponent(entity, 'hurtOverlay', layer);
-  }
-
+  const layer = overlayLayer(entity, sprite);
   layer.x = sprite.x;
   layer.y = sprite.y;
   layer.zIndex = sprite.zIndex + 0.01;
   layer.scale.copyFrom(sprite.scale);
-  layer.texture = whiteFrame(sheet, sprite.texture.frame);
+  layer.texture = whiteFrame(sheet, sprite.texture);
   layer.tint = overlay.color;
   layer.alpha = overlay.alpha;
   layer.visible = true;
 }
 
+function dropFallMask(entity: Entity, sprite: Sprite): void {
+  if (!entity.fallMask) return;
+  sprite.mask = null;
+  if (entity.hurtOverlay) entity.hurtOverlay.mask = null;
+  entity.fallMask.destroy();
+  world.removeComponent(entity, 'fallMask');
+}
+
+/** The top of the first floor row below the pit the entity is falling into: everything below is hidden. */
+function pitFloorY(level: Level, x: number, y: number): number {
+  const tx = Math.floor(x / TILE_WIDTH);
+  let ty = Math.floor(y / TILE_HEIGHT) + 1;
+  while (level.getTile(tx, ty)?.type === TileType.Hole) ty++;
+  return ty * TILE_HEIGHT;
+}
+
 /** A falling entity sinks into its pit; the floor in front of the pit hides what's below it. */
 function syncFall(entity: Entity, sprite: Sprite, level: Level): void {
-  if (!entity.falling) {
-    if (entity.fallMask) {
-      sprite.mask = null;
-      if (entity.hurtOverlay) entity.hurtOverlay.mask = null;
-      entity.fallMask.destroy();
-      world.removeComponent(entity, 'fallMask');
-    }
+  const falling = entity.falling;
+  const pos = entity.position;
+  if (!falling || !pos) {
+    dropFallMask(entity, sprite);
     return;
   }
-  const t = Math.min(1, entity.falling.age / entity.falling.duration);
-  sprite.y += Math.round(FALL_DEPTH * t);
-
-  const pos = entity.position!;
-  const tx = Math.floor(pos.x / TILE_WIDTH);
-  let ty = Math.floor(pos.y / TILE_HEIGHT) + 1;
-  while (level.getTile(tx, ty)?.type === TileType.Hole) ty++;
-  const clipBottom = ty * TILE_HEIGHT;
-
+  sprite.y += Math.round(FALL_DEPTH * Math.min(1, falling.age / falling.duration));
   let mask = entity.fallMask;
   if (!mask) {
     mask = new Graphics();
     sprite.parent?.addChild(mask);
     world.addComponent(entity, 'fallMask', mask);
   }
-  mask.clear().rect(0, 0, level.width * TILE_WIDTH, clipBottom).fill(0xffffff);
+  mask.clear().rect(0, 0, level.width * TILE_WIDTH, pitFloorY(level, pos.x, pos.y)).fill(0xffffff);
   sprite.mask = mask;
   if (entity.hurtOverlay) entity.hurtOverlay.mask = mask;
 }
 
 export function updateRender(level: Level): void {
-  for (const entity of world.with('position', 'sprite')) {
-    const pos = entity.position!;
-    const sprite = entity.sprite!;
-
-    const yOff = entity.yOffset ?? 0;
+  for (const entity of renderable) {
+    const pos = entity.position;
+    const sprite = entity.sprite;
     sprite.x = Math.round(pos.x);
-    sprite.y = Math.round(pos.y - yOff);
+    sprite.y = Math.round(pos.y - (entity.yOffset ?? 0));
     sprite.zIndex = pos.y;
     syncFall(entity, sprite, level);
-
     syncOverlay(entity, sprite);
   }
 }

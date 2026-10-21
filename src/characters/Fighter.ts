@@ -11,6 +11,7 @@ export const FIGHTER: CharacterDef = {
   trim: { x: 0, y: 0, w: 108, h: 96 },
   scale: 0.83,
   feetY: 84,
+  headY: 49,
   clips: {
     idle:    { src: `${DIR}/IDLE.png`,     frameTime: 6, mode: 'loop' },
     walk:    { src: `${DIR}/WALK.png`,     frameTime: 5, mode: 'loop' },

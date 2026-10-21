@@ -1,10 +1,10 @@
 import { Container, Graphics } from 'pixi.js';
-import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
+import { GAME_WIDTH, GAME_HEIGHT, LAYOUT_LEFT, LAYOUT_WIDTH } from '../render/Camera';
 import { PixelButton } from './PixelButton';
 import { makeText } from './PixelText';
 
 const DIM_ALPHA = 0.75;
-const PANEL = { x: 90, y: 90, w: GAME_WIDTH - 180, h: 220 };
+const PANEL = { x: LAYOUT_LEFT + 90, y: 90, w: LAYOUT_WIDTH - 180, h: 220 };
 const TITLE_Y = 18;
 const LINES_Y = 62;
 const LINE_HEIGHT = 18;

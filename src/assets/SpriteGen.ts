@@ -135,57 +135,6 @@ export function genSpawnerSheet(): HTMLCanvasElement {
   return c;
 }
 
-// ── CHEST ─────────────────────────────────────────────────────────────────────
-
-export function genChestSheet(): HTMLCanvasElement {
-  const [c, ctx] = mkCanvas(64, 32);
-  const WOOD  = 0x6a4020;
-  const WOOD2 = 0x4a2c14;
-  const IRON  = 0x605848;
-  const IRON2 = 0x403c34;
-  const GOLD  = 0xd4a030;
-  const GEM_C = 0x4060d0;
-
-  for (let state = 0; state < 2; state++) {
-    const ox = state * 32;
-    const lidY = state === 1 ? 2 : 8;
-    rect(ctx, ox + 2, 14, 28, 18, WOOD2);
-    rect(ctx, ox + 3, 15, 26, 16, WOOD);
-    rect(ctx, ox + 2, lidY, 28, 8, WOOD2);
-    rect(ctx, ox + 3, lidY + 1, 26, 6, WOOD);
-    ctx.fillStyle = hex(IRON2);
-    ctx.fillRect(ox + 2, 14, 4, 18);
-    ctx.fillRect(ox + 26, 14, 4, 18);
-    ctx.fillRect(ox + 2, lidY, 4, 8);
-    ctx.fillRect(ox + 26, lidY, 4, 8);
-    ctx.fillStyle = hex(IRON);
-    ctx.fillRect(ox + 2, 14, 28, 3);
-    ctx.fillStyle = hex(IRON2);
-    ctx.fillRect(ox + 3, 24, 26, 2);
-    ctx.fillStyle = hex(GOLD);
-    ctx.fillRect(ox + 14, 13, 4, 5);
-    ctx.fillRect(ox + 13, 14, 6, 3);
-    if (state === 0) drawChestGems(ctx, ox, lidY, GEM_C);
-    else drawChestGold(ctx, ox);
-  }
-  return c;
-}
-
-/** A closed chest's lid studs. */
-function drawChestGems(ctx: CanvasRenderingContext2D, ox: number, lidY: number, color: number): void {
-  ctx.fillStyle = hex(color);
-  ctx.fillRect(ox + 8, lidY + 2, 4, 4);
-  ctx.fillRect(ox + 20, lidY + 2, 4, 4);
-}
-
-/** An open chest's glow and the row of coins inside. */
-function drawChestGold(ctx: CanvasRenderingContext2D, ox: number): void {
-  ctx.fillStyle = 'rgba(255,200,0,0.6)';
-  ctx.fillRect(ox + 6, 16, 20, 10);
-  ctx.fillStyle = hex(0xffd030);
-  for (let i = 0; i < 5; i++) ctx.fillRect(ox + 7 + i * 4, 15, 3, 3);
-}
-
 // ── EXIT BUTTON (lever/pull) ──────────────────────────────────────────────────
 
 export function genExitButtonSheet(): HTMLCanvasElement {
@@ -369,23 +318,6 @@ export function genDarkSheet(): HTMLCanvasElement {
   draw(1, 2, (g, x, y) => { g.fillStyle = 'rgba(0,0,0,1)'; g.fillRect(x, y, 32, 32); });
   draw(1, 3, (g, x, y) => { g.fillStyle = 'rgba(0,0,0,1)'; g.fillRect(x, y, 32, 32); });
 
-  return c;
-}
-
-// ── FONT ─────────────────────────────────────────────────────────────────────
-
-export function genFontSheet(): HTMLCanvasElement {
-  const [c, ctx] = mkCanvas(128, 128);
-  ctx.clearRect(0, 0, 128, 128);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '7px monospace';
-  ctx.textBaseline = 'top';
-  for (let i = 32; i < 128; i++) {
-    const ch = String.fromCharCode(i);
-    const col = i % 16;
-    const row = Math.floor(i / 16);
-    ctx.fillText(ch, col * 8 + 1, row * 8 + 1);
-  }
   return c;
 }
 

@@ -1,10 +1,12 @@
 /**
  * Data describing a side-view character: which sprite strip plays for which
  * state. Strips are horizontal rows of equally sized frames drawn facing right;
- * facing left mirrors them. Frame counts are read from the loaded images.
+ * facing left mirrors them, unless the sheets carry a row of their own for each
+ * side (`facingRows`). Frame counts are read from the loaded images.
  */
 
-export const CHARACTER_STATES = ['idle', 'walk', 'run', 'attack', 'cast', 'hurt', 'death'] as const;
+/** `walkAttack` and `runAttack` are swings made on the move; characters without them swing standing. */
+export const CHARACTER_STATES = ['idle', 'walk', 'run', 'attack', 'walkAttack', 'runAttack', 'cast', 'hurt', 'death'] as const;
 export type CharacterState = (typeof CHARACTER_STATES)[number];
 
 export function isCharacterState(value: unknown): value is CharacterState {
@@ -39,6 +41,13 @@ export type CharacterDef = {
   scale: number;
   /** Row of the source frame (from its top) where the feet touch the ground. */
   feetY: number;
+  /** Row of the source frame where the top of the head is, so health bars float just above it. */
+  headY: number;
+  /**
+   * Sheet rows drawn for each side the character looks to. Four-direction sheets (down, up, left, right)
+   * use only their side rows; sheets without this are single rows facing right, mirrored for the left.
+   */
+  facingRows?: { left: number; right: number };
   /** Every strip the character owns, by name. */
   clips: Record<string, ClipDef>;
   /** Which clip plays for each state; states left out are skipped. Every character idles. */

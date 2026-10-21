@@ -1,5 +1,5 @@
 import { q } from '../world';
-import { characterDef, stateClip } from '../characters/Characters';
+import { characterDef, facingRow, stateClip } from '../characters/Characters';
 import type { CharacterComponent } from '../characters/Characters';
 import type { ClipDef } from '../characters/CharacterDef';
 import { frameTexture, sheetCols } from '../render/Sheets';
@@ -18,15 +18,20 @@ function advance(c: CharacterComponent, clip: ClipDef, frames: number): void {
   }
 }
 
-/** Advances each character's clip and shows the current frame, mirrored when facing left. */
+/**
+ * Advances each character's clip and shows the current frame from the row for the side it faces;
+ * characters drawn only facing right are mirrored to face left.
+ */
 export function updateCharacterAnimation(): void {
   for (const entity of q.characters) {
     const c = entity.character;
-    const found = stateClip(characterDef(c.def), c.state);
+    const def = characterDef(c.def);
+    const found = stateClip(def, c.state);
     if (!found) continue;
     advance(c, found.clip, sheetCols(found.sheet));
     const sprite = entity.sprite;
-    sprite.texture = frameTexture(found.sheet, c.frame, 0);
-    sprite.scale.x = (c.flipX ? -1 : 1) * Math.abs(sprite.scale.x);
+    sprite.texture = frameTexture(found.sheet, c.frame, facingRow(def, c.flipX));
+    const mirrored = c.flipX && !def.facingRows;
+    sprite.scale.x = (mirrored ? -1 : 1) * Math.abs(sprite.scale.x);
   }
 }

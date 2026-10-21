@@ -5,8 +5,6 @@ import { sound } from '../audio/SoundPlayer';
 import { REACH } from './TargetSystem';
 import { nearby, Sense } from '../ai/perception/spatial';
 
-/** Walking into a chest opens it; "use" (E or clicking it) works from further away. */
-const OPEN_RADIUS = 24;
 /** A chest holds two or three potions, flung out at this speed. */
 const MIN_POTIONS = 2;
 const EXTRA_POTIONS = 2;
@@ -15,13 +13,12 @@ const POTION_FLING = 0.6;
 type Chest = (typeof q.chests)['entities'][number];
 const openers: Entity[] = [];
 
-/** Whether a living player is touching the chest, or within reach and pressing "use". */
+/** Whether a living player within reach pressed "use" (E): chests open on purpose, never by walking into them. */
 function opened(chest: Chest): boolean {
   const cp = chest.position;
-  for (const e of nearby(cp.x, cp.y, Math.max(REACH, OPEN_RADIUS), Sense.player, openers)) {
-    if (!isPlayer(e) || e.health.current <= 0) continue;
-    const dist = Math.hypot(e.position.x - cp.x, e.position.y - cp.y);
-    if (dist <= OPEN_RADIUS || (e.playerInput.intents.use && dist <= REACH)) return true;
+  for (const e of nearby(cp.x, cp.y, REACH, Sense.player, openers)) {
+    if (!isPlayer(e) || e.health.current <= 0 || !e.playerInput.intents.use) continue;
+    if (Math.hypot(e.position.x - cp.x, e.position.y - cp.y) <= REACH) return true;
   }
   return false;
 }

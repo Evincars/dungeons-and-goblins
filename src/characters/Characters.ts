@@ -1,12 +1,14 @@
 import type { Entity } from '../world';
 import { StateError } from '../core/errors';
-import { registerSheet, sheetCols } from '../render/Sheets';
+import { sheetCols } from '../render/Sheets';
+import { SpriteSheet } from '../assets/SpriteSheet';
 import type { CharacterDef, CharacterState, ClipDef } from './CharacterDef';
 import { FIGHTER } from './Fighter';
 import { ORC } from './Orc';
+import { GOBLIN_GRUNT, GOBLIN_ROGUE, GOBLIN_WARRIOR } from './Goblins';
 
 const REGISTRY = new Map<string, CharacterDef>(
-  [FIGHTER, ORC].map((def) => [def.id, def]),
+  [FIGHTER, ORC, GOBLIN_GRUNT, GOBLIN_ROGUE, GOBLIN_WARRIOR].map((def) => [def.id, def]),
 );
 
 export function characterDef(id: string): CharacterDef {
@@ -29,19 +31,18 @@ export function clipSheetKey(def: CharacterDef, clip: string): string {
   return `${def.id}_${clip}`;
 }
 
-/** Everything the asset loader must fetch for the registered characters. */
-export function characterAssets(): Array<{ alias: string; src: string }> {
-  return allCharacters().flatMap((def) =>
-    Object.entries(def.clips).map(([clip, { src }]) => ({ alias: clipSheetKey(def, clip), src: encodeURI(src) })));
+/** One sheet per clip of every registered character, sliced into the character's frames. */
+export function characterSheets(): SpriteSheet[] {
+  return allCharacters().flatMap((def) => Object.entries(def.clips).map(([clip, { src }]) =>
+    new SpriteSheet(clipSheetKey(def, clip), src, {
+      grid: { frameWidth: def.frameWidth, frameHeight: def.frameHeight, trim: def.trim },
+    })));
 }
 
-/** Tells the sheet cache how to slice each clip; call once the images are loaded. */
-export function registerCharacterSheets(): void {
-  for (const def of allCharacters()) {
-    for (const clip of Object.keys(def.clips)) {
-      registerSheet(clipSheetKey(def, clip), { frameWidth: def.frameWidth, frameHeight: def.frameHeight, trim: def.trim });
-    }
-  }
+/** The sheet row a character is drawn from: its own side row, or the single row (mirrored for the left). */
+export function facingRow(def: CharacterDef, flipX: boolean): number {
+  if (!def.facingRows) return 0;
+  return flipX ? def.facingRows.left : def.facingRows.right;
 }
 
 export type CharacterComponent = NonNullable<Entity['character']>;
@@ -89,6 +90,12 @@ export function stateImpact(characterId: string, state: CharacterState): number 
 export function groundOffset(def: CharacterDef, scale = def.scale): number {
   const centerY = (def.trim?.y ?? 0) + (def.trim?.h ?? def.frameHeight) / 2;
   return Math.round((def.feetY - centerY) * scale);
+}
+
+/** How far above the sprite's centre the top of the head is drawn. */
+export function headAboveCenter(def: CharacterDef, scale = def.scale): number {
+  const centerY = (def.trim?.y ?? 0) + (def.trim?.h ?? def.frameHeight) / 2;
+  return Math.round((centerY - def.headY) * scale);
 }
 
 /** Components that turn an entity into a character; spread them into `world.add`. */

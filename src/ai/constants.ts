@@ -68,12 +68,18 @@ export const ROLE_SCORES = {
   stickiness: 0.15,
 } as const;
 
-/** How much each kind of enemy leans towards each role (Yuka's characterBias): goblins sneak, orcs and trolls charge. */
+/**
+ * How much each kind of enemy leans towards each role (Yuka's characterBias): goblins sneak, orcs and trolls
+ * charge; among the new goblins the grunt goes straight in, the rogue slips round the back and the warrior leads.
+ */
 export const TEMPERAMENT = {
   goblin:   { direct: 0.9,  flank: 1.3, support: 1.0 },
   skeleton: { direct: 1.0,  flank: 1.0, support: 1.1 },
   orc:      { direct: 1.25, flank: 0.8, support: 1.1 },
   troll:    { direct: 1.4,  flank: 0.5, support: 0.8 },
+  goblin_grunt:   { direct: 1.1, flank: 0.9, support: 1.1 },
+  goblin_rogue:   { direct: 0.7, flank: 1.6, support: 0.9 },
+  goblin_warrior: { direct: 1.3, flank: 0.7, support: 1.1 },
 } as const satisfies Record<MobType, Record<TacticRole, number>>;
 
 /** The largest temperament for a role, which bounds what its option can ever score. */

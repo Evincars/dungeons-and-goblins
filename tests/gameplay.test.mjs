@@ -39,6 +39,11 @@ const { createShopNpc, createTorch, SHOP_ITEMS } = await load('entities/DungeonF
 const { cleanName } = await load('game/Settings');
 const { localPlayer, noIntents } = await load('world');
 const { descend, restorePlayer, startRun } = await load('game/Run');
+const { createChest } = await load('entities/DungeonFactory');
+const { updateChests } = await load('systems/ChestSystem');
+const { updateCharacterState } = await load('systems/CharacterStateSystem');
+const { characterDef, facingRow } = await load('characters/Characters');
+const { PROPS, HANGINGS, STORE_FURNITURE } = await load('level/Props');
 
 const centre = (t) => t * TILE_WIDTH + TILE_WIDTH / 2;
 const tileOf = (level, e) => ({ x: Math.floor(e.position.x / TILE_WIDTH), y: Math.floor(e.position.y / TILE_WIDTH) });
@@ -426,6 +431,65 @@ test('a sword swing hits enemies in its arc only', () => {
   updateSword();
   assert.ok(front.health.current < front.health.max);
   assert.equal(behind.health.current, behind.health.max);
+});
+
+test('a chest opens only when a player within reach presses use (E), never by walking into it', () => {
+  const player = playerAt(4, 2);
+  const chest = createChest(centre(4) + 10, centre(2));
+  const far = createChest(centre(8), centre(2));
+  beginPerception();
+  updateChests();
+  assert.equal(chest.chest.opened, false, 'standing right against it does nothing');
+  player.playerInput.intents.use = true;
+  updateChests();
+  assert.equal(chest.chest.opened, true);
+  assert.equal(far.chest.opened, false, 'out of reach');
+});
+
+test('the new goblins are drawn from their side rows and swing once, standing or on the move', () => {
+  const level = arena(10, 6);
+  const rogue = mobAt(level, 'goblin_rogue', 4, 2);
+  const oldGoblin = mobAt(level, 'goblin', 6, 2);
+  assert.equal(rogue.character.def, 'goblin_rogue');
+  assert.equal(oldGoblin.character.def, 'orc', 'the old goblin keeps its art');
+  assert.equal(facingRow(characterDef('goblin_rogue'), true), 2, 'left row');
+  assert.equal(facingRow(characterDef('goblin_rogue'), false), 3, 'right row');
+  assert.equal(facingRow(characterDef('orc'), true), 0, 'single-row art is mirrored instead');
+
+  world.addComponent(rogue, 'sprite', {});
+  rogue.attackTime = 100;
+  rogue.velocity = { x: 1, y: 0 };
+  updateCharacterState();
+  assert.equal(rogue.character.state, 'walkAttack');
+  // The moving swing plays out; stopping must not start the same blow again standing.
+  rogue.character.finished = true;
+  rogue.character.spent = 'walkAttack';
+  rogue.velocity = { x: 0, y: 0 };
+  updateCharacterState();
+  assert.notEqual(rogue.character.state, 'attack');
+  rogue.attackTime = 0;
+  updateCharacterState();
+  assert.equal(rogue.character.spent, undefined, 'the next blow may swing again');
+});
+
+test('wall decor hangs only on north-wall faces, and storerooms are rare corners backed onto them', () => {
+  let dungeonRooms = 0;
+  const stores = new Set();
+  for (let seed = 1; seed <= 30; seed++) {
+    const { level, props, rooms } = new DungeonBuilder({ ...DEFAULT_CONFIG, seed }).build();
+    dungeonRooms += rooms.filter((r) => r.type === 'dungeon').length;
+    const roomAt = (p) => rooms.find((r) => p.tx >= r.x && p.tx < r.x + r.w && p.ty >= r.y && p.ty < r.y + r.h);
+    for (const p of props) {
+      const backed = level.getTile(p.tx, p.ty - 1)?.type === TileType.Wall;
+      if (HANGINGS.includes(p.kind)) assert.ok(backed, `${p.kind} hangs on a wall face`);
+      if (!STORE_FURNITURE.includes(p.kind)) continue;
+      assert.ok(backed, `${p.kind} stands against a north wall`);
+      assert.equal(PROPS[p.kind].solid, true);
+      stores.add(`${seed}:${roomAt(p)?.id}`);
+    }
+  }
+  assert.ok(stores.size > 0, 'some rooms keep a storeroom corner');
+  assert.ok(stores.size < dungeonRooms * 0.35, `but most rooms do not (${stores.size} of ${dungeonRooms})`);
 });
 
 // ── Typed errors ─────────────────────────────────────────────────────────────

@@ -97,7 +97,8 @@ export function updateTargeting(): void {
   if (!inReach) return;
 
   intents.attack = false;
-  if (!wasClicked()) return;
+  // Chests only open with the use key; a click on one does nothing.
+  if (!wasClicked() || best.chest) return;
   intents.use = true;
   swallowHeldClick = true;
 }

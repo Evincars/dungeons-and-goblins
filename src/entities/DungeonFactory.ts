@@ -21,8 +21,10 @@ const TORCH_FRAME_TICKS = 7;
 /** Floor props rest just above their tile's bottom edge, so they depth-sort with whoever stands around them. */
 const PROP_GROUND = TILE_HEIGHT - 4;
 /** Wall props hang from just under the face's cap molding. */
-const HANG_TOP = 58;
+const HANG_TOP = 54;
 const CHEST_HEALTH = 20;
+/** The chest art (chest_small.png) is a 32×53 frame with the chest standing on its bottom edge; this lifts it so it rests on its tile. */
+const CHEST_LIFT = 17;
 
 export const SHOP_ITEMS: readonly InventoryItem[] = [
   { type: 'weapon', name: 'Short Sword',  value: 50,  slot: 'weapon', icon: 0, stats: { attack: 2 } },
@@ -102,7 +104,7 @@ export function createChest(x: number, y: number): Entity {
     blocking: true,
     physicsSlide: true,
     visual: { sheet: 'chest', col: 0, row: 0 },
-    yOffset: 8,
+    yOffset: CHEST_LIFT,
     healthBarOffset: 14,
     minimapColor: 0xffd040,
   });

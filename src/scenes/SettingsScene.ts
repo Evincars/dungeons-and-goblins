@@ -1,5 +1,5 @@
 import { Container } from 'pixi.js';
-import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
+import { GAME_WIDTH, GAME_HEIGHT, LAYOUT_LEFT } from '../render/Camera';
 import type { Scene, SceneManager } from '../game/SceneManager';
 import { PixelButton } from '../ui/PixelButton';
 import { PixelCheckbox } from '../ui/PixelCheckbox';
@@ -11,7 +11,7 @@ import { settings, saveSettings } from '../game/Settings';
 import { sound } from '../audio/SoundPlayer';
 import { reportRejection } from '../core/errors';
 
-const COL_X = 136;
+const COL_X = LAYOUT_LEFT + 136;
 const COL_W = 240;
 const ROW_H = 38;
 const FIRST_ROW = 86;
@@ -70,6 +70,7 @@ export class SettingsScene implements Scene {
     nameLabel.y = y;
     this.container.addChild(nameLabel);
     this.nameField = new NameField(manager.canvas, COL_X, y + 12, COL_W, 22);
+    this.container.addChild(this.nameField.view);
 
     const back = new PixelButton('Back', COL_W, 26);
     back.x = COL_X;

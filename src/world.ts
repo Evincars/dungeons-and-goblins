@@ -40,7 +40,8 @@ export function isPlayerSlot(value: unknown): value is PlayerSlot {
   return PLAYER_SLOTS.some((slot) => slot === value);
 }
 
-export const MOB_TYPES = ['goblin', 'skeleton', 'orc', 'troll'] as const;
+/** The goblin_* kinds are the three goblins drawn in /other-orcs; the rest share the old orc art. */
+export const MOB_TYPES = ['goblin', 'skeleton', 'orc', 'troll', 'goblin_grunt', 'goblin_rogue', 'goblin_warrior'] as const;
 export type MobType = (typeof MOB_TYPES)[number];
 
 export function isMobType(value: string): value is MobType {

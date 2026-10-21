@@ -1,6 +1,6 @@
 import { Application } from 'pixi.js';
 import { loadAllAssets } from '../assets/AssetLoader';
-import { GAME_WIDTH, GAME_HEIGHT, SCALE } from '../render/Camera';
+import { GAME_WIDTH, GAME_HEIGHT, displayScale } from '../render/Camera';
 import { SceneManager } from './SceneManager';
 import { TitleScene } from '../scenes/TitleScene';
 import { InGameScene } from '../scenes/InGameScene';
@@ -35,11 +35,12 @@ export class Game {
       canvas,
       width: GAME_WIDTH,
       height: GAME_HEIGHT,
+      resolution: this.renderResolution(),
       backgroundColor: BACKGROUND,
       antialias: false,
     });
-    canvas.style.width  = `${GAME_WIDTH * SCALE}px`;
-    canvas.style.height = `${GAME_HEIGHT * SCALE}px`;
+    this.fitToWindow(canvas);
+    window.addEventListener('resize', () => this.fitToWindow(canvas));
 
     sound.setSfxVolume(settings.sfxVolume);
     sound.autoStart();
@@ -56,6 +57,19 @@ export class Game {
     this.manager.goto(joinParam() ? 'coop_join' : 'title');
     this.app.ticker.add(() => this.tick());
     exposeForDebugging({ __app: this.app, __scenes: this.manager, __coop: coop });
+  }
+
+  /** Draws at the screen's own pixel density, so scaled sprites stay sharp however large the window is. */
+  private renderResolution(): number {
+    return displayScale() * (window.devicePixelRatio || 1);
+  }
+
+  /** Scales the canvas to fill the window (the game's own size stays put), re-rendering at the new size. */
+  private fitToWindow(canvas: HTMLCanvasElement): void {
+    const scale = displayScale();
+    this.app.renderer.resize(GAME_WIDTH, GAME_HEIGHT, this.renderResolution());
+    canvas.style.width  = `${Math.floor(GAME_WIDTH * scale)}px`;
+    canvas.style.height = `${Math.floor(GAME_HEIGHT * scale)}px`;
   }
 
   /** Runs fixed 60Hz steps, so 144Hz displays don't play faster than 60Hz ones. */

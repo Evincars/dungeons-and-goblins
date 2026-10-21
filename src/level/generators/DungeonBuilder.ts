@@ -18,7 +18,7 @@ import { StateError } from '../../core/errors';
 import type { DungeonConfig } from './DungeonConfig';
 import { bspTree, bspLeaves, type BspNode } from './BSPSplit';
 import { isPillarColumn } from '../TerrainAutotile';
-import { COFFINS, CRATES, HANGINGS, POSTS, SARCOPHAGI, URNS } from '../Props';
+import { COFFINS, CRATES, HANGINGS, PEDESTALS, POSTS, SARCOPHAGI, STORE_FURNITURE, STORE_GOODS, URNS, propWeight } from '../Props';
 import type { PropKind, PropPlacement } from '../Props';
 
 type TileChange = { x: number; y: number; prev: TileType };
@@ -55,6 +55,13 @@ const CANDLE_CHANCE = 0.7;
 /** Chance a torch spot is left dark, and that a free face gets a wall hanging. */
 const TORCH_SKIP_CHANCE = 0.25;
 const HANGING_CHANCE = 0.12;
+/** Chance a dungeon room keeps a storeroom corner: furniture backed against its north wall, goods in front. */
+const STORE_CHANCE = 0.18;
+/** A storeroom has up to this many pieces of furniture, and up to this many goods around each. */
+const STORE_FURNITURE_MAX = 2;
+const STORE_GOODS_MAX = 3;
+/** Chance a plain hall is flanked by a pair of pedestals instead of posts. */
+const PEDESTAL_CHANCE = 0.4;
 /** Torch flames hang this far above the foot of their wall. */
 const TORCH_FLAME_LIFT = 30;
 /** Rows above which walls are too thin for wall fixtures. */
@@ -421,6 +428,16 @@ export class DungeonBuilder {
     return list[Math.floor(this.rng() * list.length)];
   }
 
+  /** A prop from the list, the rare ones less often (by their weight). */
+  private pickProp(kinds: readonly PropKind[]): PropKind {
+    let roll = this.rng() * kinds.reduce((sum, kind) => sum + propWeight(kind), 0);
+    for (const kind of kinds) {
+      roll -= propWeight(kind);
+      if (roll < 0) return kind;
+    }
+    return kinds[kinds.length - 1];
+  }
+
   /** Two (or four) solid 2×3 wall blocks, mirrored across the room. */
   private pillarBlocks(room: RoomData): TileChange[] {
     const bw = PILLAR_W, bh = PILLAR_H;
@@ -477,11 +494,44 @@ export class DungeonBuilder {
     } else if (roll < 0.7) {
       this.crateCorners(room, props, keep);
     } else if (!structured && room.w >= 8 && room.h >= 8) {
-      const y = room.y + Math.floor(room.h / 2);
-      this.placeSolid([[room.x + 2, y]], [this.pick(POSTS)], props, keep);
-      this.placeSolid([[room.x + room.w - 3, y]], [this.pick(POSTS)], props, keep);
+      this.flankingPair(room, props, keep);
     }
+    if (this.rng() < STORE_CHANCE) this.storeroom(room, props, keep);
     this.urnsAlongWalls(room, roll >= 0.4 && roll < 0.7 ? 4 : 2, props);
+  }
+
+  /** Posts, or a matching pair of pedestals, standing either side of the middle of a plain hall. */
+  private flankingPair(room: RoomData, props: PropPlacement[], keep: Keep): void {
+    const y = room.y + Math.floor(room.h / 2);
+    const pedestal = this.rng() < PEDESTAL_CHANCE ? this.pickProp(PEDESTALS) : null;
+    this.placeSolid([[room.x + 2, y]], [pedestal ?? this.pick(POSTS)], props, keep);
+    this.placeSolid([[room.x + room.w - 3, y]], [pedestal ?? this.pick(POSTS)], props, keep);
+  }
+
+  /** A rare storeroom corner: shelves, racks or supply heaps backed against the north wall, goods strewn in front. */
+  private storeroom(room: RoomData, props: PropPlacement[], keep: Keep): void {
+    const ty = room.y;
+    const backed: number[] = [];
+    for (let tx = room.x; tx < room.x + room.w; tx++) {
+      if (this.isWall(tx, ty - 1) && this.free(tx, ty)) backed.push(tx);
+    }
+    const count = 1 + Math.floor(this.rng() * STORE_FURNITURE_MAX);
+    for (let i = 0; i < count && backed.length; i++) {
+      const tx = backed.splice(Math.floor(this.rng() * backed.length), 1)[0];
+      if (this.placeSolid([[tx, ty]], [this.pickProp(STORE_FURNITURE)], props, keep)) this.scatterGoods(tx, ty, props);
+    }
+  }
+
+  /** Up to a few sacks and bowls on free floor beside or in front of the furniture at (tx, ty). */
+  private scatterGoods(tx: number, ty: number, props: PropPlacement[]): void {
+    const count = Math.floor(this.rng() * (STORE_GOODS_MAX + 1));
+    for (let i = 0; i < count; i++) {
+      const gx = tx + this.randInt(-1, 1);
+      const gy = ty + this.randInt(0, 1);
+      if (!this.free(gx, gy)) continue;
+      this.claim(gx, gy);
+      props.push({ kind: this.pickProp(STORE_GOODS), tx: gx, ty: gy });
+    }
   }
 
   /**
@@ -606,7 +656,7 @@ export class DungeonBuilder {
     }
   }
 
-  /** Cauldrons and chains hung on faces between the torches. */
+  /** Cauldrons, chains, trophies and banners hung on faces between the torches. */
   private placeHangings(torches: TilePos[], props: PropPlacement[]): void {
     for (let ty = FIXTURE_MIN_ROW; ty < this.cfg.mapHeight; ty++) this.hangingRow(ty, torches, props);
   }
@@ -615,7 +665,7 @@ export class DungeonBuilder {
     const nearTorch = (tx: number) => torches.some((t) => t.y === ty && Math.abs(t.x - tx) < 2);
     for (let tx = 1; tx < this.cfg.mapWidth - 1; tx++) {
       if (!this.mountable(tx, ty) || nearTorch(tx) || this.level.isSafeZone(tx, ty) || this.rng() > HANGING_CHANCE) continue;
-      props.push({ kind: this.pick(HANGINGS), tx, ty });
+      props.push({ kind: this.pickProp(HANGINGS), tx, ty });
       tx += 2;
     }
   }

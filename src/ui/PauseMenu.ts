@@ -1,5 +1,5 @@
 import { Container, Graphics, Sprite } from 'pixi.js';
-import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
+import { GAME_WIDTH, GAME_HEIGHT, LAYOUT_LEFT, LAYOUT_WIDTH } from '../render/Camera';
 import { getTexture } from '../assets/Textures';
 import { PixelButton } from './PixelButton';
 import { makeText } from './PixelText';
@@ -11,7 +11,7 @@ const MENU_TOP = 92;
 const STATUS_Y = 66;
 const DIM_ALPHA = 0.6;
 const DIALOG_ALPHA = 0.85;
-const DIALOG = { x: 90, y: 112, w: GAME_WIDTH - 180, h: 148 };
+const DIALOG = { x: LAYOUT_LEFT + 90, y: 112, w: LAYOUT_WIDTH - 180, h: 148 };
 
 export type PauseActions = {
   resume: () => void;
@@ -42,7 +42,9 @@ export class PauseMenu {
     this.container.removeChildren().forEach((c) => c.destroy({ children: true }));
     const dim = new Graphics().rect(0, 0, GAME_WIDTH, GAME_HEIGHT).fill({ color: 0x000000, alpha: DIM_ALPHA });
     const title = new Sprite(getTexture('pause_screen'));
-    title.width = GAME_WIDTH;
+    // The PAUSE art is drawn for the 4:3 screen; wider screens show it centred, unstretched.
+    title.x = LAYOUT_LEFT;
+    title.width = LAYOUT_WIDTH;
     title.height = GAME_HEIGHT;
     this.container.addChild(dim, title);
     if (status) {

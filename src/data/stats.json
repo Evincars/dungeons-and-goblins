@@ -6,6 +6,9 @@
     "goblin":   { "health": 7,   "strength": 5,  "deathPoints": 50 },
     "skeleton": { "health": 18,  "strength": 4,  "deathPoints": 8 },
     "orc":      { "health": 27,  "strength": 11, "deathPoints": 200 },
-    "troll":    { "health": 120, "strength": 12, "deathPoints": 50 }
+    "troll":    { "health": 120, "strength": 12, "deathPoints": 50 },
+    "goblin_grunt":   { "health": 7,  "strength": 5,  "deathPoints": 50 },
+    "goblin_rogue":   { "health": 12, "strength": 7,  "deathPoints": 100 },
+    "goblin_warrior": { "health": 27, "strength": 11, "deathPoints": 200 }
   }
 }

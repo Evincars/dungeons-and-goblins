@@ -12,6 +12,7 @@ export const ORC: CharacterDef = {
   trim: { x: 31, y: 30, w: 46, h: 38 },
   scale: 1.6,
   feetY: 57,
+  headY: 41,
   clips: {
     idle:    { src: `${DIR}/Orc_Idle.png`,     frameTime: 8, mode: 'loop' },
     walk:    { src: `${DIR}/Orc_Walk.png`,     frameTime: 6, mode: 'loop' },

@@ -6,16 +6,16 @@ import { makeText, makeTitle } from '../ui/PixelText';
 import type { PixelLabel } from '../ui/PixelText';
 import { PixelButton } from '../ui/PixelButton';
 import { NameField } from '../ui/NameField';
+import { TextBox } from '../ui/TextBox';
 import { menuBackdrop } from '../ui/MenuBackdrop';
-import { settings } from '../game/Settings';
-import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
+import { GAME_WIDTH, GAME_HEIGHT, LAYOUT_LEFT } from '../render/Camera';
 import { attempt, attemptAsync, report, StateError } from '../core/errors';
 
 const CENTER = GAME_WIDTH / 2;
-const COL_X = 136;
+const COL_X = LAYOUT_LEFT + 136;
 const COL_W = 240;
 const BUTTON_H = 26;
-const INVITE_BOX = { x: 70, y: 108, w: 372, h: 22 };
+const INVITE_BOX = { x: LAYOUT_LEFT + 70, y: 108, w: 372, h: 22 };
 const NAME_BOX = { x: COL_X, y: 184, w: COL_W, h: 22 };
 /** How often the lobby checks whether the settings screen covers it (its text boxes must hide then). */
 const OVERLAY_POLL_MS = 150;
@@ -29,7 +29,7 @@ export type CoopRole = 'host' | 'guest';
  */
 export class CoopScene implements Scene {
   readonly container = new Container();
-  private readonly invite = document.createElement('input');
+  private readonly invite: TextBox;
   private readonly nameField: NameField;
   private readonly status: PixelLabel;
   private readonly roster: PixelLabel;
@@ -37,7 +37,6 @@ export class CoopScene implements Scene {
   private action!: PixelButton;
   private disposed = false;
   private overlayWatch?: ReturnType<typeof setInterval>;
-  private readonly place: () => void;
 
   constructor(private readonly manager: SceneManager, private readonly role: CoopRole, destination?: string) {
     this.container.addChild(menuBackdrop());
@@ -52,8 +51,12 @@ export class CoopScene implements Scene {
     this.roster.y = 246;
     this.container.addChild(title, this.status, this.roster);
 
-    this.place = () => this.placeInvite();
-    this.buildInviteBox();
+    this.invite = new TextBox(manager.canvas, INVITE_BOX, {
+      ariaLabel: role === 'host' ? 'Invite link' : 'Host invite link or peer ID',
+      placeholder: 'Paste the invite link',
+      readOnly: role === 'host',
+    });
+    this.container.addChild(this.invite.view);
     this.action = this.button(role === 'host' ? 'Copy invite' : 'Connect', 136, () => this.runAction());
 
     // Everyone sets the name the others will see above their character.
@@ -62,6 +65,7 @@ export class CoopScene implements Scene {
     nameLabel.y = 172;
     this.container.addChild(nameLabel);
     this.nameField = new NameField(manager.canvas, NAME_BOX.x, NAME_BOX.y, NAME_BOX.w, NAME_BOX.h);
+    this.container.addChild(this.nameField.view);
     this.button('Settings', 212, () => manager.pushOverlay('settings'));
 
     if (role === 'host') {
@@ -71,35 +75,6 @@ export class CoopScene implements Scene {
     this.button('Cancel', GAME_HEIGHT - 52, () => manager.goto('title'));
     this.connect(destination);
     this.watchOverlays();
-  }
-
-  private buildInviteBox(): void {
-    const input = this.invite;
-    input.type = 'text';
-    input.setAttribute('aria-label', this.role === 'host' ? 'Invite link' : 'Host invite link or peer ID');
-    input.placeholder = 'Paste the invite link';
-    input.style.cssText = 'position:fixed;box-sizing:border-box;padding:0 8px;background:#241b18;color:#fff;border:1px solid #d9a454;z-index:10';
-    input.readOnly = this.role === 'host';
-    // Typing here must not walk the character or open menus.
-    input.addEventListener('keydown', (event) => {
-      if (event.code !== 'Escape') event.stopPropagation();
-    });
-    document.body.appendChild(input);
-    window.addEventListener('resize', this.place);
-    this.place();
-  }
-
-  /** Keeps the HTML text box over its spot on the canvas, however the page is scaled. */
-  private placeInvite(): void {
-    const rect = this.manager.canvas.getBoundingClientRect();
-    const sx = rect.width / GAME_WIDTH;
-    const sy = rect.height / GAME_HEIGHT;
-    const s = this.invite.style;
-    s.left = `${rect.left + INVITE_BOX.x * sx}px`;
-    s.top = `${rect.top + INVITE_BOX.y * sy}px`;
-    s.width = `${INVITE_BOX.w * sx}px`;
-    s.height = `${INVITE_BOX.h * sy}px`;
-    s.fontSize = `${Math.max(10, 10 * sy)}px`;
   }
 
   private button(text: string, y: number, action: () => void): PixelButton {
@@ -184,23 +159,20 @@ export class CoopScene implements Scene {
       if (this.manager.hasOverlay === covered) return;
       covered = this.manager.hasOverlay;
       this.container.interactiveChildren = !covered;
-      this.invite.style.display = covered ? 'none' : '';
+      this.invite.visible = !covered;
       this.nameField.visible = !covered;
-      if (covered) return;
-      this.nameField.element.value = settings.playerName;
-      this.place();
+      if (!covered) this.nameField.reload();
     }, OVERLAY_POLL_MS);
   }
 
   destroy(): void {
     this.disposed = true;
     clearInterval(this.overlayWatch);
-    window.removeEventListener('resize', this.place);
     // The game scene is built before this one goes, and puts in hooks of its own.
     if (coop.onChange === this.onChange) coop.onChange = null;
     if (coop.onStart === this.onStart) coop.onStart = null;
     this.nameField.destroy();
-    this.invite.remove();
+    this.invite.destroy();
     this.container.destroy({ children: true });
   }
 }

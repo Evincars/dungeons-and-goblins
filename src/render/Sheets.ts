@@ -10,15 +10,8 @@ export type SheetInfo = {
 };
 
 const SHEETS: Record<string, SheetInfo> = {
-  // ── Real-asset sprite sheets (loaded from /public) ──────────────────────────
-  // Character strips are registered from their CharacterDef (see characters/Characters.ts).
-
-  // Tileset (16×16 base tile, used via tilesetRect())
-  tileset:            { frameWidth: 16, frameHeight: 16 },
-
-  // HUD panel bars: 101 rows of 100×6, row 0 = full, row 100 = empty
-  panel_healthbar:    { frameWidth: 100, frameHeight: 6 },
-  panel_xpbar:        { frameWidth: 100, frameHeight: 6 },
+  // Images loaded from /public declare their frames on their SpriteSheet (see assets/SheetCatalog.ts);
+  // character strips come from their CharacterDef. Only art built at load time is listed here.
 
   // Torch animation — 4 frames composited into one 64×16 strip
   torch:              { frameWidth: 16, frameHeight: 16 },
@@ -29,18 +22,11 @@ const SHEETS: Record<string, SheetInfo> = {
   pickup_gem:         { frameWidth: 12,  frameHeight: 12  },
   spell_bolt:         { frameWidth: 16,  frameHeight: 16  },
   spawner:            { frameWidth: 32,  frameHeight: 40  },
-  chest:              { frameWidth: 32,  frameHeight: 32  },
   exit_button:        { frameWidth: 32,  frameHeight: 32  },
   fx_sword_swing:     { frameWidth: 48,  frameHeight: 48  },
   fx_death:           { frameWidth: 48,  frameHeight: 48  },
   fx_dust:            { frameWidth: 16,  frameHeight: 16  },
   dark:               { frameWidth: 32,  frameHeight: 32  },
-  bar_green:          { frameWidth: 32,  frameHeight: 4   },
-  bar_green_underlay: { frameWidth: 32,  frameHeight: 4   },
-  bar_outline:        { frameWidth: 32,  frameHeight: 4   },
-  sprint_bar:         { frameWidth: 32,  frameHeight: 4   },
-  font_default:       { frameWidth: 8,   frameHeight: 8   },
-  button:             { frameWidth: 128, frameHeight: 24  },
 };
 
 const DEFAULT_SHEET: SheetInfo = { frameWidth: 32, frameHeight: 32 };
@@ -70,8 +56,9 @@ export function sheetRows(key: string): number {
 function makeFrame(key: string, col: number, row: number): Texture {
   const base = getTexture(key);
   const { frameWidth, frameHeight, trim } = sheetInfo(key);
-  const fx = col * frameWidth + (trim?.x ?? 0);
-  const fy = row * frameHeight + (trim?.y ?? 0);
+  // A sheet can be a region of a larger image, so frames count from the region's corner.
+  const fx = base.frame.x + col * frameWidth + (trim?.x ?? 0);
+  const fy = base.frame.y + row * frameHeight + (trim?.y ?? 0);
   return new Texture({ source: base.source, frame: new Rectangle(fx, fy, trim?.w ?? frameWidth, trim?.h ?? frameHeight) });
 }
 

@@ -3,6 +3,7 @@ import type { Entity } from '../world';
 import type { Level } from '../level/Level';
 import { stateDuration } from '../characters/Characters';
 import { respawnPlayer } from './HoleSystem';
+import { run } from '../game/Run';
 
 /** Ticks the fallen player lies there after the death clip has finished. */
 const DEATH_LINGER = 45;
@@ -27,6 +28,11 @@ export function updateRespawns(level: Level, dt: number): void {
   for (const player of dying) {
     player.respawnTicks = Math.max(0, player.respawnTicks - dt);
     if (player.respawnTicks > 0) continue;
+    // Hardcore: the fallen stay down, and the run is over.
+    if (run.hardcore) {
+      run.over = true;
+      continue;
+    }
     world.removeComponent(player, 'respawnTicks');
     respawnPlayer(player, level, 'death');
     player.hurtTime = 0;

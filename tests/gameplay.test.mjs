@@ -38,6 +38,7 @@ const { buildDungeon } = await load('level/DungeonGenerator');
 const { createShopNpc, createTorch, SHOP_ITEMS } = await load('entities/DungeonFactory');
 const { cleanName } = await load('game/Settings');
 const { localPlayer, noIntents } = await load('world');
+const { descend, restorePlayer, startRun } = await load('game/Run');
 
 const centre = (t) => t * TILE_WIDTH + TILE_WIDTH / 2;
 const tileOf = (level, e) => ({ x: Math.floor(e.position.x / TILE_WIDTH), y: Math.floor(e.position.y / TILE_WIDTH) });
@@ -147,17 +148,15 @@ test('the rbush index answers by kind and radius, and sees moves after beginPerc
 
 // ── Senses ───────────────────────────────────────────────────────────────────
 
-test('enemies see players in front of them, never through walls, and hear them close behind', () => {
-  const level = arena(16, 8);
+test('enemies see players in the open as far as the fog lifts, in any direction, never through walls', () => {
+  const level = arena(20, 8);
   const mob = mobAt(level, 'goblin', 4, 3, { x: 1, y: 0 });
   const player = playerAt(8, 3);
-  assert.equal(canSee(level, mob, player), true, 'in front and in range');
+  assert.equal(canSee(level, mob, player), true, 'in range');
   mob.aimVector = { x: -1, y: 0 };
-  assert.equal(canSee(level, mob, player), false, 'behind it and too far to hear');
-  assert.equal(canSee(level, mob, player, true), true, 'an engaged enemy tracks all round');
-  player.position.x = centre(5);
-  assert.equal(canSee(level, mob, player), true, 'close enough to be heard');
-  mob.aimVector = { x: 1, y: 0 };
+  assert.equal(canSee(level, mob, player), true, 'facing away makes no difference');
+  player.position.x = centre(10);
+  assert.equal(canSee(level, mob, player), false, 'beyond the fog radius');
   player.position.x = centre(8);
   wallRect(level, 6, 1, 6, 6);
   assert.equal(canSee(level, mob, player), false, 'a wall blocks sight');
@@ -302,6 +301,43 @@ test('an enemy that loses sight of the player follows their trail and finds them
   assert.ok(trailAdvanced, 'it walked along the trail crumbs');
   assert.equal(mob.ai.state, 'engage', 'it found the player again');
   assert.ok(tileOf(level, mob).x > 10, 'it came round the wall');
+});
+
+test('an enemy reaches a player whose feet sink into the wall edge, and hurts them', () => {
+  const level = arena(20, 10);
+  const player = playerAt(12, 5);
+  player.position.y = 9 * TILE_WIDTH + 6;
+  const mob = mobAt(level, 'orc', 6, 4);
+  engage(mob, player, 0);
+  const before = player.health.current;
+  for (let tick = 1; tick <= 600; tick++) {
+    tickWorld(level, tick);
+    updateContactDamage(level);
+  }
+  assert.ok(player.health.current < before, 'it got close enough to strike');
+});
+
+test('kills, XP, gold and gear carry down to the next level, and a new run starts clean', () => {
+  startRun();
+  const player = playerAt(2, 2);
+  player.playerStats.kills = 7;
+  player.playerStats.exp = 40;
+  player.playerStats.goldEarned = 90;
+  player.playerStats.gold = 25;
+  player.inventory.push({ id: 'potion' });
+  descend();
+  world.clear();
+  const next = playerAt(2, 2);
+  restorePlayer(next);
+  assert.equal(next.playerStats.kills, 7);
+  assert.equal(next.playerStats.exp, 40);
+  assert.equal(next.playerStats.goldEarned, 90);
+  assert.equal(next.playerStats.gold, 25);
+  assert.equal(next.inventory.length, 1);
+  startRun();
+  const fresh = playerAt(2, 2);
+  restorePlayer(fresh);
+  assert.equal(fresh.playerStats.kills, 0);
 });
 
 test('chasing enemies never step into a pit', () => {

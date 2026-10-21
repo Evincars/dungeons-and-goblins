@@ -47,9 +47,11 @@ function collect(coin: Loot, player: Player): void {
     sound.playSound('potion', x, y);
   } else if (ld.kind === 'gem') {
     player.playerStats.gold += ld.value;
+    player.playerStats.goldEarned += ld.value;
     sound.playSound(ld.value >= BIG_GEM ? 'gem_big' : 'gem', x, y);
   } else {
     player.playerStats.gold += ld.value;
+    player.playerStats.goldEarned += ld.value;
     sound.playSound(ld.value >= BIG_COIN ? 'coin_big' : 'coin', x, y);
   }
   world.removeComponent(coin, 'loot');

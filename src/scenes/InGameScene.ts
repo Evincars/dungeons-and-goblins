@@ -11,12 +11,12 @@ import { LightRenderer } from '../level/LightRenderer';
 import type { LightSource } from '../level/LightRenderer';
 import { createPlayer } from '../entities/PlayerFactory';
 import { camera, GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
-import { TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
+import { TILE_WIDTH, TILE_HEIGHT, FOG_REVEAL_TILES } from '../level/TileType';
 import { initInput, resetInput } from '../systems/InputSystem';
 import { SIMULATION, PRESENTATION, runSystems } from '../systems/Simulation';
 import type { FrameContext } from '../systems/Simulation';
 import { resetNameTags, updateNameTags } from '../systems/NameTagSystem';
-import { HudPanel } from '../ui/HudPanel';
+import { HudPanel, totalXp } from '../ui/HudPanel';
 import { InventoryPanel } from '../ui/InventoryPanel';
 import { ShopPanel } from '../ui/ShopPanel';
 import { PauseMenu } from '../ui/PauseMenu';
@@ -30,11 +30,11 @@ import type { Level } from '../level/Level';
 import { exposeForDebugging } from '../core/debugHooks';
 import { coop } from '../network/CoopSession';
 import { GuestGame, HostGame } from '../network/CoopGame';
-import { descend, run } from '../game/Run';
+import { descend, restorePlayer, run, startRun } from '../game/Run';
+import { ResultPanel } from '../ui/ResultPanel';
 
-/** Tiles revealed around each player when the level starts, and every tick after. */
+/** Tiles revealed around each player when the level starts (every tick after, FOG_REVEAL_TILES). */
 const START_REVEAL_TILES = 6;
-const REVEAL_TILES = 5;
 const TORCH_LIGHT_RADIUS = 120;
 /** Torch flames flicker out of step, this far apart in phase. */
 const TORCH_FLICKER_STEP = 1.3;
@@ -43,14 +43,20 @@ const LANTERN_LIFT = 16;
 const LANTERN_RADIUS = 110;
 /** The fog of war must cover entities in unexplored areas, not just the terrain. */
 const FOG_Z = 1e7;
-const BANNER_LIFT = 16;
 const STATUS_Y = 6;
 
 type Mode = 'solo' | 'host' | 'guest';
+type RunTotals = { kills: number; xp: number; gold: number };
+
+/** Everything the player has earned so far in the run. */
+function totalsOf(stats: NonNullable<Player['playerStats']>): RunTotals {
+  return { kills: stats.kills, xp: totalXp(stats), gold: stats.goldEarned };
+}
 
 /**
  * One dungeon level. Alone or as the co-op host this screen runs the game; as a guest it draws the host's
- * world (built from the same seed) and sends this player's controls. Escape opens the pause menu.
+ * world (built from the same seed) and sends this player's controls. Escape opens the pause menu, which only
+ * stops the game when playing alone. Alone, one death or fall ends the run (hardcore).
  */
 export class InGameScene implements Scene {
   readonly container = new Container();
@@ -67,9 +73,12 @@ export class InGameScene implements Scene {
   private readonly pause: PauseMenu;
   private shopWasOpen = false;
   private readonly crosshair = new Crosshair();
-  private readonly completeBanner: PixelLabel;
+  private readonly result = new ResultPanel();
   private readonly status: PixelLabel;
   private complete = false;
+  private gameOverShown = false;
+  /** What the player carried in, to tell this level's kills, XP and gold from the run's total. */
+  private baseline: RunTotals | null = null;
   private readonly level: Level;
   private tick = 0;
   private torchSources: LightSource[] = [];
@@ -86,6 +95,7 @@ export class InGameScene implements Scene {
     this.mode = coop.role === 'host' ? 'host' : coop.role === 'guest' ? 'guest' : 'solo';
     // A level starts from an empty world: the previous level's entities (and their sprites, which lived in
     // its layers) are gone, along with any panel left open.
+    run.hardcore = this.mode === 'solo';
     resetLevelComplete();
     closeInventory();
     closeShop();
@@ -112,6 +122,7 @@ export class InGameScene implements Scene {
     } else {
       const me = createPlayer(spawns.playerSpawn.x, spawns.playerSpawn.y);
       world.addComponent(me, 'playerSlot', 'host');
+      restorePlayer(me);
       if (this.mode === 'host') this.host = new HostGame(me, spawns.playerSpawn, seed, depth);
     }
 
@@ -121,17 +132,13 @@ export class InGameScene implements Scene {
     this.lights.init();
     this.uiLayer.addChild(this.lights.overlay, this.hud.container, this.inv.container, this.shop.container);
 
-    this.completeBanner = new PixelLabel('', { color: 0xffcc44, scale: 2, align: 'center', shadow: true });
-    this.completeBanner.x = Math.floor(GAME_WIDTH / 2);
-    this.completeBanner.y = Math.floor(VIEW_HEIGHT / 2) - BANNER_LIFT;
-    this.completeBanner.visible = false;
     this.status = makeText('', 0xff8888, 8, 'center');
     this.status.x = GAME_WIDTH / 2;
     this.status.y = STATUS_Y;
     const levelLabel = makeText(`Depth ${depth}`, 0x998877, 8, 'right');
     levelLabel.x = GAME_WIDTH - 6;
     levelLabel.y = STATUS_Y;
-    this.uiLayer.addChild(this.completeBanner, this.status, levelLabel);
+    this.uiLayer.addChild(this.status, levelLabel);
 
     this.pause = new PauseMenu({
       resume: () => this.setPaused(false),
@@ -142,7 +149,7 @@ export class InGameScene implements Scene {
       ? 'You will leave the co-op game.'
       : this.mode === 'host' ? 'The co-op game ends for everyone.' : 'This dungeon run will be lost.');
     // The crosshair replaces the OS pointer and is the player's focus in the world.
-    this.uiLayer.addChild(this.crosshair.graphics, this.pause.container);
+    this.uiLayer.addChild(this.crosshair.graphics, this.pause.container, this.result.container);
     manager.canvas.style.cursor = 'none';
     initInput(manager.canvas);
 
@@ -160,16 +167,27 @@ export class InGameScene implements Scene {
     }
     if (e.code !== 'Escape') return;
     if (this.manager.hasOverlay) this.manager.escapeOverlay();
+    else if (this.result.open) return;
     else if (!this.pause.handleEscape()) this.setPaused(!this.pause.open);
   }
 
-  /** Alone or hosting, pausing stops the world (for everyone); a guest's game goes on behind its menu. */
+  /** Opens or closes the pause menu. Only alone does that stop the game; in co-op the world goes on behind it. */
   private setPaused(paused: boolean): void {
     if (paused) this.pause.show(this.mode !== 'solo' && !coop.connected ? coop.status : '');
     else this.pause.hide();
-    this.crosshair.graphics.visible = !paused;
-    this.manager.canvas.style.cursor = paused ? '' : 'none';
+    this.showPointer(paused);
+  }
+
+  /** A menu needs the OS pointer; in the world the crosshair takes its place. */
+  private showPointer(visible: boolean): void {
+    this.crosshair.graphics.visible = !visible;
+    this.manager.canvas.style.cursor = visible ? '' : 'none';
     resetInput();
+  }
+
+  /** Whether the world stands still: alone, behind the pause menu, the game over screen or the level summary. */
+  private get frozen(): boolean {
+    return this.mode === 'solo' && (this.pause.open || this.complete || run.over);
   }
 
   /** Browsers only let a script close a tab it opened, so fall back to the main menu. */
@@ -196,15 +214,17 @@ export class InGameScene implements Scene {
   }
 
   update(): void {
-    this.tick++;
+    const frozen = this.frozen;
+    if (!frozen) this.tick++;
     this.ctx.tick = this.tick;
-    const paused = this.pause.open;
-    if (this.guest) this.guest.tick(this.level, paused || this.guest.hostPaused || !coop.connected);
-    else this.simulate(paused);
+    if (this.guest) this.guest.tick(this.level, this.pause.open || this.guest.hostPaused || !coop.connected);
+    else this.simulate(frozen);
     if (this.level.tilesDirty) this.rebuildTerrain();
-    runSystems(PRESENTATION, this.ctx);
+    // Frozen, nothing animates either: the last frame stays up behind the menu.
+    if (!frozen) runSystems(PRESENTATION, this.ctx);
 
     const player = localPlayer();
+    this.baseline ??= player ? totalsOf(player.playerStats) : null;
     if (this.mode !== 'solo') updateNameTags(this.gameLayer, player);
     if (player) this.follow(player);
     this.revealAroundPlayers();
@@ -217,15 +237,16 @@ export class InGameScene implements Scene {
     this.updatePanels();
     this.updateStatus(player);
     if (this.mode !== 'guest' && !this.complete && isLevelComplete()) this.levelComplete();
+    if (run.over && !this.gameOverShown) this.gameOver();
   }
 
-  /** Alone or hosting: one tick of the game (unless paused), and the world out to the guests. */
-  private simulate(paused: boolean): void {
-    const lost = this.host?.beforeTick(paused) ?? false;
-    // Everyone else left: stop the world so the host can decide what to do.
-    if (lost && !paused) this.setPaused(true);
-    if (!paused && !lost) runSystems(SIMULATION, this.ctx);
-    this.host?.afterTick(this.pause.open);
+  /** Alone or hosting: one tick of the game (unless frozen), and the world out to the guests. */
+  private simulate(frozen: boolean): void {
+    const lost = this.host?.beforeTick(false) ?? false;
+    // Everyone else left: bring up the menu so the host can decide what to do.
+    if (lost && !this.pause.open) this.setPaused(true);
+    if (!frozen && !lost) runSystems(SIMULATION, this.ctx);
+    this.host?.afterTick(false);
   }
 
   /** The camera and listener follow this screen's player. */
@@ -239,7 +260,7 @@ export class InGameScene implements Scene {
   /** The party shares its map: the fog lifts around every player. */
   private revealAroundPlayers(): void {
     for (const p of q.players) {
-      this.level.reveal(Math.floor(p.position.x / TILE_WIDTH), Math.floor(p.position.y / TILE_HEIGHT), REVEAL_TILES);
+      this.level.reveal(Math.floor(p.position.x / TILE_WIDTH), Math.floor(p.position.y / TILE_HEIGHT), FOG_REVEAL_TILES);
     }
   }
 
@@ -293,14 +314,58 @@ export class InGameScene implements Scene {
     this.status.text = text;
   }
 
-  /** The exit was pulled. Alone or hosting, Enter goes deeper; a guest waits for the host. */
+  /** The exit was pulled: the summary of the level comes up. Alone or hosting, Enter goes deeper; a guest waits for the host. */
   private levelComplete(): void {
     if (this.complete) return;
     this.complete = true;
     closeShop();
     this.host?.levelComplete();
-    this.completeBanner.text = this.mode === 'guest' ? 'LEVEL COMPLETE\nWaiting for the host' : 'LEVEL COMPLETE\nPress ENTER';
-    this.completeBanner.visible = true;
+    const gained = this.levelTotals();
+    this.result.show({
+      title: 'LEVEL COMPLETE',
+      titleColor: 0xffcc44,
+      lines: [`Kills: ${gained.kills}`, `XP gained: ${gained.xp}`, `Gold gained: ${gained.gold}`],
+      waiting: this.mode === 'guest' ? 'Waiting for the host...' : undefined,
+      buttons: [
+        { label: 'Next Level', action: () => this.nextLevel() },
+        { label: 'End Run', action: () => this.manager.goto('title') },
+      ],
+    });
+    this.showPointer(true);
+  }
+
+  /** Kills, XP and gold earned on this level alone. */
+  private levelTotals(): RunTotals {
+    const stats = localPlayer()?.playerStats;
+    const now = stats ? totalsOf(stats) : { kills: 0, xp: 0, gold: 0 };
+    const start = this.baseline ?? { kills: 0, xp: 0, gold: 0 };
+    return { kills: now.kills - start.kills, xp: now.xp - start.xp, gold: now.gold - start.gold };
+  }
+
+  /** Alone, dying or falling into a pit ends the run: the world stays as it was, with the choice on top. */
+  private gameOver(): void {
+    this.gameOverShown = true;
+    this.pause.hide();
+    closeShop();
+    closeInventory();
+    const stats = localPlayer()?.playerStats;
+    const total = stats ? totalsOf(stats) : { kills: 0, xp: 0, gold: 0 };
+    this.result.show({
+      title: 'GAME OVER',
+      titleColor: 0xff5544,
+      lines: [`Depth reached: ${run.depth}`, `Total kills: ${total.kills}`, `Total XP earned: ${total.xp}`, `Total gold earned: ${total.gold}`],
+      buttons: [
+        { label: 'New Game', action: () => this.newGame() },
+        { label: 'Main Menu', action: () => this.manager.goto('title') },
+      ],
+    });
+    this.showPointer(true);
+  }
+
+  /** A fresh run from the first level's starting safe room. */
+  private newGame(): void {
+    startRun();
+    this.manager.goto('in_game');
   }
 
   private nextLevel(): void {
@@ -319,6 +384,7 @@ export class InGameScene implements Scene {
     this.hud.destroy();
     this.inv.destroy();
     this.pause.destroy();
+    this.result.destroy();
     // The next scene is built before this one goes and owns the world by now (a new level has already
     // cleared it and filled it): only this scene's display objects go, the entities' sprites with them.
     this.container.destroy({ children: true });

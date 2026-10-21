@@ -52,6 +52,7 @@ export function createPlayer(x: number, y: number): Entity {
       maxSprint: MAX_SPRINT,
       sprintLocked: false,
       kills: 0,
+      goldEarned: 0,
     },
     inventory: [],
     equipped: {},

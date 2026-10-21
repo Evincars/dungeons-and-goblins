@@ -1,16 +1,12 @@
-import { TILE_WIDTH } from '../level/TileType';
+import { FOG_REVEAL_TILES, TILE_WIDTH } from '../level/TileType';
 import type { MobType, TacticRole } from '../world';
 
 /** Enemy AI tuning: senses, squad tactics, routing and trail following. */
 
 // ── Senses ────────────────────────────────────────────────────────────────────
 
-/** How far an enemy sees a player standing in front of it, in pixels. */
-export const SIGHT_RANGE = 6 * TILE_WIDTH;
-/** Cosine of half its field of view: about 150°, so a player can sneak up from behind. */
-export const SIGHT_CONE_COS = Math.cos((75 * Math.PI) / 180);
-/** Within this radius an enemy notices a player whichever way it faces (it hears them). */
-export const HEARING_RANGE = 2 * TILE_WIDTH;
+/** How far an enemy sees a player in the open, in every direction: as far as the fog of war lifts. */
+export const SIGHT_RANGE = FOG_REVEAL_TILES * TILE_WIDTH;
 /** Ticks between looks around: sight is a ray march, too costly every tick for every enemy. */
 export const SENSE_TICKS = 6;
 /** An enemy that spots a player shouts; idle allies this close join the hunt. */
@@ -22,10 +18,6 @@ export const ALERT_RADIUS = 5 * TILE_WIDTH;
 export const ALERT_TICKS = 24;
 /** With nobody in the squad seeing the target for this long, the hunt turns into a search. */
 export const LOSE_SIGHT_TICKS = 90;
-/** A search along the trail gives up after this long without a sighting. */
-export const SEARCH_TICKS = 600;
-/** Hunting stops when the target gets this far away. */
-export const GIVE_UP_RANGE = 14 * TILE_WIDTH;
 /** Wandering enemies pick a new direction this often. */
 export const WANDER_TURN_TICKS = 60;
 

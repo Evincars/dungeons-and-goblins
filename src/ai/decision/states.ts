@@ -2,8 +2,8 @@ import { GameEntity, State, StateMachine } from 'yuka';
 import type { Level } from '../../level/Level';
 import { isActivePlayer, isMob, isPlayer, world, MOB_STATES } from '../../world';
 import type { Entity, Mob, MobState, Player } from '../../world';
-import { ALERT_RADIUS, ALERT_TICKS, GIVE_UP_RANGE, LOSE_SIGHT_TICKS, SEARCH_TICKS, SENSE_TICKS } from '../constants';
-import { canSee, spotPlayer } from '../perception/sight';
+import { ALERT_RADIUS, ALERT_TICKS, LOSE_SIGHT_TICKS, SENSE_TICKS } from '../constants';
+import { canSee, huntable, spotPlayer } from '../perception/sight';
 import { nearby, Sense } from '../perception/spatial';
 import { faceTowards, wander } from '../execution/locomotion';
 import { flank, followTrail, strike, support } from '../execution/pursuit';
@@ -14,9 +14,10 @@ import { squadOf } from './squads';
  *   idle   — wanders, looking around now and then; spotting a player sends it to alert.
  *   alert  — stops for a beat facing the player (and shouts, so idle allies nearby join in).
  *   engage — fights in the role its squad gave it (direct / flank / support); when the whole squad has
- *            lost sight of the target for a while, it starts searching.
+ *            lost sight of the target for a while, it starts searching. Hunts never time out: only the
+ *            player reaching a safe room or dying (or the enemy dying) ends one.
  *   search — follows the player's trail from where they were last seen; a sighting re-engages, a cold
- *            trail sends it back to idle.
+ *            trail sends it back to a direct chase.
  */
 export class MobAgent extends GameEntity {
   readonly mob: Mob;
@@ -162,13 +163,12 @@ class EngageState extends State<MobAgent> {
   override execute(agent: MobAgent): void {
     const { mob, level, tick } = agent;
     const target = huntedPlayer(mob);
-    const tooFar = target && Math.hypot(target.position.x - mob.position.x, target.position.y - mob.position.y) > GIVE_UP_RANGE;
-    if (!level || !target || tooFar) {
+    if (!level || !target || !huntable(level, target)) {
       agent.go('idle');
       return;
     }
     mob.ai.stateTicks++;
-    if (senseDue(mob) && canSee(level, mob, target, true)) noteSighting(mob, target, tick);
+    if (senseDue(mob) && canSee(level, mob, target)) noteSighting(mob, target, tick);
     if (tick - mob.ai.lastSeenTick > LOSE_SIGHT_TICKS) {
       agent.go('search');
       return;
@@ -199,7 +199,7 @@ class SearchState extends State<MobAgent> {
   override execute(agent: MobAgent): void {
     const { mob, level, tick } = agent;
     const target = huntedPlayer(mob);
-    if (!level || !target || ++mob.ai.stateTicks > SEARCH_TICKS) {
+    if (!level || !target || !huntable(level, target)) {
       agent.go('idle');
       return;
     }
@@ -209,7 +209,10 @@ class SearchState extends State<MobAgent> {
       agent.go('engage');
       return;
     }
-    if (!followTrail(level, mob, target)) agent.go('idle');
+    if (followTrail(level, mob, target)) return;
+    // A cold trail doesn't end the hunt: the enemy goes straight for the player for a while, then tries the trail again.
+    noteSighting(mob, target, tick);
+    agent.go('engage');
   }
 }
 

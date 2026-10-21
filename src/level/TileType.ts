@@ -7,6 +7,9 @@ export const enum TileType {
   Obstacle      = 4,
 }
 
+/** Tiles the fog of war lifts around each player: also how far enemies see. */
+export const FOG_REVEAL_TILES = 5;
+
 export const TILE_WIDTH  = 32;
 export const TILE_HEIGHT = 32;
 

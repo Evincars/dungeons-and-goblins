@@ -5,6 +5,7 @@ import { TileType } from '../level/TileType';
 import { createCoin } from '../entities/LootFactory';
 import { sound } from '../audio/SoundPlayer';
 import { clearTrail } from '../ai/perception/trail';
+import { run } from '../game/Run';
 
 /** Ticks from stepping off the edge to landing at the spawn; matches the falling cry's length. */
 export const FALL_TICKS = 60;
@@ -59,6 +60,11 @@ export function updateHoles(level: Level): void {
 export function updateFalling(level: Level): void {
   for (const player of fallers) {
     const fall = player.falling;
+    // Hardcore: the pit is the end of the run; they stay at the bottom.
+    if (run.hardcore && fall.age >= fall.duration) {
+      run.over = true;
+      continue;
+    }
     fall.age++;
     player.freezeTime = Math.max(player.freezeTime ?? 0, 2);
     if (player.velocity) player.velocity.x = player.velocity.y = 0;

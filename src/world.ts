@@ -240,6 +240,8 @@ export type Entity = {
     maxSprint: number;
     sprintLocked: boolean;
     kills: number;
+    /** All gold picked up this level, whatever was spent since. */
+    goldEarned: number;
   };
   inventory?: InventoryItem[];
   equipped?: Partial<Record<EquipSlot, InventoryItem>>;

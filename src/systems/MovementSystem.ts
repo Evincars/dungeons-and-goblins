@@ -126,11 +126,14 @@ function sprintFactor(walker: Walker, moving: boolean): number {
   return 1;
 }
 
-/** Aims from hand height, so swings and spell bolts (drawn that high) pass through the crosshair. */
+/**
+ * Aims from hand height, so swings and spell bolts (drawn that high) pass through the crosshair: this
+ * screen's pointer for the local player, the crosshair their browser sent for a remote one.
+ */
 function aimAtPointer(walker: Walker): void {
   const pi = walker.playerInput;
   if (!pi.mouseAiming || !walker.aimVector) return;
-  const target = screenToWorld(pi.mouseX, pi.mouseY, aimPoint);
+  const target = walker.aimWorld ?? screenToWorld(pi.mouseX, pi.mouseY, aimPoint);
   const dx = target.x - walker.position.x;
   const dy = target.y - (walker.position.y - AIM_HEIGHT);
   const len = Math.hypot(dx, dy);

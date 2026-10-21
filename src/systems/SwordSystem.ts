@@ -54,7 +54,7 @@ function startSwing(player: Player): void {
     dirY: aim.y,
     damage: swingDamage(player.playerStats.swordTier),
     range,
-    hitIds: new Set<number>(),
+    hitIds: [],
   });
   player.swordCooldown = SWORD_STATS.cooldown;
   const pos = player.position;
@@ -64,7 +64,7 @@ function startSwing(player: Player): void {
 
 /** Whether a mob stands inside the swing's arc and reach, and has not been hit by this swing yet. */
 function inArc(player: Player, swing: Swing, mob: Entity, mobId: number): boolean {
-  if (!mob.position || swing.hitIds.has(mobId)) return false;
+  if (!mob.position || swing.hitIds.includes(mobId)) return false;
   const dx = mob.position.x - player.position.x;
   const dy = mob.position.y - player.position.y;
   const dist = Math.hypot(dx, dy);
@@ -78,7 +78,7 @@ function resolveSwing(player: Player, swing: Swing): void {
     if (!isMob(mob) || mob.health.current <= 0 || mob.team === Team.Player) continue;
     const mobId = world.id(mob);
     if (mobId === undefined || !inArc(player, swing, mob, mobId)) continue;
-    swing.hitIds.add(mobId);
+    swing.hitIds.push(mobId);
     hitMob(mob, player, swing.damage);
   }
 }

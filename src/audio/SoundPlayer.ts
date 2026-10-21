@@ -66,6 +66,11 @@ const SYNTHS = {
   door_open: [noise(0.2, 0.3), osc(100, 'sawtooth', 0.3, 0.2)],
 } as const satisfies Record<SynthName, readonly Voice[]>;
 
+/** Whether a name (e.g. from a network message) is a sound this game can play. */
+export function isSfxName(value: unknown): value is SfxName {
+  return typeof value === 'string' && (hasKey(CLIPS, value) || hasKey(SYNTHS, value));
+}
+
 class SoundPlayer {
   private ctx: AudioContext | null = null;
   private sfxGain: GainNode | null = null;
@@ -74,6 +79,13 @@ class SoundPlayer {
 
   sfxVolume = DEFAULT_SFX_VOLUME;
   muteInterface = false;
+  /** Observer for every effect played here; the co-op host relays them to its guests. */
+  onEffect: ((name: SfxName, x?: number, y?: number) => void) | null = null;
+
+  setSfxVolume(volume: number): void {
+    this.sfxVolume = volume;
+    if (this.sfxGain) this.sfxGain.gain.value = volume;
+  }
 
   /** The audio context, made on first use; null where there is no Web Audio (tests, old browsers). */
   private context(): AudioContext | null {
@@ -134,6 +146,7 @@ class SoundPlayer {
   }
 
   playSound(name: SfxName, x?: number, y?: number): void {
+    this.onEffect?.(name, x, y);
     const ctx = this.context();
     const mix = this.sfxGain;
     if (!ctx || !mix || ctx.state !== 'running') return;

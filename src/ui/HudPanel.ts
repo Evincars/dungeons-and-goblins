@@ -1,5 +1,5 @@
 import { Container, Sprite, Graphics } from 'pixi.js';
-import { firstPlayer } from '../world';
+import { localPlayer } from '../world';
 import { frameTexture } from '../render/Sheets';
 import { GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
 import { PixelLabel } from './PixelText';
@@ -64,7 +64,7 @@ export class HudPanel {
   }
 
   update(): void {
-    const player = firstPlayer();
+    const player = localPlayer();
     if (!player) return;
     const h = player.health;
     const s = player.playerStats;

@@ -1,67 +1,91 @@
-import { Container, Graphics } from 'pixi.js';
-import { PixelLabel } from '../ui/PixelText';
+import { Container } from 'pixi.js';
+import { PixelLabel, makeText } from '../ui/PixelText';
+import { PixelButton } from '../ui/PixelButton';
+import { menuBackdrop } from '../ui/MenuBackdrop';
 import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
+import type { Scene, SceneManager } from '../game/SceneManager';
+import { coop } from '../network/CoopSession';
+import { startRun } from '../game/Run';
+import { world } from '../world';
 
-export class TitleScene {
+const BUTTON_W = 220;
+const BUTTON_H = 26;
+const BUTTON_GAP = 6;
+const MENU_TOP = 142;
+const TITLE_Y = 56;
+const SUBTITLE_Y = 96;
+const HINT_Y = GAME_HEIGHT - 40;
+/** The prompt pulses at this rate (radians per tick). */
+const PULSE_SPEED = 0.06;
+
+/** The entry menu: start alone, host or join a co-op room, change settings, or leave. */
+export class TitleScene implements Scene {
   readonly container = new Container();
   private tick = 0;
-  private pressLabel!: PixelLabel;
-  onStart?: () => void;
+  private farewell: PixelLabel;
 
-  constructor() {
-    this.build();
-    this.bindKeys();
-  }
+  constructor(manager: SceneManager) {
+    // Back at the menu: any room is left, and the next game starts from the top of the dungeon.
+    coop.close();
+    startRun();
+    clearJoinLink();
+    // Nothing of the last game is needed here; a new one fills the world again.
+    world.clear();
 
-  private build(): void {
-    const bg = new Graphics();
-    bg.rect(0, 0, GAME_WIDTH, GAME_HEIGHT).fill({ color: 0x080506 });
-    this.container.addChild(bg);
-
-    // Title stone-carved style
+    this.container.addChild(menuBackdrop());
     const title = new PixelLabel('DUNGEONS & GOBLINS', { color: 0xddaa44, scale: 2, align: 'center', shadow: true });
     title.x = Math.floor(GAME_WIDTH / 2);
-    title.y = 80;
-    this.container.addChild(title);
-
+    title.y = TITLE_Y;
     const sub = new PixelLabel('A Dungeon Crawler', { color: 0x888877, align: 'center', shadow: true });
     sub.x = Math.floor(GAME_WIDTH / 2);
-    sub.y = 120;
-    this.container.addChild(sub);
+    sub.y = SUBTITLE_Y;
+    this.container.addChild(title, sub);
 
-    // Controls hint
-    const controls = new PixelLabel(
-      'WASD - Move      Mouse - Aim\n' +
-      'Left click - Sword   Right click/Q - Spell\n' +
-      'E/Click - Use   TAB - Inventory   SHIFT - Sprint',
-      { color: 0x887766, align: 'center' }
-    );
-    controls.x = Math.floor(GAME_WIDTH / 2);
-    controls.y = 180;
-    this.container.addChild(controls);
+    const entries: Array<{ label: string; action: () => void }> = [
+      { label: 'Start', action: () => manager.goto('in_game') },
+      { label: 'Host game', action: () => manager.goto('coop_host') },
+      { label: 'Join game', action: () => manager.goto('coop_join') },
+      { label: 'Settings', action: () => manager.goto('settings') },
+      { label: 'Exit', action: () => this.exit() },
+    ];
+    entries.forEach(({ label, action }, i) => {
+      const button = new PixelButton(label, BUTTON_W, BUTTON_H);
+      button.x = Math.floor((GAME_WIDTH - BUTTON_W) / 2);
+      button.y = MENU_TOP + i * (BUTTON_H + BUTTON_GAP);
+      button.onPress = action;
+      this.container.addChild(button);
+    });
 
-    this.pressLabel = new PixelLabel('Press ENTER to start', { color: 0xffcc44, align: 'center', shadow: true });
-    this.pressLabel.x = Math.floor(GAME_WIDTH / 2);
-    this.pressLabel.y = 280;
-    this.container.addChild(this.pressLabel);
+    const hint = makeText('WASD move   Mouse aim   Click sword   RMB/Q spell\nE use   TAB inventory   SHIFT sprint   ESC pause', 0x776655, 8, 'center');
+    hint.x = Math.floor(GAME_WIDTH / 2);
+    hint.y = HINT_Y;
+    this.farewell = makeText('Close this browser tab to leave the dungeon.', 0xffcc44, 8, 'center');
+    this.farewell.x = Math.floor(GAME_WIDTH / 2);
+    this.farewell.y = MENU_TOP - 18;
+    this.farewell.visible = false;
+    this.container.addChild(hint, this.farewell);
   }
 
-  private bindKeys(): void {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.code === 'Enter' || e.code === 'Space') {
-        window.removeEventListener('keydown', onKey);
-        this.onStart?.();
-      }
-    };
-    window.addEventListener('keydown', onKey);
+  /** Browsers only let a script close a tab it opened itself; otherwise say how to leave. */
+  private exit(): void {
+    window.close();
+    this.farewell.visible = true;
   }
 
   update(): void {
     this.tick++;
-    this.pressLabel.alpha = 0.5 + 0.5 * Math.sin(this.tick * 0.06);
+    this.farewell.alpha = 0.6 + 0.4 * Math.sin(this.tick * PULSE_SPEED);
   }
 
   destroy(): void {
     this.container.destroy({ children: true });
   }
+}
+
+/** Leaving a room drops the invite from the address bar, so a reload does not rejoin it. */
+function clearJoinLink(): void {
+  const url = new URL(location.href);
+  if (!url.searchParams.has('join')) return;
+  url.searchParams.delete('join');
+  history.replaceState(null, '', url.href);
 }

@@ -2,7 +2,6 @@ import { Sprite } from 'pixi.js';
 import type { Container } from 'pixi.js';
 import { q, world } from '../world';
 import { frameTexture } from '../render/Sheets';
-import { destroyAttachments } from './BarSystem';
 import { createAnimatedVisual, setVisualFrame } from '../render/AnimatedVisual';
 
 /** Nests crack through this many frames as they lose health. */
@@ -10,7 +9,6 @@ const NEST_CRACK_FRAMES = 3;
 
 const nests = world.with('spawner', 'visual', 'sprite', 'health');
 const chestSprites = world.with('chest', 'visual', 'sprite');
-const drawn = world.with('sprite');
 
 function createSprites(gameLayer: Container): void {
   for (const entity of q.needsSprite) {
@@ -49,12 +47,4 @@ export function updateSprites(gameLayer: Container): void {
   createSprites(gameLayer);
   crackNests();
   showOpenedChests();
-}
-
-export function clearSprites(): void {
-  for (const entity of drawn) {
-    destroyAttachments(entity);
-    entity.sprite.destroy({ children: true });
-    world.removeComponent(entity, 'sprite');
-  }
 }

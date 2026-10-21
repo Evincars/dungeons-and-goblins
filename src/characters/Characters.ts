@@ -15,6 +15,11 @@ export function characterDef(id: string): CharacterDef {
   return def;
 }
 
+/** Whether a character id (e.g. from a network message) names a registered character. */
+export function hasCharacter(id: unknown): id is string {
+  return typeof id === 'string' && REGISTRY.has(id);
+}
+
 export function allCharacters(): CharacterDef[] {
   return [...REGISTRY.values()];
 }

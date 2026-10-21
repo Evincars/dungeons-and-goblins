@@ -56,18 +56,33 @@ function pickUp(player: Carrier): void {
   }
 }
 
-export function updateInventory(): void {
+/** Tab opens and closes this screen's inventory panel; returns the local player's bag, if any. */
+export function updateInventoryToggle(): Carrier | undefined {
   for (const player of carriers) {
+    // The inventory is this screen's panel; a remote player opens their own.
+    if (player.remoteInput) continue;
     const intents = player.playerInput.intents;
     if (intents.inventoryOpen) {
       intents.inventoryOpen = false;
       inventoryOpen = !inventoryOpen;
     }
-    if (!inventoryOpen) continue;
-    if (intents.inventoryUse) {
-      intents.inventoryUse = false;
-      useFirst(player);
-    }
-    pickUp(player);
+    return player;
   }
+  return undefined;
+}
+
+export function updateInventory(): void {
+  const player = updateInventoryToggle();
+  if (!player || !inventoryOpen) return;
+  const intents = player.playerInput.intents;
+  if (intents.inventoryUse) {
+    intents.inventoryUse = false;
+    useFirst(player);
+  }
+  pickUp(player);
+}
+
+/** A new level starts with the panel shut. */
+export function closeInventory(): void {
+  inventoryOpen = false;
 }

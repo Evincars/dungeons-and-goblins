@@ -1,4 +1,4 @@
-import { firstPlayer } from '../world';
+import { localPlayer } from '../world';
 import type { Entity } from '../world';
 import { screenToWorld } from '../render/Camera';
 import { pointer, wasClicked, isMouseDown } from './InputSystem';
@@ -77,7 +77,7 @@ function filterClicks(intents: { attack: boolean; cast: boolean }): void {
  */
 export function updateTargeting(): void {
   target = null;
-  const player = firstPlayer();
+  const player = localPlayer();
   if (!player) return;
   const intents = player.playerInput.intents;
   filterClicks(intents);

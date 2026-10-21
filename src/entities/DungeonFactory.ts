@@ -5,7 +5,11 @@ import { PROPS } from '../level/Props';
 import type { PropDef, PropPlacement } from '../level/Props';
 import type { DoorData, RoomData } from '../level/generators/DungeonBuilder';
 
-/** The fixtures of a generated dungeon: rooms, the safe-room door, torches, props, chests, exit and shop. */
+/**
+ * The fixtures of a generated dungeon: rooms, the safe-room door, torches, props, chests, exit and shop.
+ * Rooms, torches and props come straight from the seeded layout, so every co-op browser builds its own
+ * (`localOnly`); the rest change during play and are the host's to send.
+ */
 
 /** Torch mounts sit this far above the foot of their wall. */
 const TORCH_LIFT = 30;
@@ -32,7 +36,7 @@ export const SHOP_ITEMS: readonly InventoryItem[] = [
 
 /** ECS metadata for a room of the layout. */
 export function createRoom(room: RoomData): Entity {
-  return world.add({ room: { id: room.id, type: room.type, bounds: { x: room.x, y: room.y, w: room.w, h: room.h } } });
+  return world.add({ room: { id: room.id, type: room.type, bounds: { x: room.x, y: room.y, w: room.w, h: room.h } }, localOnly: true });
 }
 
 /** The door that seals the safe room once every player has left it. */
@@ -64,6 +68,7 @@ export function createTorch(x: number, y: number): Entity {
       loop: true,
     },
     yOffset: TORCH_LIFT,
+    localOnly: true,
   });
 }
 
@@ -74,12 +79,15 @@ export function createProp(p: PropPlacement): Entity {
   const h = def.rect.h;
   if (def.mount === 'wall') {
     // Stands at the foot of the wall like a torch, drawn up on the bricks.
-    return world.add({ position: { x, y: p.ty * TILE_HEIGHT }, visual: { sheet: `prop_${p.kind}` }, yOffset: HANG_TOP - h / 2 });
+    return world.add({
+      position: { x, y: p.ty * TILE_HEIGHT }, visual: { sheet: `prop_${p.kind}` }, yOffset: HANG_TOP - h / 2, localOnly: true,
+    });
   }
   return world.add({
     position: { x, y: p.ty * TILE_HEIGHT + PROP_GROUND },
     visual: { sheet: `prop_${p.kind}` },
     yOffset: h / 2,
+    localOnly: true,
     ...(def.glow ? { glow: { radius: def.glow } } : {}),
   });
 }

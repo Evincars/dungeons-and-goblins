@@ -104,6 +104,9 @@ export const LOOKAHEAD_TILES = 8;
 /** Pixels at which enemies crowding each other start to push apart. */
 export const PERSONAL_SPACE = 24;
 
+/** "Never": the tick of a sighting that has not happened yet (finite, so it survives JSON over the network). */
+export const NEVER_TICK = -1e9;
+
 // ── Trails ────────────────────────────────────────────────────────────────────
 
 /** Players drop a crumb on every new tile; the trail keeps this many. */

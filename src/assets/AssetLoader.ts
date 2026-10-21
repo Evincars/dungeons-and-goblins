@@ -10,7 +10,7 @@ import {
   genSpawnerSheet, genChestSheet, genExitButtonSheet,
   genSwordSwingSheet, genDeathFxSheet, genDustSheet,
   genDarkSheet,
-  genFontSheet, genButtonSheet, genPanelBg, genPortrait, genMinimapIcons,
+  genFontSheet, genPanelBg, genPortrait, genMinimapIcons,
 } from './SpriteGen';
 
 /** The torch animation is four separate 16×16 images, composited into one strip. */
@@ -46,6 +46,10 @@ const PNG_ASSETS = [
   { alias: 'sprint_bar',         src: '/ui/sprint_bar.png' },
   { alias: 'panel_healthbar',    src: '/ui/panel_healthbar.png' },
   { alias: 'panel_xpbar',        src: '/ui/panel_xpbar.png' },
+
+  // Menu art from Catacomb Snatch Redux: three 128×24 button states, and the PAUSE title overlay.
+  { alias: 'button',             src: '/ui/button.png' },
+  { alias: 'pause_screen',       src: '/ui/pause_screen.png' },
 ];
 
 /** Procedural UI/FX textures, drawn on canvases at load time. */
@@ -62,7 +66,6 @@ const PROCEDURAL: Record<string, () => HTMLCanvasElement> = {
   fx_dust:            genDustSheet,
   dark:               genDarkSheet,
   font_default:       genFontSheet,
-  button:             genButtonSheet,
   portrait:           genPortrait,
   mapicons:           genMinimapIcons,
 };

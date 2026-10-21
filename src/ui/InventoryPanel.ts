@@ -1,7 +1,8 @@
 import { Container, Graphics, Rectangle, Sprite } from 'pixi.js';
-import { firstPlayer, isEquipSlot } from '../world';
+import { localPlayer, isEquipSlot } from '../world';
 import type { InventoryItem, EquipSlot, Player } from '../world';
 import { PixelLabel } from './PixelText';
+import { requestLoadout } from '../game/PlayerActions';
 import { GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
 
 // ─── Layout constants ────────────────────────────────────────────────────────
@@ -360,7 +361,7 @@ export class InventoryPanel {
   // ─── Sync to/from entity ───────────────────────────────────────────────────
 
   private getPlayer(): Player | null {
-    return firstPlayer() ?? null;
+    return localPlayer() ?? null;
   }
 
   private syncFromEntity(player: Player): void {
@@ -379,29 +380,17 @@ export class InventoryPanel {
   }
 
   private syncToEntity(player: Player): void {
-    const newEquipped: Partial<Record<EquipSlot, InventoryItem>> = {};
+    const equipped: Partial<Record<EquipSlot, InventoryItem>> = {};
     for (const [id, view] of this.equipContainers) {
       const item = view.getItem();
-      if (item) newEquipped[id] = item;
+      if (item) equipped[id] = item;
     }
-    player.equipped = newEquipped;
-
-    const newInv: InventoryItem[] = [];
+    const inventory: InventoryItem[] = [];
     for (const view of this.bagContainers) {
       const item = view.getItem();
-      if (item) newInv.push(item);
+      if (item) inventory.push(item);
     }
-    player.inventory = newInv;
-
-    // Recalculate stats bonuses
-    const stats = player.playerStats;
-    let atk = 0, def = 0;
-    for (const item of Object.values(newEquipped)) {
-      atk += item?.stats?.attack  ?? 0;
-      def += item?.stats?.defense ?? 0;
-    }
-    stats.swordTier = 1 + atk;
-    stats.armorTier = def;
+    requestLoadout(player, { inventory, equipped });
   }
 
   // ─── Public API ────────────────────────────────────────────────────────────

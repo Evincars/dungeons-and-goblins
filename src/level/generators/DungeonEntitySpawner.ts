@@ -49,13 +49,17 @@ function populateRoom(level: Level, room: RoomData, cfg: DungeonConfig): void {
   }
 }
 
-export function spawnDungeonEntities(layout: DungeonLayout, cfg: DungeonConfig): void {
-  const { level, rooms, torchPositions, exitButtonPos, shopPos, safeDoor } = layout;
-
-  createSafeDoor(safeDoor);
-  for (const room of rooms) createRoom(room);
-  for (const tp of torchPositions) createTorch(tp.x, tp.y);
+/** Decor every browser builds for itself from the seeded layout: rooms, torches and props. */
+export function spawnDecor(layout: DungeonLayout): void {
+  for (const room of layout.rooms) createRoom(room);
+  for (const tp of layout.torchPositions) createTorch(tp.x, tp.y);
   for (const p of layout.props) createProp(p);
+}
+
+/** What changes during play, made by whoever runs the game (alone, or the co-op host). */
+export function spawnLiveEntities(layout: DungeonLayout, cfg: DungeonConfig): void {
+  const { level, rooms, exitButtonPos, shopPos, safeDoor } = layout;
+  createSafeDoor(safeDoor);
   for (const room of rooms) {
     if (room.type === 'dungeon') populateRoom(level, room, cfg);
   }

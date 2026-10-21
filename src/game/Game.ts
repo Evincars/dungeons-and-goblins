@@ -1,12 +1,16 @@
 import { Application } from 'pixi.js';
 import { loadAllAssets } from '../assets/AssetLoader';
 import { GAME_WIDTH, GAME_HEIGHT, SCALE } from '../render/Camera';
+import { SceneManager } from './SceneManager';
 import { TitleScene } from '../scenes/TitleScene';
 import { InGameScene } from '../scenes/InGameScene';
+import { SettingsScene } from '../scenes/SettingsScene';
+import { KeyBindingsScene } from '../scenes/KeyBindingsScene';
+import { CoopScene } from '../scenes/CoopScene';
 import { sound } from '../audio/SoundPlayer';
-import { reportRejection } from '../core/errors';
-
-type SceneId = 'title' | 'ingame';
+import { settings } from './Settings';
+import { exposeForDebugging } from '../core/debugHooks';
+import { coop } from '../network/CoopSession';
 
 /** The simulation is tick-based (speeds, timers, animations), so it always runs at this rate. */
 const TICK_MS = 1000 / 60;
@@ -16,15 +20,17 @@ const MAX_CATCH_UP_TICKS = 5;
 const TICK_SLACK_MS = 1;
 const BACKGROUND = 0x0a0608;
 
+/** The invite link's peer id, when the page was opened from one. */
+function joinParam(): string | undefined {
+  return new URL(location.href).searchParams.get('join') ?? undefined;
+}
+
 export class Game {
-  private app!: Application;
-  private canvas!: HTMLCanvasElement;
-  private currentScene?: TitleScene | InGameScene;
+  private readonly app = new Application();
+  private manager!: SceneManager;
   private tickDebt = 0;
 
   async init(canvas: HTMLCanvasElement): Promise<void> {
-    this.canvas = canvas;
-    this.app = new Application();
     await this.app.init({
       canvas,
       width: GAME_WIDTH,
@@ -32,50 +38,32 @@ export class Game {
       backgroundColor: BACKGROUND,
       antialias: false,
     });
-
     canvas.style.width  = `${GAME_WIDTH * SCALE}px`;
     canvas.style.height = `${GAME_HEIGHT * SCALE}px`;
 
+    sound.setSfxVolume(settings.sfxVolume);
     sound.autoStart();
     await Promise.all([loadAllAssets(), sound.load()]);
-    await this.goto('title');
 
+    this.manager = new SceneManager(this.app, canvas)
+      .register('title', (m) => new TitleScene(m))
+      .register('settings', (m) => new SettingsScene(m))
+      .register('key_bindings', (m) => new KeyBindingsScene(m))
+      .register('coop_host', (m) => new CoopScene(m, 'host'))
+      .register('coop_join', (m) => new CoopScene(m, 'guest', joinParam()))
+      .register('in_game', (m) => new InGameScene(m));
+    // An invite link opens straight into the room it invites to.
+    this.manager.goto(joinParam() ? 'coop_join' : 'title');
     this.app.ticker.add(() => this.tick());
+    exposeForDebugging({ __app: this.app, __scenes: this.manager, __coop: coop });
   }
 
   /** Runs fixed 60Hz steps, so 144Hz displays don't play faster than 60Hz ones. */
   private tick(): void {
-    if (!this.currentScene) return;
     this.tickDebt = Math.min(this.tickDebt + this.app.ticker.deltaMS, TICK_MS * MAX_CATCH_UP_TICKS);
-    while (this.tickDebt >= TICK_MS - TICK_SLACK_MS && this.currentScene) {
+    while (this.tickDebt >= TICK_MS - TICK_SLACK_MS) {
       this.tickDebt -= TICK_MS;
-      this.currentScene.update();
+      this.manager.update();
     }
-  }
-
-  /** Switches scenes from a scene's callback; a failure to build the next one is logged, not lost. */
-  private switchTo(id: SceneId): void {
-    reportRejection(this.goto(id), `Could not open the ${id} scene`, 'game');
-  }
-
-  private async goto(id: SceneId): Promise<void> {
-    if (this.currentScene) {
-      this.app.stage.removeChild(this.currentScene.container);
-      this.currentScene.destroy();
-      this.currentScene = undefined;
-    }
-    if (id === 'title') {
-      const scene = new TitleScene();
-      scene.onStart = () => this.switchTo('ingame');
-      this.app.stage.addChild(scene.container);
-      this.currentScene = scene;
-      return;
-    }
-    const scene = new InGameScene();
-    scene.onComplete = () => this.switchTo('ingame');
-    scene.onQuit = () => this.switchTo('title');
-    await scene.init(this.app, this.canvas);
-    this.app.stage.addChild(scene.container);
-    this.currentScene = scene;
   }
 }

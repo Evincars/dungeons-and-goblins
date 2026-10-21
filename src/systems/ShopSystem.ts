@@ -20,7 +20,8 @@ const customers: Entity[] = [];
 function visit(keeper: (typeof keepers)['entities'][number]): boolean {
   let near = false;
   for (const e of nearby(keeper.position.x, keeper.position.y, REACH, Sense.player, customers)) {
-    if (!isPlayer(e) || e.health.current <= 0) continue;
+    // The shop is this screen's panel: only the local player opens it (guests buy through the host).
+    if (!isPlayer(e) || e.remoteInput || e.health.current <= 0) continue;
     near = true;
     if (!e.playerInput.intents.use) continue;
     e.playerInput.intents.use = false;

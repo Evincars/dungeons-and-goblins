@@ -2,7 +2,7 @@ import { world, Team, Facing } from '../world';
 import type { Entity, MobAI, MobType } from '../world';
 import type { Level } from '../level/Level';
 import { characterComponents } from '../characters/Characters';
-import { SENSE_TICKS } from '../ai/constants';
+import { NEVER_TICK, SENSE_TICKS } from '../ai/constants';
 
 /** In idle/walk frames the orc's head sits ~8 source px above the centre of its trimmed frame. */
 const ORC_HEAD_ABOVE_CENTER = 8;
@@ -63,8 +63,8 @@ export function createMobAI(): MobAI {
     calmTicks: 0,
     lastSeenX: 0,
     lastSeenY: 0,
-    lastSeenTick: -Infinity,
-    trailTick: -Infinity,
+    lastSeenTick: NEVER_TICK,
+    trailTick: NEVER_TICK,
   };
 }
 

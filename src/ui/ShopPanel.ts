@@ -1,9 +1,9 @@
-import { Container, Graphics } from 'pixi.js';
-import { firstPlayer } from '../world';
+import { Container, Graphics, Rectangle } from 'pixi.js';
+import { localPlayer } from '../world';
 import type { InventoryItem, Player } from '../world';
 import { PixelLabel } from './PixelText';
 import { GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
-import { sound } from '../audio/SoundPlayer';
+import { requestBuy } from '../game/PlayerActions';
 
 const PW = 320;
 const ROW_H = 26;
@@ -12,8 +12,6 @@ const BORDER = 0x8a6030;
 const BG = 0x0c0a08;
 const ROW_BG = 0x1c1610;
 const ROW_HOVER = 0x2c2418;
-
-const MAX_INVENTORY = 8;
 
 function statText(item: InventoryItem): string {
   const s = item.stats;
@@ -72,10 +70,13 @@ export class ShopPanel {
         .rect(PAD, 0, PW - PAD * 2, ROW_H - 4).stroke({ color: BORDER, width: 1 });
       draw(ROW_BG);
       row.addChild(bg);
-      row.hitArea = { contains: (x: number, y: number) => x >= PAD && x <= PW - PAD && y >= 0 && y <= ROW_H - 4 };
+      row.hitArea = new Rectangle(PAD, 0, PW - PAD * 2, ROW_H - 4);
       row.on('pointerover', () => draw(ROW_HOVER));
       row.on('pointerout', () => draw(ROW_BG));
-      row.on('pointertap', () => this.buy(item));
+      row.on('pointertap', () => {
+        const player = this.player();
+        if (player) requestBuy(player, this.items, i);
+      });
 
       const name = new PixelLabel(item.name, { color: 0xe8e0d0, shadow: true });
       name.x = PAD + 6;
@@ -113,19 +114,7 @@ export class ShopPanel {
   }
 
   private player(): Player | null {
-    return firstPlayer() ?? null;
-  }
-
-  private buy(item: InventoryItem): void {
-    const player = this.player();
-    if (!player) return;
-    const stats = player.playerStats;
-    const inv = player.inventory ?? (player.inventory = []);
-    if (stats.gold < item.value) { sound.playSound('fail'); return; }
-    if (inv.length >= MAX_INVENTORY) { sound.playSound('fail'); return; }
-    stats.gold -= item.value;
-    inv.push({ ...item });
-    sound.playSound('buy');
+    return localPlayer() ?? null;
   }
 
   setVisible(visible: boolean): void {

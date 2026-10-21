@@ -14,9 +14,14 @@ export function isEquipSlot(value: string): value is EquipSlot {
   return EQUIP_SLOTS.some((slot) => slot === value);
 }
 
-export type ItemType =
-  | 'health_potion' | 'mana_potion' | 'weapon' | 'helmet' | 'chest' | 'gloves' | 'boots' | 'ring'
-  | 'sword_scroll' | 'armor_piece';
+export const ITEM_TYPES = [
+  'health_potion', 'mana_potion', 'weapon', 'helmet', 'chest', 'gloves', 'boots', 'ring', 'sword_scroll', 'armor_piece',
+] as const;
+export type ItemType = (typeof ITEM_TYPES)[number];
+
+export function isItemType(value: unknown): value is ItemType {
+  return ITEM_TYPES.some((type) => type === value);
+}
 
 export type InventoryItem = {
   type: ItemType;
@@ -26,6 +31,14 @@ export type InventoryItem = {
   icon?: number;   // column index in item icon sheet
   stats?: { attack?: number; defense?: number; hp?: number };
 };
+
+/** Who controls a player character: the host, or one of up to three guests in a co-op room. */
+export const PLAYER_SLOTS = ['host', 'p2', 'p3', 'p4'] as const;
+export type PlayerSlot = (typeof PLAYER_SLOTS)[number];
+
+export function isPlayerSlot(value: unknown): value is PlayerSlot {
+  return PLAYER_SLOTS.some((slot) => slot === value);
+}
 
 export const MOB_TYPES = ['goblin', 'skeleton', 'orc', 'troll'] as const;
 export type MobType = (typeof MOB_TYPES)[number];
@@ -178,6 +191,14 @@ export type Entity = {
   };
 
   // --- player ---
+  /** Which seat in the room controls this character. */
+  playerSlot?: PlayerSlot;
+  /** Name shown above the character in multiplayer. */
+  playerName?: string;
+  /** Controlled from elsewhere (a guest's browser, or the host's on a guest): local input never touches it. */
+  remoteInput?: true;
+  /** A remote player's crosshair, in world pixels (local players aim with this screen's pointer). */
+  aimWorld?: { x: number; y: number };
   playerInput?: {
     up: boolean;
     down: boolean;
@@ -229,7 +250,8 @@ export type Entity = {
     dirY: number;
     damage: number;
     range: number;
-    hitIds: Set<number>;
+    /** Entities this swing already hit (a list: a swing meets a handful at most, and it travels as JSON). */
+    hitIds: number[];
   };
   swordCooldown?: number;
 
@@ -305,6 +327,11 @@ export type Entity = {
 
   // --- lifecycle ---
   removed?: true;
+  /**
+   * Built on every machine from the level seed (torches, props, rooms), so it is never sent over the
+   * network: each browser makes its own.
+   */
+  localOnly?: true;
 };
 
 export const world = new World<Entity>();
@@ -333,9 +360,24 @@ export const q = {
 export type Player = (typeof q.players)['entities'][number];
 export type Mob = (typeof q.walkingMobs)['entities'][number];
 
-/** The local player (the first one), for the camera, HUD and panels; undefined between levels. */
-export function firstPlayer(): Player | undefined {
-  return q.players.first;
+/** The player this screen controls, for input, the camera, HUD and panels; undefined between levels. */
+export function localPlayer(): Player | undefined {
+  for (const player of q.players) if (!player.remoteInput) return player;
+  return undefined;
+}
+
+export type PlayerInput = NonNullable<Entity['playerInput']>;
+export type Intents = PlayerInput['intents'];
+
+export function noIntents(): Intents {
+  return { use: false, attack: false, cast: false, inventoryOpen: false, inventoryUse: false };
+}
+
+/** Lets go of every key and button, e.g. for a remote player whose input stopped arriving. */
+export function releaseControls(input: PlayerInput): void {
+  input.up = input.down = input.left = input.right = false;
+  input.attack = input.use = input.sprint = false;
+  input.intents = noIntents();
 }
 
 export function isPlayer(e: Entity | undefined): e is Player {

@@ -1,6 +1,6 @@
 import { q } from '../world';
 import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
-import { Settings } from '../game/Settings';
+import { bindingFor } from '../game/Settings';
 import type { ActionName } from '../game/Settings';
 
 const LEFT_BUTTON = 0;
@@ -43,16 +43,20 @@ export function isKeyDown(code: string): boolean {
 }
 
 function isActionDown(action: ActionName): boolean {
-  return keys.has(Settings.bindings[action].key);
+  return keys.has(bindingFor(action));
 }
 
 function wasActionPressed(action: ActionName): boolean {
-  return pressed.has(Settings.bindings[action].key);
+  return pressed.has(bindingFor(action));
 }
 
 export function resetInput(): void {
   pending.clear();
   pressed.clear();
+  clickPending = false;
+  clicked = false;
+  mouseDown = false;
+  rightDown = false;
 }
 
 function onKeyDown(e: KeyboardEvent): void {
@@ -100,6 +104,8 @@ export function updateInput(): void {
   clickPending = false;
 
   for (const entity of q.players) {
+    // Remote players are driven by their own browser's input frames.
+    if (entity.remoteInput) continue;
     const pi = entity.playerInput;
     pi.up    = isActionDown('up');
     pi.down  = isActionDown('down');

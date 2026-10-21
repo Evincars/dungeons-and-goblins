@@ -4,7 +4,12 @@
  * facing left mirrors them. Frame counts are read from the loaded images.
  */
 
-export type CharacterState = 'idle' | 'walk' | 'run' | 'attack' | 'cast' | 'hurt' | 'death';
+export const CHARACTER_STATES = ['idle', 'walk', 'run', 'attack', 'cast', 'hurt', 'death'] as const;
+export type CharacterState = (typeof CHARACTER_STATES)[number];
+
+export function isCharacterState(value: unknown): value is CharacterState {
+  return CHARACTER_STATES.some((state) => state === value);
+}
 
 /**
  * What a clip does after its last frame:

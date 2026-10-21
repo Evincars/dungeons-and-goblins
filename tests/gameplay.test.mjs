@@ -31,6 +31,13 @@ const { updateTrails } = await load('systems/TrailSystem');
 const { updateContactDamage } = await load('systems/CombatSystem');
 const { updateSword } = await load('systems/SwordSystem');
 const { attempt, ensure, ValidationError } = await load('core/errors/index');
+const { invitePeer, inviteLink, validInput, validCommand, validRoster, validStart } = await load('network/protocol');
+const { captureWorld, validateNetState, WorldReplica } = await load('network/WorldSync');
+const { sameItems, handleGuestCommand, playerInSlot } = await load('game/PlayerActions');
+const { buildDungeon } = await load('level/DungeonGenerator');
+const { createShopNpc, createTorch, SHOP_ITEMS } = await load('entities/DungeonFactory');
+const { cleanName } = await load('game/Settings');
+const { localPlayer, noIntents } = await load('world');
 
 const centre = (t) => t * TILE_WIDTH + TILE_WIDTH / 2;
 const tileOf = (level, e) => ({ x: Math.floor(e.position.x / TILE_WIDTH), y: Math.floor(e.position.y / TILE_WIDTH) });
@@ -349,4 +356,150 @@ test('typed errors and results', () => {
   assert.deepEqual(failed.error.context, { field: 'x' });
   assert.equal(isMobType('orc'), true);
   assert.equal(isMobType('dragon'), false);
+});
+
+// ── Co-op ────────────────────────────────────────────────────────────────────
+
+function inputFrame(sequence = 1) {
+  return {
+    sequence,
+    aim: { x: 100, y: 50 },
+    input: {
+      up: true, down: false, left: false, right: false, attack: false, use: false, sprint: false,
+      mouseX: 10, mouseY: 20, mouseAiming: true, keyAim: null, intents: noIntents(),
+    },
+  };
+}
+
+test('invite links and peer ids are parsed, and anything else is refused', () => {
+  const link = inviteLink('abc-123', 'https://example.org/game/?x=1#top');
+  assert.equal(link, 'https://example.org/game/?join=abc-123');
+  assert.equal(invitePeer(link), 'abc-123');
+  assert.equal(invitePeer('  peer_ID-9 '), 'peer_ID-9');
+  assert.throws(() => invitePeer('not a peer!'), ValidationError);
+  assert.throws(() => invitePeer('https://example.org/?nojoin=1'), ValidationError);
+});
+
+test('guest controls, commands, rosters and level starts are checked before they are believed', () => {
+  assert.equal(validInput(inputFrame()), true);
+  assert.equal(validInput({ ...inputFrame(), sequence: -1 }), false);
+  const broken = inputFrame();
+  broken.input.intents = { use: 'yes' };
+  assert.equal(validInput(broken), false);
+  assert.equal(validInput({ ...inputFrame(), aim: { x: Infinity, y: 0 } }), false);
+
+  assert.equal(validCommand({ kind: 'buy', index: 2 }), true);
+  assert.equal(validCommand({ kind: 'buy', index: 1.5 }), false);
+  assert.equal(validCommand({ kind: 'loadout', inventory: [SHOP_ITEMS[0]], equipped: { helmet: SHOP_ITEMS[2] } }), true);
+  assert.equal(validCommand({ kind: 'loadout', inventory: [{ type: 'dragon', name: 'x', value: 1 }], equipped: {} }), false);
+  assert.equal(validCommand({ kind: 'loadout', inventory: [], equipped: { hat: SHOP_ITEMS[2] } }), false);
+
+  assert.equal(validRoster([{ slot: 'host', name: 'Ana' }, { slot: 'p2', name: 'Bo' }]), true);
+  assert.equal(validRoster([{ slot: 'host', name: 'Ana' }, { slot: 'host', name: 'Bo' }]), false, 'seats are unique');
+  assert.equal(validRoster([{ slot: 'host', name: '<script>' }]), false, 'names arrive clean');
+  assert.equal(validStart(123, 1), true);
+  assert.equal(validStart(-1, 1), false);
+  assert.equal(cleanName('  Sir   Lance<>lot!!  the brave '), 'Sir Lancelot', 'stripped, squeezed and cut to 12');
+});
+
+test('the world a host sends is validated and mirrored on a guest, with ids remapped', () => {
+  const level = arena(12, 8);
+  const host = playerAt(2, 2);
+  world.addComponent(host, 'playerSlot', 'host');
+  world.addComponent(host, 'playerName', 'Ana');
+  const guest = playerAt(3, 2);
+  world.addComponent(guest, 'playerSlot', 'p2');
+  world.addComponent(guest, 'playerName', 'Bo');
+  const mob = mobAt(level, 'goblin', 8, 2);
+  mob.ai.targetId = world.id(guest);
+  createTorch(centre(5), centre(1));
+  createShopNpc(centre(4), centre(4));
+
+  const wire = JSON.parse(JSON.stringify(captureWorld(false, 7)));
+  validateNetState(wire);
+  assert.ok(wire.entities.every((e) => !e.data.localOnly && !e.data.trail), 'decor and host bookkeeping stay home');
+
+  world.clear();
+  const replica = new WorldReplica();
+  replica.localSlot = 'p2';
+  replica.apply(wire);
+  const players = world.entities.filter((e) => e.playerInput);
+  assert.equal(players.length, 2);
+  const mine = players.find((p) => p.playerSlot === 'p2');
+  const theirs = players.find((p) => p.playerSlot === 'host');
+  assert.equal(mine.remoteInput, undefined, 'this screen drives its own character');
+  assert.equal(theirs.remoteInput, true);
+  assert.equal(localPlayer(), mine);
+  const mirroredMob = world.entities.find((e) => e.ai);
+  assert.equal(world.entity(mirroredMob.ai.targetId), mine, 'the enemy hunts the local copy of the guest');
+  assert.ok(!world.entities.some((e) => e.torch), 'the torch is not sent: the guest builds its own');
+
+  // Presentation the guest drives itself survives later updates.
+  mine.character.frame = 3;
+  replica.apply(wire);
+  assert.equal(mine.character.frame, 3);
+});
+
+test('tampered world updates are refused', () => {
+  const level = arena(8, 6);
+  const host = playerAt(2, 2);
+  world.addComponent(host, 'playerSlot', 'host');
+  mobAt(level, 'orc', 5, 2);
+  const good = () => JSON.parse(JSON.stringify(captureWorld(false, 7)));
+  const tamper = (edit) => { const w = good(); edit(w); return w; };
+  assert.throws(() => validateNetState(tamper((w) => { w.entities[0].data.hack = 1; })), ValidationError);
+  assert.throws(() => validateNetState(tamper((w) => { w.entities[0].data.position = { x: 'a', y: 0 }; })), ValidationError);
+  assert.throws(() => validateNetState(tamper((w) => { w.entities.find((e) => e.data.ai).data.mobType = 'dragon'; })), ValidationError);
+  assert.throws(() => validateNetState(tamper((w) => { w.entities.find((e) => e.data.playerSlot).data.playerName = '<evil>'; })), ValidationError);
+  assert.throws(() => validateNetState(tamper((w) => { w.entities.find((e) => e.data.playerSlot).data.playerSlot = 'p2'; })), ValidationError, 'no host');
+  assert.throws(() => validateNetState(tamper((w) => { w.entities[0].data.sprite = {}; })), ValidationError);
+  assert.throws(() => validateNetState(tamper((w) => { delete w.seed; })), ValidationError, 'updates name their level');
+  assert.equal(good().seed, 7);
+});
+
+test('the host carries out guest purchases near the shop, and only rearrangements of their own items', () => {
+  const level = arena(12, 8);
+  const host = playerAt(2, 2);
+  world.addComponent(host, 'playerSlot', 'host');
+  const guest = playerAt(6, 4);
+  world.addComponent(guest, 'playerSlot', 'p2');
+  world.addComponent(guest, 'remoteInput', true);
+  createShopNpc(centre(9), centre(4));
+  guest.playerStats.gold = 100;
+  beginPerception();
+
+  handleGuestCommand('p2', { kind: 'buy', index: 0 });
+  assert.equal(guest.inventory.length, 0, 'too far from the shop');
+  guest.position.x = centre(8);
+  beginPerception();
+  handleGuestCommand('p2', { kind: 'buy', index: 0 });
+  assert.equal(guest.inventory.length, 1);
+  assert.equal(guest.playerStats.gold, 100 - SHOP_ITEMS[0].value);
+
+  const sword = guest.inventory[0];
+  handleGuestCommand('p2', { kind: 'loadout', inventory: [sword, SHOP_ITEMS[1]], equipped: {} });
+  assert.equal(guest.inventory.length, 1, 'cannot conjure a second sword');
+  handleGuestCommand('p2', { kind: 'loadout', inventory: [], equipped: { helmet: sword } });
+  assert.deepEqual(guest.equipped, {}, 'a sword is not a helmet');
+  handleGuestCommand('p2', { kind: 'loadout', inventory: [], equipped: { weapon: sword } });
+  assert.equal(guest.equipped.weapon.name, sword.name);
+  assert.equal(guest.playerStats.swordTier, 1 + sword.stats.attack);
+  assert.equal(playerInSlot('p2'), guest);
+  assert.ok(sameItems({ inventory: [sword], equipped: {} }, { inventory: [], equipped: { weapon: sword } }));
+});
+
+test('every machine builds the same level from a seed; only the authority adds what changes in play', () => {
+  const guestSide = buildDungeon(4242, false);
+  const decor = world.entities.filter((e) => e.localOnly).length;
+  assert.ok(decor > 0);
+  assert.equal(world.entities.filter((e) => e.ai || e.door || e.shopNpc).length, 0, 'guests get those from the host');
+  world.clear();
+  const hostSide = buildDungeon(4242, true);
+  assert.equal(world.entities.filter((e) => e.localOnly).length, decor);
+  assert.ok(world.entities.some((e) => e.ai) && world.entities.some((e) => e.door));
+  assert.deepEqual(hostSide.spawns, guestSide.spawns);
+  for (let i = 0; i < hostSide.level.width * hostSide.level.height; i++) {
+    const x = i % hostSide.level.width, y = Math.floor(i / hostSide.level.width);
+    assert.equal(hostSide.level.getTile(x, y).type, guestSide.level.getTile(x, y).type);
+  }
 });

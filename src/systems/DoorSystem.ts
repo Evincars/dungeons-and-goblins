@@ -20,14 +20,28 @@ function everyoneLeft(boundaryX: number): boolean {
   return anyone;
 }
 
+/** Walls the doorway up (once: the dirty flag rebuilds the terrain only when a tile really changes). */
+function wallUp(level: Level, door: Door): void {
+  for (const t of door.door.tiles) {
+    if (level.getTile(t.x, t.y)?.type !== TileType.Wall) level.setTile(t.x, t.y, createTile(TileType.Wall, 0));
+  }
+}
+
 function seal(level: Level, door: Door): void {
   const d = door.door;
-  for (const t of d.tiles) level.setTile(t.x, t.y, createTile(TileType.Wall, 0));
+  wallUp(level, door);
   // The safe room is now unreachable, so respawn just past the door instead.
   const mid = d.tiles[Math.floor(d.tiles.length / 2)];
   level.setSpawnPoint((mid.x + RESPAWN_TILES_PAST_DOOR) * TILE_WIDTH + TILE_WIDTH / 2, mid.y * TILE_HEIGHT + TILE_HEIGHT / 2);
   d.closed = true;
   sound.playSound('door_open', door.position.x, door.position.y);
+}
+
+/** Co-op guest: the host sealed a door, so this copy of the terrain walls it up too. */
+export function mirrorSealedDoors(level: Level): void {
+  for (const door of doors) {
+    if (door.door.closed) wallUp(level, door);
+  }
 }
 
 /** Seals each safe-room door once every living player has crossed into the dungeon. */

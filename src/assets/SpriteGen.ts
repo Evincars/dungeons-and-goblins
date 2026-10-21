@@ -389,31 +389,6 @@ export function genFontSheet(): HTMLCanvasElement {
   return c;
 }
 
-// ── BUTTON ───────────────────────────────────────────────────────────────────
-
-export function genButtonSheet(): HTMLCanvasElement {
-  const [c, ctx] = mkCanvas(128, 72);
-  const styles = [
-    { fill: 0x2a1e14, border: 0x6a4a2a },
-    { fill: 0x3a2a18, border: 0xd4a030 },
-    { fill: 0x1a1410, border: 0x3a2a20 },
-  ];
-  for (let row = 0; row < 3; row++) {
-    const s = styles[row];
-    const oy = row * 24;
-    ctx.fillStyle = hex(s.fill);
-    ctx.fillRect(0, oy, 128, 24);
-    ctx.strokeStyle = hex(s.border);
-    ctx.lineWidth = 2;
-    ctx.strokeRect(1, oy + 1, 126, 22);
-    ctx.fillStyle = 'rgba(255,255,255,0.05)';
-    ctx.fillRect(2, oy + 2, 124, 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.15)';
-    ctx.fillRect(2, oy + 20, 124, 2);
-  }
-  return c;
-}
-
 // ── PANEL BG ─────────────────────────────────────────────────────────────────
 
 export function genPanelBg(w: number, h: number): HTMLCanvasElement {

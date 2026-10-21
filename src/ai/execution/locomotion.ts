@@ -27,15 +27,23 @@ export function faceTowards(mob: Mob, dx: number, dy: number): void {
   mob.aimVector.y = dy / len;
 }
 
-/** Pushes the mob along (dx, dy) unless a pit lies just ahead; returns whether it moved. */
-export function walkTowards(level: Level, mob: Mob, dx: number, dy: number): boolean {
-  if (pitAhead(level, mob, dx, dy)) return false;
+/**
+ * Pushes the mob along (dx, dy). Hunting enemies don't shy from pit edges: a player standing at one must
+ * still be reached, and the movement system already keeps enemies from stepping into a pit.
+ */
+export function walkTowards(_level: Level, mob: Mob, dx: number, dy: number): boolean {
   const len = Math.hypot(dx, dy) || 1;
   const speed = mob.speed ?? WALK_SPEED;
   mob.velocity.x += (dx / len) * speed;
   mob.velocity.y += (dy / len) * speed;
   faceTowards(mob, dx, dy);
   return true;
+}
+
+/** Wandering enemies keep clear of pits: pushes along (dx, dy) unless one lies just ahead; returns whether it moved. */
+function stroll(level: Level, mob: Mob, dx: number, dy: number): boolean {
+  if (pitAhead(level, mob, dx, dy)) return false;
+  return walkTowards(level, mob, dx, dy);
 }
 
 /** Catacomb Snatch's limp: the mob skips movement on part of its walk cycle, so mobs read as slow and lurching. */
@@ -64,6 +72,6 @@ export function wander(level: Level, mob: Mob): void {
     mob.facing = FACINGS[Math.floor(Math.random() * FACINGS.length)];
   }
   const facing = FACINGS[mob.facing] ?? Facing.South;
-  if (walkTowards(level, mob, FACING_STEPS[facing][0], FACING_STEPS[facing][1])) return;
+  if (stroll(level, mob, FACING_STEPS[facing][0], FACING_STEPS[facing][1])) return;
   mob.facing = clearFacing(level, mob, facing);
 }

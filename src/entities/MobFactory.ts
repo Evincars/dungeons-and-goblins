@@ -3,6 +3,7 @@ import type { Entity, MobAI, MobType } from '../world';
 import type { Level } from '../level/Level';
 import { characterComponents } from '../characters/Characters';
 import { NEVER_TICK, SENSE_TICKS } from '../ai/constants';
+import stats from '../data/stats.json';
 
 /** In idle/walk frames the orc's head sits ~8 source px above the centre of its trimmed frame. */
 const ORC_HEAD_ABOVE_CENTER = 8;
@@ -26,21 +27,24 @@ export type MobConfig = {
   minimapColor: number;
 };
 
+/** Health, damage per hit and XP reward live in src/data/stats.json so they can be tuned without touching code. */
+const STATS = stats.mobs satisfies Record<MobType, Pick<MobConfig, 'health' | 'strength' | 'deathPoints'>>;
+
 export const MOB_CONFIGS = {
   goblin: {
-    health: 14, speed: 0.7, strength: 3, deathPoints: 5, limp: 4,
+    ...STATS.goblin, speed: 0.7, limp: 4,
     radius: { x: 10, y: 10 }, yOffset: 24, scale: 1.3, minimapColor: 0xff4040,
   },
   skeleton: {
-    health: 18, speed: 0.6, strength: 4, deathPoints: 8, limp: 3,
+    ...STATS.skeleton, speed: 0.6, limp: 3,
     radius: { x: 10, y: 10 }, yOffset: 24, scale: 1.4, minimapColor: 0xff4040,
   },
   orc: {
-    health: 30, speed: 0.5, strength: 6, deathPoints: 12, limp: 3,
+    ...STATS.orc, speed: 0.5, limp: 3,
     radius: { x: 12, y: 12 }, yOffset: 26, scale: 1.6, minimapColor: 0xff4040,
   },
   troll: {
-    health: 120, speed: 0.4, strength: 12, deathPoints: 50, limp: 2,
+    ...STATS.troll, speed: 0.4, limp: 2,
     radius: { x: 16, y: 14 }, yOffset: 30, scale: 2.0, minimapColor: 0xff8000,
   },
 } as const satisfies Record<MobType, MobConfig>;

@@ -1,0 +1,11 @@
+{
+  "player": {
+    "health": 50
+  },
+  "mobs": {
+    "goblin":   { "health": 7,   "strength": 5,  "deathPoints": 50 },
+    "skeleton": { "health": 18,  "strength": 4,  "deathPoints": 8 },
+    "orc":      { "health": 27,  "strength": 11, "deathPoints": 200 },
+    "troll":    { "health": 120, "strength": 12, "deathPoints": 50 }
+  }
+}

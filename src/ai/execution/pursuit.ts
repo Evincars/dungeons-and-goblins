@@ -50,8 +50,8 @@ function advanceStep(level: Level, mob: Mob): void {
   }
 }
 
-/** Walks toward a tile by route, planning one when due; `avoid` makes the route keep off those tiles. */
-function walkToTile(level: Level, mob: Mob, goal: number, avoid: Uint8Array | null = null): void {
+/** Walks toward a tile by route, planning one when due; `avoid` makes the route keep off those tiles. Returns whether it moved. */
+function walkToTile(level: Level, mob: Mob, goal: number, avoid: Uint8Array | null = null): boolean {
   const ai = mob.ai;
   ai.repathIn--;
   const exhausted = ai.step >= ai.route.length;
@@ -62,13 +62,25 @@ function walkToTile(level: Level, mob: Mob, goal: number, avoid: Uint8Array | nu
     ai.repathIn = REPATH_TICKS;
   }
   advanceStep(level, mob);
-  if (driveRoute(level, mob, ai.route, ai.step)) return;
+  if (driveRoute(level, mob, ai.route, ai.step)) return true;
   // Pushed off its route or blocked by a pit: plan again next tick.
   ai.repathIn = 0;
+  return false;
 }
 
 /** How far, in tiles, an enemy looks for ground to stand on near a target that stands on none (feet can sink into a wall's edge). */
 const STANDABLE_SEARCH_TILES = 2;
+
+/**
+ * Walks to a point on ground enemies can stand on: by route, then the last bit straight at the point. A route
+ * only ends at the tile's centre, which can fall short of a player pressed against a wall, and there is nothing
+ * to follow once the enemy is on that tile (or when no route exists); walking straight at the point beats standing still.
+ */
+function walkToGoalTile(level: Level, mob: Mob, goal: number, x: number, y: number): void {
+  if (level.tileIndexAt(mob.position.x, mob.position.y) !== goal && walkToTile(level, mob, goal)) return;
+  resetRoute(mob);
+  driveTo(level, mob, x, y);
+}
 
 /**
  * Walks to a point: straight at it when the way is clear, otherwise by route. A point on a tile enemies
@@ -83,12 +95,15 @@ function walkToPoint(level: Level, mob: Mob, x: number, y: number): void {
   }
   const goal = level.tileIndexAt(x, y);
   if (standable(level, goal)) {
-    walkToTile(level, mob, goal);
+    walkToGoalTile(level, mob, goal, x, y);
     return;
   }
   const ground = nearestStandable(level, x, y, STANDABLE_SEARCH_TILES);
   if (ground < 0) return;
-  if (level.tileIndexAt(mob.position.x, mob.position.y) !== ground) {
+  // An enemy's own feet can sink into the wall edge too; that counts as having arrived, or it would
+  // turn back to the ground tile's centre and then press on again, forever.
+  const here = level.tileIndexAt(mob.position.x, mob.position.y);
+  if (here !== ground && standable(level, here)) {
     walkToTile(level, mob, ground);
     return;
   }

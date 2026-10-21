@@ -18,8 +18,8 @@ export type SwordStats = {
 
 export const SWORD_STATS = {
   swingTicks: 8,
-  rangeBase: 28,
-  rangePerTier: 4,
+  rangeBase: 19,
+  rangePerTier: 3,
   cooldown: 30,
   damageByTier: [10, 15, 22, 30],
   arcCos: 0.5,
@@ -53,7 +53,7 @@ export const SPELL_STATS = {
   boltSpeed: 4.5,
   boltDamage: 14,
   boltLife: 80,
-  boltSpawnOffset: 14,
+  boltSpawnOffset: 9,
   boltGlow: 56,
   reachX: 6,
   reachY: 14,

@@ -9,7 +9,7 @@ export const FIGHTER: CharacterDef = {
   frameWidth: 112,
   frameHeight: 96,
   trim: { x: 0, y: 0, w: 108, h: 96 },
-  scale: 1.25,
+  scale: 0.83,
   feetY: 84,
   clips: {
     idle:    { src: `${DIR}/IDLE.png`,     frameTime: 6, mode: 'loop' },

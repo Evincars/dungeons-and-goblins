@@ -317,6 +317,52 @@ test('an enemy reaches a player whose feet sink into the wall edge, and hurts th
   assert.ok(player.health.current < before, 'it got close enough to strike');
 });
 
+test('an enemy on the same tile as a player hugging a wall still closes in and strikes', () => {
+  const level = arena(10, 6);
+  const player = playerAt(4, 1);
+  player.position.y = TILE_WIDTH + 4;
+  const mob = mobAt(level, 'goblin', 4, 1);
+  mob.position.x = player.position.x + 14;
+  mob.position.y = player.position.y + 26;
+  engage(mob, player, 0);
+  const before = player.health.current;
+  for (let tick = 1; tick <= 120; tick++) {
+    tickWorld(level, tick);
+    updateContactDamage(level);
+  }
+  assert.ok(player.health.current < before, 'it did not stand still short of the player');
+});
+
+test('an enemy does not dither at the wall edge when the player stands sunk into it', () => {
+  const level = arena(10, 6);
+  const player = playerAt(4, 4);
+  player.position.y = 5 * TILE_WIDTH + 12;
+  const mob = mobAt(level, 'goblin', 4, 3);
+  engage(mob, player, 0);
+  const before = player.health.current;
+  for (let tick = 1; tick <= 240; tick++) {
+    tickWorld(level, tick);
+    updateContactDamage(level);
+  }
+  assert.ok(player.health.current < before, 'it pressed on into reach');
+});
+
+test('an enemy reaches and hurts a player standing at a pit edge, without falling in', () => {
+  const level = arena(10, 8);
+  for (let x = 1; x < 9; x++) level.setTile(x, 5, createTile(TileType.Hole));
+  const player = playerAt(4, 4);
+  player.position.y = 5 * TILE_WIDTH - 4;
+  const mob = mobAt(level, 'goblin', 4, 2);
+  engage(mob, player, 0);
+  const before = player.health.current;
+  for (let tick = 1; tick <= 240; tick++) {
+    tickWorld(level, tick);
+    updateContactDamage(level);
+    assert.notEqual(level.getTileAt(mob.position.x, mob.position.y).type, TileType.Hole, `tick ${tick}`);
+  }
+  assert.ok(player.health.current < before, 'it stepped up to the edge and struck');
+});
+
 test('kills, XP, gold and gear carry down to the next level, and a new run starts clean', () => {
   startRun();
   const player = playerAt(2, 2);
@@ -373,8 +419,8 @@ test('a sword swing hits enemies in its arc only', () => {
   const level = arena(10, 6);
   const player = playerAt(4, 2);
   player.aimVector = { x: 1, y: 0 };
-  const front = mobAt(level, 'goblin', 5, 2);
-  const behind = mobAt(level, 'goblin', 3, 2);
+  const front = mobAt(level, 'goblin', 4.5, 2);
+  const behind = mobAt(level, 'goblin', 3.5, 2);
   player.playerInput.intents.attack = true;
   updateSword();
   updateSword();

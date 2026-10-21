@@ -2,12 +2,16 @@ import { world, Team } from '../world';
 import type { Entity } from '../world';
 import { characterComponents } from '../characters/Characters';
 import { createTrail } from '../ai/perception/trail';
+import stats from '../data/stats.json';
 
-const PLAYER_HEALTH = 100;
+/** Tuned in src/data/stats.json, next to the enemies' stats. */
+const PLAYER_HEALTH = stats.player.health;
 /** Players regain one hit point this often while unhurt. */
 const PLAYER_REGEN_TICKS = 180;
 const PLAYER_SPEED = 1.2;
 const PLAYER_FRICTION = 0.4;
+/** Half-width of the player's collision box in pixels (two thirds of the original 10). */
+const PLAYER_RADIUS = 7;
 /** Ticks of sprinting a full stamina bar allows. */
 const MAX_SPRINT = 120;
 
@@ -15,7 +19,7 @@ export function createPlayer(x: number, y: number): Entity {
   return world.add({
     position: { x, y },
     velocity: { x: 0, y: 0 },
-    radius: { x: 10, y: 10 },
+    radius: { x: PLAYER_RADIUS, y: PLAYER_RADIUS },
     blocking: true,
     physicsSlide: true,
     team: Team.Player,

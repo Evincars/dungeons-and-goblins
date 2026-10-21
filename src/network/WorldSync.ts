@@ -99,7 +99,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
 
 /** Components that are plain values. */
 const VALUES: Readonly<Record<string, FieldType>> = {
-  blocking: 'boolean', physicsSlide: 'boolean', team: 'number', hurtTime: 'number', freezeTime: 'number',
+  blocking: 'boolean', physicsSlide: 'boolean', team: 'number', hurtTime: 'number', attackTime: 'number', freezeTime: 'number',
   bounceWallTime: 'number', regenInterval: 'number', regenAmount: 'number', regenTimer: 'number', deathPoints: 'number',
   facing: 'number', speed: 'number', friction: 'number', strength: 'number', walkTime: 'number', limp: 'number',
   chasing: 'boolean', frame: 'number', yOffset: 'number', flashTime: 'number', healthBarOffset: 'number',

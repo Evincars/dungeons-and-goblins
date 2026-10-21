@@ -78,6 +78,13 @@ export function stateDuration(characterId: string, state: CharacterState): numbe
   return found ? sheetCols(found.sheet) * found.clip.frameTime : 0;
 }
 
+/** Ticks into a state's clip at which its strike lands (0 if the clip has no impact frame). */
+export function stateImpact(characterId: string, state: CharacterState): number {
+  const found = stateClip(characterDef(characterId), state);
+  if (!found?.clip.impactFrame) return 0;
+  return Math.min(found.clip.impactFrame, sheetCols(found.sheet) - 1) * found.clip.frameTime;
+}
+
 /** How far above the ground position a sprite's centre sits so its feet land on the position. */
 export function groundOffset(def: CharacterDef, scale = def.scale): number {
   const centerY = (def.trim?.y ?? 0) + (def.trim?.h ?? def.frameHeight) / 2;

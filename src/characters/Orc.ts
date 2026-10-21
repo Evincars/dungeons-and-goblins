@@ -4,7 +4,7 @@ const DIR = '/Orc/Orc';
 
 // Tiny pixel art centred in large transparent 100×100 frames: crop to the content
 // (shared by every strip), kept horizontally centred so mirroring stays symmetric.
-// Only idle and walk are wired to states so far.
+// Attack02 is in the folder but isn't wired to a state yet.
 export const ORC: CharacterDef = {
   id: 'orc',
   frameWidth: 100,
@@ -15,7 +15,7 @@ export const ORC: CharacterDef = {
   clips: {
     idle:    { src: `${DIR}/Orc_Idle.png`,     frameTime: 8, mode: 'loop' },
     walk:    { src: `${DIR}/Orc_Walk.png`,     frameTime: 6, mode: 'loop' },
-    attack1: { src: `${DIR}/Orc_Attack01.png`, frameTime: 4, mode: 'once' },
+    attack1: { src: `${DIR}/Orc_Attack01.png`, frameTime: 4, mode: 'once', impactFrame: 3 },
     attack2: { src: `${DIR}/Orc_Attack02.png`, frameTime: 4, mode: 'once' },
     hurt:    { src: `${DIR}/Orc_Hurt.png`,     frameTime: 4, mode: 'once' },
     death:   { src: `${DIR}/Orc_Death.png`,    frameTime: 5, mode: 'hold' },
@@ -23,5 +23,8 @@ export const ORC: CharacterDef = {
   states: {
     idle: 'idle',
     walk: 'walk',
+    attack: 'attack1',
+    hurt: 'hurt',
+    death: 'death',
   },
 };

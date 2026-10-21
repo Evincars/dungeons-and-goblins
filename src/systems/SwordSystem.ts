@@ -21,6 +21,7 @@ export function hitMob(mob: Entity, attacker: Entity, damage: number): void {
   if ((mob.freezeTime ?? 0) > 0) return;
 
   mob.hurtTime = MOB_HURT_TICKS;
+  mob.attackTime = 0;
   mob.freezeTime = MOB_FREEZE_TICKS;
   mob.regenTimer = mob.regenInterval ?? DEFAULT_REGEN_TICKS;
   h.current = Math.max(0, h.current - damage);

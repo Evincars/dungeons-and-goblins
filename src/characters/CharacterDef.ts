@@ -25,6 +25,8 @@ export type ClipDef = {
   /** Ticks each frame is shown. */
   frameTime: number;
   mode: ClipMode;
+  /** Frame at which the strike lands, for clips that carry a hit (attacks). */
+  impactFrame?: number;
 };
 
 export type CharacterDef = {

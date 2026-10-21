@@ -5,6 +5,8 @@ import type { Level } from '../level/Level';
 import { boxAround } from '../core/geometry';
 import { sound } from '../audio/SoundPlayer';
 import { nearby, Sense } from '../ai/perception/spatial';
+import { stateDuration, stateImpact } from '../characters/Characters';
+import { ATTACK_RECOVERY } from '../characters/StateTriggers';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 
 const PLAYER_HURT_TIME = 25;
@@ -22,6 +24,7 @@ const touching: Entity[] = [];
 
 function tickDown(entity: Entity): void {
   if (entity.hurtTime !== undefined && entity.hurtTime > 0) entity.hurtTime--;
+  if (entity.attackTime !== undefined && entity.attackTime > 0) entity.attackTime--;
   if (entity.freezeTime !== undefined && entity.freezeTime > 0) entity.freezeTime--;
   if (entity.bounceWallTime !== undefined && entity.bounceWallTime > 0) entity.bounceWallTime--;
   if (entity.flashTime !== undefined && entity.flashTime > 0) entity.flashTime--;
@@ -64,12 +67,23 @@ function enemyTouching(player: Player): Entity | null {
   return null;
 }
 
+/**
+ * A mob in reach starts its swing, and the blow lands when the clip reaches its impact frame, so the
+ * damage and the animation coincide. Mobs without an attack clip hit at once.
+ */
+function strikeLands(mob: Entity): boolean {
+  if (!mob.character) return true;
+  const swing = stateDuration(mob.character.def, 'attack');
+  if (!(mob.attackTime ?? 0)) mob.attackTime = swing + ATTACK_RECOVERY;
+  return mob.attackTime === swing + ATTACK_RECOVERY - stateImpact(mob.character.def, 'attack');
+}
+
 /** Mobs deal contact damage to the player, except inside safe zones. */
 export function updateContactDamage(level: Level): void {
   for (const player of q.players) {
     if (!vulnerable(level, player)) continue;
     const mob = enemyTouching(player);
-    if (mob) hurtPlayer(player, mob, mob.strength ?? 1);
+    if (mob && strikeLands(mob)) hurtPlayer(player, mob, mob.strength ?? 1);
   }
 }
 

@@ -119,6 +119,8 @@ export type Entity = {
   // --- health / combat ---
   health?: { current: number; max: number };
   hurtTime?: number;
+  /** Ticks left on a mob's attack animation, started when it lands a hit. */
+  attackTime?: number;
   freezeTime?: number;
   bounceWallTime?: number;
   regenInterval?: number;

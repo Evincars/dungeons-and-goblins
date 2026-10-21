@@ -6,6 +6,7 @@ import { createDeathFx } from '../entities/FxFactory';
 import { sound } from '../audio/SoundPlayer';
 import type { SfxName } from '../audio/SoundPlayer';
 import { destroyAttachments } from './BarSystem';
+import { stateDuration } from '../characters/Characters';
 import { startDying } from './RespawnSystem';
 import { xpForLevel } from '../ui/HudPanel';
 
@@ -15,6 +16,9 @@ const DEATH_SOUNDS = {
   orc: 'enemy_death',
   troll: 'enemy_death',
 } as const satisfies Record<MobType, SfxName>;
+
+/** Ticks a dead mob stays on its last death frame before it is cleared away. */
+const CORPSE_LINGER = 60;
 
 /** A destroyed nest is worth this many times its own death points. */
 const NEST_XP_FACTOR = 3;
@@ -62,16 +66,38 @@ function die(entity: Entity, pos: { x: number; y: number }): void {
   }
 }
 
+/** A mob with a death clip lies there while it plays, then is cleared away; others vanish at once. */
+function killMob(entity: Entity): void {
+  const clipTicks = entity.character && entity.ai ? stateDuration(entity.character.def, 'death') : 0;
+  if (clipTicks === 0) {
+    world.addComponent(entity, 'removed', true);
+    return;
+  }
+  world.addComponent(entity, 'respawnTicks', clipTicks + CORPSE_LINGER);
+  entity.hurtTime = 0;
+  entity.attackTime = 0;
+}
+
+/** Counts down a dead mob's clip and linger time, then clears it away (players wait on {@link updateRespawns}). */
+function tickCorpse(entity: Entity): void {
+  if (entity.playerInput || entity.respawnTicks === undefined) return;
+  if (--entity.respawnTicks <= 0) world.addComponent(entity, 'removed', true);
+}
+
 export function updateDeath(level: Level): void {
   for (const entity of mortal) {
-    if (entity.health.current > 0 || entity.removed || entity.respawnTicks !== undefined) continue;
+    if (entity.health.current > 0 || entity.removed) continue;
+    if (entity.respawnTicks !== undefined) {
+      tickCorpse(entity);
+      continue;
+    }
     if (entity.playerInput) {
       sound.playSound('death');
       startDying(entity, level);
       continue;
     }
     die(entity, entity.position);
-    world.addComponent(entity, 'removed', true);
+    killMob(entity);
   }
   flushRemoved();
 }

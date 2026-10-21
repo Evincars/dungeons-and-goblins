@@ -1,6 +1,6 @@
 import type { CharacterDef } from './CharacterDef';
 
-const DIR = '/Orc/Orc';
+const DIR = '/orc/Orc';
 
 // Tiny pixel art centred in large transparent 100×100 frames: crop to the content
 // (shared by every strip), kept horizontally centred so mirroring stays symmetric.

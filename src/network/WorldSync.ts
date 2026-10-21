@@ -16,7 +16,7 @@ import { isInventoryItem } from './protocol';
  */
 
 /** Display objects: rebuilt on each screen, never sent. */
-const RUNTIME_KEYS = ['sprite', 'container', 'healthBar', 'hurtOverlay', 'fallMask', 'priceLabel'] as const satisfies readonly (keyof Entity)[];
+const RUNTIME_KEYS = ['sprite', 'container', 'healthBar', 'hurtOverlay', 'sprintBar', 'fallMask', 'priceLabel'] as const satisfies readonly (keyof Entity)[];
 /** Host bookkeeping a guest has no use for, or sets for itself. */
 const HOST_KEYS = ['trail', 'remoteInput', 'aimWorld', 'removed', 'localOnly'] as const satisfies readonly (keyof Entity)[];
 type UnsentKey = (typeof RUNTIME_KEYS)[number] | (typeof HOST_KEYS)[number];

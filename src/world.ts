@@ -150,6 +150,8 @@ export type Entity = {
   healthBarOffset?: number;
   healthBar?: { container: Container; fill: Sprite };
   hurtOverlay?: Sprite;
+  /** The stamina bar under a player while their sprint is used up (presentation only). */
+  sprintBar?: Sprite;
   fallMask?: Graphics;
   mobType?: MobType;
   /** Runtime display label (price etc.) */
@@ -229,7 +231,13 @@ export type Entity = {
   projectile?: { damage: number; life: number; team: number };
 
   /** Point light this entity emits (spell bolts, …). */
-  glow?: { radius: number };
+  glow?: {
+    radius: number;
+    /** A cold light (crystals) instead of firelight. */
+    cool?: boolean;
+    /** Phase of a flame's flicker; steady when left out. */
+    flicker?: number;
+  };
   playerStats?: {
     level: number;
     exp: number;

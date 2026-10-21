@@ -1,5 +1,5 @@
 import { world } from '../world';
-import { createDustFx } from '../entities/FxFactory';
+import { spawnDust } from '../entities/FxFactory';
 
 const WALK_INTERVAL = 8;
 const SPRINT_INTERVAL = 4;
@@ -40,6 +40,6 @@ export function updateDust(): void {
     const along = TRAIL + (Math.random() * 2 - 1) * SCATTER;
     const across = (Math.random() * 2 - 1) * SCATTER;
     const pos = player.position;
-    createDustFx(pos.x - dirX * along - dirY * across, pos.y - dirY * along + dirX * across + FOOT_DROP);
+    spawnDust(player, pos.x - dirX * along - dirY * across, pos.y - dirY * along + dirX * across + FOOT_DROP);
   }
 }

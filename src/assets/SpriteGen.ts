@@ -232,26 +232,6 @@ function drawSparks(ctx: CanvasRenderingContext2D, ox: number, f: number, radius
   }
 }
 
-// ── DUST FX ──────────────────────────────────────────────────────────────────
-
-export function genDustSheet(): HTMLCanvasElement {
-  const [c, ctx] = mkCanvas(64, 16);
-  for (let f = 0; f < 4; f++) {
-    const ox = f * 16;
-    const alpha = 1 - f * 0.25;
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = '#7a6a58';
-    const r = 3 + f * 2;
-    ctx.beginPath(); ctx.arc(ox + 8, 8, r, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#a09080';
-    ctx.beginPath(); ctx.arc(ox + 5, 6, r / 2, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#8a7868';
-    ctx.beginPath(); ctx.arc(ox + 11, 10, r / 2, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-  return c;
-}
-
 // ── DARKNESS / FOG ───────────────────────────────────────────────────────────
 
 export function genDarkSheet(): HTMLCanvasElement {
@@ -371,4 +351,32 @@ export function genShadow(w: number, h: number): HTMLCanvasElement {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, w, h);
   return c;
+}
+
+// ── CAMPFIRE ─────────────────────────────────────────────────────────────────
+
+/** A campfire cell is this big; the flames (from the torch art) are laid on by the loader. */
+export const CAMPFIRE_CELL = 24;
+const CAMPFIRE_STONES: ReadonlyArray<[number, number]> = [
+  [3, 18], [6, 20], [10, 21], [14, 21], [18, 20], [21, 18], [19, 15], [5, 15],
+];
+const STONE = 0x6a6660;
+const STONE_DARK = 0x3e3a36;
+const LOG = 0x5a3a22;
+const LOG_LIGHT = 0x7a5232;
+const EMBER = 0xff7a1a;
+const EMBER_HOT = 0xffd040;
+
+/** One frame's ring of stones, crossed logs and glowing embers, without flames; `frame` flickers the embers. */
+export function drawCampfireBase(ctx: CanvasRenderingContext2D, ox: number, frame: number): void {
+  for (const [x, y] of CAMPFIRE_STONES) {
+    rect(ctx, ox + x - 1, y - 1, 3, 2, STONE);
+    px(ctx, ox + x - 1, y, STONE_DARK);
+  }
+  for (let i = 0; i < 12; i++) {
+    px(ctx, ox + 6 + i, 19 - Math.floor(i / 3), LOG);
+    px(ctx, ox + 6 + i, 15 + Math.floor(i / 3), LOG);
+    px(ctx, ox + 6 + i, 18 - Math.floor(i / 3), LOG_LIGHT);
+  }
+  for (let i = 0; i < 5; i++) px(ctx, ox + 9 + i + (frame % 2), 17 + (i % 2), (i + frame) % 3 === 0 ? EMBER_HOT : EMBER);
 }

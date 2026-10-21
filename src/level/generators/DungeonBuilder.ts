@@ -18,8 +18,12 @@ import { StateError } from '../../core/errors';
 import type { DungeonConfig } from './DungeonConfig';
 import { bspTree, bspLeaves, type BspNode } from './BSPSplit';
 import { isPillarColumn } from '../TerrainAutotile';
-import { COFFINS, CRATES, HANGINGS, PEDESTALS, POSTS, SARCOPHAGI, STORE_FURNITURE, STORE_GOODS, URNS, propWeight } from '../Props';
-import type { PropKind, PropPlacement } from '../Props';
+import {
+  CAVE_CENTREPIECES, CAVE_CRYSTALS, CAVE_PLANTS, CAVE_SPIRES, CAVE_STONES, COFFINS, CRATES, CRYPT_CENTREPIECES,
+  HALL_CENTREPIECES, HANGINGS, PEDESTALS, POSTS, PROPS, SARCOPHAGI, STORE_CENTREPIECES, STORE_FURNITURE, STORE_GOODS, URNS,
+  propWeight,
+} from '../Props';
+import type { PropDef, PropKind, PropPlacement } from '../Props';
 
 type TileChange = { x: number; y: number; prev: TileType };
 type Keep = (apply: () => TileChange[]) => boolean;
@@ -62,6 +66,22 @@ const STORE_FURNITURE_MAX = 2;
 const STORE_GOODS_MAX = 3;
 /** Chance a plain hall is flanked by a pair of pedestals instead of posts. */
 const PEDESTAL_CHANCE = 0.4;
+/** Chance a room gets something standing in its middle (a tomb, a crate stack, a pedestal). */
+const CENTREPIECE_CHANCE = 0.7;
+/** Tiles of open floor a centrepiece keeps around it, and how far from the middle it may move to find them. */
+const CENTRE_CLEARANCE = 1;
+const CENTRE_SEARCH = 3;
+/** Cave halls: how many spires, crystal clusters, stones and plants are strewn about (min, max). */
+const CAVE_SPIRE_COUNT = [2, 4] as const;
+const CAVE_CRYSTAL_COUNT = [3, 6] as const;
+const CAVE_STONE_COUNT = [6, 12] as const;
+const CAVE_PLANT_COUNT = [5, 10] as const;
+/** The plant colours a cave hall can grow (one per hall, so it reads as one cave). */
+const PLANT_COLOURS = ['yellow', 'red', 'lilac', 'teal'] as const;
+/** Exit room: campfires this many tiles either side of the exit, banners every other tile of its north wall. */
+const CAMPFIRE_SPREAD = 3;
+const EXIT_BANNERS: readonly PropKind[] = ['banner_red', 'banner_blue', 'pennant_red', 'pennant_blue'];
+const EXIT_CORNER_PROPS: readonly PropKind[] = ['barrel', 'barrel2', 'supplies_barrel', 'supplies_crates'];
 /** Torch flames hang this far above the foot of their wall. */
 const TORCH_FLAME_LIFT = 30;
 /** Rows above which walls are too thin for wall fixtures. */
@@ -74,6 +94,8 @@ export type RoomType = 'safe' | 'dungeon' | 'exit';
 export type RoomData = {
   id: number;
   type: RoomType;
+  /** A big dungeon room furnished as a cave: cave ground, rock spires, crystals and plants. */
+  hall?: boolean;
   /** Tile-space bounds (exclusive right/bottom). */
   x: number; y: number; w: number; h: number;
   /** Center in WORLD space (pixels). */
@@ -94,6 +116,8 @@ export type DungeonLayout = {
   torchPositions: Array<{ x: number; y: number }>;
   /** Decorative and obstacle props (coffins, crates, urns, candles, wall hangings). */
   props: PropPlacement[];
+  /** World positions of the campfires in the exit room (each on a blocked tile). */
+  campfires: Array<{ x: number; y: number }>;
   exitButtonPos: { x: number; y: number };
   shopPos: { x: number; y: number };
   safeDoor: DoorData;
@@ -158,20 +182,11 @@ export class DungeonBuilder {
 
     // ── Dungeon rooms, one per BSP leaf ───────────────────────────────────────
     const area = { x: cfg.safeRoomW, y: 1, w: W - cfg.safeRoomW - cfg.exitRoomW, h: H - 2 };
-    const tree = bspTree(area, cfg.minRoomSize + 3, cfg.splitDepth, this.rng);
+    const tree = bspTree(area, cfg.minRoomSize + 3, cfg.splitDepth, this.rng, cfg.hallChance);
     const leafRooms = new Map<BspNode, RoomData>();
     for (const leaf of bspLeaves(tree)) {
-      const r = leaf.rect;
-      // 1-tile margin left/right/bottom, 2 on top so north walls are thick
-      // enough for a full brick face.
-      const maxW = Math.min(cfg.maxRoomSize, r.w - 2);
-      const maxH = Math.min(cfg.maxRoomSize, r.h - 3);
-      if (maxW < cfg.minRoomSize || maxH < cfg.minRoomSize) continue;
-      const w = this.randInt(cfg.minRoomSize, maxW);
-      const h = this.randInt(cfg.minRoomSize, maxH);
-      const x = r.x + 1 + this.randInt(0, r.w - 2 - w);
-      const y = r.y + 2 + this.randInt(0, r.h - 3 - h);
-      leafRooms.set(leaf, this.carveRoom(x, y, w, h, 'dungeon'));
+      const room = this.leafRoom(leaf);
+      if (room) leafRooms.set(leaf, room);
     }
     const dungeonRooms = [...leafRooms.values()];
     if (dungeonRooms.length < MIN_DUNGEON_ROOMS) return null;
@@ -206,6 +221,10 @@ export class DungeonBuilder {
     const keepIfReachable = (apply: () => TileChange[]) => this.tryFeature(playerTile, anchors, apply);
     for (const room of dungeonRooms) {
       let structured = false;
+      if (room.hall) {
+        this.furnishCave(room, props, keepIfReachable);
+        continue;
+      }
       if (room.w >= 9 && room.h >= 8 && this.rng() < cfg.pillarChance) {
         structured = keepIfReachable(() => this.pillarBlocks(room));
       } else if (room.w >= 6 && room.h >= 6 && this.rng() < cfg.pitChance) {
@@ -221,6 +240,8 @@ export class DungeonBuilder {
 
     const torchTiles = this.placeTorches();
     this.placeHangings(torchTiles, props);
+    this.usedTiles.add(exitTile.x + exitTile.y * W);
+    const campfires = this.dressExitRoom(exit, exitTile, torchTiles, props, keepIfReachable);
 
     const playerSpawn = tileCenter(playerTile.x, playerTile.y);
     this.level.addSpawnPoint(playerSpawn.x, playerSpawn.y);
@@ -230,6 +251,7 @@ export class DungeonBuilder {
       playerSpawn,
       torchPositions: torchTiles.map((t) => ({ x: t.x * TILE_WIDTH + TILE_WIDTH / 2, y: t.y * TILE_HEIGHT - TORCH_FLAME_LIFT })),
       props,
+      campfires: campfires.map((t) => tileCenter(t.x, t.y)),
       exitButtonPos: tileCenter(exitTile.x, exitTile.y),
       shopPos: tileCenter(safe.x + Math.floor(safe.w / 2), safe.y + 1),
       safeDoor: { tiles: doorTiles, boundaryX: (doorX + 1) * TILE_WIDTH + TILE_WIDTH / 2 },
@@ -237,6 +259,31 @@ export class DungeonBuilder {
   }
 
   // ── Carving ─────────────────────────────────────────────────────────────────
+
+  /**
+   * The room a BSP partition holds: a hall in a partition left whole (if it is big enough), else a room of
+   * the usual size. Rooms keep a 1-tile margin left, right and below, and 2 above so north walls are thick
+   * enough for a full brick face.
+   */
+  private leafRoom(leaf: BspNode): RoomData | null {
+    const { cfg } = this;
+    const r = leaf.rect;
+    const hall = !!leaf.merged && r.w - 2 >= cfg.hallMinSize && r.h - 3 >= cfg.hallMinSize;
+    const minSize = hall ? cfg.hallMinSize : cfg.minRoomSize;
+    const maxSize = hall ? cfg.hallMaxSize : cfg.maxRoomSize;
+    const maxW = Math.min(maxSize, r.w - 2);
+    const maxH = Math.min(maxSize, r.h - 3);
+    if (maxW < cfg.minRoomSize || maxH < cfg.minRoomSize) return null;
+    const w = this.randInt(Math.min(minSize, maxW), maxW);
+    const h = this.randInt(Math.min(minSize, maxH), maxH);
+    const x = r.x + 1 + this.randInt(0, r.w - 2 - w);
+    const y = r.y + 2 + this.randInt(0, r.h - 3 - h);
+    const room = this.carveRoom(x, y, w, h, 'dungeon');
+    if (!hall) return room;
+    room.hall = true;
+    forEachTile(x, y, x + w - 1, y + h - 1, (tx, ty) => this.level.caveFloor.add(tx + ty * this.cfg.mapWidth));
+    return room;
+  }
 
   private randInt(min: number, max: number): number {
     return min + Math.floor(this.rng() * (max - min + 1));
@@ -488,16 +535,160 @@ export class DungeonBuilder {
   /** Dresses a dungeon room by theme: a crypt, a storeroom or a plain hall. */
   private furnish(room: RoomData, structured: boolean, props: PropPlacement[], keep: Keep): void {
     const roll = this.rng();
+    let centrepieces = HALL_CENTREPIECES;
+    let middleTaken = false;
     if (roll < 0.4) {
       this.tombNiches(room, props, keep);
-      if (!structured && room.w >= 8 && room.h >= 7) this.sarcophagi(room, props, keep);
+      middleTaken = !structured && room.w >= 8 && room.h >= 7 && this.sarcophagi(room, props, keep);
+      centrepieces = CRYPT_CENTREPIECES;
     } else if (roll < 0.7) {
       this.crateCorners(room, props, keep);
+      centrepieces = STORE_CENTREPIECES;
     } else if (!structured && room.w >= 8 && room.h >= 8) {
       this.flankingPair(room, props, keep);
     }
+    if (!middleTaken && this.rng() < CENTREPIECE_CHANCE) this.centrepiece(room, centrepieces, props, keep);
     if (this.rng() < STORE_CHANCE) this.storeroom(room, props, keep);
     this.urnsAlongWalls(room, roll >= 0.4 && roll < 0.7 ? 4 : 2, props);
+  }
+
+  // ── Centrepieces and large props ────────────────────────────────────────────
+
+  /** The tiles a prop blocks: its footprint, centred on (tx, ty) and reaching up from it. */
+  private footprintCells(def: PropDef, tx: number, ty: number): Array<[number, number]> {
+    const { w, h } = def.footprint ?? { w: 1, h: 1 };
+    const cells: Array<[number, number]> = [];
+    const half = Math.floor(w / 2);
+    forEachTile(tx - half, ty - h + 1, tx + half, ty, (x, y) => cells.push([x, y]));
+    return cells;
+  }
+
+  /** Whether the prop fits at (tx, ty) inside the room with `clearance` tiles of open floor all round it. */
+  private standsClear(room: RoomData, def: PropDef, tx: number, ty: number, clearance: number): boolean {
+    const { w, h } = def.footprint ?? { w: 1, h: 1 };
+    const half = Math.floor(w / 2);
+    const x0 = tx - half - clearance, x1 = tx + half + clearance;
+    const y0 = ty - h + 1 - clearance, y1 = ty + clearance;
+    const inside = x0 >= room.x && y0 >= room.y && x1 < room.x + room.w && y1 < room.y + room.h;
+    return inside && !someTile(x0, y0, x1, y1, (x, y) => !this.free(x, y));
+  }
+
+  /** Room tiles nearest its middle first. */
+  private tilesByDistanceFromMiddle(room: RoomData): TilePos[] {
+    const cx = room.x + (room.w - 1) / 2;
+    const cy = room.y + (room.h - 1) / 2;
+    const tiles: TilePos[] = [];
+    forEachTile(room.x, room.y, room.x + room.w - 1, room.y + room.h - 1, (x, y) => tiles.push({ x, y }));
+    const dist = (t: TilePos) => Math.max(Math.abs(t.x - cx), Math.abs(t.y - cy));
+    return tiles.sort((a, b) => dist(a) - dist(b));
+  }
+
+  /**
+   * Something solid in the middle of the room with open floor around it. If pits, pillars or other props
+   * fill the middle, it moves outwards — up to {@link CENTRE_SEARCH} tiles, else wherever it fits clear.
+   */
+  private centrepiece(room: RoomData, kinds: readonly PropKind[], props: PropPlacement[], keep: Keep): TilePos | null {
+    const kind = this.pickProp(kinds);
+    const def: PropDef = PROPS[kind];
+    const tiles = this.tilesByDistanceFromMiddle(room);
+    const cx = room.x + (room.w - 1) / 2;
+    const cy = room.y + (room.h - 1) / 2;
+    const near = (t: TilePos) => Math.max(Math.abs(t.x - cx), Math.abs(t.y - cy)) <= CENTRE_SEARCH;
+    const fits = (t: TilePos) => this.standsClear(room, def, t.x, t.y, CENTRE_CLEARANCE);
+    const spot = tiles.find((t) => near(t) && fits(t)) ?? tiles.find(fits);
+    if (!spot || !this.placeLarge(kind, spot.x, spot.y, props, keep)) return null;
+    if (CRYPT_CENTREPIECES.includes(kind)) for (const x of [spot.x - 1, spot.x + 1]) this.placeCandle(x, spot.y, props);
+    return spot;
+  }
+
+  /** One prop blocking its whole footprint, if the dungeon stays connected. */
+  private placeLarge(kind: PropKind, tx: number, ty: number, props: PropPlacement[], keep: Keep): boolean {
+    const cells = this.footprintCells(PROPS[kind], tx, ty);
+    if (!cells.every(([x, y]) => this.free(x, y))) return false;
+    if (!keep(() => this.setTiles(cells, TileType.Obstacle))) return false;
+    for (const [x, y] of cells) this.claim(x, y);
+    props.push({ kind, tx, ty });
+    return true;
+  }
+
+  // ── Cave halls ──────────────────────────────────────────────────────────────
+
+  /** A cave hall: great spires in the middle, smaller ones about, crystals, stones and plants of one colour. */
+  private furnishCave(room: RoomData, props: PropPlacement[], keep: Keep): void {
+    if (room.w >= 6 && room.h >= 6 && this.rng() < this.cfg.pitChance) this.pits(room, keep);
+    this.centrepiece(room, CAVE_CENTREPIECES, props, keep);
+    const open = this.shuffledFreeTiles(room);
+    for (let i = this.countIn(CAVE_SPIRE_COUNT); i > 0; i--) this.scatterSolid(room, open, CAVE_SPIRES, props, keep);
+    const colour = this.pick(PLANT_COLOURS);
+    const plants = CAVE_PLANTS.filter((kind) => kind.endsWith(colour) || kind.includes(`${colour}_`));
+    this.scatterLoose(open, CAVE_CRYSTALS, this.countIn(CAVE_CRYSTAL_COUNT), props);
+    this.scatterLoose(open, CAVE_STONES, this.countIn(CAVE_STONE_COUNT), props);
+    this.scatterLoose(open, plants, this.countIn(CAVE_PLANT_COUNT), props);
+  }
+
+  private countIn([min, max]: readonly [number, number]): number {
+    return this.randInt(min, max);
+  }
+
+  /** The room's free floor tiles in random order (a Fisher–Yates shuffle on the level's generator). */
+  private shuffledFreeTiles(room: RoomData): TilePos[] {
+    const tiles: TilePos[] = [];
+    forEachTile(room.x, room.y, room.x + room.w - 1, room.y + room.h - 1, (x, y) => {
+      if (this.free(x, y)) tiles.push({ x, y });
+    });
+    for (let i = tiles.length - 1; i > 0; i--) {
+      const j = Math.floor(this.rng() * (i + 1));
+      [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+    }
+    return tiles;
+  }
+
+  /** A solid prop on the next open tile that leaves a tile of floor round it. */
+  private scatterSolid(room: RoomData, open: TilePos[], kinds: readonly PropKind[], props: PropPlacement[], keep: Keep): void {
+    const kind = this.pickProp(kinds);
+    const i = open.findIndex((t) => this.standsClear(room, PROPS[kind], t.x, t.y, 1));
+    if (i < 0) return;
+    const [spot] = open.splice(i, 1);
+    this.placeLarge(kind, spot.x, spot.y, props, keep);
+  }
+
+  /** Walk-through props on the next few still-free tiles. */
+  private scatterLoose(open: TilePos[], kinds: readonly PropKind[], count: number, props: PropPlacement[]): void {
+    for (let placed = 0; placed < count && open.length;) {
+      const spot = open.pop();
+      if (!spot || !this.free(spot.x, spot.y)) continue;
+      this.claim(spot.x, spot.y);
+      props.push({ kind: this.pickProp(kinds), tx: spot.x, ty: spot.y });
+      placed++;
+    }
+  }
+
+  // ── Exit room ───────────────────────────────────────────────────────────────
+
+  /**
+   * The way down is a place to gather: campfires either side of the exit, banners between the torches on
+   * its north wall and casks in its upper corners. Returns the campfire tiles.
+   */
+  private dressExitRoom(exit: RoomData, exitTile: TilePos, torches: TilePos[], props: PropPlacement[], keep: Keep): TilePos[] {
+    const campfires: TilePos[] = [];
+    for (const x of [exitTile.x - CAMPFIRE_SPREAD, exitTile.x + CAMPFIRE_SPREAD]) {
+      if (!this.free(x, exitTile.y) || !keep(() => this.setTiles([[x, exitTile.y]], TileType.Obstacle))) continue;
+      this.claim(x, exitTile.y);
+      campfires.push({ x, y: exitTile.y });
+    }
+    this.hangBanners(exit, torches, props);
+    for (const x of [exit.x, exit.x + exit.w - 1]) this.placeSolid([[x, exit.y]], [this.pick(EXIT_CORNER_PROPS)], props, keep);
+    return campfires;
+  }
+
+  /** Banners on every other free stretch of the room's north wall, clear of the torches. */
+  private hangBanners(room: RoomData, torches: TilePos[], props: PropPlacement[]): void {
+    const ty = room.y;
+    const nearTorch = (tx: number) => torches.some((t) => t.y === ty && Math.abs(t.x - tx) < 2);
+    for (let tx = room.x + 1; tx < room.x + room.w - 1; tx += 2) {
+      if (!this.mountable(tx, ty) || nearTorch(tx)) continue;
+      props.push({ kind: EXIT_BANNERS[(tx >> 1) % EXIT_BANNERS.length], tx, ty });
+    }
   }
 
   /** Posts, or a matching pair of pedestals, standing either side of the middle of a plain hall. */
@@ -562,12 +753,12 @@ export class DungeonBuilder {
     props.push({ kind: this.rng() < 0.5 ? 'candles' : 'candle', tx, ty });
   }
 
-  /** A row of sarcophagi across the middle of the room, with gaps to walk between. */
-  private sarcophagi(room: RoomData, props: PropPlacement[], keep: Keep): void {
+  /** A row of sarcophagi across the middle of the room, with gaps to walk between; returns whether it stands. */
+  private sarcophagi(room: RoomData, props: PropPlacement[], keep: Keep): boolean {
     const ty = room.y + Math.floor(room.h / 2);
     const cells: Array<[number, number]> = [];
     for (let x = room.x + 2; x <= room.x + room.w - 3; x += 2) cells.push([x, ty]);
-    if (cells.length >= 2) this.placeSolid(cells, cells.map(() => this.pick(SARCOPHAGI)), props, keep);
+    return cells.length >= 2 && this.placeSolid(cells, cells.map(() => this.pick(SARCOPHAGI)), props, keep);
   }
 
   /** Stacks of crates in one or two corners. */

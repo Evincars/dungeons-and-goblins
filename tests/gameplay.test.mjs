@@ -43,7 +43,9 @@ const { createChest } = await load('entities/DungeonFactory');
 const { updateChests } = await load('systems/ChestSystem');
 const { updateCharacterState } = await load('systems/CharacterStateSystem');
 const { characterDef, facingRow } = await load('characters/Characters');
-const { PROPS, HANGINGS, STORE_FURNITURE } = await load('level/Props');
+const { PROPS, HANGINGS, STORE_FURNITURE, CAVE_CENTREPIECES, CAVE_PLANTS, CAVE_CRYSTALS, CRYPT_CENTREPIECES, STORE_CENTREPIECES, HALL_CENTREPIECES } = await load('level/Props');
+const { updateHoles } = await load('systems/HoleSystem');
+const { prepareLevel } = await load('level/DungeonGenerator');
 
 const centre = (t) => t * TILE_WIDTH + TILE_WIDTH / 2;
 const tileOf = (level, e) => ({ x: Math.floor(e.position.x / TILE_WIDTH), y: Math.floor(e.position.y / TILE_WIDTH) });
@@ -490,6 +492,73 @@ test('wall decor hangs only on north-wall faces, and storerooms are rare corners
   }
   assert.ok(stores.size > 0, 'some rooms keep a storeroom corner');
   assert.ok(stores.size < dungeonRooms * 0.35, `but most rooms do not (${stores.size} of ${dungeonRooms})`);
+});
+
+test('about one room in five is a cave hall: bigger, floored with cave ground and furnished as a cave', () => {
+  let rooms = 0, halls = 0, bigHalls = 0;
+  for (let seed = 1; seed <= 30; seed++) {
+    const { level, rooms: all, props } = new DungeonBuilder({ ...DEFAULT_CONFIG, seed }).build();
+    const dungeon = all.filter((r) => r.type === 'dungeon');
+    rooms += dungeon.length;
+    for (const hall of dungeon.filter((r) => r.hall)) {
+      halls++;
+      if (Math.max(hall.w, hall.h) > DEFAULT_CONFIG.maxRoomSize) bigHalls++;
+      assert.ok(level.caveFloor.has(hall.x + hall.y * level.width), 'cave ground');
+      const inside = props.filter((p) => p.tx >= hall.x && p.tx < hall.x + hall.w && p.ty >= hall.y && p.ty < hall.y + hall.h);
+      assert.ok(inside.some((p) => CAVE_PLANTS.includes(p.kind) || CAVE_CRYSTALS.includes(p.kind)), 'cave decor');
+    }
+  }
+  assert.ok(halls / rooms > 0.1 && halls / rooms < 0.35, `${halls} halls of ${rooms} rooms`);
+  assert.ok(bigHalls > 0, 'halls outgrow ordinary rooms');
+});
+
+test('rooms get a centrepiece in the middle (or nearby) with open floor around it', () => {
+  const CENTRES = [...CRYPT_CENTREPIECES, ...STORE_CENTREPIECES, ...HALL_CENTREPIECES, ...CAVE_CENTREPIECES];
+  let rooms = 0, centred = 0;
+  for (let seed = 1; seed <= 20; seed++) {
+    const { level, rooms: all, props } = new DungeonBuilder({ ...DEFAULT_CONFIG, seed }).build();
+    for (const room of all.filter((r) => r.type === 'dungeon')) {
+      rooms++;
+      const cx = room.x + (room.w - 1) / 2, cy = room.y + (room.h - 1) / 2;
+      const piece = props.find((p) => CENTRES.includes(p.kind) && Math.max(Math.abs(p.tx - cx), Math.abs(p.ty - cy)) <= 3.5);
+      if (!piece) continue;
+      centred++;
+      const below = level.getTile(piece.tx, piece.ty + 1)?.type;
+      assert.notEqual(below, TileType.Hole, 'never at the lip of a pit');
+    }
+  }
+  assert.ok(centred > rooms * 0.3, `${centred} of ${rooms} rooms have something in the middle`);
+});
+
+test('the exit room has campfires beside the exit and banners on its wall', () => {
+  const { campfires, rooms, props, exitButtonPos, level } = new DungeonBuilder({ ...DEFAULT_CONFIG, seed: 7 }).build();
+  const exit = rooms.find((r) => r.type === 'exit');
+  assert.equal(campfires.length, 2);
+  for (const c of campfires) assert.equal(level.getTileAt(c.x, c.y).type, TileType.Obstacle, 'a campfire blocks its tile');
+  assert.equal(level.getTileAt(exitButtonPos.x, exitButtonPos.y).type, TileType.Floor, 'the exit stays clear');
+  assert.ok(props.some((p) => p.ty === exit.y && HANGINGS.includes(p.kind)), 'banners');
+});
+
+test('falling into a pit pops a "!" over the player that follows them down', () => {
+  const level = arena(8, 6);
+  level.setTile(4, 2, createTile(TileType.Hole));
+  const player = playerAt(4, 2);
+  updateHoles(level);
+  assert.ok(player.falling);
+  const mark = world.entities.find((e) => e.visual?.sheet === 'exclamation_mark');
+  assert.ok(mark, 'an exclamation mark');
+  assert.equal(mark.fx.orderId, world.id(player));
+  assert.equal(mark.fx.duration, player.falling.duration);
+});
+
+test('a level generated ahead of time is the same level the seed builds on the spot', () => {
+  const fresh = buildDungeon(99, false);
+  const props = world.entities.filter((e) => e.localOnly).length;
+  world.clear();
+  prepareLevel(99);
+  const ready = buildDungeon(99, false);
+  assert.equal(world.entities.filter((e) => e.localOnly).length, props);
+  assert.deepEqual(ready.spawns, fresh.spawns);
 });
 
 // ── Typed errors ─────────────────────────────────────────────────────────────

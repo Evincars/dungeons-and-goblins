@@ -32,6 +32,8 @@ export class Level {
   private safeZoneSet = new Set<number>();  // packed tileX + tileY * width
   /** Face decorations keyed by packed tile index. */
   readonly wallDecor = new Map<number, WallDecor>();
+  /** Tiles (index x + y·width) of cave halls, whose floor is laid with patches of cave ground. */
+  readonly caveFloor = new Set<number>();
   /** Top-left tiles of 2×2 pits (each is four Hole tiles drawn as one framed pit). */
   readonly pits: Array<{ x: number; y: number }> = [];
 

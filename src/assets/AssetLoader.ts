@@ -7,14 +7,22 @@ import { allSheets } from './SheetCatalog';
 import {
   genCoinSheet, genPotionSheet, genGemSheet, genSpellBoltSheet,
   genSpawnerSheet, genExitButtonSheet,
-  genSwordSwingSheet, genDeathFxSheet, genDustSheet,
+  genSwordSwingSheet, genDeathFxSheet,
   genDarkSheet,
   genPanelBg, genPortrait, genMinimapIcons,
+  CAMPFIRE_CELL, drawCampfireBase,
 } from './SpriteGen';
 
 /** The torch animation is four separate 16×16 images, composited into one strip. */
 const TORCH_FRAMES = 4;
 const TORCH_FRAME_SIZE = 16;
+/** The flame in each torch frame (above its wall bracket), and where a campfire's three flames stand. */
+const TORCH_FLAME = { x: 6, y: 0, w: 4, h: 7 };
+const CAMPFIRE_FLAMES: ReadonlyArray<{ x: number; y: number; scale: number; lag: number }> = [
+  { x: 6, y: 9, scale: 1, lag: 1 },
+  { x: 14, y: 9, scale: 1, lag: 2 },
+  { x: 8, y: 2, scale: 2, lag: 0 },
+];
 /** Sizes of the generated HUD and inventory panel backgrounds. */
 const HUD_PANEL = { w: 512, h: 80 };
 const INVENTORY_PANEL = { w: 320, h: 240 };
@@ -29,7 +37,6 @@ const PROCEDURAL: Record<string, () => HTMLCanvasElement> = {
   exit_button:        genExitButtonSheet,
   fx_sword_swing:     genSwordSwingSheet,
   fx_death:           genDeathFxSheet,
-  fx_dust:            genDustSheet,
   dark:               genDarkSheet,
   portrait:           genPortrait,
   mapicons:           genMinimapIcons,
@@ -52,9 +59,32 @@ function buildTorchStrip(): void {
   setTexture('torch', strip);
 }
 
+/**
+ * The exit room's campfires: stones and logs drawn here, under three torch flames each a frame out of
+ * step with the others, so the fire never repeats one shape.
+ */
+function buildCampfireStrip(): void {
+  const canvas = createCanvas(TORCH_FRAMES * CAMPFIRE_CELL, CAMPFIRE_CELL);
+  const ctx = context2d(canvas);
+  ctx.imageSmoothingEnabled = false;
+  const f = TORCH_FLAME;
+  for (let frame = 0; frame < TORCH_FRAMES; frame++) {
+    const ox = frame * CAMPFIRE_CELL;
+    drawCampfireBase(ctx, ox, frame);
+    for (const flame of CAMPFIRE_FLAMES) {
+      const torch = imageFor(`torch_${((frame + flame.lag) % TORCH_FRAMES) + 1}`);
+      ctx.drawImage(torch, f.x, f.y, f.w, f.h, ox + flame.x, flame.y, f.w * flame.scale, f.h * flame.scale);
+    }
+  }
+  const strip = Texture.from(canvas);
+  strip.source.scaleMode = 'nearest';
+  setTexture('campfire', strip);
+}
+
 export async function loadAllAssets(onProgress?: (fraction: number) => void): Promise<void> {
   await loadSheets(allSheets());
   buildTorchStrip();
+  buildCampfireStrip();
   for (const [key, draw] of Object.entries(PROCEDURAL)) setTexture(key, Texture.from(draw()));
   setTexture('panel_hud', Texture.from(genPanelBg(HUD_PANEL.w, HUD_PANEL.h)));
   setTexture('panel_inv', Texture.from(genPanelBg(INVENTORY_PANEL.w, INVENTORY_PANEL.h)));

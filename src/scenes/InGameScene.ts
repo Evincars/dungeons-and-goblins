@@ -3,7 +3,7 @@ import type { Application } from 'pixi.js';
 import { world, q, localPlayer } from '../world';
 import type { Player } from '../world';
 import type { Scene, SceneManager } from '../game/SceneManager';
-import { buildDungeon, randomSeed } from '../level/DungeonGenerator';
+import { buildDungeon, prepareLevel, randomSeed } from '../level/DungeonGenerator';
 import { buildLevelView } from '../level/TileRenderer';
 import type { LevelView } from '../level/TileRenderer';
 import { DarknessRenderer } from '../level/DarknessRenderer';
@@ -32,6 +32,7 @@ import { coop } from '../network/CoopSession';
 import { GuestGame, HostGame } from '../network/CoopGame';
 import { descend, restorePlayer, run, startRun } from '../game/Run';
 import { ResultPanel } from '../ui/ResultPanel';
+import { attempt, report } from '../core/errors';
 
 /** Tiles revealed around each player when the level starts (every tick after, FOG_REVEAL_TILES). */
 const START_REVEAL_TILES = 6;
@@ -106,7 +107,8 @@ export class InGameScene implements Scene {
     this.container.addChild(this.gameLayer, this.uiLayer);
 
     // A guest builds the level the host announced; alone or hosting, a fresh one.
-    const seed = this.mode === 'guest' ? coop.level?.seed ?? 0 : randomSeed();
+    const seed = this.mode === 'guest' ? coop.level?.seed ?? 0 : run.nextSeed ?? randomSeed();
+    run.nextSeed = null;
     const depth = this.mode === 'guest' ? coop.level?.depth ?? 1 : run.depth;
     const { level, spawns } = buildDungeon(seed, this.mode !== 'guest');
     this.level = level;
@@ -287,7 +289,8 @@ export class InGameScene implements Scene {
       light.x = e.position.x;
       light.y = e.position.y - (e.yOffset ?? 0);
       light.radius = e.glow.radius;
-      light.kind = 0;
+      light.kind = e.glow.cool ? 1 : 0;
+      light.flicker = e.glow.flicker;
       lights.push(light);
     }
     return lights;
@@ -320,6 +323,7 @@ export class InGameScene implements Scene {
     this.complete = true;
     closeShop();
     this.host?.levelComplete();
+    if (this.mode !== 'guest') this.prepareNextLevel();
     const gained = this.levelTotals();
     this.result.show({
       title: 'LEVEL COMPLETE',
@@ -332,6 +336,16 @@ export class InGameScene implements Scene {
       ],
     });
     this.showPointer(true);
+  }
+
+  /** Picks the next level and generates its map in the background, once the summary has drawn. */
+  private prepareNextLevel(): void {
+    const seed = randomSeed();
+    run.nextSeed = seed;
+    setTimeout(() => {
+      const ready = attempt(() => prepareLevel(seed));
+      if (!ready.ok) report(ready.error, 'Could not prepare the next level', 'level');
+    }, 0);
   }
 
   /** Kills, XP and gold earned on this level alone. */

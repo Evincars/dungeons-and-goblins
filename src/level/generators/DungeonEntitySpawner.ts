@@ -6,7 +6,7 @@ import type { MobType } from '../../world';
 import { TILE_WIDTH, TILE_HEIGHT, TileType } from '../TileType';
 import { createMob } from '../../entities/MobFactory';
 import {
-  createChest, createExitButton, createProp, createRoom, createSafeDoor, createShopNpc, createTorch,
+  createCampfire, createChest, createExitButton, createProp, createRoom, createSafeDoor, createShopNpc, createTorch,
 } from '../../entities/DungeonFactory';
 import type { Level } from '../Level';
 import { forEachTile } from '../Grid';
@@ -68,11 +68,12 @@ function populateRoom(level: Level, room: RoomData, cfg: DungeonConfig): void {
   }
 }
 
-/** Decor every browser builds for itself from the seeded layout: rooms, torches and props. */
+/** Decor every browser builds for itself from the seeded layout: rooms, torches, props and campfires. */
 export function spawnDecor(layout: DungeonLayout): void {
   for (const room of layout.rooms) createRoom(room);
   for (const tp of layout.torchPositions) createTorch(tp.x, tp.y);
   for (const p of layout.props) createProp(p);
+  for (const c of layout.campfires) createCampfire(c.x, c.y);
 }
 
 /** What changes during play, made by whoever runs the game (alone, or the co-op host). */

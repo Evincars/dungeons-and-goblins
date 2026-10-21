@@ -2,13 +2,17 @@ import { q } from '../world';
 import type { Entity } from '../world';
 
 /** One trip into the dungeon: how deep the party has gone. A new run starts from the title screen. */
-export const run = {
-  depth: 1,
+type RunState = {
+  depth: number;
   /** Alone, one death or fall ends the run; the scene sets this when the level starts. */
-  hardcore: false,
+  hardcore: boolean;
   /** The run is lost: dying or falling ended it, and the game over screen is up. */
-  over: false,
+  over: boolean;
+  /** Seed of the next level, picked (and its map generated) as soon as the exit is pulled. */
+  nextSeed: number | null;
 };
+
+export const run: RunState = { depth: 1, hardcore: false, over: false, nextSeed: null };
 
 /** What a player takes down to the next level: their progress and gear, not their position or wounds. */
 type Carry = {
@@ -26,6 +30,7 @@ const seatOf = (player: Entity): string => player.playerSlot ?? 'host';
 export function startRun(): void {
   run.depth = 1;
   run.over = false;
+  run.nextSeed = null;
   carried.clear();
 }
 

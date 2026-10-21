@@ -2,7 +2,7 @@ import { world, q, isMob } from '../world';
 import type { Entity, Player } from '../world';
 import type { Level } from '../level/Level';
 import { hitMob } from './SwordSystem';
-import { createDustFx } from '../entities/FxFactory';
+import { spawnBurstPuff } from '../entities/FxFactory';
 import { createSpellBolt } from '../entities/ProjectileFactory';
 import { SPELL_STATS } from '../entities/WeaponStats';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
@@ -18,7 +18,7 @@ const victims: Entity[] = [];
 
 function burst(bolt: Entity): void {
   const p = bolt.position;
-  for (let i = 0; p && i < SPELL_STATS.burstPuffs; i++) createDustFx(p.x, p.y);
+  for (let i = 0; p && i < SPELL_STATS.burstPuffs; i++) spawnBurstPuff(p.x, p.y);
   world.addComponent(bolt, 'removed', true);
 }
 

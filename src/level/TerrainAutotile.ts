@@ -8,7 +8,14 @@ import { TileType, TILE_WIDTH, TILE_HEIGHT } from './TileType';
  * a `z` are drawn among the entities at that depth (walls characters can stand
  * behind, arch lintels); the rest lie flat beneath everything.
  */
-export type TerrainPiece = { dx: number; dy: number; sx: number; sy: number; w: number; h: number; z?: number };
+export type TerrainPiece = {
+  dx: number; dy: number; sx: number; sy: number; w: number; h: number; z?: number;
+  /** Texture the rect is cut from, when not the catacomb tileset: cave ground lies beneath all of it. */
+  sheet?: typeof CAVE_GROUND;
+};
+
+/** The cave tileset (/caves/MainLev2.0.png), whose charcoal ground tiles floor the cave halls. */
+export const CAVE_GROUND = 'cave_ground';
 
 // Terrain is autotiled on 16px sub-tiles (the tileset's native grid); walls are
 // outlined with 8px quarter pieces. A wall mass renders as black void with a
@@ -70,6 +77,13 @@ const FLOOR_ROUGH: Array<[number, number]> = [[304, 336], [336, 336], [304, 400]
 const FLOOR_SAFE: Array<[number, number]> = [[832, 208]];
 const FLOOR_GRATE: [number, number] = [496, 288];
 
+// Cave ground (MainLev2.0.png, charcoal set): bare earth, pebbles, and tufts of blue grass.
+const CAVE_PLAIN: Array<[number, number]> = [[0, 1472], [32, 1472], [0, 1504], [32, 1504], [64, 1472], [96, 1472]];
+const CAVE_PEBBLES: Array<[number, number]> = [
+  [0, 1344], [32, 1344], [64, 1344], [96, 1344], [0, 1376], [32, 1376], [64, 1376], [96, 1376],
+];
+const CAVE_GRASS: Array<[number, number]> = [[128, 1376], [160, 1376], [192, 1376], [224, 1376], [256, 1376]];
+
 // Pit interior for holes that aren't part of a framed 2×2 pit
 const PIT_WALL: Array<[number, number]> = [[384, 208], [384, 224]];
 
@@ -106,6 +120,12 @@ const PIT_SUBTILES = 4;
 const FLOOR_NOISE_SCALE = 6;
 const FLOOR_ROUGH_LEVEL = 0.82;
 const FLOOR_PATCH_LEVEL = 0.64;
+/** Cave halls: noise scale (tiles) of their patches of cave ground, the level above which a tile is cave
+ *  ground, and the levels above which that ground grows grass or is strewn with pebbles. */
+const CAVE_NOISE_SCALE = 4;
+const CAVE_LEVEL = 0.32;
+const CAVE_GRASS_LEVEL = 0.72;
+const CAVE_PEBBLE_EVERY = 4;
 /** One floor tile in this many (by hash) is a drain grate. */
 const GRATE_EVERY = 53;
 /** One plain full-height face column in this many (by hash) shows an arched window. */
@@ -228,8 +248,24 @@ class TerrainBuilder {
   private readonly addFloor = (tx: number, ty: number): void => {
     const t = this.level.getTile(tx, ty);
     if (!t || (t.type !== TileType.Floor && t.type !== TileType.Obstacle)) return;
+    const cave = this.caveSource(tx, ty);
+    if (cave) {
+      this.floorPieces.push({ dx: tx * TILE_WIDTH, dy: ty * TILE_HEIGHT, sx: cave[0], sy: cave[1], w: TILE_WIDTH, h: TILE_HEIGHT, sheet: CAVE_GROUND });
+      return;
+    }
     quad(this.floorPieces, tx * TILE_WIDTH, ty * TILE_HEIGHT, this.floorSource(t, tx, ty), TILE_WIDTH, TILE_HEIGHT);
   };
+
+  /** In a cave hall, patches of the floor are cave ground: bare, pebbly or grassy. */
+  private caveSource(tx: number, ty: number): Src | null {
+    if (!this.level.caveFloor.has(tx + ty * this.level.width)) return null;
+    const n = noise(tx, ty, CAVE_NOISE_SCALE);
+    if (n < CAVE_LEVEL) return null;
+    const v = hash(tx, ty);
+    if (n > CAVE_GRASS_LEVEL) return CAVE_GRASS[v % CAVE_GRASS.length];
+    if (v % CAVE_PEBBLE_EVERY === 0) return CAVE_PEBBLES[v % CAVE_PEBBLES.length];
+    return CAVE_PLAIN[v % CAVE_PLAIN.length];
+  }
 
   private floorSource(t: TileData, tx: number, ty: number): Src {
     const v = hash(tx, ty);

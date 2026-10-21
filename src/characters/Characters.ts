@@ -92,6 +92,11 @@ export function groundOffset(def: CharacterDef, scale = def.scale): number {
   return Math.round((def.feetY - centerY) * scale);
 }
 
+/** How far above the ground position the top of the head is drawn. */
+export function headAboveFeet(def: CharacterDef, scale = def.scale): number {
+  return Math.round((def.feetY - def.headY) * scale);
+}
+
 /** How far above the sprite's centre the top of the head is drawn. */
 export function headAboveCenter(def: CharacterDef, scale = def.scale): number {
   const centerY = (def.trim?.y ?? 0) + (def.trim?.h ?? def.frameHeight) / 2;

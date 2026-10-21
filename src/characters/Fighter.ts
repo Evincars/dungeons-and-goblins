@@ -1,6 +1,6 @@
 import type { CharacterDef } from './CharacterDef';
 
-const DIR = '/Fighter';
+const DIR = '/fighter';
 
 // 112×96 frames; the body sits ~54px from the left edge, so crop to 108 to centre it for mirroring.
 // Jump and block strips exist in the folder but aren't wired up yet.

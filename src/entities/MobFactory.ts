@@ -33,24 +33,24 @@ export type MobConfig = {
 /** Health, damage per hit and XP reward live in src/data/stats.json so they can be tuned without touching code. */
 const STATS = stats.mobs satisfies Record<MobType, Pick<MobConfig, 'health' | 'strength' | 'deathPoints'>>;
 
+/** Every enemy stands with its feet on its position, like the player, so none looks sunk into the wall above it. */
 export const MOB_CONFIGS = {
   goblin: {
     ...STATS.goblin, character: ORC.id, speed: 0.7, limp: 4,
-    radius: { x: 10, y: 10 }, yOffset: 24, scale: 1.3, minimapColor: 0xff4040,
+    radius: { x: 10, y: 10 }, yOffset: groundOffset(ORC, 1.3), scale: 1.3, minimapColor: 0xff4040,
   },
   skeleton: {
     ...STATS.skeleton, character: ORC.id, speed: 0.6, limp: 3,
-    radius: { x: 10, y: 10 }, yOffset: 24, scale: 1.4, minimapColor: 0xff4040,
+    radius: { x: 10, y: 10 }, yOffset: groundOffset(ORC, 1.4), scale: 1.4, minimapColor: 0xff4040,
   },
   orc: {
     ...STATS.orc, character: ORC.id, speed: 0.5, limp: 3,
-    radius: { x: 12, y: 12 }, yOffset: 26, scale: 1.6, minimapColor: 0xff4040,
+    radius: { x: 12, y: 12 }, yOffset: groundOffset(ORC, 1.6), scale: 1.6, minimapColor: 0xff4040,
   },
   troll: {
     ...STATS.troll, character: ORC.id, speed: 0.4, limp: 2,
-    radius: { x: 16, y: 14 }, yOffset: 30, scale: 2.0, minimapColor: 0xff8000,
+    radius: { x: 16, y: 14 }, yOffset: groundOffset(ORC, 2.0), scale: 2.0, minimapColor: 0xff8000,
   },
-  // The new goblins stand with their feet on their position, like the player.
   goblin_grunt: {
     ...STATS.goblin_grunt, character: GOBLIN_GRUNT.id, speed: 0.7, limp: 4,
     radius: { x: 9, y: 9 }, yOffset: groundOffset(GOBLIN_GRUNT), scale: GOBLIN_GRUNT.scale, minimapColor: 0xff4040,
@@ -121,7 +121,7 @@ export function createMob(_level: Level, type: MobType, x: number, y: number): E
     chasing: false,
     ai: createMobAI(),
     ...characterComponents(cfg.character, cfg.scale),
-    // Hand-tuned per mob type rather than derived from the feet row.
+    // The kind's own scale may differ from the character's, so the lift comes from the table.
     yOffset: cfg.yOffset,
     minimapColor: cfg.minimapColor,
   });

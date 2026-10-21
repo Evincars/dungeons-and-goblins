@@ -33,11 +33,14 @@ function layerFor(piece: TerrainPiece, base: StaticTileLayer, byZ: Map<number, S
  */
 export function buildLevelView(level: Level): LevelView {
   const base = new StaticTileLayer();
+  // A batch draws from one image, so cave ground has its own, laid first: plinths and pit rims cover it.
+  const cave = new StaticTileLayer();
   const byZ = new Map<number, StaticTileLayer>();
   for (const p of buildTerrainPieces(level)) {
-    layerFor(p, base, byZ).addTile(tilesetRect(p.sx, p.sy, p.w, p.h), p.dx, p.dy);
+    const layer = p.sheet ? cave : layerFor(p, base, byZ);
+    layer.addTile(tilesetRect(p.sx, p.sy, p.w, p.h, p.sheet), p.dx, p.dy);
   }
   const container = new Container();
-  container.addChild(base);
+  container.addChild(cave, base);
   return { base: container, occluders: [...byZ.values()] };
 }

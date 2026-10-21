@@ -2,7 +2,7 @@ import { SpriteSheet, frameRun } from './SpriteSheet';
 import type { Rect, SheetRegion } from './SpriteSheet';
 import { characterSheets } from '../characters/Characters';
 import { PROPS, PROP_IMAGES } from '../level/Props';
-import type { PropImage } from '../level/Props';
+import type { PropDef, PropImage } from '../level/Props';
 
 /**
  * Every image the game loads from /public, and how each is cut up. Characters and props declare their own
@@ -149,15 +149,24 @@ const PROP_IMAGE_EXTRAS: Partial<Record<PropImage, Record<string, SheetRegion>>>
   pedestals: MISSILE_ICONS,
 };
 
-/** One sheet per prop image; each prop is a region keyed `prop_<kind>`. */
+/** A prop's region: its still rect, or its animation frames (which may lie in other prop images). */
+function propRegion(def: PropDef): SheetRegion {
+  if (!def.frames) return def.rect;
+  return { frames: def.frames.map((f) => ({ ...f, image: f.image && propSheetKey(f.image) })) };
+}
+
+const propSheetKey = (image: string): string => `props_${image}`;
+
+/** One sheet per prop image (frame-per-file images too); each prop is a region keyed `prop_<kind>`. */
 function propSheets(): SpriteSheet[] {
-  const regions = new Map<PropImage, Record<string, SheetRegion>>();
-  for (const [kind, def] of Object.entries(PROPS)) {
-    const forImage = regions.get(def.image) ?? { ...PROP_IMAGE_EXTRAS[def.image] };
-    forImage[`prop_${kind}`] = def.rect;
-    regions.set(def.image, forImage);
+  const regions = new Map<string, Record<string, SheetRegion>>();
+  for (const image of Object.keys(PROP_IMAGES)) regions.set(image, {});
+  for (const [image, extras] of Object.entries(PROP_IMAGE_EXTRAS)) Object.assign(regions.get(image) ?? {}, extras);
+  for (const [kind, def] of Object.entries<PropDef>(PROPS)) {
+    const parts = regions.get(def.image);
+    if (parts) parts[`prop_${kind}`] = propRegion(def);
   }
-  return [...regions].map(([image, parts]) => new SpriteSheet(`props_${image}`, PROP_IMAGES[image], { regions: parts }));
+  return Object.entries(PROP_IMAGES).map(([image, src]) => new SpriteSheet(propSheetKey(image), src, { regions: regions.get(image) }));
 }
 
 // ── Everything else ───────────────────────────────────────────────────────────
@@ -165,6 +174,9 @@ function propSheets(): SpriteSheet[] {
 const UI_SHEETS = [
   // Terrain tiles (16×16 base tile, used via tilesetRect())
   new SpriteSheet('tileset', '/catacombs/mainlevbuild.png', { grid: { frameWidth: 16, frameHeight: 16 } }),
+
+  // Cave tileset: its ground tiles floor the cave halls (see level/TerrainAutotile.ts)
+  new SpriteSheet('cave_ground', '/caves/MainLev2.0.png'),
 
   // Torch frames (16×16 each) — composited into a single 'torch' strip by the loader
   new SpriteSheet('torch_1', '/catacombs/torch_1.png'),
@@ -187,6 +199,10 @@ const UI_SHEETS = [
 
   // Catacomb Snatch Redux's main font: 16×16 glyphs of 8×8 for character codes 0–255, drawn white and tinted.
   new SpriteSheet('font_default', '/ui/fonts/font_default.png', { grid: { frameWidth: 8, frameHeight: 8 } }),
+
+  // Effects from Catacomb Snatch Redux: the "!" over a falling player, and footstep dust recoloured to dark dirt.
+  new SpriteSheet('exclamation_mark', '/ui/effects/exclamation_mark.png', { grid: { frameWidth: 4, frameHeight: 13 } }),
+  new SpriteSheet('fx_dirt', '/ui/effects/fx_dirt_12.png', { grid: { frameWidth: 12, frameHeight: 12 } }),
 
   // Chests: closed and open, side by side (the open lid reaches up to the top of the frame).
   new SpriteSheet('chest',       `${OBJECTS}/chest_small.png`, { grid: { frameWidth: 32, frameHeight: 53 } }),

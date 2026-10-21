@@ -3,6 +3,8 @@ import type { Entity } from '../world';
 import type { Level } from '../level/Level';
 import { TileType } from '../level/TileType';
 import { createCoin } from '../entities/LootFactory';
+import { spawnExclamation } from '../entities/FxFactory';
+import { characterDef, headAboveFeet } from '../characters/Characters';
 import { sound } from '../audio/SoundPlayer';
 import { clearTrail } from '../ai/perception/trail';
 import { run } from '../game/Run';
@@ -38,9 +40,13 @@ export function overHole(level: Level, entity: Entity): boolean {
     && holeAt(level, p.x + rx, p.y - ry) && holeAt(level, p.x + rx, p.y + ry);
 }
 
+/** The player slips over the edge: input stops, a "!" pops up over their head and a cry plays. */
 function startFall(player: Entity & { position: { x: number; y: number } }): void {
+  const { x, y } = player.position;
   world.addComponent(player, 'falling', { age: 0, duration: FALL_TICKS });
-  sound.playSound('falling', player.position.x, player.position.y);
+  sound.playSound('falling', x, y);
+  const head = player.character ? headAboveFeet(characterDef(player.character.def), player.visual?.scale) : 0;
+  spawnExclamation(player, x, y, head, FALL_TICKS);
 }
 
 /** Anything that walks onto a hole falls in: mobs are lost, players drop and respawn. */

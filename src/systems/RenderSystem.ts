@@ -86,10 +86,18 @@ function pitFloorY(level: Level, x: number, y: number): number {
   return ty * TILE_HEIGHT;
 }
 
+/** The entity whose fall this sprite follows: its own, or that of the player a "!" hangs over. */
+function fallOf(entity: Entity): Entity | undefined {
+  if (entity.falling) return entity;
+  const owner = entity.fx?.orderId !== undefined ? world.entity(entity.fx.orderId) : undefined;
+  return owner?.falling && entity.visual?.sheet === 'exclamation_mark' ? owner : undefined;
+}
+
 /** A falling entity sinks into its pit; the floor in front of the pit hides what's below it. */
 function syncFall(entity: Entity, sprite: Sprite, level: Level): void {
-  const falling = entity.falling;
-  const pos = entity.position;
+  const faller = fallOf(entity);
+  const falling = faller?.falling;
+  const pos = faller?.position;
   if (!falling || !pos) {
     dropFallMask(entity, sprite);
     return;
@@ -106,13 +114,23 @@ function syncFall(entity: Entity, sprite: Sprite, level: Level): void {
   if (entity.hurtOverlay) entity.hurtOverlay.mask = mask;
 }
 
+/**
+ * Entities overlap back to front by their feet; an effect tied to an entity (dust behind a runner, the "!"
+ * over a faller) is drawn just behind or in front of it instead.
+ */
+function drawOrder(entity: Entity, pos: { x: number; y: number }): number {
+  const fx = entity.fx;
+  if (fx?.orderId === undefined) return pos.y;
+  return (world.entity(fx.orderId)?.position?.y ?? pos.y) + (fx.orderBias ?? 0);
+}
+
 export function updateRender(level: Level): void {
   for (const entity of renderable) {
     const pos = entity.position;
     const sprite = entity.sprite;
     sprite.x = Math.round(pos.x);
     sprite.y = Math.round(pos.y - (entity.yOffset ?? 0));
-    sprite.zIndex = pos.y;
+    sprite.zIndex = drawOrder(entity, pos);
     syncFall(entity, sprite, level);
     syncOverlay(entity, sprite);
   }

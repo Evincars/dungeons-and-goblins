@@ -24,6 +24,14 @@ export type DungeonConfig = {
   enemyDensity: number;
   /** Minimum tiles between torches along a wall. */
   torchSpacing: number;
+  /**
+   * Chance two neighbouring BSP partitions are left whole, making room for a hall: a big cave-floored
+   * room with rock spires, crystals and plants (about one room in five).
+   */
+  hallChance: number;
+  /** Largest hall dimension (tiles); halls are never smaller than `hallMinSize`. */
+  hallMaxSize: number;
+  hallMinSize: number;
   /** Optional deterministic RNG seed (uses Date.now() if omitted). */
   seed?: number;
 };
@@ -41,4 +49,7 @@ export const DEFAULT_CONFIG: DungeonConfig = {
   pitChance:    0.5,
   enemyDensity:  3,
   torchSpacing:  5,
+  hallChance:    0.55,
+  hallMaxSize:  24,
+  hallMinSize:  10,
 };

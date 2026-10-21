@@ -15,6 +15,8 @@ const SHEETS: Record<string, SheetInfo> = {
 
   // Torch animation — 4 frames composited into one 64×16 strip
   torch:              { frameWidth: 16, frameHeight: 16 },
+  // Campfire — stones and logs under torch flames, 4 frames of 24×24
+  campfire:           { frameWidth: 24, frameHeight: 24 },
 
   // ── Procedural UI / FX sheets ───────────────────────────────────────────────
   pickup_coin_16:     { frameWidth: 8,   frameHeight: 8   },
@@ -25,7 +27,6 @@ const SHEETS: Record<string, SheetInfo> = {
   exit_button:        { frameWidth: 32,  frameHeight: 32  },
   fx_sword_swing:     { frameWidth: 48,  frameHeight: 48  },
   fx_death:           { frameWidth: 48,  frameHeight: 48  },
-  fx_dust:            { frameWidth: 16,  frameHeight: 16  },
   dark:               { frameWidth: 32,  frameHeight: 32  },
 };
 
@@ -77,12 +78,12 @@ export function frameTexture(key: string, col: number, row: number): Texture {
   return sheet[i] ?? (sheet[i] = makeFrame(key, c, r));
 }
 
-/** Build a Texture that crops a W×H pixel region at (px, py) from the tileset (terrain building only). */
-export function tilesetRect(px: number, py: number, w: number, h: number): Texture {
-  const id = `${px}:${py}:${w}:${h}`;
+/** Build a Texture that crops a W×H pixel region at (px, py) from a terrain tileset (terrain building only). */
+export function tilesetRect(px: number, py: number, w: number, h: number, sheet = 'tileset'): Texture {
+  const id = `${sheet}:${px}:${py}:${w}:${h}`;
   const hit = rects.get(id);
   if (hit) return hit;
-  const base = getTexture('tileset');
+  const base = getTexture(sheet);
   if (!base.source || base.width === 0) return Texture.EMPTY;
   const tex = new Texture({ source: base.source, frame: new Rectangle(px, py, w, h) });
   rects.set(id, tex);

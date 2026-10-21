@@ -11,6 +11,13 @@ import type { DoorData, RoomData } from '../level/generators/DungeonBuilder';
  * (`localOnly`); the rest change during play and are the host's to send.
  */
 
+/** Campfires light the exit room warmly, flickering like torches; the art is a 4-frame 24px strip. */
+const CAMPFIRE_LIGHT_RADIUS = 96;
+const CAMPFIRE_FRAMES = 4;
+const CAMPFIRE_FRAME_TICKS = 6;
+const CAMPFIRE_SCALE = 1.5;
+/** The fire's art stands on the lower part of its 24px cell. */
+const CAMPFIRE_LIFT = 10;
 /** Torch mounts sit this far above the foot of their wall. */
 const TORCH_LIFT = 30;
 const TORCH_LIGHT_RADIUS = 120;
@@ -74,23 +81,58 @@ export function createTorch(x: number, y: number): Entity {
   });
 }
 
+/** A campfire on its (blocked) tile in the exit room. */
+export function createCampfire(x: number, y: number): Entity {
+  return world.add({
+    position: { x, y },
+    visual: { sheet: 'campfire', scale: CAMPFIRE_SCALE },
+    animation: {
+      sheet: 'campfire', frameX: 0, frameY: 0, frameCount: CAMPFIRE_FRAMES, frameTime: CAMPFIRE_FRAME_TICKS,
+      timer: Math.floor(Math.random() * CAMPFIRE_FRAME_TICKS), loop: true,
+    },
+    glow: { radius: CAMPFIRE_LIGHT_RADIUS, flicker: Math.random() * Math.PI * 2 },
+    yOffset: CAMPFIRE_LIFT,
+    localOnly: true,
+  });
+}
+
+/** The looping animation of an animated prop (candle flames, swaying plants), started at a random frame. */
+function propAnimation(sheet: string, def: PropDef): Pick<Entity, 'animation'> {
+  if (!def.frames) return {};
+  const frameCount = def.frames.length;
+  const frameTime = def.frameTime ?? 1;
+  return {
+    animation: {
+      sheet, frameX: Math.floor(Math.random() * frameCount), frameY: 0, frameCount, frameTime,
+      timer: Math.floor(Math.random() * frameTime), loop: true,
+    },
+  };
+}
+
+/** The light a prop gives off, if any: firelight, or a crystal's cold shine. */
+function propGlow(def: PropDef): Pick<Entity, 'glow'> {
+  return def.glow ? { glow: { radius: def.glow, cool: def.coolGlow } } : {};
+}
+
 /** A decorative prop: standing on its tile, or hung on the brick face above it. */
 export function createProp(p: PropPlacement): Entity {
   const def: PropDef = PROPS[p.kind];
+  const sheet = `prop_${p.kind}`;
   const x = p.tx * TILE_WIDTH + TILE_WIDTH / 2;
   const h = def.rect.h;
   if (def.mount === 'wall') {
     // Stands at the foot of the wall like a torch, drawn up on the bricks.
     return world.add({
-      position: { x, y: p.ty * TILE_HEIGHT }, visual: { sheet: `prop_${p.kind}` }, yOffset: HANG_TOP - h / 2, localOnly: true,
+      position: { x, y: p.ty * TILE_HEIGHT }, visual: { sheet }, yOffset: HANG_TOP - h / 2, localOnly: true,
     });
   }
   return world.add({
     position: { x, y: p.ty * TILE_HEIGHT + PROP_GROUND },
-    visual: { sheet: `prop_${p.kind}` },
+    visual: { sheet },
     yOffset: h / 2,
     localOnly: true,
-    ...(def.glow ? { glow: { radius: def.glow } } : {}),
+    ...propAnimation(sheet, def),
+    ...propGlow(def),
   });
 }
 

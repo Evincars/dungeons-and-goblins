@@ -67,14 +67,33 @@ function walkToTile(level: Level, mob: Mob, goal: number, avoid: Uint8Array | nu
   ai.repathIn = 0;
 }
 
-/** Walks to a point: straight at it when the way is clear, otherwise by route. */
+/** How far, in tiles, an enemy looks for ground to stand on near a target that stands on none (feet can sink into a wall's edge). */
+const STANDABLE_SEARCH_TILES = 2;
+
+/**
+ * Walks to a point: straight at it when the way is clear, otherwise by route. A point on a tile enemies
+ * can't stand on (a player pressed against a wall) is reached by routing to the nearest ground, then
+ * walking the last bit straight at it.
+ */
 function walkToPoint(level: Level, mob: Mob, x: number, y: number): void {
   if (clearLine(level, mob.position.x, mob.position.y, x, y)) {
     resetRoute(mob);
     driveTo(level, mob, x, y);
     return;
   }
-  walkToTile(level, mob, level.tileIndexAt(x, y));
+  const goal = level.tileIndexAt(x, y);
+  if (standable(level, goal)) {
+    walkToTile(level, mob, goal);
+    return;
+  }
+  const ground = nearestStandable(level, x, y, STANDABLE_SEARCH_TILES);
+  if (ground < 0) return;
+  if (level.tileIndexAt(mob.position.x, mob.position.y) !== ground) {
+    walkToTile(level, mob, ground);
+    return;
+  }
+  resetRoute(mob);
+  driveTo(level, mob, x, y);
 }
 
 /**

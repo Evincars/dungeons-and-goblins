@@ -3,6 +3,7 @@ import type { Entity, PlayerSlot } from '../world';
 import type { Level } from '../level/Level';
 import { createPlayer } from '../entities/PlayerFactory';
 import { handleGuestCommand, playerInSlot } from '../game/PlayerActions';
+import { restorePlayer } from '../game/Run';
 import { sound } from '../audio/SoundPlayer';
 import type { SfxName } from '../audio/SoundPlayer';
 import { screenToWorld } from '../render/Camera';
@@ -57,6 +58,7 @@ export class HostGame {
     const [dx, dy] = GUEST_OFFSETS[index] ?? [0, 0];
     const guest = createPlayer(spawn.x + dx, spawn.y + dy);
     world.addComponent(guest, 'playerSlot', slot);
+    restorePlayer(guest);
     world.addComponent(guest, 'remoteInput', true);
     world.addComponent(guest, 'aimWorld', { x: spawn.x + dx, y: spawn.y + dy + 1 });
     setName(guest, coop.nameOf(slot) ?? slot);

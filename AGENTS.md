@@ -56,7 +56,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 | Static terrain batches | **Pixi.js v8** `ParticleContainer` + `Particle` | `src/render/StaticTileLayer.ts` |
 | Sprites, animation, rendering | **Pixi.js v8** `Sprite`, `AnimatedSprite`, `Container` | `src/render/` |
 | 2-D spatial queries (R-tree) | **rbush** | `src/ai/perception/spatial.ts` |
-| Peer-to-peer networking | **PeerJS** (WebRTC) | `src/network/` (co-op, planned) |
+| Peer-to-peer networking | **PeerJS** (WebRTC) | `src/network/CoopSession.ts` |
 
 - Never write your own A*, Dijkstra, heap, spatial hash, vector or bounding-box class.
 - **Yuka first for graphs and pathfinding.** Add another graph library only for an algorithm Yuka
@@ -125,12 +125,13 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - **Fixed-timestep game loop** — simulation advances in whole ticks; presentation runs once per frame;
   animation is driven by ticks, never by Pixi's shared ticker, so pause and co-op stay in sync.
 - **Command** — input becomes data (`playerInput`, one-shot `intents`) that systems consume; the same
-  path will serve remote co-op guests.
+  path serves co-op guests, whose input frames and shop/equipment commands the host checks and applies.
 - **Strategy / Utility AI** — interchangeable tactics (`direct`, `flank`, `support`) scored by Yuka
   `GoalEvaluator`s; the arbiter picks the best one for each enemy in a squad.
-- **State** — scenes and enemy behaviour (`ai.state`: idle → alert → engage → search) are explicit
-  states, run by Yuka's `StateMachine`.
-- **Observer** — narrow callback hooks (`scene.onComplete`, `scene.onQuit`) instead of globals.
+- **State** — scenes (`SceneManager`, with overlays such as settings over the pause menu) and enemy behaviour
+  (`ai.state`: idle → alert → engage → search, run by Yuka's `StateMachine`) are explicit states.
+- **Observer** — narrow callback hooks (`coop.onState`, `coop.onStart`, `sound.onEffect`) instead of globals; whoever
+  installs a hook clears it only while it is still theirs (the next scene is built before the old one goes).
 - **Dirty flag** — `level.tilesDirty` triggers terrain rebuilds only when tiles change.
 
 ## 9. Project map
@@ -144,7 +145,11 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - `src/characters/` — side-view `CharacterDef`s and their animation-state triggers.
 - `src/entities/` — factories and stat tables. `src/render/` — sheets, camera, terrain layers.
 - `src/core/` — cross-cutting: `errors/`, `log/`, `geometry.ts`, `guards.ts`, `debugHooks.ts`.
-- `src/game/` — game loop and settings. `src/scenes/` — title and in-game scenes. `src/ui/` — HUD and panels.
+- `src/game/` — game loop, `SceneManager`, persisted settings, player actions. `src/scenes/` — title, settings,
+  key bindings, co-op lobby and the level itself. `src/ui/` — buttons, HUD, panels, pause menu.
+- `src/network/` — co-op: `protocol.ts` (messages and their validators), `CoopSession.ts` (PeerJS room),
+  `WorldSync.ts` (the host's world snapshot, its validation and the guest's replica), `CoopGame.ts` (host and
+  guest per-tick work). The host is the authority; guests build the level from its seed and send input.
 - `tests/gameplay.test.mjs` — Node test runner over the real modules via Vite SSR.
 
 ## 10. Working conventions

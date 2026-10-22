@@ -1,6 +1,7 @@
 {
   "player": {
-    "health": 50
+    "health": 100,
+    "abilities": { "strength": 15, "dexterity": 14, "constitution": 10, "intelligence": 9, "wisdom": 13, "charisma": 11 }
   },
   "mobs": {
     "goblin":   { "health": 7,   "strength": 5,  "deathPoints": 50 },

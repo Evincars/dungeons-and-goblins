@@ -1,5 +1,5 @@
 {
-  "$comment": "Weapons (icons in /weapons and weapons-1.png). Tune name, cost (gold), weight (kg) and stats freely; gear decides the slot (weapon, offhand).",
+  "$comment": "Weapons (icons in /weapons and weapons-1.png). Tune name, cost (gold), weight (kg) and stats freely; gear decides the slot (weapon, offhand). base is the D&D weapon it plays as (its damage dice, src/rules/WeaponTable.ts); bonus is its magic +0..+3 to hit and damage.",
   "items": [
     {
       "id": "weapon_axe_001",
@@ -7,6 +7,8 @@
       "icon": "weapon_axe_001",
       "src": "/weapons/WR_NightBoundSet _Axe_001.png",
       "kind": "axe",
+      "base": "battleaxe",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -22,6 +24,8 @@
       "icon": "weapon_axe_002",
       "src": "/weapons/WR_NightBoundSet _Axe_002.png",
       "kind": "axe",
+      "base": "battleaxe",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -37,6 +41,8 @@
       "icon": "weapon_axe_003",
       "src": "/weapons/WR_NightBoundSet _Axe_003.png",
       "kind": "axe",
+      "base": "battleaxe",
+      "bonus": 3,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -51,6 +57,8 @@
       "icon": "weapon_axe_004",
       "src": "/weapons/WR_NightBoundSet _Axe_004.png",
       "kind": "axe",
+      "base": "battleaxe",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -66,6 +74,8 @@
       "icon": "weapon_bladed_knuckle_001",
       "src": "/weapons/WR_NightBoundSet _BladedKnuckle_001.png",
       "kind": "bladedknuckle",
+      "base": "punch_dagger",
+      "bonus": 3,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -80,6 +90,8 @@
       "icon": "weapon_bladed_knuckle_002",
       "src": "/weapons/WR_NightBoundSet _BladedKnuckle_002.png",
       "kind": "bladedknuckle",
+      "base": "punch_dagger",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -94,6 +106,8 @@
       "icon": "weapon_bladed_knuckle_003",
       "src": "/weapons/WR_NightBoundSet _BladedKnuckle_003.png",
       "kind": "bladedknuckle",
+      "base": "punch_dagger",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -109,6 +123,8 @@
       "icon": "weapon_bladed_knuckle_004",
       "src": "/weapons/WR_NightBoundSet _BladedKnuckle_004.png",
       "kind": "bladedknuckle",
+      "base": "punch_dagger",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -124,6 +140,8 @@
       "icon": "weapon_bladed_knuckle_005",
       "src": "/weapons/WR_NightBoundSet _BladedKnuckle_005.png",
       "kind": "bladedknuckle",
+      "base": "punch_dagger",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -139,6 +157,8 @@
       "icon": "weapon_bladed_knuckle_006",
       "src": "/weapons/WR_NightBoundSet _BladedKnuckle_006.png",
       "kind": "bladedknuckle",
+      "base": "punch_dagger",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -153,6 +173,8 @@
       "icon": "weapon_bow_001",
       "src": "/weapons/WR_NightBoundSet _Bow_001.png",
       "kind": "bow",
+      "base": "shortbow",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -168,6 +190,8 @@
       "icon": "weapon_bow_002",
       "src": "/weapons/WR_NightBoundSet _Bow_002.png",
       "kind": "bow",
+      "base": "longbow",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -183,6 +207,8 @@
       "icon": "weapon_bow_003",
       "src": "/weapons/WR_NightBoundSet _Bow_003.png",
       "kind": "bow",
+      "base": "longbow",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -198,6 +224,8 @@
       "icon": "weapon_bow_004",
       "src": "/weapons/WR_NightBoundSet _Bow_004.png",
       "kind": "bow",
+      "base": "longbow",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -213,6 +241,8 @@
       "icon": "weapon_bow_005",
       "src": "/weapons/WR_NightBoundSet _Bow_005.png",
       "kind": "bow",
+      "base": "shortbow",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -227,6 +257,8 @@
       "icon": "weapon_crossbow_001",
       "src": "/weapons/WR_NightBoundSet _Crossbow_001.png",
       "kind": "crossbow",
+      "base": "heavy_crossbow",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -241,6 +273,8 @@
       "icon": "weapon_crossbow_002",
       "src": "/weapons/WR_NightBoundSet _Crossbow_002.png",
       "kind": "crossbow",
+      "base": "light_crossbow",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -256,6 +290,8 @@
       "icon": "weapon_crossbow_003",
       "src": "/weapons/WR_NightBoundSet _Crossbow_003.png",
       "kind": "crossbow",
+      "base": "heavy_crossbow",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -270,6 +306,8 @@
       "icon": "weapon_crossbow_004",
       "src": "/weapons/WR_NightBoundSet _Crossbow_004.png",
       "kind": "crossbow",
+      "base": "light_crossbow",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -285,6 +323,8 @@
       "icon": "weapon_glaive_001",
       "src": "/weapons/WR_NightBoundSet _Glaive_001.png",
       "kind": "glaive",
+      "base": "glaive",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -299,6 +339,8 @@
       "icon": "weapon_glaive_002",
       "src": "/weapons/WR_NightBoundSet _Glaive_002.png",
       "kind": "glaive",
+      "base": "glaive",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -313,6 +355,8 @@
       "icon": "weapon_great_hammer_001",
       "src": "/weapons/WR_NightBoundSet _GreatHammer_001.png",
       "kind": "greathammer",
+      "base": "maul",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -328,6 +372,8 @@
       "icon": "weapon_great_hammer_002",
       "src": "/weapons/WR_NightBoundSet _GreatHammer_002.png",
       "kind": "greathammer",
+      "base": "maul",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -342,6 +388,8 @@
       "icon": "weapon_great_hammer_003",
       "src": "/weapons/WR_NightBoundSet _GreatHammer_003.png",
       "kind": "greathammer",
+      "base": "maul",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -357,6 +405,8 @@
       "icon": "weapon_great_mace_001",
       "src": "/weapons/WR_NightBoundSet _GreatMace_001.png",
       "kind": "greatmace",
+      "base": "greatclub",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -371,6 +421,8 @@
       "icon": "weapon_great_mace_002",
       "src": "/weapons/WR_NightBoundSet _GreatMace_002.png",
       "kind": "greatmace",
+      "base": "greatclub",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -386,6 +438,8 @@
       "icon": "weapon_greataxe_001",
       "src": "/weapons/WR_NightBoundSet _Greataxe_001.png",
       "kind": "greataxe",
+      "base": "greataxe",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -400,6 +454,8 @@
       "icon": "weapon_greataxe_002",
       "src": "/weapons/WR_NightBoundSet _Greataxe_002.png",
       "kind": "greataxe",
+      "base": "greataxe",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -415,6 +471,8 @@
       "icon": "weapon_greataxe_003",
       "src": "/weapons/WR_NightBoundSet _Greataxe_003.png",
       "kind": "greataxe",
+      "base": "greataxe",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -429,6 +487,8 @@
       "icon": "weapon_greataxe_004",
       "src": "/weapons/WR_NightBoundSet _Greataxe_004.png",
       "kind": "greataxe",
+      "base": "greataxe",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -444,6 +504,8 @@
       "icon": "weapon_greater_axe_001",
       "src": "/weapons/WR_NightBoundSet _GreaterAxe_001.png",
       "kind": "greateraxe",
+      "base": "greataxe",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -459,6 +521,8 @@
       "icon": "weapon_greater_axe_002",
       "src": "/weapons/WR_NightBoundSet _GreaterAxe_002.png",
       "kind": "greateraxe",
+      "base": "greataxe",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -473,6 +537,8 @@
       "icon": "weapon_gun_000",
       "src": "/weapons/WR_NightBoundSet _Gun_000.png",
       "kind": "gun",
+      "base": "pistol",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -488,6 +554,8 @@
       "icon": "weapon_gun_001",
       "src": "/weapons/WR_NightBoundSet _Gun_001.png",
       "kind": "gun",
+      "base": "pistol",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -502,6 +570,8 @@
       "icon": "weapon_gun_002",
       "src": "/weapons/WR_NightBoundSet _Gun_002.png",
       "kind": "gun",
+      "base": "pistol",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -516,6 +586,8 @@
       "icon": "weapon_gun_003",
       "src": "/weapons/WR_NightBoundSet _Gun_003.png",
       "kind": "gun",
+      "base": "pistol",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -531,6 +603,8 @@
       "icon": "weapon_gun_004",
       "src": "/weapons/WR_NightBoundSet _Gun_004.png",
       "kind": "gun",
+      "base": "pistol",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -545,6 +619,8 @@
       "icon": "weapon_gun_005",
       "src": "/weapons/WR_NightBoundSet _Gun_005.png",
       "kind": "gun",
+      "base": "musket",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -559,6 +635,8 @@
       "icon": "weapon_gun_006",
       "src": "/weapons/WR_NightBoundSet _Gun_006.png",
       "kind": "gun",
+      "base": "musket",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -573,6 +651,8 @@
       "icon": "weapon_gun_007",
       "src": "/weapons/WR_NightBoundSet _Gun_007.png",
       "kind": "gun",
+      "base": "pistol",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -587,6 +667,8 @@
       "icon": "weapon_gun_008",
       "src": "/weapons/WR_NightBoundSet _Gun_008.png",
       "kind": "gun",
+      "base": "pistol",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -601,6 +683,8 @@
       "icon": "weapon_gun_009",
       "src": "/weapons/WR_NightBoundSet _Gun_009.png",
       "kind": "gun",
+      "base": "pistol",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -616,6 +700,8 @@
       "icon": "weapon_gun_010",
       "src": "/weapons/WR_NightBoundSet _Gun_010.png",
       "kind": "gun",
+      "base": "musket",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -631,6 +717,8 @@
       "icon": "weapon_gun_011",
       "src": "/weapons/WR_NightBoundSet _Gun_011.png",
       "kind": "gun",
+      "base": "musket",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -645,6 +733,8 @@
       "icon": "weapon_gun_012",
       "src": "/weapons/WR_NightBoundSet _Gun_012.png",
       "kind": "gun",
+      "base": "pistol",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -659,6 +749,8 @@
       "icon": "weapon_gun_013",
       "src": "/weapons/WR_NightBoundSet _Gun_013.png",
       "kind": "gun",
+      "base": "musket",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -673,6 +765,8 @@
       "icon": "weapon_katar_001",
       "src": "/weapons/WR_NightBoundSet _Katar_001.png",
       "kind": "katar",
+      "base": "punch_dagger",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -687,6 +781,8 @@
       "icon": "weapon_katar_002",
       "src": "/weapons/WR_NightBoundSet _Katar_002.png",
       "kind": "katar",
+      "base": "punch_dagger",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -701,6 +797,8 @@
       "icon": "weapon_katar_003",
       "src": "/weapons/WR_NightBoundSet _Katar_003.png",
       "kind": "katar",
+      "base": "punch_dagger",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -716,6 +814,8 @@
       "icon": "weapon_katar_004",
       "src": "/weapons/WR_NightBoundSet _Katar_004.png",
       "kind": "katar",
+      "base": "punch_dagger",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -730,6 +830,8 @@
       "icon": "weapon_leafcut_001",
       "src": "/weapons/WR_NightBoundSet _Leafcut_001.png",
       "kind": "leafcut",
+      "base": "shortsword",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -745,6 +847,8 @@
       "icon": "weapon_leafcut_002",
       "src": "/weapons/WR_NightBoundSet _Leafcut_002.png",
       "kind": "leafcut",
+      "base": "shortsword",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -760,6 +864,8 @@
       "icon": "weapon_leafcut_003",
       "src": "/weapons/WR_NightBoundSet _Leafcut_003.png",
       "kind": "leafcut",
+      "base": "shortsword",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -774,6 +880,8 @@
       "icon": "weapon_leafcut_004",
       "src": "/weapons/WR_NightBoundSet _Leafcut_004.png",
       "kind": "leafcut",
+      "base": "shortsword",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -789,6 +897,8 @@
       "icon": "weapon_longsword_001",
       "src": "/weapons/WR_NightBoundSet _Longsword_001.png",
       "kind": "longsword",
+      "base": "longsword",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -803,6 +913,8 @@
       "icon": "weapon_longsword_002",
       "src": "/weapons/WR_NightBoundSet _Longsword_002.png",
       "kind": "longsword",
+      "base": "longsword",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -817,6 +929,8 @@
       "icon": "weapon_longsword_003",
       "src": "/weapons/WR_NightBoundSet _Longsword_003.png",
       "kind": "longsword",
+      "base": "longsword",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -832,6 +946,8 @@
       "icon": "weapon_longsword_004",
       "src": "/weapons/WR_NightBoundSet _Longsword_004.png",
       "kind": "longsword",
+      "base": "longsword",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -846,6 +962,8 @@
       "icon": "weapon_longsword_005",
       "src": "/weapons/WR_NightBoundSet _Longsword_005.png",
       "kind": "longsword",
+      "base": "longsword",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -861,6 +979,8 @@
       "icon": "weapon_machete_001",
       "src": "/weapons/WR_NightBoundSet _Machete_001.png",
       "kind": "machete",
+      "base": "scimitar",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -876,6 +996,8 @@
       "icon": "weapon_machete_002",
       "src": "/weapons/WR_NightBoundSet _Machete_002.png",
       "kind": "machete",
+      "base": "scimitar",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -890,6 +1012,8 @@
       "icon": "weapon_machete_003",
       "src": "/weapons/WR_NightBoundSet _Machete_003.png",
       "kind": "machete",
+      "base": "scimitar",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -905,6 +1029,8 @@
       "icon": "weapon_scepter_001",
       "src": "/weapons/WR_NightBoundSet _Scepter_001.png",
       "kind": "scepter",
+      "base": "mace",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -920,6 +1046,8 @@
       "icon": "weapon_scepter_002",
       "src": "/weapons/WR_NightBoundSet _Scepter_002.png",
       "kind": "scepter",
+      "base": "mace",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -934,6 +1062,8 @@
       "icon": "weapon_scepter_003",
       "src": "/weapons/WR_NightBoundSet _Scepter_003.png",
       "kind": "scepter",
+      "base": "mace",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -949,6 +1079,8 @@
       "icon": "weapon_scepter_004",
       "src": "/weapons/WR_NightBoundSet _Scepter_004.png",
       "kind": "scepter",
+      "base": "mace",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -963,6 +1095,7 @@
       "icon": "weapon_shield_001",
       "src": "/weapons/WR_NightBoundSet _Shield_001.png",
       "kind": "shield",
+      "base": "shield",
       "type": "shield",
       "gear": "offhand",
       "stats": {
@@ -977,6 +1110,7 @@
       "icon": "weapon_shield_002",
       "src": "/weapons/WR_NightBoundSet _Shield_002.png",
       "kind": "shield",
+      "base": "shield",
       "type": "shield",
       "gear": "offhand",
       "stats": {
@@ -992,6 +1126,8 @@
       "icon": "weapon_shuriken_001",
       "src": "/weapons/WR_NightBoundSet _Shuriken_001.png",
       "kind": "shuriken",
+      "base": "dart",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1006,6 +1142,8 @@
       "icon": "weapon_shuriken_002",
       "src": "/weapons/WR_NightBoundSet _Shuriken_002.png",
       "kind": "shuriken",
+      "base": "dart",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1020,6 +1158,8 @@
       "icon": "weapon_shuriken_003",
       "src": "/weapons/WR_NightBoundSet _Shuriken_003.png",
       "kind": "shuriken",
+      "base": "dart",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1034,6 +1174,8 @@
       "icon": "weapon_shuriken_004",
       "src": "/weapons/WR_NightBoundSet _Shuriken_004.png",
       "kind": "shuriken",
+      "base": "dart",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1048,6 +1190,8 @@
       "icon": "weapon_shuriken_005",
       "src": "/weapons/WR_NightBoundSet _Shuriken_005.png",
       "kind": "shuriken",
+      "base": "dart",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1063,6 +1207,8 @@
       "icon": "weapon_shuriken_006",
       "src": "/weapons/WR_NightBoundSet _Shuriken_006.png",
       "kind": "shuriken",
+      "base": "dart",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1078,6 +1224,8 @@
       "icon": "weapon_shuriken_007",
       "src": "/weapons/WR_NightBoundSet _Shuriken_007.png",
       "kind": "shuriken",
+      "base": "dart",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1092,6 +1240,8 @@
       "icon": "weapon_shuriken_008",
       "src": "/weapons/WR_NightBoundSet _Shuriken_008.png",
       "kind": "shuriken",
+      "base": "dart",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1106,6 +1256,8 @@
       "icon": "weapon_shuriken_009",
       "src": "/weapons/WR_NightBoundSet _Shuriken_009.png",
       "kind": "shuriken",
+      "base": "dart",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1120,6 +1272,8 @@
       "icon": "weapon_sickle_sword_001",
       "src": "/weapons/WR_NightBoundSet _SickleSword_001.png",
       "kind": "sicklesword",
+      "base": "scimitar",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1134,6 +1288,8 @@
       "icon": "weapon_sickle_sword_002",
       "src": "/weapons/WR_NightBoundSet _SickleSword_002.png",
       "kind": "sicklesword",
+      "base": "scimitar",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1148,6 +1304,8 @@
       "icon": "weapon_staff_001",
       "src": "/weapons/WR_NightBoundSet _Staff_001.png",
       "kind": "staff",
+      "base": "quarterstaff",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1162,6 +1320,8 @@
       "icon": "weapon_staff_002",
       "src": "/weapons/WR_NightBoundSet _Staff_002.png",
       "kind": "staff",
+      "base": "quarterstaff",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1176,6 +1336,8 @@
       "icon": "weapon_sword_001",
       "src": "/weapons/WR_NightBoundSet _Sword_001.png",
       "kind": "sword",
+      "base": "shortsword",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1190,6 +1352,8 @@
       "icon": "weapon_sword_002",
       "src": "/weapons/WR_NightBoundSet _Sword_002.png",
       "kind": "sword",
+      "base": "shortsword",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1204,6 +1368,8 @@
       "icon": "weapon_sword_003",
       "src": "/weapons/WR_NightBoundSet _Sword_003.png",
       "kind": "sword",
+      "base": "shortsword",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1218,6 +1384,8 @@
       "icon": "weapon_sword_004",
       "src": "/weapons/WR_NightBoundSet _Sword_004.png",
       "kind": "sword",
+      "base": "shortsword",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1232,6 +1400,8 @@
       "icon": "weapon_sword_005",
       "src": "/weapons/WR_NightBoundSet _Sword_005.png",
       "kind": "sword",
+      "base": "shortsword",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1246,6 +1416,8 @@
       "icon": "weapon_sword_006",
       "src": "/weapons/WR_NightBoundSet _Sword_006.png",
       "kind": "sword",
+      "base": "shortsword",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1261,6 +1433,8 @@
       "icon": "weapon_sword_007",
       "src": "/weapons/WR_NightBoundSet _Sword_007.png",
       "kind": "sword",
+      "base": "shortsword",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1276,6 +1450,8 @@
       "icon": "weapon_sword_008",
       "src": "/weapons/WR_NightBoundSet _Sword_008.png",
       "kind": "sword",
+      "base": "shortsword",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1291,6 +1467,8 @@
       "icon": "weapon_sword_009",
       "src": "/weapons/WR_NightBoundSet _Sword_009.png",
       "kind": "sword",
+      "base": "shortsword",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1305,6 +1483,8 @@
       "icon": "weapon_sword_010",
       "src": "/weapons/WR_NightBoundSet _Sword_010.png",
       "kind": "sword",
+      "base": "shortsword",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1319,6 +1499,8 @@
       "icon": "weapon_sword_011",
       "src": "/weapons/WR_NightBoundSet _Sword_011.png",
       "kind": "sword",
+      "base": "shortsword",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1333,6 +1515,8 @@
       "icon": "weapon_sword_012",
       "src": "/weapons/WR_NightBoundSet _Sword_012.png",
       "kind": "sword",
+      "base": "shortsword",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1347,6 +1531,7 @@
       "icon": "weapon_tower_shield_001",
       "src": "/weapons/WR_NightBoundSet _TowerShield_001.png",
       "kind": "towershield",
+      "base": "shield",
       "type": "shield",
       "gear": "offhand",
       "stats": {
@@ -1361,6 +1546,7 @@
       "icon": "weapon_tower_shield_002",
       "src": "/weapons/WR_NightBoundSet _TowerShield_002.png",
       "kind": "towershield",
+      "base": "shield",
       "type": "shield",
       "gear": "offhand",
       "stats": {
@@ -1376,6 +1562,8 @@
       "icon": "weapon_wand_001_a",
       "src": "/weapons/WR_NightBoundSet _Wand_001_A.png",
       "kind": "wand",
+      "base": "club",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1390,6 +1578,8 @@
       "icon": "weapon_wand_001_b",
       "src": "/weapons/WR_NightBoundSet _Wand_001_B.png",
       "kind": "wand",
+      "base": "club",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1404,6 +1594,8 @@
       "icon": "weapon_wand_002_a",
       "src": "/weapons/WR_NightBoundSet _Wand_002_A.png",
       "kind": "wand",
+      "base": "club",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1418,6 +1610,8 @@
       "icon": "weapon_wand_002_b",
       "src": "/weapons/WR_NightBoundSet _Wand_002_B.png",
       "kind": "wand",
+      "base": "club",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1433,6 +1627,8 @@
       "icon": "weapon_wand_003_a",
       "src": "/weapons/WR_NightBoundSet _Wand_003_A.png",
       "kind": "wand",
+      "base": "club",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1448,6 +1644,8 @@
       "icon": "weapon_wand_003_b",
       "src": "/weapons/WR_NightBoundSet _Wand_003_B.png",
       "kind": "wand",
+      "base": "club",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1462,6 +1660,8 @@
       "icon": "weapon_wand_004_a",
       "src": "/weapons/WR_NightBoundSet _Wand_004_A.png",
       "kind": "wand",
+      "base": "club",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1477,6 +1677,8 @@
       "icon": "weapon_wand_004_b",
       "src": "/weapons/WR_NightBoundSet _Wand_004_B.png",
       "kind": "wand",
+      "base": "club",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1491,6 +1693,8 @@
       "icon": "weapon_wand_005_a",
       "src": "/weapons/WR_NightBoundSet _Wand_005_A.png",
       "kind": "wand",
+      "base": "club",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1506,6 +1710,8 @@
       "icon": "weapon_wand_005_b",
       "src": "/weapons/WR_NightBoundSet _Wand_005_B.png",
       "kind": "wand",
+      "base": "club",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1521,6 +1727,8 @@
       "icon": "weapon_wand_006_a",
       "src": "/weapons/WR_NightBoundSet _Wand_006_A.png",
       "kind": "wand",
+      "base": "club",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1535,6 +1743,8 @@
       "icon": "weapon_wand_006_b",
       "src": "/weapons/WR_NightBoundSet _Wand_006_B.png",
       "kind": "wand",
+      "base": "club",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1549,6 +1759,8 @@
       "icon": "weapon_dagger_001",
       "src": "/weapons/WR_NightBoundSet_Dagger_001.png",
       "kind": "dagger",
+      "base": "dagger",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1563,6 +1775,8 @@
       "icon": "weapon_dagger_002",
       "src": "/weapons/WR_NightBoundSet_Dagger_002.png",
       "kind": "dagger",
+      "base": "dagger",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1578,6 +1792,8 @@
       "icon": "weapon_dagger_003",
       "src": "/weapons/WR_NightBoundSet_Dagger_003.png",
       "kind": "dagger",
+      "base": "dagger",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1593,6 +1809,8 @@
       "icon": "weapon_dagger_004",
       "src": "/weapons/WR_NightBoundSet_Dagger_004.png",
       "kind": "dagger",
+      "base": "dagger",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1607,6 +1825,8 @@
       "icon": "weapon_dagger_005",
       "src": "/weapons/WR_NightBoundSet_Dagger_005.png",
       "kind": "dagger",
+      "base": "dagger",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1621,6 +1841,8 @@
       "icon": "weapon_grappling_hook_001",
       "src": "/weapons/WR_NightBoundSet_GrapplingHook_001.png",
       "kind": "grapplinghook",
+      "base": "whip",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1636,6 +1858,8 @@
       "icon": "weapon_grappling_hook_002",
       "src": "/weapons/WR_NightBoundSet_GrapplingHook_002.png",
       "kind": "grapplinghook",
+      "base": "whip",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1650,6 +1874,8 @@
       "icon": "weapon_grappling_hook_003",
       "src": "/weapons/WR_NightBoundSet_GrapplingHook_003.png",
       "kind": "grapplinghook",
+      "base": "whip",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1665,6 +1891,8 @@
       "icon": "weapon_grappling_hook_004",
       "src": "/weapons/WR_NightBoundSet_GrapplingHook_004.png",
       "kind": "grapplinghook",
+      "base": "whip",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1680,6 +1908,8 @@
       "icon": "weapon_grappling_hook_005",
       "src": "/weapons/WR_NightBoundSet_GrapplingHook_005.png",
       "kind": "grapplinghook",
+      "base": "whip",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1694,6 +1924,8 @@
       "icon": "weapon_grappling_hook_006",
       "src": "/weapons/WR_NightBoundSet_GrapplingHook_006.png",
       "kind": "grapplinghook",
+      "base": "whip",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1708,6 +1940,8 @@
       "icon": "weapon_grappling_hook_007",
       "src": "/weapons/WR_NightBoundSet_GrapplingHook_007.png",
       "kind": "grapplinghook",
+      "base": "whip",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1723,6 +1957,8 @@
       "icon": "weapon_hook_001",
       "src": "/weapons/WR_NightBoundSet_Hook_001.png",
       "kind": "hook",
+      "base": "sickle",
+      "bonus": 3,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1737,6 +1973,8 @@
       "icon": "weapon_hook_002",
       "src": "/weapons/WR_NightBoundSet_Hook_002.png",
       "kind": "hook",
+      "base": "sickle",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1752,6 +1990,8 @@
       "icon": "weapon_hook_003",
       "src": "/weapons/WR_NightBoundSet_Hook_003.png",
       "kind": "hook",
+      "base": "sickle",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1766,6 +2006,8 @@
       "icon": "weapon_hook_004",
       "src": "/weapons/WR_NightBoundSet_Hook_004.png",
       "kind": "hook",
+      "base": "sickle",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1780,6 +2022,8 @@
       "name": "Storm Pike",
       "icon": "weapon_blade_01",
       "kind": "blade",
+      "base": "pike",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1793,6 +2037,8 @@
       "name": "Rusted Glaive",
       "icon": "weapon_blade_02",
       "kind": "blade",
+      "base": "glaive",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1807,6 +2053,8 @@
       "name": "Pale Falchion",
       "icon": "weapon_blade_03",
       "kind": "blade",
+      "base": "scimitar",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1820,6 +2068,8 @@
       "name": "Pale Cleaver",
       "icon": "weapon_blade_04",
       "kind": "blade",
+      "base": "glaive",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1833,6 +2083,8 @@
       "name": "Queen's Halberd",
       "icon": "weapon_blade_05",
       "kind": "blade",
+      "base": "halberd",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1847,6 +2099,8 @@
       "name": "Ashen Glaive of Ash",
       "icon": "weapon_blade_06",
       "kind": "blade",
+      "base": "glaive",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1861,6 +2115,8 @@
       "name": "Obsidian Glaive",
       "icon": "weapon_blade_07",
       "kind": "blade",
+      "base": "glaive",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1874,6 +2130,8 @@
       "name": "Zealot's Glaive",
       "icon": "weapon_blade_08",
       "kind": "blade",
+      "base": "glaive",
+      "bonus": 3,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1888,6 +2146,8 @@
       "name": "Thorn Spear of Despair",
       "icon": "weapon_blade_09",
       "kind": "blade",
+      "base": "spear",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1902,6 +2162,8 @@
       "name": "Night Falchion",
       "icon": "weapon_blade_10",
       "kind": "blade",
+      "base": "scimitar",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1916,6 +2178,8 @@
       "name": "Ember Pike of the Deep",
       "icon": "weapon_blade_11",
       "kind": "blade",
+      "base": "pike",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1929,6 +2193,8 @@
       "name": "Silent Cleaver",
       "icon": "weapon_blade_12",
       "kind": "blade",
+      "base": "glaive",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1943,6 +2209,8 @@
       "name": "Molten Halberd",
       "icon": "weapon_blade_13",
       "kind": "blade",
+      "base": "halberd",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1956,6 +2224,8 @@
       "name": "Jade Falchion",
       "icon": "weapon_blade_14",
       "kind": "blade",
+      "base": "scimitar",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1970,6 +2240,8 @@
       "name": "Pale Falchion of Ash",
       "icon": "weapon_blade_15",
       "kind": "blade",
+      "base": "scimitar",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1984,6 +2256,8 @@
       "name": "Hollow Halberd",
       "icon": "weapon_blade_16",
       "kind": "blade",
+      "base": "halberd",
+      "bonus": 3,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -1997,6 +2271,8 @@
       "name": "Storm Glaive of Ruin",
       "icon": "weapon_blade_17",
       "kind": "blade",
+      "base": "glaive",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2010,6 +2286,8 @@
       "name": "Ashen Spear",
       "icon": "weapon_blade_18",
       "kind": "blade",
+      "base": "spear",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2023,6 +2301,8 @@
       "name": "Storm Pike",
       "icon": "weapon_blade_19",
       "kind": "blade",
+      "base": "pike",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2037,6 +2317,8 @@
       "name": "Hollow Spear of Ash",
       "icon": "weapon_blade_20",
       "kind": "blade",
+      "base": "spear",
+      "bonus": 3,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2050,6 +2332,8 @@
       "name": "Lunar Halberd of Embers",
       "icon": "weapon_blade_21",
       "kind": "blade",
+      "base": "halberd",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2063,6 +2347,8 @@
       "name": "Pale Cleaver of the Moon",
       "icon": "weapon_blade_22",
       "kind": "blade",
+      "base": "glaive",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2077,6 +2363,8 @@
       "name": "Dread Spear",
       "icon": "weapon_blade_23",
       "kind": "blade",
+      "base": "spear",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2091,6 +2379,8 @@
       "name": "Queen's Spear of the Goblin King",
       "icon": "weapon_blade_24",
       "kind": "blade",
+      "base": "spear",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2105,6 +2395,8 @@
       "name": "Silent Blade of Dawn",
       "icon": "weapon_blade_25",
       "kind": "blade",
+      "base": "greatsword",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2118,6 +2410,8 @@
       "name": "Pale Glaive",
       "icon": "weapon_blade_26",
       "kind": "blade",
+      "base": "glaive",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2131,6 +2425,8 @@
       "name": "Night Glaive",
       "icon": "weapon_blade_27",
       "kind": "blade",
+      "base": "glaive",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2145,6 +2441,8 @@
       "name": "Wyrm Pike",
       "icon": "weapon_blade_28",
       "kind": "blade",
+      "base": "pike",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2159,6 +2457,8 @@
       "name": "Night Blade",
       "icon": "weapon_blade_29",
       "kind": "blade",
+      "base": "greatsword",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2173,6 +2473,8 @@
       "name": "Obsidian Halberd of Ruin",
       "icon": "weapon_blade_30",
       "kind": "blade",
+      "base": "halberd",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2187,6 +2489,8 @@
       "name": "Wyrm Spear",
       "icon": "weapon_blade_31",
       "kind": "blade",
+      "base": "spear",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2201,6 +2505,8 @@
       "name": "Kingslayer Pike",
       "icon": "weapon_blade_32",
       "kind": "blade",
+      "base": "pike",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2215,6 +2521,8 @@
       "name": "Sun Blade",
       "icon": "weapon_blade_33",
       "kind": "blade",
+      "base": "greatsword",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2229,6 +2537,8 @@
       "name": "Iron Spear",
       "icon": "weapon_blade_34",
       "kind": "blade",
+      "base": "spear",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2243,6 +2553,8 @@
       "name": "Vile Falchion",
       "icon": "weapon_blade_35",
       "kind": "blade",
+      "base": "scimitar",
+      "bonus": 1,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2256,6 +2568,8 @@
       "name": "Runed Cleaver of Embers",
       "icon": "weapon_blade_36",
       "kind": "blade",
+      "base": "glaive",
+      "bonus": 0,
       "type": "weapon",
       "gear": "weapon",
       "stats": {
@@ -2270,6 +2584,8 @@
       "name": "Rusted Falchion of Dawn",
       "icon": "weapon_blade_37",
       "kind": "blade",
+      "base": "scimitar",
+      "bonus": 2,
       "type": "weapon",
       "gear": "weapon",
       "stats": {

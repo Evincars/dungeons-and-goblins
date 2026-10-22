@@ -1,5 +1,5 @@
 {
-  "$comment": "Shields (icons in /shields). Tune name, cost (gold), weight (kg) and stats freely.",
+  "$comment": "Shields (icons in /shields). Tune name, cost (gold), weight (kg) and stats freely. base \"shield\" gives +2 Armor Class (src/rules/ArmorTable.ts).",
   "items": [
     {
       "id": "shield_001",
@@ -8,6 +8,7 @@
       "src": "/shields/01.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 9
       },
@@ -21,6 +22,7 @@
       "src": "/shields/02.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 4,
         "constitution": 5
@@ -35,6 +37,7 @@
       "src": "/shields/03.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 4
       },
@@ -48,6 +51,7 @@
       "src": "/shields/04.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 1,
         "intelligence": 2
@@ -62,6 +66,7 @@
       "src": "/shields/05.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7
       },
@@ -75,6 +80,7 @@
       "src": "/shields/06.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 8
       },
@@ -88,6 +94,7 @@
       "src": "/shields/07.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3
       },
@@ -101,6 +108,7 @@
       "src": "/shields/08.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 6,
         "wisdom": 2
@@ -115,6 +123,7 @@
       "src": "/shields/09.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 8
       },
@@ -128,6 +137,7 @@
       "src": "/shields/10.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 10
       },
@@ -141,6 +151,7 @@
       "src": "/shields/11.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7
       },
@@ -154,6 +165,7 @@
       "src": "/shields/12.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 5,
         "strength": 2
@@ -168,6 +180,7 @@
       "src": "/shields/13.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 9,
         "strength": 1
@@ -182,6 +195,7 @@
       "src": "/shields/14.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3,
         "charisma": 3
@@ -196,6 +210,7 @@
       "src": "/shields/15.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7,
         "wisdom": 1
@@ -210,6 +225,7 @@
       "src": "/shields/16.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 2
       },
@@ -223,6 +239,7 @@
       "src": "/shields/17.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 5
       },
@@ -236,6 +253,7 @@
       "src": "/shields/18.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 8,
         "intelligence": 5
@@ -250,6 +268,7 @@
       "src": "/shields/19.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3
       },
@@ -263,6 +282,7 @@
       "src": "/shields/20.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 6,
         "intelligence": 2
@@ -277,6 +297,7 @@
       "src": "/shields/21.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 8
       },
@@ -290,6 +311,7 @@
       "src": "/shields/22.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7
       },
@@ -303,6 +325,7 @@
       "src": "/shields/23.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 6,
         "intelligence": 3
@@ -317,6 +340,7 @@
       "src": "/shields/24.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 10
       },
@@ -330,6 +354,7 @@
       "src": "/shields/25.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 4,
         "wisdom": 2
@@ -344,6 +369,7 @@
       "src": "/shields/26.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 10
       },
@@ -357,6 +383,7 @@
       "src": "/shields/27.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 5
       },
@@ -370,6 +397,7 @@
       "src": "/shields/28.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 10,
         "intelligence": 4
@@ -384,6 +412,7 @@
       "src": "/shields/29.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 6,
         "strength": 5
@@ -398,6 +427,7 @@
       "src": "/shields/30.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 4,
         "wisdom": 4
@@ -412,6 +442,7 @@
       "src": "/shields/31.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 10,
         "strength": 5
@@ -426,6 +457,7 @@
       "src": "/shields/32.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 5
       },
@@ -439,6 +471,7 @@
       "src": "/shields/33.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 10,
         "constitution": 3
@@ -453,6 +486,7 @@
       "src": "/shields/34.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 4,
         "constitution": 4
@@ -467,6 +501,7 @@
       "src": "/shields/35.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 6
       },
@@ -480,6 +515,7 @@
       "src": "/shields/36.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 5,
         "intelligence": 1
@@ -494,6 +530,7 @@
       "src": "/shields/37.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7
       },
@@ -507,6 +544,7 @@
       "src": "/shields/38.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 1
       },
@@ -520,6 +558,7 @@
       "src": "/shields/39.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 10
       },
@@ -533,6 +572,7 @@
       "src": "/shields/40.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7,
         "wisdom": 2
@@ -547,6 +587,7 @@
       "src": "/shields/41.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 5
       },
@@ -560,6 +601,7 @@
       "src": "/shields/42.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 5,
         "strength": 2
@@ -574,6 +616,7 @@
       "src": "/shields/43.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 4,
         "strength": 4
@@ -588,6 +631,7 @@
       "src": "/shields/44.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 9
       },
@@ -601,6 +645,7 @@
       "src": "/shields/45.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7,
         "strength": 4
@@ -615,6 +660,7 @@
       "src": "/shields/46.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 10,
         "charisma": 2
@@ -629,6 +675,7 @@
       "src": "/shields/47.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 5
       },
@@ -642,6 +689,7 @@
       "src": "/shields/48.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 2,
         "wisdom": 1
@@ -656,6 +704,7 @@
       "src": "/shields/49.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3,
         "charisma": 4
@@ -670,6 +719,7 @@
       "src": "/shields/50.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 9,
         "intelligence": 2
@@ -684,6 +734,7 @@
       "src": "/shields/51.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3,
         "wisdom": 4
@@ -698,6 +749,7 @@
       "src": "/shields/52.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7,
         "charisma": 4
@@ -712,6 +764,7 @@
       "src": "/shields/53.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 4,
         "wisdom": 3
@@ -726,6 +779,7 @@
       "src": "/shields/54.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 9,
         "wisdom": 4
@@ -740,6 +794,7 @@
       "src": "/shields/55.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3,
         "charisma": 2
@@ -754,6 +809,7 @@
       "src": "/shields/56.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 9
       },
@@ -767,6 +823,7 @@
       "src": "/shields/57.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7,
         "strength": 2
@@ -781,6 +838,7 @@
       "src": "/shields/58.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 6,
         "intelligence": 3
@@ -795,6 +853,7 @@
       "src": "/shields/59.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 6,
         "strength": 3
@@ -809,6 +868,7 @@
       "src": "/shields/60.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3,
         "charisma": 5
@@ -823,6 +883,7 @@
       "src": "/shields/61.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 8,
         "wisdom": 3
@@ -837,6 +898,7 @@
       "src": "/shields/62.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3
       },
@@ -850,6 +912,7 @@
       "src": "/shields/63.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3
       },
@@ -863,6 +926,7 @@
       "src": "/shields/64.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 5,
         "wisdom": 4
@@ -877,6 +941,7 @@
       "src": "/shields/65.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3,
         "intelligence": 1
@@ -891,6 +956,7 @@
       "src": "/shields/66.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 5,
         "charisma": 1
@@ -905,6 +971,7 @@
       "src": "/shields/67.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 10,
         "strength": 5
@@ -919,6 +986,7 @@
       "src": "/shields/68.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 9,
         "charisma": 5
@@ -933,6 +1001,7 @@
       "src": "/shields/69.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 6,
         "wisdom": 2
@@ -947,6 +1016,7 @@
       "src": "/shields/70.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 1,
         "charisma": 5
@@ -961,6 +1031,7 @@
       "src": "/shields/71.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 9,
         "charisma": 5
@@ -975,6 +1046,7 @@
       "src": "/shields/72.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 2
       },
@@ -988,6 +1060,7 @@
       "src": "/shields/73.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 1
       },
@@ -1001,6 +1074,7 @@
       "src": "/shields/74.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7,
         "intelligence": 3
@@ -1015,6 +1089,7 @@
       "src": "/shields/75.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 8
       },
@@ -1028,6 +1103,7 @@
       "src": "/shields/76.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 6
       },
@@ -1041,6 +1117,7 @@
       "src": "/shields/77.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 4
       },
@@ -1054,6 +1131,7 @@
       "src": "/shields/78.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 2,
         "constitution": 1
@@ -1068,6 +1146,7 @@
       "src": "/shields/79.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 4,
         "strength": 2
@@ -1082,6 +1161,7 @@
       "src": "/shields/80.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 2
       },
@@ -1095,6 +1175,7 @@
       "src": "/shields/81.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 8,
         "wisdom": 3
@@ -1109,6 +1190,7 @@
       "src": "/shields/82.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 8
       },
@@ -1122,6 +1204,7 @@
       "src": "/shields/83.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7
       },
@@ -1135,6 +1218,7 @@
       "src": "/shields/84.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3
       },
@@ -1148,6 +1232,7 @@
       "src": "/shields/85.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 5
       },
@@ -1161,6 +1246,7 @@
       "src": "/shields/86.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7
       },
@@ -1174,6 +1260,7 @@
       "src": "/shields/87.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 8,
         "charisma": 1
@@ -1188,6 +1275,7 @@
       "src": "/shields/88.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7,
         "charisma": 5
@@ -1202,6 +1290,7 @@
       "src": "/shields/89.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 10
       },
@@ -1215,6 +1304,7 @@
       "src": "/shields/90.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 9,
         "charisma": 5
@@ -1229,6 +1319,7 @@
       "src": "/shields/91.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 5
       },
@@ -1242,6 +1333,7 @@
       "src": "/shields/92.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 9
       },
@@ -1255,6 +1347,7 @@
       "src": "/shields/93.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 6,
         "constitution": 1
@@ -1269,6 +1362,7 @@
       "src": "/shields/94.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 6
       },
@@ -1282,6 +1376,7 @@
       "src": "/shields/95.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3
       },
@@ -1295,6 +1390,7 @@
       "src": "/shields/96.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 6,
         "charisma": 1
@@ -1309,6 +1405,7 @@
       "src": "/shields/97.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 2,
         "constitution": 2
@@ -1323,6 +1420,7 @@
       "src": "/shields/98.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 4,
         "wisdom": 4
@@ -1337,6 +1435,7 @@
       "src": "/shields/99.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 1
       },
@@ -1350,6 +1449,7 @@
       "src": "/shields/100.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 10
       },
@@ -1363,6 +1463,7 @@
       "src": "/shields/101.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7
       },
@@ -1376,6 +1477,7 @@
       "src": "/shields/102.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 6,
         "constitution": 2
@@ -1390,6 +1492,7 @@
       "src": "/shields/103.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 1,
         "constitution": 4
@@ -1404,6 +1507,7 @@
       "src": "/shields/104.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 5,
         "intelligence": 3
@@ -1418,6 +1522,7 @@
       "src": "/shields/105.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 5
       },
@@ -1431,6 +1536,7 @@
       "src": "/shields/106.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 6,
         "charisma": 5
@@ -1445,6 +1551,7 @@
       "src": "/shields/107.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 2,
         "charisma": 2
@@ -1459,6 +1566,7 @@
       "src": "/shields/108.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 5
       },
@@ -1472,6 +1580,7 @@
       "src": "/shields/109.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 1,
         "wisdom": 3
@@ -1486,6 +1595,7 @@
       "src": "/shields/110.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3
       },
@@ -1499,6 +1609,7 @@
       "src": "/shields/111.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 5,
         "charisma": 5
@@ -1513,6 +1624,7 @@
       "src": "/shields/112.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 2
       },
@@ -1526,6 +1638,7 @@
       "src": "/shields/113.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 5
       },
@@ -1539,6 +1652,7 @@
       "src": "/shields/114.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 9
       },
@@ -1552,6 +1666,7 @@
       "src": "/shields/115.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 2,
         "intelligence": 1
@@ -1566,6 +1681,7 @@
       "src": "/shields/116.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3
       },
@@ -1579,6 +1695,7 @@
       "src": "/shields/117.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3,
         "intelligence": 2
@@ -1593,6 +1710,7 @@
       "src": "/shields/118.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 4,
         "charisma": 3
@@ -1607,6 +1725,7 @@
       "src": "/shields/119.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3
       },
@@ -1620,6 +1739,7 @@
       "src": "/shields/120.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7,
         "constitution": 3
@@ -1634,6 +1754,7 @@
       "src": "/shields/121.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 6
       },
@@ -1647,6 +1768,7 @@
       "src": "/shields/122.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 8,
         "wisdom": 5
@@ -1661,6 +1783,7 @@
       "src": "/shields/123.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 6,
         "charisma": 5
@@ -1675,6 +1798,7 @@
       "src": "/shields/124.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 10
       },
@@ -1688,6 +1812,7 @@
       "src": "/shields/125.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 4,
         "strength": 3
@@ -1702,6 +1827,7 @@
       "src": "/shields/127.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3,
         "strength": 4
@@ -1716,6 +1842,7 @@
       "src": "/shields/128.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 9
       },
@@ -1729,6 +1856,7 @@
       "src": "/shields/129.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 9,
         "constitution": 2
@@ -1743,6 +1871,7 @@
       "src": "/shields/130.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 8,
         "intelligence": 5
@@ -1757,6 +1886,7 @@
       "src": "/shields/131.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7,
         "wisdom": 5
@@ -1771,6 +1901,7 @@
       "src": "/shields/132.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7,
         "wisdom": 2
@@ -1785,6 +1916,7 @@
       "src": "/shields/133.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7
       },
@@ -1798,6 +1930,7 @@
       "src": "/shields/134.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 4
       },
@@ -1811,6 +1944,7 @@
       "src": "/shields/135.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 9
       },
@@ -1824,6 +1958,7 @@
       "src": "/shields/136.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 3
       },
@@ -1837,6 +1972,7 @@
       "src": "/shields/137.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 10
       },
@@ -1850,6 +1986,7 @@
       "src": "/shields/138.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7
       },
@@ -1863,6 +2000,7 @@
       "src": "/shields/139.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 2,
         "constitution": 2
@@ -1877,6 +2015,7 @@
       "src": "/shields/140.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 9,
         "strength": 1
@@ -1891,6 +2030,7 @@
       "src": "/shields/141.png",
       "type": "shield",
       "gear": "offhand",
+      "base": "shield",
       "stats": {
         "dexterity": 7
       },

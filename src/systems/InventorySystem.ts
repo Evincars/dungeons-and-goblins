@@ -1,11 +1,11 @@
-import { world } from '../world';
+import { world, isPlayer, q } from '../world';
 import type { Entity } from '../world';
-import { MAX_INVENTORY } from '../game/PlayerActions';
+import { addToBag } from '../game/PlayerActions';
 import { sound } from '../audio/SoundPlayer';
 import { nearby, Sense } from '../ai/perception/spatial';
 
-/** Items this close are picked up while the inventory is open. */
-const PICKUP_RADIUS = 20;
+/** Items lying this close to a player's feet are picked up as they walk over them. */
+const PICKUP_RADIUS = 14;
 
 let inventoryOpen = false;
 
@@ -15,12 +15,12 @@ const carriers = world.with('position', 'playerInput', 'playerStats', 'inventory
 type Carrier = (typeof carriers)['entities'][number];
 const lying: Entity[] = [];
 
-/** Picks up the world items lying at the player's feet, while the bag has room. */
-function pickUp(player: Carrier): void {
+/** Picks up the things lying at a player's feet, as long as there is a free square and it isn't too heavy. */
+function pickUp(player: Entity): void {
+  if (!isPlayer(player) || player.health.current <= 0) return;
   const { x, y } = player.position;
   for (const e of nearby(x, y, PICKUP_RADIUS, Sense.item, lying)) {
-    if (!e.item || !e.position || player.inventory.length >= MAX_INVENTORY) continue;
-    player.inventory.push({ type: e.item.type, name: e.item.name, value: e.item.value });
+    if (!e.item || !e.position || e.removed || !addToBag(player, e.item)) continue;
     sound.playSound('coin', e.position.x, e.position.y);
     world.addComponent(e, 'removed', true);
   }
@@ -42,9 +42,8 @@ export function updateInventoryToggle(): Carrier | undefined {
 }
 
 export function updateInventory(): void {
-  const player = updateInventoryToggle();
-  if (!player || !inventoryOpen) return;
-  pickUp(player);
+  updateInventoryToggle();
+  for (const player of q.players) pickUp(player);
 }
 
 /** A new level starts with the panel shut. */

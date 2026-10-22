@@ -1,5 +1,5 @@
 {
-  "$comment": "Shields (icons in /shields). Tune name, value and stats freely.",
+  "$comment": "Shields (icons in /shields). Tune name, cost (gold), weight (kg) and stats freely.",
   "items": [
     {
       "id": "shield_001",
@@ -8,10 +8,11 @@
       "src": "/shields/01.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 179,
       "stats": {
         "defence": 9
-      }
+      },
+      "weight": 7.6,
+      "cost": 179
     },
     {
       "id": "shield_002",
@@ -20,11 +21,12 @@
       "src": "/shields/02.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 41,
       "stats": {
         "defence": 4,
         "stamina": 5
-      }
+      },
+      "weight": 6.2,
+      "cost": 41
     },
     {
       "id": "shield_003",
@@ -33,10 +35,11 @@
       "src": "/shields/03.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 199,
       "stats": {
         "defence": 4
-      }
+      },
+      "weight": 7.7,
+      "cost": 199
     },
     {
       "id": "shield_004",
@@ -45,11 +48,12 @@
       "src": "/shields/04.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 252,
       "stats": {
         "defence": 1,
         "intelligence": 2
-      }
+      },
+      "weight": 5.0,
+      "cost": 252
     },
     {
       "id": "shield_005",
@@ -58,10 +62,11 @@
       "src": "/shields/05.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 360,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 4.3,
+      "cost": 360
     },
     {
       "id": "shield_006",
@@ -70,10 +75,11 @@
       "src": "/shields/06.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 221,
       "stats": {
         "defence": 8
-      }
+      },
+      "weight": 7.9,
+      "cost": 221
     },
     {
       "id": "shield_007",
@@ -82,10 +88,11 @@
       "src": "/shields/07.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 241,
       "stats": {
         "defence": 3
-      }
+      },
+      "weight": 8.9,
+      "cost": 241
     },
     {
       "id": "shield_008",
@@ -94,11 +101,12 @@
       "src": "/shields/08.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 241,
       "stats": {
         "defence": 6,
         "mana": 2
-      }
+      },
+      "weight": 8.1,
+      "cost": 241
     },
     {
       "id": "shield_009",
@@ -107,10 +115,11 @@
       "src": "/shields/09.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 311,
       "stats": {
         "defence": 8
-      }
+      },
+      "weight": 7.8,
+      "cost": 311
     },
     {
       "id": "shield_010",
@@ -119,10 +128,11 @@
       "src": "/shields/10.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 303,
       "stats": {
         "defence": 10
-      }
+      },
+      "weight": 7.9,
+      "cost": 303
     },
     {
       "id": "shield_011",
@@ -131,10 +141,11 @@
       "src": "/shields/11.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 309,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 7.4,
+      "cost": 309
     },
     {
       "id": "shield_012",
@@ -143,11 +154,12 @@
       "src": "/shields/12.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 86,
       "stats": {
         "defence": 5,
         "strength": 2
-      }
+      },
+      "weight": 4.4,
+      "cost": 86
     },
     {
       "id": "shield_013",
@@ -156,11 +168,12 @@
       "src": "/shields/13.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 186,
       "stats": {
         "defence": 9,
         "strength": 1
-      }
+      },
+      "weight": 6.1,
+      "cost": 186
     },
     {
       "id": "shield_014",
@@ -169,11 +182,12 @@
       "src": "/shields/14.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 275,
       "stats": {
         "defence": 3,
         "luck": 3
-      }
+      },
+      "weight": 5.1,
+      "cost": 275
     },
     {
       "id": "shield_015",
@@ -182,11 +196,12 @@
       "src": "/shields/15.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 288,
       "stats": {
         "defence": 7,
         "mana": 1
-      }
+      },
+      "weight": 3.2,
+      "cost": 288
     },
     {
       "id": "shield_016",
@@ -195,10 +210,11 @@
       "src": "/shields/16.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 286,
       "stats": {
         "defence": 2
-      }
+      },
+      "weight": 3.2,
+      "cost": 286
     },
     {
       "id": "shield_017",
@@ -207,10 +223,11 @@
       "src": "/shields/17.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 353,
       "stats": {
         "defence": 5
-      }
+      },
+      "weight": 4.7,
+      "cost": 353
     },
     {
       "id": "shield_018",
@@ -219,11 +236,12 @@
       "src": "/shields/18.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 192,
       "stats": {
         "defence": 8,
         "intelligence": 5
-      }
+      },
+      "weight": 4.6,
+      "cost": 192
     },
     {
       "id": "shield_019",
@@ -232,10 +250,11 @@
       "src": "/shields/19.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 259,
       "stats": {
         "defence": 3
-      }
+      },
+      "weight": 7.2,
+      "cost": 259
     },
     {
       "id": "shield_020",
@@ -244,11 +263,12 @@
       "src": "/shields/20.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 207,
       "stats": {
         "defence": 6,
         "intelligence": 2
-      }
+      },
+      "weight": 8.7,
+      "cost": 207
     },
     {
       "id": "shield_021",
@@ -257,10 +277,11 @@
       "src": "/shields/21.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 313,
       "stats": {
         "defence": 8
-      }
+      },
+      "weight": 5.7,
+      "cost": 313
     },
     {
       "id": "shield_022",
@@ -269,10 +290,11 @@
       "src": "/shields/22.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 340,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 8.6,
+      "cost": 340
     },
     {
       "id": "shield_023",
@@ -281,11 +303,12 @@
       "src": "/shields/23.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 86,
       "stats": {
         "defence": 6,
         "intelligence": 3
-      }
+      },
+      "weight": 8.9,
+      "cost": 86
     },
     {
       "id": "shield_024",
@@ -294,10 +317,11 @@
       "src": "/shields/24.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 197,
       "stats": {
         "defence": 10
-      }
+      },
+      "weight": 8.7,
+      "cost": 197
     },
     {
       "id": "shield_025",
@@ -306,11 +330,12 @@
       "src": "/shields/25.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 117,
       "stats": {
         "defence": 4,
         "mana": 2
-      }
+      },
+      "weight": 5.2,
+      "cost": 117
     },
     {
       "id": "shield_026",
@@ -319,10 +344,11 @@
       "src": "/shields/26.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 212,
       "stats": {
         "defence": 10
-      }
+      },
+      "weight": 4.3,
+      "cost": 212
     },
     {
       "id": "shield_027",
@@ -331,10 +357,11 @@
       "src": "/shields/27.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 201,
       "stats": {
         "defence": 5
-      }
+      },
+      "weight": 4.4,
+      "cost": 201
     },
     {
       "id": "shield_028",
@@ -343,11 +370,12 @@
       "src": "/shields/28.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 366,
       "stats": {
         "defence": 10,
         "intelligence": 4
-      }
+      },
+      "weight": 4.2,
+      "cost": 366
     },
     {
       "id": "shield_029",
@@ -356,11 +384,12 @@
       "src": "/shields/29.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 381,
       "stats": {
         "defence": 6,
         "strength": 5
-      }
+      },
+      "weight": 4.2,
+      "cost": 381
     },
     {
       "id": "shield_030",
@@ -369,11 +398,12 @@
       "src": "/shields/30.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 43,
       "stats": {
         "defence": 4,
         "mana": 4
-      }
+      },
+      "weight": 6.7,
+      "cost": 43
     },
     {
       "id": "shield_031",
@@ -382,11 +412,12 @@
       "src": "/shields/31.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 306,
       "stats": {
         "defence": 10,
         "strength": 5
-      }
+      },
+      "weight": 8.4,
+      "cost": 306
     },
     {
       "id": "shield_032",
@@ -395,10 +426,11 @@
       "src": "/shields/32.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 240,
       "stats": {
         "defence": 5
-      }
+      },
+      "weight": 8.0,
+      "cost": 240
     },
     {
       "id": "shield_033",
@@ -407,11 +439,12 @@
       "src": "/shields/33.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 171,
       "stats": {
         "defence": 10,
         "stamina": 3
-      }
+      },
+      "weight": 5.9,
+      "cost": 171
     },
     {
       "id": "shield_034",
@@ -420,11 +453,12 @@
       "src": "/shields/34.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 355,
       "stats": {
         "defence": 4,
         "stamina": 4
-      }
+      },
+      "weight": 6.9,
+      "cost": 355
     },
     {
       "id": "shield_035",
@@ -433,10 +467,11 @@
       "src": "/shields/35.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 51,
       "stats": {
         "defence": 6
-      }
+      },
+      "weight": 7.8,
+      "cost": 51
     },
     {
       "id": "shield_036",
@@ -445,11 +480,12 @@
       "src": "/shields/36.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 301,
       "stats": {
         "defence": 5,
         "intelligence": 1
-      }
+      },
+      "weight": 3.5,
+      "cost": 301
     },
     {
       "id": "shield_037",
@@ -458,10 +494,11 @@
       "src": "/shields/37.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 44,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 7.0,
+      "cost": 44
     },
     {
       "id": "shield_038",
@@ -470,10 +507,11 @@
       "src": "/shields/38.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 41,
       "stats": {
         "defence": 1
-      }
+      },
+      "weight": 8.5,
+      "cost": 41
     },
     {
       "id": "shield_039",
@@ -482,10 +520,11 @@
       "src": "/shields/39.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 148,
       "stats": {
         "defence": 10
-      }
+      },
+      "weight": 7.7,
+      "cost": 148
     },
     {
       "id": "shield_040",
@@ -494,11 +533,12 @@
       "src": "/shields/40.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 280,
       "stats": {
         "defence": 7,
         "mana": 2
-      }
+      },
+      "weight": 7.5,
+      "cost": 280
     },
     {
       "id": "shield_041",
@@ -507,10 +547,11 @@
       "src": "/shields/41.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 228,
       "stats": {
         "defence": 5
-      }
+      },
+      "weight": 5.9,
+      "cost": 228
     },
     {
       "id": "shield_042",
@@ -519,11 +560,12 @@
       "src": "/shields/42.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 101,
       "stats": {
         "defence": 5,
         "strength": 2
-      }
+      },
+      "weight": 4.1,
+      "cost": 101
     },
     {
       "id": "shield_043",
@@ -532,11 +574,12 @@
       "src": "/shields/43.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 290,
       "stats": {
         "defence": 4,
         "strength": 4
-      }
+      },
+      "weight": 7.7,
+      "cost": 290
     },
     {
       "id": "shield_044",
@@ -545,10 +588,11 @@
       "src": "/shields/44.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 67,
       "stats": {
         "defence": 9
-      }
+      },
+      "weight": 5.0,
+      "cost": 67
     },
     {
       "id": "shield_045",
@@ -557,11 +601,12 @@
       "src": "/shields/45.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 68,
       "stats": {
         "defence": 7,
         "strength": 4
-      }
+      },
+      "weight": 7.8,
+      "cost": 68
     },
     {
       "id": "shield_046",
@@ -570,11 +615,12 @@
       "src": "/shields/46.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 115,
       "stats": {
         "defence": 10,
         "luck": 2
-      }
+      },
+      "weight": 8.8,
+      "cost": 115
     },
     {
       "id": "shield_047",
@@ -583,10 +629,11 @@
       "src": "/shields/47.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 339,
       "stats": {
         "defence": 5
-      }
+      },
+      "weight": 5.4,
+      "cost": 339
     },
     {
       "id": "shield_048",
@@ -595,11 +642,12 @@
       "src": "/shields/48.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 243,
       "stats": {
         "defence": 2,
         "mana": 1
-      }
+      },
+      "weight": 5.4,
+      "cost": 243
     },
     {
       "id": "shield_049",
@@ -608,11 +656,12 @@
       "src": "/shields/49.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 232,
       "stats": {
         "defence": 3,
         "luck": 4
-      }
+      },
+      "weight": 8.7,
+      "cost": 232
     },
     {
       "id": "shield_050",
@@ -621,11 +670,12 @@
       "src": "/shields/50.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 251,
       "stats": {
         "defence": 9,
         "intelligence": 2
-      }
+      },
+      "weight": 7.3,
+      "cost": 251
     },
     {
       "id": "shield_051",
@@ -634,11 +684,12 @@
       "src": "/shields/51.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 131,
       "stats": {
         "defence": 3,
         "mana": 4
-      }
+      },
+      "weight": 4.0,
+      "cost": 131
     },
     {
       "id": "shield_052",
@@ -647,11 +698,12 @@
       "src": "/shields/52.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 400,
       "stats": {
         "defence": 7,
         "luck": 4
-      }
+      },
+      "weight": 3.8,
+      "cost": 400
     },
     {
       "id": "shield_053",
@@ -660,11 +712,12 @@
       "src": "/shields/53.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 108,
       "stats": {
         "defence": 4,
         "mana": 3
-      }
+      },
+      "weight": 3.9,
+      "cost": 108
     },
     {
       "id": "shield_054",
@@ -673,11 +726,12 @@
       "src": "/shields/54.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 326,
       "stats": {
         "defence": 9,
         "mana": 4
-      }
+      },
+      "weight": 8.4,
+      "cost": 326
     },
     {
       "id": "shield_055",
@@ -686,11 +740,12 @@
       "src": "/shields/55.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 309,
       "stats": {
         "defence": 3,
         "luck": 2
-      }
+      },
+      "weight": 7.8,
+      "cost": 309
     },
     {
       "id": "shield_056",
@@ -699,10 +754,11 @@
       "src": "/shields/56.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 89,
       "stats": {
         "defence": 9
-      }
+      },
+      "weight": 3.9,
+      "cost": 89
     },
     {
       "id": "shield_057",
@@ -711,11 +767,12 @@
       "src": "/shields/57.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 70,
       "stats": {
         "defence": 7,
         "strength": 2
-      }
+      },
+      "weight": 8.0,
+      "cost": 70
     },
     {
       "id": "shield_058",
@@ -724,11 +781,12 @@
       "src": "/shields/58.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 261,
       "stats": {
         "defence": 6,
         "intelligence": 3
-      }
+      },
+      "weight": 8.9,
+      "cost": 261
     },
     {
       "id": "shield_059",
@@ -737,11 +795,12 @@
       "src": "/shields/59.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 58,
       "stats": {
         "defence": 6,
         "strength": 3
-      }
+      },
+      "weight": 6.9,
+      "cost": 58
     },
     {
       "id": "shield_060",
@@ -750,11 +809,12 @@
       "src": "/shields/60.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 117,
       "stats": {
         "defence": 3,
         "luck": 5
-      }
+      },
+      "weight": 5.1,
+      "cost": 117
     },
     {
       "id": "shield_061",
@@ -763,11 +823,12 @@
       "src": "/shields/61.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 307,
       "stats": {
         "defence": 8,
         "mana": 3
-      }
+      },
+      "weight": 6.3,
+      "cost": 307
     },
     {
       "id": "shield_062",
@@ -776,10 +837,11 @@
       "src": "/shields/62.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 297,
       "stats": {
         "defence": 3
-      }
+      },
+      "weight": 3.8,
+      "cost": 297
     },
     {
       "id": "shield_063",
@@ -788,10 +850,11 @@
       "src": "/shields/63.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 217,
       "stats": {
         "defence": 3
-      }
+      },
+      "weight": 3.1,
+      "cost": 217
     },
     {
       "id": "shield_064",
@@ -800,11 +863,12 @@
       "src": "/shields/64.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 184,
       "stats": {
         "defence": 5,
         "mana": 4
-      }
+      },
+      "weight": 8.8,
+      "cost": 184
     },
     {
       "id": "shield_065",
@@ -813,11 +877,12 @@
       "src": "/shields/65.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 283,
       "stats": {
         "defence": 3,
         "intelligence": 1
-      }
+      },
+      "weight": 6.9,
+      "cost": 283
     },
     {
       "id": "shield_066",
@@ -826,11 +891,12 @@
       "src": "/shields/66.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 174,
       "stats": {
         "defence": 5,
         "luck": 1
-      }
+      },
+      "weight": 6.2,
+      "cost": 174
     },
     {
       "id": "shield_067",
@@ -839,11 +905,12 @@
       "src": "/shields/67.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 103,
       "stats": {
         "defence": 10,
         "strength": 5
-      }
+      },
+      "weight": 8.6,
+      "cost": 103
     },
     {
       "id": "shield_068",
@@ -852,11 +919,12 @@
       "src": "/shields/68.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 242,
       "stats": {
         "defence": 9,
         "luck": 5
-      }
+      },
+      "weight": 5.6,
+      "cost": 242
     },
     {
       "id": "shield_069",
@@ -865,11 +933,12 @@
       "src": "/shields/69.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 306,
       "stats": {
         "defence": 6,
         "mana": 2
-      }
+      },
+      "weight": 8.2,
+      "cost": 306
     },
     {
       "id": "shield_070",
@@ -878,11 +947,12 @@
       "src": "/shields/70.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 101,
       "stats": {
         "defence": 1,
         "luck": 5
-      }
+      },
+      "weight": 8.0,
+      "cost": 101
     },
     {
       "id": "shield_071",
@@ -891,11 +961,12 @@
       "src": "/shields/71.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 214,
       "stats": {
         "defence": 9,
         "luck": 5
-      }
+      },
+      "weight": 4.3,
+      "cost": 214
     },
     {
       "id": "shield_072",
@@ -904,10 +975,11 @@
       "src": "/shields/72.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 385,
       "stats": {
         "defence": 2
-      }
+      },
+      "weight": 4.5,
+      "cost": 385
     },
     {
       "id": "shield_073",
@@ -916,10 +988,11 @@
       "src": "/shields/73.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 225,
       "stats": {
         "defence": 1
-      }
+      },
+      "weight": 4.8,
+      "cost": 225
     },
     {
       "id": "shield_074",
@@ -928,11 +1001,12 @@
       "src": "/shields/74.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 284,
       "stats": {
         "defence": 7,
         "intelligence": 3
-      }
+      },
+      "weight": 4.4,
+      "cost": 284
     },
     {
       "id": "shield_075",
@@ -941,10 +1015,11 @@
       "src": "/shields/75.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 374,
       "stats": {
         "defence": 8
-      }
+      },
+      "weight": 6.5,
+      "cost": 374
     },
     {
       "id": "shield_076",
@@ -953,10 +1028,11 @@
       "src": "/shields/76.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 100,
       "stats": {
         "defence": 6
-      }
+      },
+      "weight": 4.6,
+      "cost": 100
     },
     {
       "id": "shield_077",
@@ -965,10 +1041,11 @@
       "src": "/shields/77.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 207,
       "stats": {
         "defence": 4
-      }
+      },
+      "weight": 5.5,
+      "cost": 207
     },
     {
       "id": "shield_078",
@@ -977,11 +1054,12 @@
       "src": "/shields/78.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 188,
       "stats": {
         "defence": 2,
         "stamina": 1
-      }
+      },
+      "weight": 3.8,
+      "cost": 188
     },
     {
       "id": "shield_079",
@@ -990,11 +1068,12 @@
       "src": "/shields/79.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 273,
       "stats": {
         "defence": 4,
         "strength": 2
-      }
+      },
+      "weight": 8.5,
+      "cost": 273
     },
     {
       "id": "shield_080",
@@ -1003,10 +1082,11 @@
       "src": "/shields/80.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 213,
       "stats": {
         "defence": 2
-      }
+      },
+      "weight": 5.1,
+      "cost": 213
     },
     {
       "id": "shield_081",
@@ -1015,11 +1095,12 @@
       "src": "/shields/81.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 367,
       "stats": {
         "defence": 8,
         "mana": 3
-      }
+      },
+      "weight": 5.7,
+      "cost": 367
     },
     {
       "id": "shield_082",
@@ -1028,10 +1109,11 @@
       "src": "/shields/82.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 213,
       "stats": {
         "defence": 8
-      }
+      },
+      "weight": 6.5,
+      "cost": 213
     },
     {
       "id": "shield_083",
@@ -1040,10 +1122,11 @@
       "src": "/shields/83.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 187,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 8.4,
+      "cost": 187
     },
     {
       "id": "shield_084",
@@ -1052,10 +1135,11 @@
       "src": "/shields/84.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 394,
       "stats": {
         "defence": 3
-      }
+      },
+      "weight": 5.5,
+      "cost": 394
     },
     {
       "id": "shield_085",
@@ -1064,10 +1148,11 @@
       "src": "/shields/85.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 107,
       "stats": {
         "defence": 5
-      }
+      },
+      "weight": 8.5,
+      "cost": 107
     },
     {
       "id": "shield_086",
@@ -1076,10 +1161,11 @@
       "src": "/shields/86.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 100,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 6.0,
+      "cost": 100
     },
     {
       "id": "shield_087",
@@ -1088,11 +1174,12 @@
       "src": "/shields/87.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 56,
       "stats": {
         "defence": 8,
         "luck": 1
-      }
+      },
+      "weight": 6.2,
+      "cost": 56
     },
     {
       "id": "shield_088",
@@ -1101,11 +1188,12 @@
       "src": "/shields/88.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 304,
       "stats": {
         "defence": 7,
         "luck": 5
-      }
+      },
+      "weight": 6.1,
+      "cost": 304
     },
     {
       "id": "shield_089",
@@ -1114,10 +1202,11 @@
       "src": "/shields/89.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 73,
       "stats": {
         "defence": 10
-      }
+      },
+      "weight": 3.1,
+      "cost": 73
     },
     {
       "id": "shield_090",
@@ -1126,11 +1215,12 @@
       "src": "/shields/90.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 369,
       "stats": {
         "defence": 9,
         "luck": 5
-      }
+      },
+      "weight": 5.6,
+      "cost": 369
     },
     {
       "id": "shield_091",
@@ -1139,10 +1229,11 @@
       "src": "/shields/91.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 215,
       "stats": {
         "defence": 5
-      }
+      },
+      "weight": 4.1,
+      "cost": 215
     },
     {
       "id": "shield_092",
@@ -1151,10 +1242,11 @@
       "src": "/shields/92.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 63,
       "stats": {
         "defence": 9
-      }
+      },
+      "weight": 3.0,
+      "cost": 63
     },
     {
       "id": "shield_093",
@@ -1163,11 +1255,12 @@
       "src": "/shields/93.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 265,
       "stats": {
         "defence": 6,
         "stamina": 1
-      }
+      },
+      "weight": 7.8,
+      "cost": 265
     },
     {
       "id": "shield_094",
@@ -1176,10 +1269,11 @@
       "src": "/shields/94.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 254,
       "stats": {
         "defence": 6
-      }
+      },
+      "weight": 4.0,
+      "cost": 254
     },
     {
       "id": "shield_095",
@@ -1188,10 +1282,11 @@
       "src": "/shields/95.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 239,
       "stats": {
         "defence": 3
-      }
+      },
+      "weight": 5.8,
+      "cost": 239
     },
     {
       "id": "shield_096",
@@ -1200,11 +1295,12 @@
       "src": "/shields/96.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 135,
       "stats": {
         "defence": 6,
         "luck": 1
-      }
+      },
+      "weight": 7.4,
+      "cost": 135
     },
     {
       "id": "shield_097",
@@ -1213,11 +1309,12 @@
       "src": "/shields/97.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 195,
       "stats": {
         "defence": 2,
         "stamina": 2
-      }
+      },
+      "weight": 6.3,
+      "cost": 195
     },
     {
       "id": "shield_098",
@@ -1226,11 +1323,12 @@
       "src": "/shields/98.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 343,
       "stats": {
         "defence": 4,
         "mana": 4
-      }
+      },
+      "weight": 5.0,
+      "cost": 343
     },
     {
       "id": "shield_099",
@@ -1239,10 +1337,11 @@
       "src": "/shields/99.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 237,
       "stats": {
         "defence": 1
-      }
+      },
+      "weight": 6.1,
+      "cost": 237
     },
     {
       "id": "shield_100",
@@ -1251,10 +1350,11 @@
       "src": "/shields/100.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 242,
       "stats": {
         "defence": 10
-      }
+      },
+      "weight": 6.3,
+      "cost": 242
     },
     {
       "id": "shield_101",
@@ -1263,10 +1363,11 @@
       "src": "/shields/101.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 100,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 7.7,
+      "cost": 100
     },
     {
       "id": "shield_102",
@@ -1275,11 +1376,12 @@
       "src": "/shields/102.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 235,
       "stats": {
         "defence": 6,
         "stamina": 2
-      }
+      },
+      "weight": 3.6,
+      "cost": 235
     },
     {
       "id": "shield_103",
@@ -1288,11 +1390,12 @@
       "src": "/shields/103.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 227,
       "stats": {
         "defence": 1,
         "stamina": 4
-      }
+      },
+      "weight": 6.4,
+      "cost": 227
     },
     {
       "id": "shield_104",
@@ -1301,11 +1404,12 @@
       "src": "/shields/104.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 79,
       "stats": {
         "defence": 5,
         "intelligence": 3
-      }
+      },
+      "weight": 4.5,
+      "cost": 79
     },
     {
       "id": "shield_105",
@@ -1314,10 +1418,11 @@
       "src": "/shields/105.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 398,
       "stats": {
         "defence": 5
-      }
+      },
+      "weight": 4.7,
+      "cost": 398
     },
     {
       "id": "shield_106",
@@ -1326,11 +1431,12 @@
       "src": "/shields/106.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 113,
       "stats": {
         "defence": 6,
         "luck": 5
-      }
+      },
+      "weight": 7.6,
+      "cost": 113
     },
     {
       "id": "shield_107",
@@ -1339,11 +1445,12 @@
       "src": "/shields/107.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 169,
       "stats": {
         "defence": 2,
         "luck": 2
-      }
+      },
+      "weight": 6.0,
+      "cost": 169
     },
     {
       "id": "shield_108",
@@ -1352,10 +1459,11 @@
       "src": "/shields/108.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 176,
       "stats": {
         "defence": 5
-      }
+      },
+      "weight": 6.4,
+      "cost": 176
     },
     {
       "id": "shield_109",
@@ -1364,11 +1472,12 @@
       "src": "/shields/109.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 276,
       "stats": {
         "defence": 1,
         "mana": 3
-      }
+      },
+      "weight": 7.6,
+      "cost": 276
     },
     {
       "id": "shield_110",
@@ -1377,10 +1486,11 @@
       "src": "/shields/110.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 133,
       "stats": {
         "defence": 3
-      }
+      },
+      "weight": 8.5,
+      "cost": 133
     },
     {
       "id": "shield_111",
@@ -1389,11 +1499,12 @@
       "src": "/shields/111.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 336,
       "stats": {
         "defence": 5,
         "luck": 5
-      }
+      },
+      "weight": 5.7,
+      "cost": 336
     },
     {
       "id": "shield_112",
@@ -1402,10 +1513,11 @@
       "src": "/shields/112.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 173,
       "stats": {
         "defence": 2
-      }
+      },
+      "weight": 6.7,
+      "cost": 173
     },
     {
       "id": "shield_113",
@@ -1414,10 +1526,11 @@
       "src": "/shields/113.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 207,
       "stats": {
         "defence": 5
-      }
+      },
+      "weight": 6.0,
+      "cost": 207
     },
     {
       "id": "shield_114",
@@ -1426,10 +1539,11 @@
       "src": "/shields/114.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 220,
       "stats": {
         "defence": 9
-      }
+      },
+      "weight": 6.1,
+      "cost": 220
     },
     {
       "id": "shield_115",
@@ -1438,11 +1552,12 @@
       "src": "/shields/115.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 133,
       "stats": {
         "defence": 2,
         "intelligence": 1
-      }
+      },
+      "weight": 7.2,
+      "cost": 133
     },
     {
       "id": "shield_116",
@@ -1451,10 +1566,11 @@
       "src": "/shields/116.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 262,
       "stats": {
         "defence": 3
-      }
+      },
+      "weight": 5.7,
+      "cost": 262
     },
     {
       "id": "shield_117",
@@ -1463,11 +1579,12 @@
       "src": "/shields/117.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 121,
       "stats": {
         "defence": 3,
         "intelligence": 2
-      }
+      },
+      "weight": 6.2,
+      "cost": 121
     },
     {
       "id": "shield_118",
@@ -1476,11 +1593,12 @@
       "src": "/shields/118.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 60,
       "stats": {
         "defence": 4,
         "luck": 3
-      }
+      },
+      "weight": 5.9,
+      "cost": 60
     },
     {
       "id": "shield_119",
@@ -1489,10 +1607,11 @@
       "src": "/shields/119.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 255,
       "stats": {
         "defence": 3
-      }
+      },
+      "weight": 8.6,
+      "cost": 255
     },
     {
       "id": "shield_120",
@@ -1501,11 +1620,12 @@
       "src": "/shields/120.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 120,
       "stats": {
         "defence": 7,
         "stamina": 3
-      }
+      },
+      "weight": 7.2,
+      "cost": 120
     },
     {
       "id": "shield_121",
@@ -1514,10 +1634,11 @@
       "src": "/shields/121.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 265,
       "stats": {
         "defence": 6
-      }
+      },
+      "weight": 8.3,
+      "cost": 265
     },
     {
       "id": "shield_122",
@@ -1526,11 +1647,12 @@
       "src": "/shields/122.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 127,
       "stats": {
         "defence": 8,
         "mana": 5
-      }
+      },
+      "weight": 8.7,
+      "cost": 127
     },
     {
       "id": "shield_123",
@@ -1539,11 +1661,12 @@
       "src": "/shields/123.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 301,
       "stats": {
         "defence": 6,
         "luck": 5
-      }
+      },
+      "weight": 4.6,
+      "cost": 301
     },
     {
       "id": "shield_124",
@@ -1552,10 +1675,11 @@
       "src": "/shields/124.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 276,
       "stats": {
         "defence": 10
-      }
+      },
+      "weight": 6.4,
+      "cost": 276
     },
     {
       "id": "shield_125",
@@ -1564,11 +1688,12 @@
       "src": "/shields/125.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 265,
       "stats": {
         "defence": 4,
         "strength": 3
-      }
+      },
+      "weight": 8.7,
+      "cost": 265
     },
     {
       "id": "shield_127",
@@ -1577,11 +1702,12 @@
       "src": "/shields/127.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 245,
       "stats": {
         "defence": 3,
         "strength": 4
-      }
+      },
+      "weight": 8.0,
+      "cost": 245
     },
     {
       "id": "shield_128",
@@ -1590,10 +1716,11 @@
       "src": "/shields/128.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 86,
       "stats": {
         "defence": 9
-      }
+      },
+      "weight": 3.8,
+      "cost": 86
     },
     {
       "id": "shield_129",
@@ -1602,11 +1729,12 @@
       "src": "/shields/129.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 169,
       "stats": {
         "defence": 9,
         "stamina": 2
-      }
+      },
+      "weight": 3.7,
+      "cost": 169
     },
     {
       "id": "shield_130",
@@ -1615,11 +1743,12 @@
       "src": "/shields/130.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 223,
       "stats": {
         "defence": 8,
         "intelligence": 5
-      }
+      },
+      "weight": 5.7,
+      "cost": 223
     },
     {
       "id": "shield_131",
@@ -1628,11 +1757,12 @@
       "src": "/shields/131.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 334,
       "stats": {
         "defence": 7,
         "mana": 5
-      }
+      },
+      "weight": 3.4,
+      "cost": 334
     },
     {
       "id": "shield_132",
@@ -1641,11 +1771,12 @@
       "src": "/shields/132.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 332,
       "stats": {
         "defence": 7,
         "mana": 2
-      }
+      },
+      "weight": 4.4,
+      "cost": 332
     },
     {
       "id": "shield_133",
@@ -1654,10 +1785,11 @@
       "src": "/shields/133.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 50,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 3.4,
+      "cost": 50
     },
     {
       "id": "shield_134",
@@ -1666,10 +1798,11 @@
       "src": "/shields/134.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 345,
       "stats": {
         "defence": 4
-      }
+      },
+      "weight": 7.0,
+      "cost": 345
     },
     {
       "id": "shield_135",
@@ -1678,10 +1811,11 @@
       "src": "/shields/135.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 303,
       "stats": {
         "defence": 9
-      }
+      },
+      "weight": 7.7,
+      "cost": 303
     },
     {
       "id": "shield_136",
@@ -1690,10 +1824,11 @@
       "src": "/shields/136.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 271,
       "stats": {
         "defence": 3
-      }
+      },
+      "weight": 8.4,
+      "cost": 271
     },
     {
       "id": "shield_137",
@@ -1702,10 +1837,11 @@
       "src": "/shields/137.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 301,
       "stats": {
         "defence": 10
-      }
+      },
+      "weight": 3.9,
+      "cost": 301
     },
     {
       "id": "shield_138",
@@ -1714,10 +1850,11 @@
       "src": "/shields/138.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 329,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 7.3,
+      "cost": 329
     },
     {
       "id": "shield_139",
@@ -1726,11 +1863,12 @@
       "src": "/shields/139.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 195,
       "stats": {
         "defence": 2,
         "stamina": 2
-      }
+      },
+      "weight": 7.0,
+      "cost": 195
     },
     {
       "id": "shield_140",
@@ -1739,11 +1877,12 @@
       "src": "/shields/140.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 395,
       "stats": {
         "defence": 9,
         "strength": 1
-      }
+      },
+      "weight": 3.9,
+      "cost": 395
     },
     {
       "id": "shield_141",
@@ -1752,10 +1891,11 @@
       "src": "/shields/141.png",
       "type": "shield",
       "gear": "offhand",
-      "value": 40,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 8.3,
+      "cost": 40
     }
   ]
 }

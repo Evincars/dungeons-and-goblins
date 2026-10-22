@@ -45,10 +45,11 @@ const { updateCharacterState } = await load('systems/CharacterStateSystem');
 const { characterDef, facingRow } = await load('characters/Characters');
 const { PROPS, HANGINGS, STORE_FURNITURE, CAVE_CENTREPIECES, CAVE_PLANTS, CAVE_CRYSTALS, CRYPT_CENTREPIECES, STORE_CENTREPIECES, HALL_CENTREPIECES } = await load('level/Props');
 const { updateHoles } = await load('systems/HoleSystem');
-const { moveItem } = await load('game/PlayerActions');
+const { moveItem, addToBag, carriedWeight } = await load('game/PlayerActions');
 const { statTotals } = await load('entities/Items');
 const { spawnDrops } = await load('entities/Drops');
-const { createLoot, LOOT_KINDS } = await load('entities/LootFactory');
+const { createLoot, dropLoot, LOOT_KINDS } = await load('entities/LootFactory');
+const { updateInventory } = await load('systems/InventorySystem');
 const { updateLoot } = await load('systems/LootSystem');
 const { updateArrows } = await load('systems/ArrowSystem');
 const { updateDummies } = await load('systems/DummySystem');
@@ -182,6 +183,18 @@ test('enemies see players in the open within sight range, in any direction, past
   assert.equal(canSee(level, mob, player), true, 'a crate does not hide the player');
   wallRect(level, 6, 1, 6, 6);
   assert.equal(canSee(level, mob, player), false, 'a wall blocks sight');
+});
+
+test('an enemy whose feet sink into the wall edge still sees a player right beside it', () => {
+  const level = arena(10, 8);
+  // The bottom border is wall with floor above it: feet may step into it, as in the screenshot.
+  const mob = mobAt(level, 'goblin_rogue', 4, 6);
+  mob.position.y = 7 * TILE_WIDTH + 6;
+  const above = playerAt(4, 5);
+  assert.equal(canSee(level, mob, above), true, 'player just above');
+  above.position.x = centre(6);
+  above.position.y = 7 * TILE_WIDTH + 6;
+  assert.equal(canSee(level, mob, above), true, 'player beside it, both sunk into the wall');
 });
 
 test('players inside a safe room are never spotted, and enemies never path into one', () => {
@@ -610,36 +623,68 @@ test('a level generated ahead of time is the same level the seed builds on the s
   assert.deepEqual(ready.spawns, fresh.spawns);
 });
 
-test('dragging items: gear is worn only where it fits, swaps with what was worn, and comes back off', () => {
+test('dragging items: they stay on the square they are dropped on, gear is worn only where it fits, swaps and comes off', () => {
   const sword = SHOP_ITEMS.find((i) => i.name === 'Short Sword');
   const axe = SHOP_ITEMS.find((i) => i.name === 'Hand Axe');
   const helm = SHOP_ITEMS.find((i) => i.gear === 'head');
   const start = { inventory: [sword, helm, axe], equipped: {} };
+  const corner = moveItem(start, { bag: 0 }, { bag: 41 });
+  assert.equal(corner.inventory[41], sword, 'moved to the bottom corner, and it stays there');
+  assert.equal(corner.inventory[0], null, 'leaving its square empty');
   assert.equal(moveItem(start, { bag: 1 }, { slot: 'legs' }), null, 'a helm is not worn on the legs');
   const armed = moveItem(start, { bag: 0 }, { slot: 'primary' });
   assert.equal(armed.equipped.primary, sword);
-  assert.deepEqual(armed.inventory, [helm, axe]);
-  const swapped = moveItem(armed, { bag: 1 }, { slot: 'primary' });
+  assert.deepEqual(armed.inventory, [null, helm, axe]);
+  const swapped = moveItem(armed, { bag: 2 }, { slot: 'primary' });
   assert.equal(swapped.equipped.primary, axe, 'the axe takes the sword hand');
-  assert.deepEqual(swapped.inventory, [helm, sword], 'and the sword goes back to the bag');
+  assert.equal(swapped.inventory[2], sword, 'and the sword takes the square the axe left');
   const offhand = moveItem(swapped, { slot: 'primary' }, { slot: 'secondary' });
   assert.equal(offhand.equipped.secondary, axe, 'weapons fit either hand');
-  const off = moveItem(offhand, { slot: 'secondary' }, { bag: 0 });
+  const off = moveItem(offhand, { slot: 'secondary' }, { bag: 5 });
   assert.deepEqual(off.equipped, {});
-  assert.deepEqual(off.inventory, [axe, helm, sword]);
+  assert.equal(off.inventory[5], axe, 'taken off onto the square it was dropped on');
+  assert.equal(moveItem(off, { bag: 1 }, { slot: 'medal' }), null, 'only medals go in the medal slot');
   assert.equal(start.inventory.length, 3, 'the old arrangement is left alone');
   assert.deepEqual(statTotals({ primary: axe, head: helm }), { strength: 3, intelligence: 0, stamina: 0, defence: 1, luck: 0, mana: 0 });
 });
 
-test('an opened chest throws out coins from its drop table, as Catacomb Snatch Redux pickups', () => {
+test('an opened chest throws out a weapon or armour and some coins; walking over the gear picks it up', () => {
   spawnDrops(centre(3), centre(3), 'chest');
   const coins = world.entities.filter((e) => e.loot);
+  const gear = world.entities.filter((e) => e.item);
+  assert.equal(gear.length, 1, 'one piece of gear');
+  assert.ok(['weapon', 'offhand', 'armor'].includes(gear[0].item.gear));
   const total = coins.reduce((sum, e) => sum + e.loot.value, 0);
-  assert.ok(coins.length > 0 && total >= 20 && total <= 60, `${coins.length} pieces worth ${total}`);
-  for (const c of coins) assert.equal(c.animation.frameCount, LOOT_KINDS[c.loot.kind].frames);
+  assert.ok(total >= 10 && total <= 30, `coins worth ${total}`);
+  const player = playerAt(3, 3);
+  player.inventory = [];
+  player.position.x = gear[0].position.x;
+  player.position.y = gear[0].position.y;
+  beginPerception();
+  updateInventory();
+  assert.equal(player.inventory.filter(Boolean).length, 1, 'it is in the bag now');
+  assert.ok(gear[0].removed);
   const gem = createLoot(0, 0, 0, 0, 200, true);
   assert.equal(LOOT_KINDS[gem.loot.kind].sheet, 'pickup_gem_ruby_12', 'an exact 200 is a ruby');
-  assert.equal(gem.animation.frameTime, 3, 'spinning at Redux pace');
+});
+
+test('a kill drops only a few coins (gems are rare), and nobody carries more than 100 kg', () => {
+  let gems = 0;
+  for (let i = 0; i < 200; i++) {
+    world.clear();
+    dropLoot(0, 0, 200);
+    const drops = world.entities.filter((e) => e.loot);
+    const coins = drops.filter((e) => LOOT_KINDS[e.loot.kind].sheet.includes('coin'));
+    assert.ok(coins.length >= 1 && coins.length <= 3, `${coins.length} coins`);
+    gems += drops.length - coins.length;
+  }
+  assert.ok(gems < 20, `${gems} gems in 200 kills`);
+  world.clear();
+  const player = playerAt(2, 2);
+  player.inventory = [];
+  assert.equal(addToBag(player, { type: 'armor', name: 'Anvil', value: 1, weight: 90 }), true);
+  assert.equal(addToBag(player, { type: 'armor', name: 'Second anvil', value: 1, weight: 20 }), false, 'over 100 kg');
+  assert.equal(carriedWeight(player), 90);
 });
 
 test('solid props block only the strip at their foot, so characters walk behind tall ones and up to urns', () => {
@@ -685,6 +730,7 @@ test('a new run starts with random weapons, twenty arrows, a shield and armour i
   assert.equal(bag.find((i) => i.gear === 'ammo').count, 20);
   assert.equal(bag.filter((i) => i.gear === 'armor').length, 4);
   assert.equal(bag.filter((i) => i.gear === 'offhand').length, 1);
+  assert.equal(bag.filter((i) => i.gear === 'medal').length, 2, 'and two medals for the medal slot');
 });
 
 test('worn gear applies all its stats, and an item dropped on the gear panel finds its slot', () => {

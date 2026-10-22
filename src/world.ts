@@ -9,7 +9,7 @@ export const enum Team { Neutral = 0, Player = 1 }
 export const enum Facing { North = 0, East = 1, South = 2, West = 3 }
 
 /** Where a player wears or holds gear, in the order the inventory screen lists them. */
-export const EQUIP_SLOTS = ['head', 'armor', 'primary', 'secondary', 'legs', 'other1', 'other2', 'ammo'] as const;
+export const EQUIP_SLOTS = ['head', 'armor', 'primary', 'secondary', 'legs', 'medal', 'other', 'ammo'] as const;
 export type EquipSlot = (typeof EQUIP_SLOTS)[number];
 
 export function isEquipSlot(value: string): value is EquipSlot {
@@ -17,7 +17,7 @@ export function isEquipSlot(value: string): value is EquipSlot {
 }
 
 /** What kind of gear an item is, which decides the slots it fits (see entities/Items.ts). */
-export const GEAR_KINDS = ['head', 'armor', 'weapon', 'offhand', 'legs', 'trinket', 'ammo'] as const;
+export const GEAR_KINDS = ['head', 'armor', 'weapon', 'offhand', 'legs', 'trinket', 'ammo', 'medal'] as const;
 export type GearKind = (typeof GEAR_KINDS)[number];
 
 export function isGearKind(value: unknown): value is GearKind {
@@ -33,7 +33,7 @@ export function isStatName(value: unknown): value is StatName {
   return STAT_NAMES.some((stat) => stat === value);
 }
 
-export const ITEM_TYPES = ['weapon', 'shield', 'helmet', 'armor', 'boots', 'ring', 'ammo'] as const;
+export const ITEM_TYPES = ['weapon', 'shield', 'helmet', 'armor', 'boots', 'ring', 'ammo', 'medal'] as const;
 export type ItemType = (typeof ITEM_TYPES)[number];
 
 export function isItemType(value: unknown): value is ItemType {
@@ -55,7 +55,12 @@ export type InventoryItem = {
   stats?: ItemStats;
   /** How many there are in this one square (arrows); a single thing has none. */
   count?: number;
+  /** Kilograms it weighs (a whole stack, for arrows); what a player carries is limited. */
+  weight?: number;
 };
+
+/** A square of the bag: an item, or empty (the bag keeps items where they were put). */
+export type BagSquare = InventoryItem | null;
 
 /** Who controls a player character: the host, or one of up to three guests in a co-op room. */
 export const PLAYER_SLOTS = ['host', 'p2', 'p3', 'p4'] as const;
@@ -168,8 +173,11 @@ export type Entity = {
   chasing?: boolean;
 
   // --- rendering ---
-  /** `rotation`: radians the sprite is turned (an arrow points where it flies). */
-  visual?: { sheet: string; col?: number; row?: number; scale?: number; rotation?: number };
+  /**
+   * `rotation`: radians the sprite is turned (an arrow points where it flies). `fit`: drawn so its longer
+   * side is this many pixels, whatever size its art is (icons of things lying on the floor).
+   */
+  visual?: { sheet: string; col?: number; row?: number; scale?: number; rotation?: number; fit?: number };
   frame?: number;
   sprite?: Sprite;
   container?: Container;
@@ -287,7 +295,8 @@ export type Entity = {
     spellBonus: number;
     lootBonus: number;
   };
-  inventory?: InventoryItem[];
+  /** The bag, square by square (index = grid square); empty squares are null. */
+  inventory?: BagSquare[];
   equipped?: Partial<Record<EquipSlot, InventoryItem>>;
 
   // --- sword melee ---
@@ -320,7 +329,8 @@ export type Entity = {
   };
 
   // --- world item (picked up to inventory) ---
-  item?: { type: ItemType; name: string; value: number };
+  /** A thing lying on the floor, picked up by walking over it. */
+  item?: InventoryItem;
 
   // --- chest ---
   /** `drops`: the DROP_TABLES entry (entities/Drops.ts) it throws out when opened. */

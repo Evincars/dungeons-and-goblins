@@ -1,19 +1,23 @@
 import { q } from '../world';
 import type { Entity, InventoryItem } from '../world';
-import { ARMORS, ARROWS, HAND_WEAPONS, SHIELDS, randomItem } from '../entities/ItemCatalog';
+import { ARMORS, ARROWS, HAND_WEAPONS, MEDALS, SHIELDS, randomItem } from '../entities/ItemCatalog';
 
 /** Arrows the starting quiver holds, and how many random weapons and suits of armour come with it. */
 const STARTING_ARROWS = 20;
 const STARTING_WEAPONS = 4;
 const STARTING_ARMORS = 4;
 const STARTING_SHIELDS = 1;
+const STARTING_MEDALS = 2;
 
-/** What everyone sets out with, to try the inventory on: random weapons, a quiver of arrows, a shield and armour. */
+/** What everyone sets out with, to try the inventory on: random weapons, a quiver of arrows, a shield, armour and medals. */
 export function giveStartingKit(player: Entity): void {
   const arrows = randomItem(ARROWS);
   arrows.count = STARTING_ARROWS;
   const some = (from: readonly InventoryItem[], n: number) => Array.from({ length: n }, () => randomItem(from));
-  player.inventory = [...some(HAND_WEAPONS, STARTING_WEAPONS), arrows, ...some(SHIELDS, STARTING_SHIELDS), ...some(ARMORS, STARTING_ARMORS)];
+  player.inventory = [
+    ...some(HAND_WEAPONS, STARTING_WEAPONS), arrows, ...some(SHIELDS, STARTING_SHIELDS), ...some(ARMORS, STARTING_ARMORS),
+    ...some(MEDALS, STARTING_MEDALS),
+  ];
 }
 
 /** One trip into the dungeon: how deep the party has gone. A new run starts from the title screen. */

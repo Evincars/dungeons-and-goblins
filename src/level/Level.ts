@@ -206,7 +206,10 @@ export class Level {
     ));
   };
 
-  /** Whether nothing but open floor, furniture or pits lies between two points: only walls block sight. */
+  /**
+   * Whether nothing but open floor, furniture or pits lies between two points: only walls block sight. The
+   * tiles the two stand on don't count — feet may sink into a wall's edge, and that wall is behind them.
+   */
   checkLineOfSight(x0: number, y0: number, x1: number, y1: number): boolean {
     let tx0 = Math.floor(x0 / TILE_WIDTH);
     let ty0 = Math.floor(y0 / TILE_HEIGHT);
@@ -215,14 +218,14 @@ export class Level {
     const dx = Math.abs(tx1 - tx0); const dy = Math.abs(ty1 - ty0);
     const sx = tx0 < tx1 ? 1 : -1; const sy = ty0 < ty1 ? 1 : -1;
     let err = dx - dy;
-    while (tx0 !== tx1 || ty0 !== ty1) {
-      const tile = this.getTile(tx0, ty0);
-      if (!tile || isWallType(tile)) return false;
+    for (;;) {
       const e2 = 2 * err;
       if (e2 > -dy) { err -= dy; tx0 += sx; }
       if (e2 < dx) { err += dx; ty0 += sy; }
+      if (tx0 === tx1 && ty0 === ty1) return true;
+      const tile = this.getTile(tx0, ty0);
+      if (!tile || isWallType(tile)) return false;
     }
-    return true;
   }
 
   addSpawnPoint(x: number, y: number): void {

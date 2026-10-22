@@ -1,14 +1,14 @@
 import { Container, Graphics, Rectangle, Sprite } from 'pixi.js';
 import type { FederatedPointerEvent } from 'pixi.js';
 import { EQUIP_SLOTS, STAT_NAMES, localPlayer } from '../world';
-import type { InventoryItem, Player, StatName } from '../world';
+import type { BagSquare, EquipSlot, InventoryItem, Player, StatName } from '../world';
 import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
 import { getTexture } from '../assets/Textures';
 import { lazyTexture, onArtLoaded } from '../assets/LazyArt';
 import { ItemTooltip } from './ItemTooltip';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
-import { INVENTORY_COLS, INVENTORY_ROWS, moveItem, requestLoadout } from '../game/PlayerActions';
+import { INVENTORY_COLS, INVENTORY_ROWS, MAX_CARRY_KG, carriedWeight, freeSquare, moveItem, requestLoadout } from '../game/PlayerActions';
 import type { ItemPlace } from '../game/PlayerActions';
 import { SLOT_LABELS, STAT_LABELS, itemIcon, slotFor, statTotals } from '../entities/Items';
 
@@ -29,6 +29,9 @@ const TAB_UNDERLINE = 2;
 const STATS_TAB_TEXT = 'test text here...';
 /** Where the title sits, above the bag panel. */
 const TITLE = { x: 80, y: 6 };
+/** The weight carried shows under the gold; it turns orange past this share of what can be carried. */
+const WEIGHT_ROW = 11;
+const HEAVY_SHARE = 0.9;
 /** Height of a stack count, drawn in a square's bottom corner. */
 const COUNT_H = 9;
 
@@ -48,8 +51,8 @@ const ICON_PAD = 3;
 /** The bag grid reaches this close to the leather's edges, and its squares stay at least this far apart. */
 const BAG_PAD = 2;
 const BAG_MIN_GAP = 3;
-/** Two presses on one square this quickly is a double-click: it puts the item on, or takes it off. */
-const DOUBLE_CLICK_MS = 350;
+/** Two presses on one square this quickly (the usual desktop double-click time) is a double-click: it puts the item on, or takes it off. */
+const DOUBLE_CLICK_MS = 500;
 /** Between an equipment label and its square, and between the gear and stats columns. */
 const LABEL_GAP = 6;
 const COLUMN_GAP = 10;
@@ -68,6 +71,16 @@ type Tab = { glow: Graphics; label: PixelLabel; page: Container; hovered: boolea
 /** A rect of the art, in the overlay's design space. */
 function designRect(r: Rect): Rect {
   return { x: r.x * K, y: r.y * K, w: r.w * K, h: r.h * K };
+}
+
+/**
+ * A number that changes when what the bag and slots hold changes in place (an item picked up into an empty
+ * square, an arrow spent), without building anything.
+ */
+function contentsMark(inventory: readonly BagSquare[], equipped: Partial<Record<EquipSlot, InventoryItem>>): number {
+  let mark = 0;
+  for (let i = 0; i < inventory.length; i++) if (inventory[i]) mark += i + 1;
+  return mark * 1000 + (equipped.ammo?.count ?? 0) + Object.keys(equipped).length * 100000;
 }
 
 function samePlace(a: ItemPlace, b: ItemPlace): boolean {
@@ -96,8 +109,9 @@ export class InventoryOverlay {
   private lastPress: { place: ItemPlace; at: number } | null = null;
   private dragging: ItemPlace | null = null;
   private readonly stopListening: () => void;
-  /** What the squares show, so they are redrawn only when the player's things change. */
-  private shown: { inventory: unknown; count: number; equipped: unknown; gold: number } | null = null;
+  /** What the screen shows, so it is redrawn only when the player's things change. */
+  private shown: { inventory: unknown; equipped: unknown; contents: number; gold: number } | null = null;
+  private readonly weight = new PixelLabel('', { color: THEME.buttonText, align: 'right', shadow: true });
 
   constructor() {
     this.container.visible = false;
@@ -124,9 +138,10 @@ export class InventoryOverlay {
     if (!this.container.visible || !player) return;
     const inventory = player.inventory ?? [];
     const equipped = player.equipped ?? {};
+    const contents = contentsMark(inventory, equipped);
     const s = this.shown;
-    if (s && s.inventory === inventory && s.count === inventory.length && s.equipped === equipped && s.gold === player.playerStats.gold) return;
-    this.shown = { inventory, count: inventory.length, equipped, gold: player.playerStats.gold };
+    if (s && s.inventory === inventory && s.equipped === equipped && s.contents === contents && s.gold === player.playerStats.gold) return;
+    this.shown = { inventory, equipped, contents, gold: player.playerStats.gold };
     this.refresh(player);
   }
 
@@ -143,8 +158,9 @@ export class InventoryOverlay {
     this.root.addChild(art);
     const title = new PixelLabel('INVENTORY', { color: THEME.title, scale: 2, shadow: true });
     title.position.set(TITLE.x * K, TITLE.y);
-    this.gold.position.set((BAG_AREA.x + BAG_AREA.w) * K, TITLE.y + 4);
-    this.root.addChild(title, this.gold);
+    this.gold.position.set((BAG_AREA.x + BAG_AREA.w) * K, TITLE.y);
+    this.weight.position.set((BAG_AREA.x + BAG_AREA.w) * K, TITLE.y + WEIGHT_ROW);
+    this.root.addChild(title, this.gold, this.weight);
     this.buildBag(designRect(BAG_AREA));
     const gearPage = new Container();
     const statsPage = new Container();
@@ -297,7 +313,7 @@ export class InventoryOverlay {
   // ── Contents ────────────────────────────────────────────────────────────────
 
   private itemIn(player: Player, place: ItemPlace): InventoryItem | undefined {
-    return 'bag' in place ? player.inventory?.[place.bag] : player.equipped?.[place.slot];
+    return ('bag' in place ? player.inventory?.[place.bag] : player.equipped?.[place.slot]) ?? undefined;
   }
 
   /** Shows an item's picture in a sprite, as large as fits a square of `size` (loading it the first time). */
@@ -318,6 +334,9 @@ export class InventoryOverlay {
     const totals = statTotals(player.equipped ?? {});
     for (const [stat, label] of this.statValues) label.text = String(totals[stat]);
     this.gold.text = `Gold: ${player.playerStats.gold}`;
+    const kg = carriedWeight(player);
+    this.weight.text = `Weight: ${kg.toFixed(1)} / ${MAX_CARRY_KG} kg`;
+    this.weight.fill = kg > MAX_CARRY_KG * HEAVY_SHARE ? 0xffa060 : THEME.buttonText;
   }
 
   // ── Dragging ────────────────────────────────────────────────────────────────
@@ -345,8 +364,10 @@ export class InventoryOverlay {
   }
 
   /** A second press on the same square soon after the first: true when this one completes a double-click. */
-  private doubleClicked(place: ItemPlace): boolean {
-    const now = performance.now();
+  private doubleClicked(place: ItemPlace, e: FederatedPointerEvent): boolean {
+    // Timed by when the press happened, not when a slow frame got round to handling it.
+    const native = e.nativeEvent;
+    const now = 'timeStamp' in native ? native.timeStamp : performance.now();
     const last = this.lastPress;
     this.lastPress = { place, at: now };
     if (!last || now - last.at > DOUBLE_CLICK_MS || !samePlace(last.place, place)) return false;
@@ -354,13 +375,14 @@ export class InventoryOverlay {
     return true;
   }
 
-  /** Double-click: an item in the bag is put on where it fits; a worn one goes back in the bag. */
+  /** Double-click: an item in the bag is put on, replacing whatever is worn there; a worn one goes back in the bag. */
   private quickMove(player: Player, place: ItemPlace): void {
     const loadout = { inventory: player.inventory ?? [], equipped: player.equipped ?? {} };
     const item = this.itemIn(player, place);
     if (!item) return;
-    const slot = 'bag' in place ? slotFor(loadout.equipped, item) : null;
-    const to: ItemPlace | null = 'bag' in place ? (slot ? { slot } : null) : { bag: loadout.inventory.length };
+    const slot = 'bag' in place ? slotFor(loadout.equipped, item, true) : null;
+    const free = freeSquare(loadout.inventory);
+    const to: ItemPlace | null = 'bag' in place ? (slot ? { slot } : null) : (free >= 0 ? { bag: free } : null);
     const next = to ? moveItem(loadout, place, to) : null;
     if (next) requestLoadout(player, next);
   }
@@ -369,7 +391,7 @@ export class InventoryOverlay {
     const player = localPlayer();
     const square = this.squareAt(e);
     if (!player || !square || !this.itemIn(player, square.place)) return;
-    if (this.doubleClicked(square.place)) {
+    if (this.doubleClicked(square.place, e)) {
       this.quickMove(player, square.place);
       return;
     }

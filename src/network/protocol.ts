@@ -1,5 +1,5 @@
 import { isEquipSlot, isGearKind, isItemType, isPlayerSlot, isStatName, PLAYER_SLOTS, STAT_NAMES } from '../world';
-import type { EquipSlot, InventoryItem, PlayerInput, PlayerSlot } from '../world';
+import type { BagSquare, EquipSlot, InventoryItem, PlayerInput, PlayerSlot } from '../world';
 import type { SfxName } from '../audio/SoundPlayer';
 import { cleanName } from '../game/Settings';
 import { ValidationError } from '../core/errors';
@@ -20,7 +20,7 @@ export type RosterEntry = { slot: PlayerSlot; name: string };
 /** Things a guest asks the host to do for its character, which the host checks and carries out. */
 export type GuestCommand =
   | { kind: 'buy'; index: number }
-  | { kind: 'loadout'; inventory: InventoryItem[]; equipped: Partial<Record<EquipSlot, InventoryItem>> };
+  | { kind: 'loadout'; inventory: BagSquare[]; equipped: Partial<Record<EquipSlot, InventoryItem>> };
 
 export type Message =
   | { type: 'hello'; version: number; name: string }
@@ -82,6 +82,13 @@ export function validStart(seed: unknown, depth: unknown): boolean {
     && Number.isInteger(depth) && Number(depth) >= 1 && Number(depth) <= MAX_DEPTH;
 }
 
+/** Heaviest a single item may claim to be, in kilograms. */
+const MAX_ITEM_WEIGHT = 500;
+/** A bag square: an item, or empty. */
+export function isBagSquare(value: unknown): boolean {
+  return value === null || isInventoryItem(value);
+}
+
 /** Most items one square can stack (a quiver of arrows). */
 const MAX_STACK = 999;
 const SHORT_KEY = /^[a-z0-9_]{1,40}$/;
@@ -105,7 +112,8 @@ export function isInventoryItem(value: unknown): value is InventoryItem {
   const iconOk = value.icon === undefined || isShortKey(value.icon);
   const idOk = (value.id === undefined || isShortKey(value.id)) && (value.kind === undefined || isShortKey(value.kind));
   const countOk = value.count === undefined || (Number.isInteger(value.count) && Number(value.count) >= 0 && Number(value.count) <= MAX_STACK);
-  return gearOk && iconOk && idOk && countOk && validStats(value.stats);
+  const weightOk = value.weight === undefined || (isFiniteNumber(value.weight) && Number(value.weight) >= 0 && Number(value.weight) <= MAX_ITEM_WEIGHT);
+  return gearOk && iconOk && idOk && countOk && weightOk && validStats(value.stats);
 }
 
 function validEquipped(value: unknown): value is Partial<Record<EquipSlot, InventoryItem>> {
@@ -117,7 +125,7 @@ export function validCommand(value: unknown): value is GuestCommand {
   if (!isRecord(value)) return false;
   if (value.kind === 'buy') return Number.isInteger(value.index) && Number(value.index) >= 0 && Number(value.index) < MAX_ITEMS;
   if (value.kind !== 'loadout' || !Array.isArray(value.inventory) || value.inventory.length > MAX_ITEMS) return false;
-  return value.inventory.every(isInventoryItem) && validEquipped(value.equipped);
+  return value.inventory.every(isBagSquare) && validEquipped(value.equipped);
 }
 
 export function validSound(name: unknown, x: unknown, y: unknown, isSfx: (v: unknown) => v is SfxName): boolean {

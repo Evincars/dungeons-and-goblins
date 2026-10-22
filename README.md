@@ -1,3 +1,5 @@
+<p align="center"><img src="public/logo.png" alt="Dungeons & Goblins" width="560"></p>
+
 # Dungeons & Goblins
 
 A top-down dungeon crawler in TypeScript, Pixi.js v8 and Miniplex, adapted from Catacomb Snatch Redux.
@@ -56,7 +58,8 @@ arrow bundles. Each item:
 | `kind` | What it is: `axe`, `bow`, `sword`, `wand`, `arrows`, … |
 | `type` | `weapon`, `shield` or `ammo` |
 | `gear` | Which slot it fits: `weapon` (primary or secondary hand), `offhand` (secondary hand), `ammo` (Arrows slot) |
-| `value` | Price in gold |
+| `cost` | Price in gold |
+| `weight` | Kilograms it weighs (a whole stack, for arrows) |
 | `stats` | What it adds while worn: any of `strength`, `intelligence`, `stamina`, `defence`, `luck`, `mana` (random placeholder values for now) |
 | `count` | Arrows only: how many are in the stack |
 
@@ -67,6 +70,18 @@ arrow bundles. Each item:
 ### [`src/data/armors.json`](src/data/armors.json) — body armour
 
 220 suits of armour and robes (pictures in `public/armors/`), with the same fields (`gear` is `armor`).
+
+### [`src/data/medals.json`](src/data/medals.json) — medals
+
+80 medals (pictures in `public/medals/`), worn in the inventory's Medal slot, with the same fields (`gear`
+is `medal`).
+
+### Carrying
+
+A player carries at most **100 kg** — bag and worn gear together (`MAX_CARRY_KG` in
+[`src/game/PlayerActions.ts`](src/game/PlayerActions.ts)); the inventory shows the total next to the gold.
+Things too heavy to carry are left lying where they are, and the shop won't sell them. Chests drop a random
+weapon, shield or suit of armour (and a few coins); walk over it to pick it up.
 
 ### What the stats do
 
@@ -87,6 +102,7 @@ Not JSON, but kept in one place each:
 
 - [`src/entities/WeaponStats.ts`](src/entities/WeaponStats.ts) — sword swing, spell bolt (damage, mana cost) and arrow numbers.
 - [`src/entities/Drops.ts`](src/entities/Drops.ts) — drop tables (what chests throw out).
+- [`src/entities/LootFactory.ts`](src/entities/LootFactory.ts) — the coins and gems enemies drop, and how few.
 - [`src/level/generators/DungeonConfig.ts`](src/level/generators/DungeonConfig.ts) — map size, room sizes, halls, pits, enemy density.
 - [`src/level/Props.ts`](src/level/Props.ts) — every decoration and how often it appears.
 - [`src/ai/constants.ts`](src/ai/constants.ts) — enemy senses, squad tactics and chase speed.

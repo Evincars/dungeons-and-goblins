@@ -201,6 +201,8 @@ const UI_SHEETS = [
   new SpriteSheet('pause_screen', '/ui/pause_screen.png'),
   // Painted art: the menu background, and the inventory's two framed panels.
   new SpriteSheet('menu_background', '/menu-1.jpg', { smooth: true }),
+  // The game's logo, cut to its letters (the file has a wide transparent margin).
+  new SpriteSheet('logo_image', '/logo.png', { smooth: true, regions: { logo: { x: 114, y: 68, w: 2513, h: 1440 } } }),
   // The inventory art has a stray white strip down its right edge; the region stops short of it.
   new SpriteSheet('inventory_panels', '/inventory.png', {
     smooth: true, regions: { inventory_art: { x: 0, y: 0, w: 2732, h: 1536 } },
@@ -284,13 +286,12 @@ function numberedIcons(prefix: string, folder: string, count: number): void {
   }
 }
 
-/** HUD medals, gates and treasures (mapped, used later). */
-const MEDALS = 80;
+/** Gates and treasures (mapped, used later); medals are items (src/data/medals.json). */
 const GATES = 100;
 const TREASURES = 80;
 
 /**
- * Registers the art that loads the first time it is drawn: item icons (weapons, shields, armour), HUD medals,
+ * Registers the art that loads the first time it is drawn: item icons (weapons, shields, armour, medals),
  * gates, treasures and every effect.
  */
 export function registerLazyArt(): void {
@@ -299,7 +300,6 @@ export function registerLazyArt(): void {
     registerLazy(new SpriteSheet(key, src, { smooth: painted }), [key]);
   }
   registerLazy(new SpriteSheet('weapons_loose', '/weapons-1.png', { regions: BLADE_ICONS }), Object.keys(BLADE_ICONS));
-  numberedIcons('medal', 'medals', MEDALS);
   numberedIcons('gate', 'gates', GATES);
   numberedIcons('treasure', 'treasures', TREASURES);
   registerEffects();

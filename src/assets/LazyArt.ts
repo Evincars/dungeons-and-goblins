@@ -44,6 +44,13 @@ export function lazyTexture(key: string): Texture {
   return Texture.EMPTY;
 }
 
+/** Whether a key's art loads on demand and hasn't arrived yet (it is asked for). */
+export function artPending(key: string): boolean {
+  if (!providers.has(key) || hasTexture(key)) return false;
+  reportRejection(requestArt(key), `Art "${key}" did not load`, 'render');
+  return true;
+}
+
 /** Calls `listener` whenever lazily loaded art arrives; returns the call that stops it. */
 export function onArtLoaded(listener: () => void): () => void {
   listeners.add(listener);

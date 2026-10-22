@@ -1,5 +1,5 @@
 import { q, isPlayer } from '../world';
-import type { EquipSlot, Entity, InventoryItem, Player, PlayerSlot } from '../world';
+import type { BagSquare, EquipSlot, Entity, InventoryItem, Player, PlayerSlot } from '../world';
 import { sound } from '../audio/SoundPlayer';
 import { coop } from '../network/CoopSession';
 import type { GuestCommand } from '../network/protocol';
@@ -27,29 +27,65 @@ const MANA_PER_POINT = 5;
 const SPELL_DAMAGE_PER_INTELLIGENCE = 2;
 const LOOT_PER_LUCK = 0.05;
 
-export type Loadout = { inventory: InventoryItem[]; equipped: Partial<Record<EquipSlot, InventoryItem>> };
+export type Loadout = { inventory: BagSquare[]; equipped: Partial<Record<EquipSlot, InventoryItem>> };
 
 /** A square of the inventory screen: one in the bag's grid, or an equipment slot. */
 export type ItemPlace = { bag: number } | { slot: EquipSlot };
 
-function itemAt(loadout: Loadout, place: ItemPlace): InventoryItem | undefined {
-  return 'bag' in place ? loadout.inventory[place.bag] : loadout.equipped[place.slot];
+/** Kilograms a player can carry, bag and worn gear together. */
+export const MAX_CARRY_KG = 100;
+
+/** The items in a bag, without its empty squares. */
+export function bagItems(inventory: readonly BagSquare[]): InventoryItem[] {
+  return inventory.flatMap((square) => (square ? [square] : []));
 }
 
-/** Within the bag the item simply moves to the square it was dropped on (the bag has no gaps). */
+/** The first empty square of the bag (squares past its end count as empty), or -1 when it is full. */
+export function freeSquare(inventory: readonly BagSquare[]): number {
+  for (let i = 0; i < MAX_INVENTORY; i++) if (!inventory[i]) return i;
+  return -1;
+}
+
+/** Everything a player carries — bag and worn gear — in kilograms. */
+export function carriedWeight(player: Pick<Player, 'inventory' | 'equipped'>): number {
+  const items = [...bagItems(player.inventory ?? []), ...Object.values(player.equipped ?? {})];
+  return items.reduce((sum, item) => sum + (item?.weight ?? 0), 0);
+}
+
+/** Puts an item in the first empty square, if there is one and it isn't too heavy to carry; returns whether it went in. */
+export function addToBag(player: Player, item: InventoryItem): boolean {
+  const inventory = player.inventory ?? (player.inventory = []);
+  const square = freeSquare(inventory);
+  if (square < 0 || carriedWeight(player) + (item.weight ?? 0) > MAX_CARRY_KG) return false;
+  inventory[square] = item;
+  return true;
+}
+
+/** A bag with its trailing empty squares dropped (the squares themselves stay put). */
+function trimmed(inventory: BagSquare[]): BagSquare[] {
+  let end = inventory.length;
+  while (end > 0 && !inventory[end - 1]) end--;
+  inventory.length = end;
+  for (let i = 0; i < end; i++) inventory[i] ??= null;
+  return inventory;
+}
+
+function itemAt(loadout: Loadout, place: ItemPlace): InventoryItem | undefined {
+  return ('bag' in place ? loadout.inventory[place.bag] : loadout.equipped[place.slot]) ?? undefined;
+}
+
+/** Within the bag the item goes to the square it was dropped on; anything already there takes its old square. */
 function bagToBag(next: Loadout, from: number, to: number, item: InventoryItem): Loadout {
-  next.inventory.splice(from, 1);
-  next.inventory.splice(Math.min(to, next.inventory.length), 0, item);
+  next.inventory[from] = next.inventory[to] ?? null;
+  next.inventory[to] = item;
   return next;
 }
 
 /** Worn if it fits the slot; what was worn there takes its square in the bag. */
 function bagToSlot(next: Loadout, from: number, slot: EquipSlot, item: InventoryItem): Loadout | null {
   if (!fitsSlot(item, slot)) return null;
-  const worn = next.equipped[slot];
+  next.inventory[from] = next.equipped[slot] ?? null;
   next.equipped[slot] = item;
-  if (worn) next.inventory.splice(from, 1, worn);
-  else next.inventory.splice(from, 1);
   return next;
 }
 
@@ -63,17 +99,13 @@ function slotToSlot(next: Loadout, from: EquipSlot, to: EquipSlot, item: Invento
   return next;
 }
 
-/** Taken off into the bag: an item there that fits the slot swaps into it, otherwise this one just makes room. */
+/** Taken off onto a bag square: an empty one takes it; an item there that fits the slot swaps into it. */
 function slotToBag(next: Loadout, slot: EquipSlot, bag: number, item: InventoryItem): Loadout | null {
   const there = next.inventory[bag];
-  if (there && fitsSlot(there, slot)) {
-    next.inventory[bag] = item;
-    next.equipped[slot] = there;
-    return next;
-  }
-  if (next.inventory.length >= MAX_INVENTORY) return null;
-  delete next.equipped[slot];
-  next.inventory.splice(Math.min(bag, next.inventory.length), 0, item);
+  if (there && !fitsSlot(there, slot)) return null;
+  next.inventory[bag] = item;
+  if (there) next.equipped[slot] = there;
+  else delete next.equipped[slot];
   return next;
 }
 
@@ -83,10 +115,13 @@ function slotToBag(next: Loadout, slot: EquipSlot, bag: number, item: InventoryI
  */
 export function moveItem(loadout: Loadout, from: ItemPlace, to: ItemPlace): Loadout | null {
   const item = itemAt(loadout, from);
-  if (!item) return null;
+  if (!item || ('bag' in to && (to.bag < 0 || to.bag >= MAX_INVENTORY))) return null;
   const next: Loadout = { inventory: [...loadout.inventory], equipped: { ...loadout.equipped } };
-  if ('bag' in from) return 'bag' in to ? bagToBag(next, from.bag, to.bag, item) : bagToSlot(next, from.bag, to.slot, item);
-  return 'bag' in to ? slotToBag(next, from.slot, to.bag, item) : slotToSlot(next, from.slot, to.slot, item);
+  const moved = 'bag' in from
+    ? ('bag' in to ? bagToBag(next, from.bag, to.bag, item) : bagToSlot(next, from.bag, to.slot, item))
+    : ('bag' in to ? slotToBag(next, from.slot, to.bag, item) : slotToSlot(next, from.slot, to.slot, item));
+  if (moved) trimmed(moved.inventory);
+  return moved;
 }
 
 /** The player sitting in a room seat, if it is in the world. */
@@ -95,16 +130,14 @@ export function playerInSlot(slot: PlayerSlot): Player | undefined {
   return undefined;
 }
 
-/** Buys one item for the player; returns whether it was paid for. */
+/** Buys one item for the player (if they can pay, have a free square and can carry it); returns whether it was bought. */
 export function buy(player: Player, item: InventoryItem): boolean {
-  const inventory = player.inventory ?? (player.inventory = []);
   const { x, y } = player.position;
-  if (player.playerStats.gold < item.value || inventory.length >= MAX_INVENTORY) {
+  if (player.playerStats.gold < item.value || !addToBag(player, { ...item })) {
     sound.playSound('fail', x, y);
     return false;
   }
   player.playerStats.gold -= item.value;
-  inventory.push({ ...item });
   sound.playSound('buy', x, y);
   return true;
 }

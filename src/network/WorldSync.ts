@@ -8,7 +8,7 @@ import { destroyAttachments } from '../systems/BarSystem';
 import { setVisualFrame } from '../render/AnimatedVisual';
 import { ensure } from '../core/errors';
 import { hasKey, isFiniteNumber, isRecord } from '../core/guards';
-import { isInventoryItem } from './protocol';
+import { isBagSquare, isInventoryItem } from './protocol';
 
 /**
  * The live world as the co-op host sends it: every entity that is not rebuilt locally from the level
@@ -144,7 +144,8 @@ function checkDetails(data: EntityState): void {
   ensure(!data.character || (hasCharacter(data.character.def) && isCharacterState(data.character.state)), 'Invalid character');
   ensure(!data.ai || (MOB_STATES.includes(data.ai.state) && TACTIC_ROLES.includes(data.ai.role)), 'Invalid enemy state');
   ensure(!data.item || isItemType(data.item.type), 'Invalid item');
-  ensure(!data.inventory || (Array.isArray(data.inventory) && data.inventory.every(isInventoryItem)), 'Invalid inventory');
+  ensure(!data.inventory || (Array.isArray(data.inventory) && data.inventory.every(isBagSquare)), 'Invalid inventory');
+  ensure(!data.item || isInventoryItem(data.item), 'Invalid item');
   ensure(!data.equipped || Object.entries(data.equipped).every(([slot, item]) => isEquipSlot(slot) && isInventoryItem(item)), 'Invalid equipment');
   ensure(!data.shopNpc || (Array.isArray(data.shopNpc.items) && data.shopNpc.items.every(isInventoryItem)), 'Invalid shop');
   ensure(!data.door || (Array.isArray(data.door.tiles) && data.door.tiles.length <= MAX_DOOR_TILES && data.door.tiles.every(isTile)), 'Invalid door');

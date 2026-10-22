@@ -1,5 +1,6 @@
 import { world } from '../world';
-import type { Entity } from '../world';
+import type { Entity, InventoryItem } from '../world';
+import { itemIcon } from './Items';
 import type { SfxName } from '../audio/SoundPlayer';
 
 /**
@@ -63,13 +64,18 @@ function exactKind(value: number): number {
 /** A coin or gem flung out at (velX, velY); `exact` keeps the stated worth (spilled money) instead of rolling a tier. */
 export function createLoot(x: number, y: number, velX: number, velY: number, value: number, exact = false): Entity {
   const kind = exact ? exactKind(value) : rollKind(value);
+  return createLootOfKind(x, y, velX, velY, kind, exact ? value : LOOT_KINDS[kind].value);
+}
+
+/** A pickup of a given kind (index into LOOT_KINDS), worth `value`. */
+function createLootOfKind(x: number, y: number, velX: number, velY: number, kind: number, value: number): Entity {
   const spec = LOOT_KINDS[kind];
   const pow = 1 + Math.random();
   return world.add({
     position: { x, y },
     yOffset: LOOT_REST_LIFT,
     loot: {
-      value: exact ? value : spec.value,
+      value,
       kind,
       velX: velX * pow * 2,
       velY: velY * pow * 2,
@@ -93,16 +99,48 @@ export function createLoot(x: number, y: number, velX: number, velY: number, val
   });
 }
 
-/** A kill throws four pickups, each rolled from its worth, in a different pattern every time. */
-const KILL_DROPS = 4;
+/**
+ * A kill leaves only a few coins — one to three, worth this share of its experience between them — and only
+ * now and then a gem; a diamond is a rare find even among those.
+ */
+const KILL_COIN_SHARE = 0.2;
+const KILL_MIN_COINS = 1;
+const KILL_EXTRA_COINS = 2;
+const KILL_GEM_CHANCE = 0.03;
+const DIAMOND_SHARE = 0.12;
+/** Indexes into LOOT_KINDS: the largest coin, then the gems. */
+const GOLD_COIN = 5;
+const EMERALD = 6;
+const RUBY = 7;
+const DIAMOND = 8;
 const DROP_MIN_SPEED = 0.4;
 const DROP_SPEED_SPREAD = 0.8;
+
+function flingSpeed(): { vx: number; vy: number } {
+  const angle = Math.random() * Math.PI * 2;
+  const speed = DROP_MIN_SPEED + Math.random() * DROP_SPEED_SPREAD;
+  return { vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed };
+}
+
+/** The coin a sum is paid in: the largest worth no more than it, never a gem. */
+function coinKind(value: number): number {
+  return Math.min(GOLD_COIN, exactKind(value));
+}
+
 export function dropLoot(x: number, y: number, value: number): void {
-  for (let i = 0; i < KILL_DROPS; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = DROP_MIN_SPEED + Math.random() * DROP_SPEED_SPREAD;
-    createLoot(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, value);
+  const total = Math.max(1, Math.round(value * KILL_COIN_SHARE));
+  const coins = Math.min(total, KILL_MIN_COINS + Math.floor(Math.random() * (KILL_EXTRA_COINS + 1)));
+  let left = total;
+  for (let i = 0; i < coins; i++) {
+    const worth = i === coins - 1 ? left : Math.max(1, Math.floor(total / coins));
+    left -= worth;
+    const { vx, vy } = flingSpeed();
+    createLootOfKind(x, y, vx, vy, coinKind(worth), worth);
   }
+  if (Math.random() >= KILL_GEM_CHANCE) return;
+  const gem = Math.random() < DIAMOND_SHARE ? DIAMOND : Math.random() < 0.5 ? EMERALD : RUBY;
+  const { vx, vy } = flingSpeed();
+  createLootOfKind(x, y, vx, vy, gem, LOOT_KINDS[gem].value);
 }
 
 /** Most pieces a sum of money spills as. */
@@ -117,3 +155,21 @@ export function spillMoney(x: number, y: number, total: number, maxPieces = MAX_
     remaining -= value;
   }
 }
+
+/** Things lying on the floor are drawn this big (their longer side), a little above the ground. */
+const ITEM_FIT = 18;
+const ITEM_LIFT = 8;
+/** How far from where it fell out a thing may land. */
+const ITEM_SCATTER = 14;
+
+/** A weapon, shield or suit of armour lying on the floor, picked up by walking over it. */
+export function createItemPickup(x: number, y: number, item: InventoryItem): Entity {
+  const angle = Math.random() * Math.PI * 2;
+  return world.add({
+    position: { x: x + Math.cos(angle) * ITEM_SCATTER, y: y + Math.sin(angle) * ITEM_SCATTER },
+    item: structuredClone(item),
+    visual: { sheet: itemIcon(item), fit: ITEM_FIT },
+    yOffset: ITEM_LIFT,
+  });
+}
+

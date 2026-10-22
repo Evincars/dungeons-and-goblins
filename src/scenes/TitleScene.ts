@@ -1,4 +1,5 @@
-import { Container } from 'pixi.js';
+import { Container, Sprite } from 'pixi.js';
+import { getTexture } from '../assets/Textures';
 import { PixelLabel, makeText } from '../ui/PixelText';
 import { PixelButton } from '../ui/PixelButton';
 import { menuBackdrop } from '../ui/MenuBackdrop';
@@ -11,9 +12,10 @@ import { world } from '../world';
 const BUTTON_W = 220;
 const BUTTON_H = 26;
 const BUTTON_GAP = 6;
-const MENU_TOP = 142;
-const TITLE_Y = 56;
-const SUBTITLE_Y = 96;
+const MENU_TOP = 156;
+/** The logo fills the space above the buttons: this far from the top, and this tall. */
+const LOGO_TOP = 10;
+const LOGO_H = 138;
 const HINT_Y = GAME_HEIGHT - 40;
 /** The prompt pulses at this rate (radians per tick). */
 const PULSE_SPEED = 0.06;
@@ -33,13 +35,11 @@ export class TitleScene implements Scene {
     world.clear();
 
     this.container.addChild(menuBackdrop());
-    const title = new PixelLabel('DUNGEONS & GOBLINS', { color: 0xddaa44, scale: 2, align: 'center', shadow: true });
-    title.x = Math.floor(GAME_WIDTH / 2);
-    title.y = TITLE_Y;
-    const sub = new PixelLabel('A Dungeon Crawler', { color: 0x888877, align: 'center', shadow: true });
-    sub.x = Math.floor(GAME_WIDTH / 2);
-    sub.y = SUBTITLE_Y;
-    this.container.addChild(title, sub);
+    const logo = new Sprite(getTexture('logo'));
+    logo.anchor.set(0.5, 0);
+    logo.scale.set(LOGO_H / Math.max(1, logo.texture.height));
+    logo.position.set(Math.floor(GAME_WIDTH / 2), LOGO_TOP);
+    this.container.addChild(logo);
 
     const entries: Array<{ label: string; action: () => void }> = [
       { label: 'Start', action: () => manager.goto('in_game') },

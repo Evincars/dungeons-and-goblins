@@ -4,6 +4,7 @@ import { q, world } from '../world';
 import { frameTexture } from '../render/Sheets';
 import { createAnimatedVisual, setVisualFrame } from '../render/AnimatedVisual';
 import { anchorX, characterDef } from '../characters/Characters';
+import { artPending } from '../assets/LazyArt';
 
 /** Nests crack through this many frames as they lose health. */
 const NEST_CRACK_FRAMES = 3;
@@ -14,11 +15,14 @@ const chestSprites = world.with('chest', 'visual', 'sprite');
 function createSprites(gameLayer: Container): void {
   for (const entity of q.needsSprite) {
     const v = entity.visual;
+    // Art that loads on first use: the sprite is made once it has arrived.
+    if (artPending(v.sheet)) continue;
     const sprite = entity.animation
       ? createAnimatedVisual(v.sheet, v.col ?? 0, v.row ?? 0)
       : new Sprite(frameTexture(v.sheet, v.col ?? 0, v.row ?? 0));
     sprite.anchor.set(entity.character ? anchorX(characterDef(entity.character.def)) : 0.5, 0.5);
     if (v.scale) sprite.scale.set(v.scale);
+    if (v.fit) sprite.scale.set(v.fit / Math.max(1, sprite.texture.width, sprite.texture.height));
     if (v.rotation) sprite.rotation = v.rotation;
     gameLayer.addChild(sprite);
     world.addComponent(entity, 'sprite', sprite);

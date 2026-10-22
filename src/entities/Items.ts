@@ -8,8 +8,8 @@ export const SLOT_LABELS = {
   primary: 'Primary weapon',
   secondary: 'Secondary weapon',
   legs: 'Legs',
-  other1: 'Other 1',
-  other2: 'Other 2',
+  medal: 'Medal',
+  other: 'Other',
   ammo: 'Arrows',
 } as const satisfies Record<EquipSlot, string>;
 
@@ -30,8 +30,8 @@ const SLOT_GEAR = {
   primary: ['weapon'],
   secondary: ['weapon', 'offhand'],
   legs: ['legs'],
-  other1: ['trinket'],
-  other2: ['trinket'],
+  medal: ['medal'],
+  other: ['trinket'],
   ammo: ['ammo'],
 } as const satisfies Record<EquipSlot, readonly GearKind[]>;
 
@@ -41,9 +41,13 @@ export function fitsSlot(item: InventoryItem, slot: EquipSlot): boolean {
   return item.gear !== undefined && kinds.includes(item.gear);
 }
 
-/** The slot an item would go to if worn now: the first that fits and is free, else the first that fits. */
-export function slotFor(equipped: Partial<Record<EquipSlot, InventoryItem>>, item: InventoryItem): EquipSlot | null {
+/**
+ * The slot an item goes to when put on: dropped on the gear panel, the first that fits and is free (else the
+ * first that fits); double-clicked (`replace`), always the first that fits, swapping out what is worn there.
+ */
+export function slotFor(equipped: Partial<Record<EquipSlot, InventoryItem>>, item: InventoryItem, replace = false): EquipSlot | null {
   const fitting = EQUIP_SLOTS.filter((slot) => fitsSlot(item, slot));
+  if (replace) return fitting[0] ?? null;
   return fitting.find((slot) => !equipped[slot]) ?? fitting[0] ?? null;
 }
 

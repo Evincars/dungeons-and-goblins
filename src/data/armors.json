@@ -1,5 +1,5 @@
 {
-  "$comment": "Body armour (icons in /armors). Tune name, value and stats freely.",
+  "$comment": "Body armour (icons in /armors). Tune name, cost (gold), weight (kg) and stats freely.",
   "items": [
     {
       "id": "armor_001",
@@ -8,12 +8,13 @@
       "src": "/armors/01.png",
       "type": "armor",
       "gear": "armor",
-      "value": 62,
       "stats": {
         "defence": 2,
         "strength": 5,
         "mana": 5
-      }
+      },
+      "weight": 21.4,
+      "cost": 62
     },
     {
       "id": "armor_002",
@@ -22,12 +23,13 @@
       "src": "/armors/02.png",
       "type": "armor",
       "gear": "armor",
-      "value": 68,
       "stats": {
         "defence": 2,
         "strength": 3,
         "luck": 4
-      }
+      },
+      "weight": 7.2,
+      "cost": 68
     },
     {
       "id": "armor_003",
@@ -36,12 +38,13 @@
       "src": "/armors/03.png",
       "type": "armor",
       "gear": "armor",
-      "value": 79,
       "stats": {
         "defence": 10,
         "luck": 1,
         "mana": 5
-      }
+      },
+      "weight": 21.1,
+      "cost": 79
     },
     {
       "id": "armor_004",
@@ -50,12 +53,13 @@
       "src": "/armors/04.png",
       "type": "armor",
       "gear": "armor",
-      "value": 292,
       "stats": {
         "defence": 10,
         "strength": 4,
         "stamina": 4
-      }
+      },
+      "weight": 10.6,
+      "cost": 292
     },
     {
       "id": "armor_005",
@@ -64,11 +68,12 @@
       "src": "/armors/05.png",
       "type": "armor",
       "gear": "armor",
-      "value": 258,
       "stats": {
         "defence": 1,
         "strength": 2
-      }
+      },
+      "weight": 12.3,
+      "cost": 258
     },
     {
       "id": "armor_006",
@@ -77,12 +82,13 @@
       "src": "/armors/06.png",
       "type": "armor",
       "gear": "armor",
-      "value": 273,
       "stats": {
         "defence": 8,
         "strength": 4,
         "stamina": 1
-      }
+      },
+      "weight": 21.8,
+      "cost": 273
     },
     {
       "id": "armor_007",
@@ -91,12 +97,13 @@
       "src": "/armors/07.png",
       "type": "armor",
       "gear": "armor",
-      "value": 116,
       "stats": {
         "defence": 8,
         "luck": 1,
         "stamina": 2
-      }
+      },
+      "weight": 18.8,
+      "cost": 116
     },
     {
       "id": "armor_008",
@@ -105,11 +112,12 @@
       "src": "/armors/08.png",
       "type": "armor",
       "gear": "armor",
-      "value": 184,
       "stats": {
         "defence": 4,
         "mana": 5
-      }
+      },
+      "weight": 6.1,
+      "cost": 184
     },
     {
       "id": "armor_009",
@@ -118,11 +126,12 @@
       "src": "/armors/09.png",
       "type": "armor",
       "gear": "armor",
-      "value": 482,
       "stats": {
         "defence": 6,
         "mana": 5
-      }
+      },
+      "weight": 11.2,
+      "cost": 482
     },
     {
       "id": "armor_010",
@@ -131,10 +140,11 @@
       "src": "/armors/10.png",
       "type": "armor",
       "gear": "armor",
-      "value": 485,
       "stats": {
         "defence": 2
-      }
+      },
+      "weight": 12.8,
+      "cost": 485
     },
     {
       "id": "armor_011",
@@ -143,11 +153,12 @@
       "src": "/armors/11.png",
       "type": "armor",
       "gear": "armor",
-      "value": 169,
       "stats": {
         "defence": 5,
         "luck": 2
-      }
+      },
+      "weight": 9.4,
+      "cost": 169
     },
     {
       "id": "armor_012",
@@ -156,12 +167,13 @@
       "src": "/armors/12.png",
       "type": "armor",
       "gear": "armor",
-      "value": 105,
       "stats": {
         "defence": 2,
         "mana": 5,
         "luck": 5
-      }
+      },
+      "weight": 6.7,
+      "cost": 105
     },
     {
       "id": "armor_013",
@@ -170,12 +182,13 @@
       "src": "/armors/13.png",
       "type": "armor",
       "gear": "armor",
-      "value": 285,
       "stats": {
         "defence": 4,
         "mana": 5,
         "luck": 1
-      }
+      },
+      "weight": 9.1,
+      "cost": 285
     },
     {
       "id": "armor_014",
@@ -184,10 +197,11 @@
       "src": "/armors/14.png",
       "type": "armor",
       "gear": "armor",
-      "value": 469,
       "stats": {
         "defence": 3
-      }
+      },
+      "weight": 16.7,
+      "cost": 469
     },
     {
       "id": "armor_015",
@@ -196,12 +210,13 @@
       "src": "/armors/15.png",
       "type": "armor",
       "gear": "armor",
-      "value": 304,
       "stats": {
         "defence": 8,
         "luck": 2,
         "mana": 2
-      }
+      },
+      "weight": 3.4,
+      "cost": 304
     },
     {
       "id": "armor_016",
@@ -210,10 +225,11 @@
       "src": "/armors/16.png",
       "type": "armor",
       "gear": "armor",
-      "value": 209,
       "stats": {
         "defence": 6
-      }
+      },
+      "weight": 13.5,
+      "cost": 209
     },
     {
       "id": "armor_017",
@@ -222,10 +238,11 @@
       "src": "/armors/17.png",
       "type": "armor",
       "gear": "armor",
-      "value": 318,
       "stats": {
         "defence": 3
-      }
+      },
+      "weight": 11.4,
+      "cost": 318
     },
     {
       "id": "armor_018",
@@ -234,10 +251,11 @@
       "src": "/armors/18.png",
       "type": "armor",
       "gear": "armor",
-      "value": 393,
       "stats": {
         "defence": 6
-      }
+      },
+      "weight": 3.3,
+      "cost": 393
     },
     {
       "id": "armor_019",
@@ -246,10 +264,11 @@
       "src": "/armors/19.png",
       "type": "armor",
       "gear": "armor",
-      "value": 141,
       "stats": {
         "defence": 4
-      }
+      },
+      "weight": 9.3,
+      "cost": 141
     },
     {
       "id": "armor_020",
@@ -258,10 +277,11 @@
       "src": "/armors/20.png",
       "type": "armor",
       "gear": "armor",
-      "value": 281,
       "stats": {
         "defence": 8
-      }
+      },
+      "weight": 14.9,
+      "cost": 281
     },
     {
       "id": "armor_021",
@@ -270,10 +290,11 @@
       "src": "/armors/21.png",
       "type": "armor",
       "gear": "armor",
-      "value": 397,
       "stats": {
         "defence": 5
-      }
+      },
+      "weight": 12.7,
+      "cost": 397
     },
     {
       "id": "armor_022",
@@ -282,10 +303,11 @@
       "src": "/armors/22.png",
       "type": "armor",
       "gear": "armor",
-      "value": 113,
       "stats": {
         "defence": 8
-      }
+      },
+      "weight": 4.2,
+      "cost": 113
     },
     {
       "id": "armor_023",
@@ -294,10 +316,11 @@
       "src": "/armors/23.png",
       "type": "armor",
       "gear": "armor",
-      "value": 441,
       "stats": {
         "defence": 4
-      }
+      },
+      "weight": 21.7,
+      "cost": 441
     },
     {
       "id": "armor_024",
@@ -306,11 +329,12 @@
       "src": "/armors/24.png",
       "type": "armor",
       "gear": "armor",
-      "value": 358,
       "stats": {
         "defence": 10,
         "mana": 1
-      }
+      },
+      "weight": 18.0,
+      "cost": 358
     },
     {
       "id": "armor_025",
@@ -319,10 +343,11 @@
       "src": "/armors/25.png",
       "type": "armor",
       "gear": "armor",
-      "value": 106,
       "stats": {
         "defence": 2
-      }
+      },
+      "weight": 21.5,
+      "cost": 106
     },
     {
       "id": "armor_026",
@@ -331,10 +356,11 @@
       "src": "/armors/26.png",
       "type": "armor",
       "gear": "armor",
-      "value": 388,
       "stats": {
         "defence": 1
-      }
+      },
+      "weight": 5.0,
+      "cost": 388
     },
     {
       "id": "armor_027",
@@ -343,12 +369,13 @@
       "src": "/armors/27.png",
       "type": "armor",
       "gear": "armor",
-      "value": 55,
       "stats": {
         "defence": 10,
         "luck": 2,
         "strength": 4
-      }
+      },
+      "weight": 8.0,
+      "cost": 55
     },
     {
       "id": "armor_028",
@@ -357,10 +384,11 @@
       "src": "/armors/28.png",
       "type": "armor",
       "gear": "armor",
-      "value": 86,
       "stats": {
         "defence": 2
-      }
+      },
+      "weight": 3.8,
+      "cost": 86
     },
     {
       "id": "armor_029",
@@ -369,12 +397,13 @@
       "src": "/armors/29.png",
       "type": "armor",
       "gear": "armor",
-      "value": 225,
       "stats": {
         "defence": 8,
         "stamina": 5,
         "mana": 3
-      }
+      },
+      "weight": 17.8,
+      "cost": 225
     },
     {
       "id": "armor_030",
@@ -383,11 +412,12 @@
       "src": "/armors/30.png",
       "type": "armor",
       "gear": "armor",
-      "value": 330,
       "stats": {
         "defence": 3,
         "strength": 1
-      }
+      },
+      "weight": 8.1,
+      "cost": 330
     },
     {
       "id": "armor_031",
@@ -396,11 +426,12 @@
       "src": "/armors/31.png",
       "type": "armor",
       "gear": "armor",
-      "value": 152,
       "stats": {
         "defence": 3,
         "intelligence": 4
-      }
+      },
+      "weight": 5.5,
+      "cost": 152
     },
     {
       "id": "armor_032",
@@ -409,12 +440,13 @@
       "src": "/armors/32.png",
       "type": "armor",
       "gear": "armor",
-      "value": 409,
       "stats": {
         "defence": 8,
         "strength": 2,
         "luck": 4
-      }
+      },
+      "weight": 11.0,
+      "cost": 409
     },
     {
       "id": "armor_033",
@@ -423,11 +455,12 @@
       "src": "/armors/33.png",
       "type": "armor",
       "gear": "armor",
-      "value": 251,
       "stats": {
         "defence": 9,
         "stamina": 2
-      }
+      },
+      "weight": 20.3,
+      "cost": 251
     },
     {
       "id": "armor_034",
@@ -436,10 +469,11 @@
       "src": "/armors/34.png",
       "type": "armor",
       "gear": "armor",
-      "value": 494,
       "stats": {
         "defence": 6
-      }
+      },
+      "weight": 18.6,
+      "cost": 494
     },
     {
       "id": "armor_035",
@@ -448,10 +482,11 @@
       "src": "/armors/35.png",
       "type": "armor",
       "gear": "armor",
-      "value": 378,
       "stats": {
         "defence": 9
-      }
+      },
+      "weight": 7.9,
+      "cost": 378
     },
     {
       "id": "armor_036",
@@ -460,12 +495,13 @@
       "src": "/armors/36.png",
       "type": "armor",
       "gear": "armor",
-      "value": 336,
       "stats": {
         "defence": 6,
         "intelligence": 5,
         "mana": 1
-      }
+      },
+      "weight": 5.8,
+      "cost": 336
     },
     {
       "id": "armor_037",
@@ -474,10 +510,11 @@
       "src": "/armors/37.png",
       "type": "armor",
       "gear": "armor",
-      "value": 101,
       "stats": {
         "defence": 4
-      }
+      },
+      "weight": 20.5,
+      "cost": 101
     },
     {
       "id": "armor_038",
@@ -486,11 +523,12 @@
       "src": "/armors/38.png",
       "type": "armor",
       "gear": "armor",
-      "value": 230,
       "stats": {
         "defence": 4,
         "luck": 2
-      }
+      },
+      "weight": 13.8,
+      "cost": 230
     },
     {
       "id": "armor_039",
@@ -499,11 +537,12 @@
       "src": "/armors/39.png",
       "type": "armor",
       "gear": "armor",
-      "value": 251,
       "stats": {
         "defence": 5,
         "mana": 1
-      }
+      },
+      "weight": 16.3,
+      "cost": 251
     },
     {
       "id": "armor_040",
@@ -512,10 +551,11 @@
       "src": "/armors/40.png",
       "type": "armor",
       "gear": "armor",
-      "value": 255,
       "stats": {
         "defence": 4
-      }
+      },
+      "weight": 4.7,
+      "cost": 255
     },
     {
       "id": "armor_041",
@@ -524,11 +564,12 @@
       "src": "/armors/41.png",
       "type": "armor",
       "gear": "armor",
-      "value": 228,
       "stats": {
         "defence": 2,
         "luck": 1
-      }
+      },
+      "weight": 4.1,
+      "cost": 228
     },
     {
       "id": "armor_042",
@@ -537,12 +578,13 @@
       "src": "/armors/42.png",
       "type": "armor",
       "gear": "armor",
-      "value": 222,
       "stats": {
         "defence": 9,
         "strength": 2,
         "luck": 2
-      }
+      },
+      "weight": 16.1,
+      "cost": 222
     },
     {
       "id": "armor_043",
@@ -551,12 +593,13 @@
       "src": "/armors/43.png",
       "type": "armor",
       "gear": "armor",
-      "value": 371,
       "stats": {
         "defence": 10,
         "mana": 1,
         "stamina": 4
-      }
+      },
+      "weight": 11.1,
+      "cost": 371
     },
     {
       "id": "armor_044",
@@ -565,11 +608,12 @@
       "src": "/armors/44.png",
       "type": "armor",
       "gear": "armor",
-      "value": 475,
       "stats": {
         "defence": 10,
         "stamina": 1
-      }
+      },
+      "weight": 4.4,
+      "cost": 475
     },
     {
       "id": "armor_045",
@@ -578,11 +622,12 @@
       "src": "/armors/45.png",
       "type": "armor",
       "gear": "armor",
-      "value": 350,
       "stats": {
         "defence": 3,
         "intelligence": 4
-      }
+      },
+      "weight": 20.8,
+      "cost": 350
     },
     {
       "id": "armor_046",
@@ -591,11 +636,12 @@
       "src": "/armors/46.png",
       "type": "armor",
       "gear": "armor",
-      "value": 334,
       "stats": {
         "defence": 6,
         "stamina": 1
-      }
+      },
+      "weight": 15.1,
+      "cost": 334
     },
     {
       "id": "armor_047",
@@ -604,11 +650,12 @@
       "src": "/armors/47.png",
       "type": "armor",
       "gear": "armor",
-      "value": 75,
       "stats": {
         "defence": 10,
         "mana": 4
-      }
+      },
+      "weight": 18.2,
+      "cost": 75
     },
     {
       "id": "armor_048",
@@ -617,10 +664,11 @@
       "src": "/armors/48.png",
       "type": "armor",
       "gear": "armor",
-      "value": 438,
       "stats": {
         "defence": 4
-      }
+      },
+      "weight": 4.6,
+      "cost": 438
     },
     {
       "id": "armor_049",
@@ -629,11 +677,12 @@
       "src": "/armors/49.png",
       "type": "armor",
       "gear": "armor",
-      "value": 471,
       "stats": {
         "defence": 6,
         "stamina": 3
-      }
+      },
+      "weight": 19.3,
+      "cost": 471
     },
     {
       "id": "armor_050",
@@ -642,10 +691,11 @@
       "src": "/armors/50.png",
       "type": "armor",
       "gear": "armor",
-      "value": 481,
       "stats": {
         "defence": 1
-      }
+      },
+      "weight": 4.3,
+      "cost": 481
     },
     {
       "id": "armor_051",
@@ -654,12 +704,13 @@
       "src": "/armors/51.png",
       "type": "armor",
       "gear": "armor",
-      "value": 299,
       "stats": {
         "defence": 6,
         "strength": 3,
         "intelligence": 4
-      }
+      },
+      "weight": 19.4,
+      "cost": 299
     },
     {
       "id": "armor_052",
@@ -668,12 +719,13 @@
       "src": "/armors/52.png",
       "type": "armor",
       "gear": "armor",
-      "value": 231,
       "stats": {
         "defence": 4,
         "strength": 3,
         "luck": 5
-      }
+      },
+      "weight": 11.6,
+      "cost": 231
     },
     {
       "id": "armor_053",
@@ -682,11 +734,12 @@
       "src": "/armors/53.png",
       "type": "armor",
       "gear": "armor",
-      "value": 138,
       "stats": {
         "defence": 8,
         "strength": 5
-      }
+      },
+      "weight": 9.4,
+      "cost": 138
     },
     {
       "id": "armor_054",
@@ -695,11 +748,12 @@
       "src": "/armors/54.png",
       "type": "armor",
       "gear": "armor",
-      "value": 148,
       "stats": {
         "defence": 8,
         "luck": 3
-      }
+      },
+      "weight": 13.5,
+      "cost": 148
     },
     {
       "id": "armor_055",
@@ -708,10 +762,11 @@
       "src": "/armors/55.png",
       "type": "armor",
       "gear": "armor",
-      "value": 313,
       "stats": {
         "defence": 9
-      }
+      },
+      "weight": 20.6,
+      "cost": 313
     },
     {
       "id": "armor_056",
@@ -720,11 +775,12 @@
       "src": "/armors/56.png",
       "type": "armor",
       "gear": "armor",
-      "value": 73,
       "stats": {
         "defence": 4,
         "luck": 3
-      }
+      },
+      "weight": 8.1,
+      "cost": 73
     },
     {
       "id": "armor_057",
@@ -733,11 +789,12 @@
       "src": "/armors/57.png",
       "type": "armor",
       "gear": "armor",
-      "value": 273,
       "stats": {
         "defence": 5,
         "stamina": 3
-      }
+      },
+      "weight": 5.5,
+      "cost": 273
     },
     {
       "id": "armor_058",
@@ -746,11 +803,12 @@
       "src": "/armors/58.png",
       "type": "armor",
       "gear": "armor",
-      "value": 448,
       "stats": {
         "defence": 1,
         "strength": 4
-      }
+      },
+      "weight": 13.0,
+      "cost": 448
     },
     {
       "id": "armor_059",
@@ -759,12 +817,13 @@
       "src": "/armors/59.png",
       "type": "armor",
       "gear": "armor",
-      "value": 214,
       "stats": {
         "defence": 1,
         "strength": 3,
         "intelligence": 2
-      }
+      },
+      "weight": 7.5,
+      "cost": 214
     },
     {
       "id": "armor_060",
@@ -773,12 +832,13 @@
       "src": "/armors/60.png",
       "type": "armor",
       "gear": "armor",
-      "value": 203,
       "stats": {
         "defence": 7,
         "luck": 2,
         "mana": 5
-      }
+      },
+      "weight": 5.1,
+      "cost": 203
     },
     {
       "id": "armor_061",
@@ -787,12 +847,13 @@
       "src": "/armors/61.png",
       "type": "armor",
       "gear": "armor",
-      "value": 65,
       "stats": {
         "defence": 4,
         "intelligence": 3,
         "strength": 5
-      }
+      },
+      "weight": 6.1,
+      "cost": 65
     },
     {
       "id": "armor_062",
@@ -801,12 +862,13 @@
       "src": "/armors/62.png",
       "type": "armor",
       "gear": "armor",
-      "value": 144,
       "stats": {
         "defence": 4,
         "stamina": 2,
         "luck": 1
-      }
+      },
+      "weight": 4.0,
+      "cost": 144
     },
     {
       "id": "armor_063",
@@ -815,11 +877,12 @@
       "src": "/armors/63.png",
       "type": "armor",
       "gear": "armor",
-      "value": 104,
       "stats": {
         "defence": 10,
         "strength": 1
-      }
+      },
+      "weight": 6.8,
+      "cost": 104
     },
     {
       "id": "armor_064",
@@ -828,12 +891,13 @@
       "src": "/armors/64.png",
       "type": "armor",
       "gear": "armor",
-      "value": 483,
       "stats": {
         "defence": 2,
         "strength": 1,
         "luck": 3
-      }
+      },
+      "weight": 8.9,
+      "cost": 483
     },
     {
       "id": "armor_065",
@@ -842,11 +906,12 @@
       "src": "/armors/65.png",
       "type": "armor",
       "gear": "armor",
-      "value": 477,
       "stats": {
         "defence": 7,
         "stamina": 2
-      }
+      },
+      "weight": 8.8,
+      "cost": 477
     },
     {
       "id": "armor_066",
@@ -855,11 +920,12 @@
       "src": "/armors/66.png",
       "type": "armor",
       "gear": "armor",
-      "value": 384,
       "stats": {
         "defence": 4,
         "strength": 1
-      }
+      },
+      "weight": 17.4,
+      "cost": 384
     },
     {
       "id": "armor_067",
@@ -868,12 +934,13 @@
       "src": "/armors/67.png",
       "type": "armor",
       "gear": "armor",
-      "value": 452,
       "stats": {
         "defence": 6,
         "mana": 5,
         "luck": 1
-      }
+      },
+      "weight": 8.5,
+      "cost": 452
     },
     {
       "id": "armor_068",
@@ -882,11 +949,12 @@
       "src": "/armors/68.png",
       "type": "armor",
       "gear": "armor",
-      "value": 395,
       "stats": {
         "defence": 10,
         "strength": 1
-      }
+      },
+      "weight": 12.5,
+      "cost": 395
     },
     {
       "id": "armor_069",
@@ -895,10 +963,11 @@
       "src": "/armors/69.png",
       "type": "armor",
       "gear": "armor",
-      "value": 478,
       "stats": {
         "defence": 9
-      }
+      },
+      "weight": 6.4,
+      "cost": 478
     },
     {
       "id": "armor_070",
@@ -907,12 +976,13 @@
       "src": "/armors/70.png",
       "type": "armor",
       "gear": "armor",
-      "value": 239,
       "stats": {
         "defence": 7,
         "luck": 3,
         "mana": 5
-      }
+      },
+      "weight": 9.6,
+      "cost": 239
     },
     {
       "id": "armor_071",
@@ -921,11 +991,12 @@
       "src": "/armors/71.png",
       "type": "armor",
       "gear": "armor",
-      "value": 220,
       "stats": {
         "defence": 2,
         "mana": 1
-      }
+      },
+      "weight": 3.3,
+      "cost": 220
     },
     {
       "id": "armor_072",
@@ -934,10 +1005,11 @@
       "src": "/armors/72.png",
       "type": "armor",
       "gear": "armor",
-      "value": 457,
       "stats": {
         "defence": 1
-      }
+      },
+      "weight": 7.8,
+      "cost": 457
     },
     {
       "id": "armor_073",
@@ -946,11 +1018,12 @@
       "src": "/armors/73.png",
       "type": "armor",
       "gear": "armor",
-      "value": 470,
       "stats": {
         "defence": 6,
         "strength": 3
-      }
+      },
+      "weight": 3.3,
+      "cost": 470
     },
     {
       "id": "armor_074",
@@ -959,12 +1032,13 @@
       "src": "/armors/74.png",
       "type": "armor",
       "gear": "armor",
-      "value": 186,
       "stats": {
         "defence": 1,
         "strength": 5,
         "intelligence": 5
-      }
+      },
+      "weight": 16.9,
+      "cost": 186
     },
     {
       "id": "armor_075",
@@ -973,11 +1047,12 @@
       "src": "/armors/75.png",
       "type": "armor",
       "gear": "armor",
-      "value": 232,
       "stats": {
         "defence": 9,
         "strength": 1
-      }
+      },
+      "weight": 13.5,
+      "cost": 232
     },
     {
       "id": "armor_076",
@@ -986,10 +1061,11 @@
       "src": "/armors/76.png",
       "type": "armor",
       "gear": "armor",
-      "value": 149,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 6.6,
+      "cost": 149
     },
     {
       "id": "armor_077",
@@ -998,12 +1074,13 @@
       "src": "/armors/77.png",
       "type": "armor",
       "gear": "armor",
-      "value": 334,
       "stats": {
         "defence": 6,
         "mana": 3,
         "intelligence": 3
-      }
+      },
+      "weight": 12.0,
+      "cost": 334
     },
     {
       "id": "armor_078",
@@ -1012,10 +1089,11 @@
       "src": "/armors/78.png",
       "type": "armor",
       "gear": "armor",
-      "value": 268,
       "stats": {
         "defence": 8
-      }
+      },
+      "weight": 20.8,
+      "cost": 268
     },
     {
       "id": "armor_079",
@@ -1024,12 +1102,13 @@
       "src": "/armors/79.png",
       "type": "armor",
       "gear": "armor",
-      "value": 198,
       "stats": {
         "defence": 8,
         "strength": 1,
         "luck": 2
-      }
+      },
+      "weight": 5.0,
+      "cost": 198
     },
     {
       "id": "armor_080",
@@ -1038,12 +1117,13 @@
       "src": "/armors/80.png",
       "type": "armor",
       "gear": "armor",
-      "value": 498,
       "stats": {
         "defence": 8,
         "luck": 1,
         "intelligence": 1
-      }
+      },
+      "weight": 18.6,
+      "cost": 498
     },
     {
       "id": "armor_081",
@@ -1052,12 +1132,13 @@
       "src": "/armors/81.png",
       "type": "armor",
       "gear": "armor",
-      "value": 249,
       "stats": {
         "defence": 6,
         "intelligence": 2,
         "stamina": 1
-      }
+      },
+      "weight": 11.2,
+      "cost": 249
     },
     {
       "id": "armor_082",
@@ -1066,10 +1147,11 @@
       "src": "/armors/82.png",
       "type": "armor",
       "gear": "armor",
-      "value": 446,
       "stats": {
         "defence": 4
-      }
+      },
+      "weight": 12.4,
+      "cost": 446
     },
     {
       "id": "armor_083",
@@ -1078,10 +1160,11 @@
       "src": "/armors/83.png",
       "type": "armor",
       "gear": "armor",
-      "value": 76,
       "stats": {
         "defence": 2
-      }
+      },
+      "weight": 18.9,
+      "cost": 76
     },
     {
       "id": "armor_084",
@@ -1090,10 +1173,11 @@
       "src": "/armors/84.png",
       "type": "armor",
       "gear": "armor",
-      "value": 299,
       "stats": {
         "defence": 9
-      }
+      },
+      "weight": 10.5,
+      "cost": 299
     },
     {
       "id": "armor_085",
@@ -1102,11 +1186,12 @@
       "src": "/armors/85.png",
       "type": "armor",
       "gear": "armor",
-      "value": 326,
       "stats": {
         "defence": 9,
         "luck": 2
-      }
+      },
+      "weight": 12.6,
+      "cost": 326
     },
     {
       "id": "armor_086",
@@ -1115,11 +1200,12 @@
       "src": "/armors/86.png",
       "type": "armor",
       "gear": "armor",
-      "value": 113,
       "stats": {
         "defence": 5,
         "strength": 4
-      }
+      },
+      "weight": 16.1,
+      "cost": 113
     },
     {
       "id": "armor_087",
@@ -1128,10 +1214,11 @@
       "src": "/armors/87.png",
       "type": "armor",
       "gear": "armor",
-      "value": 196,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 21.7,
+      "cost": 196
     },
     {
       "id": "armor_088",
@@ -1140,11 +1227,12 @@
       "src": "/armors/88.png",
       "type": "armor",
       "gear": "armor",
-      "value": 190,
       "stats": {
         "defence": 10,
         "strength": 4
-      }
+      },
+      "weight": 9.5,
+      "cost": 190
     },
     {
       "id": "armor_089",
@@ -1153,12 +1241,13 @@
       "src": "/armors/89.png",
       "type": "armor",
       "gear": "armor",
-      "value": 128,
       "stats": {
         "defence": 2,
         "strength": 1,
         "mana": 5
-      }
+      },
+      "weight": 18.8,
+      "cost": 128
     },
     {
       "id": "armor_090",
@@ -1167,12 +1256,13 @@
       "src": "/armors/90.png",
       "type": "armor",
       "gear": "armor",
-      "value": 223,
       "stats": {
         "defence": 9,
         "intelligence": 4,
         "mana": 2
-      }
+      },
+      "weight": 16.4,
+      "cost": 223
     },
     {
       "id": "armor_091",
@@ -1181,12 +1271,13 @@
       "src": "/armors/91.png",
       "type": "armor",
       "gear": "armor",
-      "value": 305,
       "stats": {
         "defence": 6,
         "stamina": 5,
         "strength": 1
-      }
+      },
+      "weight": 15.1,
+      "cost": 305
     },
     {
       "id": "armor_092",
@@ -1195,12 +1286,13 @@
       "src": "/armors/92.png",
       "type": "armor",
       "gear": "armor",
-      "value": 241,
       "stats": {
         "defence": 1,
         "strength": 1,
         "intelligence": 5
-      }
+      },
+      "weight": 10.7,
+      "cost": 241
     },
     {
       "id": "armor_093",
@@ -1209,12 +1301,13 @@
       "src": "/armors/93.png",
       "type": "armor",
       "gear": "armor",
-      "value": 218,
       "stats": {
         "defence": 3,
         "luck": 3,
         "strength": 3
-      }
+      },
+      "weight": 9.6,
+      "cost": 218
     },
     {
       "id": "armor_094",
@@ -1223,10 +1316,11 @@
       "src": "/armors/94.png",
       "type": "armor",
       "gear": "armor",
-      "value": 265,
       "stats": {
         "defence": 5
-      }
+      },
+      "weight": 4.0,
+      "cost": 265
     },
     {
       "id": "armor_095",
@@ -1235,11 +1329,12 @@
       "src": "/armors/95.png",
       "type": "armor",
       "gear": "armor",
-      "value": 204,
       "stats": {
         "defence": 2,
         "strength": 4
-      }
+      },
+      "weight": 5.5,
+      "cost": 204
     },
     {
       "id": "armor_096",
@@ -1248,12 +1343,13 @@
       "src": "/armors/96.png",
       "type": "armor",
       "gear": "armor",
-      "value": 416,
       "stats": {
         "defence": 5,
         "mana": 5,
         "intelligence": 1
-      }
+      },
+      "weight": 4.3,
+      "cost": 416
     },
     {
       "id": "armor_097",
@@ -1262,11 +1358,12 @@
       "src": "/armors/97.png",
       "type": "armor",
       "gear": "armor",
-      "value": 85,
       "stats": {
         "defence": 7,
         "strength": 2
-      }
+      },
+      "weight": 17.1,
+      "cost": 85
     },
     {
       "id": "armor_098",
@@ -1275,12 +1372,13 @@
       "src": "/armors/98.png",
       "type": "armor",
       "gear": "armor",
-      "value": 186,
       "stats": {
         "defence": 1,
         "luck": 4,
         "strength": 4
-      }
+      },
+      "weight": 7.9,
+      "cost": 186
     },
     {
       "id": "armor_099",
@@ -1289,11 +1387,12 @@
       "src": "/armors/99.png",
       "type": "armor",
       "gear": "armor",
-      "value": 174,
       "stats": {
         "defence": 9,
         "luck": 3
-      }
+      },
+      "weight": 6.1,
+      "cost": 174
     },
     {
       "id": "armor_100",
@@ -1302,11 +1401,12 @@
       "src": "/armors/100.png",
       "type": "armor",
       "gear": "armor",
-      "value": 60,
       "stats": {
         "defence": 9,
         "intelligence": 5
-      }
+      },
+      "weight": 4.6,
+      "cost": 60
     },
     {
       "id": "armor_101",
@@ -1315,12 +1415,13 @@
       "src": "/armors/101.png",
       "type": "armor",
       "gear": "armor",
-      "value": 390,
       "stats": {
         "defence": 7,
         "mana": 5,
         "intelligence": 5
-      }
+      },
+      "weight": 19.0,
+      "cost": 390
     },
     {
       "id": "armor_102",
@@ -1329,12 +1430,13 @@
       "src": "/armors/102.png",
       "type": "armor",
       "gear": "armor",
-      "value": 213,
       "stats": {
         "defence": 3,
         "luck": 3,
         "strength": 2
-      }
+      },
+      "weight": 19.5,
+      "cost": 213
     },
     {
       "id": "armor_103",
@@ -1343,10 +1445,11 @@
       "src": "/armors/103.png",
       "type": "armor",
       "gear": "armor",
-      "value": 322,
       "stats": {
         "defence": 4
-      }
+      },
+      "weight": 15.7,
+      "cost": 322
     },
     {
       "id": "armor_104",
@@ -1355,10 +1458,11 @@
       "src": "/armors/104.png",
       "type": "armor",
       "gear": "armor",
-      "value": 86,
       "stats": {
         "defence": 3
-      }
+      },
+      "weight": 8.4,
+      "cost": 86
     },
     {
       "id": "armor_105",
@@ -1367,10 +1471,11 @@
       "src": "/armors/105.png",
       "type": "armor",
       "gear": "armor",
-      "value": 483,
       "stats": {
         "defence": 1
-      }
+      },
+      "weight": 7.6,
+      "cost": 483
     },
     {
       "id": "armor_106",
@@ -1379,10 +1484,11 @@
       "src": "/armors/106.png",
       "type": "armor",
       "gear": "armor",
-      "value": 291,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 8.6,
+      "cost": 291
     },
     {
       "id": "armor_107",
@@ -1391,12 +1497,13 @@
       "src": "/armors/107.png",
       "type": "armor",
       "gear": "armor",
-      "value": 361,
       "stats": {
         "defence": 5,
         "luck": 3,
         "stamina": 1
-      }
+      },
+      "weight": 11.7,
+      "cost": 361
     },
     {
       "id": "armor_108",
@@ -1405,10 +1512,11 @@
       "src": "/armors/108.png",
       "type": "armor",
       "gear": "armor",
-      "value": 109,
       "stats": {
         "defence": 10
-      }
+      },
+      "weight": 6.0,
+      "cost": 109
     },
     {
       "id": "armor_109",
@@ -1417,11 +1525,12 @@
       "src": "/armors/109.png",
       "type": "armor",
       "gear": "armor",
-      "value": 324,
       "stats": {
         "defence": 8,
         "stamina": 5
-      }
+      },
+      "weight": 11.5,
+      "cost": 324
     },
     {
       "id": "armor_110",
@@ -1430,12 +1539,13 @@
       "src": "/armors/110.png",
       "type": "armor",
       "gear": "armor",
-      "value": 158,
       "stats": {
         "defence": 3,
         "stamina": 5,
         "intelligence": 3
-      }
+      },
+      "weight": 8.0,
+      "cost": 158
     },
     {
       "id": "armor_111",
@@ -1444,10 +1554,11 @@
       "src": "/armors/111.png",
       "type": "armor",
       "gear": "armor",
-      "value": 230,
       "stats": {
         "defence": 9
-      }
+      },
+      "weight": 21.3,
+      "cost": 230
     },
     {
       "id": "armor_112",
@@ -1456,10 +1567,11 @@
       "src": "/armors/112.png",
       "type": "armor",
       "gear": "armor",
-      "value": 154,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 21.5,
+      "cost": 154
     },
     {
       "id": "armor_113",
@@ -1468,10 +1580,11 @@
       "src": "/armors/113.png",
       "type": "armor",
       "gear": "armor",
-      "value": 330,
       "stats": {
         "defence": 2
-      }
+      },
+      "weight": 13.4,
+      "cost": 330
     },
     {
       "id": "armor_114",
@@ -1480,10 +1593,11 @@
       "src": "/armors/114.png",
       "type": "armor",
       "gear": "armor",
-      "value": 234,
       "stats": {
         "defence": 5
-      }
+      },
+      "weight": 7.6,
+      "cost": 234
     },
     {
       "id": "armor_115",
@@ -1492,11 +1606,12 @@
       "src": "/armors/115.png",
       "type": "armor",
       "gear": "armor",
-      "value": 463,
       "stats": {
         "defence": 2,
         "luck": 5
-      }
+      },
+      "weight": 21.3,
+      "cost": 463
     },
     {
       "id": "armor_116",
@@ -1505,12 +1620,13 @@
       "src": "/armors/116.png",
       "type": "armor",
       "gear": "armor",
-      "value": 288,
       "stats": {
         "defence": 6,
         "mana": 5,
         "luck": 5
-      }
+      },
+      "weight": 8.9,
+      "cost": 288
     },
     {
       "id": "armor_117",
@@ -1519,12 +1635,13 @@
       "src": "/armors/117.png",
       "type": "armor",
       "gear": "armor",
-      "value": 106,
       "stats": {
         "defence": 6,
         "stamina": 3,
         "strength": 2
-      }
+      },
+      "weight": 9.8,
+      "cost": 106
     },
     {
       "id": "armor_118",
@@ -1533,12 +1650,13 @@
       "src": "/armors/118.png",
       "type": "armor",
       "gear": "armor",
-      "value": 81,
       "stats": {
         "defence": 9,
         "stamina": 4,
         "strength": 1
-      }
+      },
+      "weight": 3.0,
+      "cost": 81
     },
     {
       "id": "armor_119",
@@ -1547,12 +1665,13 @@
       "src": "/armors/119.png",
       "type": "armor",
       "gear": "armor",
-      "value": 257,
       "stats": {
         "defence": 8,
         "strength": 5,
         "intelligence": 1
-      }
+      },
+      "weight": 10.3,
+      "cost": 257
     },
     {
       "id": "armor_120",
@@ -1561,12 +1680,13 @@
       "src": "/armors/120.png",
       "type": "armor",
       "gear": "armor",
-      "value": 284,
       "stats": {
         "defence": 3,
         "mana": 5,
         "strength": 3
-      }
+      },
+      "weight": 12.0,
+      "cost": 284
     },
     {
       "id": "armor_121",
@@ -1575,12 +1695,13 @@
       "src": "/armors/121.png",
       "type": "armor",
       "gear": "armor",
-      "value": 156,
       "stats": {
         "defence": 5,
         "luck": 1,
         "intelligence": 3
-      }
+      },
+      "weight": 12.6,
+      "cost": 156
     },
     {
       "id": "armor_122",
@@ -1589,10 +1710,11 @@
       "src": "/armors/122.png",
       "type": "armor",
       "gear": "armor",
-      "value": 348,
       "stats": {
         "defence": 8
-      }
+      },
+      "weight": 6.8,
+      "cost": 348
     },
     {
       "id": "armor_123",
@@ -1601,10 +1723,11 @@
       "src": "/armors/123.png",
       "type": "armor",
       "gear": "armor",
-      "value": 202,
       "stats": {
         "defence": 6
-      }
+      },
+      "weight": 12.6,
+      "cost": 202
     },
     {
       "id": "armor_124",
@@ -1613,10 +1736,11 @@
       "src": "/armors/124.png",
       "type": "armor",
       "gear": "armor",
-      "value": 231,
       "stats": {
         "defence": 10
-      }
+      },
+      "weight": 3.1,
+      "cost": 231
     },
     {
       "id": "armor_125",
@@ -1625,11 +1749,12 @@
       "src": "/armors/125.png",
       "type": "armor",
       "gear": "armor",
-      "value": 284,
       "stats": {
         "defence": 9,
         "intelligence": 2
-      }
+      },
+      "weight": 8.0,
+      "cost": 284
     },
     {
       "id": "armor_126",
@@ -1638,10 +1763,11 @@
       "src": "/armors/126.png",
       "type": "armor",
       "gear": "armor",
-      "value": 86,
       "stats": {
         "defence": 5
-      }
+      },
+      "weight": 4.7,
+      "cost": 86
     },
     {
       "id": "armor_127",
@@ -1650,12 +1776,13 @@
       "src": "/armors/127.png",
       "type": "armor",
       "gear": "armor",
-      "value": 331,
       "stats": {
         "defence": 5,
         "luck": 3,
         "strength": 3
-      }
+      },
+      "weight": 10.6,
+      "cost": 331
     },
     {
       "id": "armor_128",
@@ -1664,12 +1791,13 @@
       "src": "/armors/128.png",
       "type": "armor",
       "gear": "armor",
-      "value": 83,
       "stats": {
         "defence": 4,
         "mana": 3,
         "strength": 2
-      }
+      },
+      "weight": 3.8,
+      "cost": 83
     },
     {
       "id": "armor_129",
@@ -1678,11 +1806,12 @@
       "src": "/armors/129.png",
       "type": "armor",
       "gear": "armor",
-      "value": 185,
       "stats": {
         "defence": 6,
         "stamina": 3
-      }
+      },
+      "weight": 3.4,
+      "cost": 185
     },
     {
       "id": "armor_130",
@@ -1691,12 +1820,13 @@
       "src": "/armors/130.png",
       "type": "armor",
       "gear": "armor",
-      "value": 374,
       "stats": {
         "defence": 3,
         "intelligence": 3,
         "mana": 2
-      }
+      },
+      "weight": 8.8,
+      "cost": 374
     },
     {
       "id": "armor_131",
@@ -1705,11 +1835,12 @@
       "src": "/armors/131.png",
       "type": "armor",
       "gear": "armor",
-      "value": 398,
       "stats": {
         "defence": 5,
         "stamina": 5
-      }
+      },
+      "weight": 7.4,
+      "cost": 398
     },
     {
       "id": "armor_132",
@@ -1718,11 +1849,12 @@
       "src": "/armors/132.png",
       "type": "armor",
       "gear": "armor",
-      "value": 246,
       "stats": {
         "defence": 6,
         "intelligence": 4
-      }
+      },
+      "weight": 14.1,
+      "cost": 246
     },
     {
       "id": "armor_133",
@@ -1731,12 +1863,13 @@
       "src": "/armors/133.png",
       "type": "armor",
       "gear": "armor",
-      "value": 87,
       "stats": {
         "defence": 9,
         "stamina": 5,
         "intelligence": 5
-      }
+      },
+      "weight": 13.1,
+      "cost": 87
     },
     {
       "id": "armor_134",
@@ -1745,12 +1878,13 @@
       "src": "/armors/134.png",
       "type": "armor",
       "gear": "armor",
-      "value": 266,
       "stats": {
         "defence": 7,
         "strength": 3,
         "luck": 1
-      }
+      },
+      "weight": 17.3,
+      "cost": 266
     },
     {
       "id": "armor_135",
@@ -1759,11 +1893,12 @@
       "src": "/armors/135.png",
       "type": "armor",
       "gear": "armor",
-      "value": 384,
       "stats": {
         "defence": 5,
         "stamina": 3
-      }
+      },
+      "weight": 15.5,
+      "cost": 384
     },
     {
       "id": "armor_136",
@@ -1772,11 +1907,12 @@
       "src": "/armors/136.png",
       "type": "armor",
       "gear": "armor",
-      "value": 193,
       "stats": {
         "defence": 7,
         "luck": 2
-      }
+      },
+      "weight": 16.6,
+      "cost": 193
     },
     {
       "id": "armor_137",
@@ -1785,12 +1921,13 @@
       "src": "/armors/137.png",
       "type": "armor",
       "gear": "armor",
-      "value": 218,
       "stats": {
         "defence": 8,
         "mana": 4,
         "stamina": 4
-      }
+      },
+      "weight": 19.7,
+      "cost": 218
     },
     {
       "id": "armor_138",
@@ -1799,12 +1936,13 @@
       "src": "/armors/138.png",
       "type": "armor",
       "gear": "armor",
-      "value": 278,
       "stats": {
         "defence": 2,
         "stamina": 4,
         "luck": 4
-      }
+      },
+      "weight": 10.4,
+      "cost": 278
     },
     {
       "id": "armor_139",
@@ -1813,12 +1951,13 @@
       "src": "/armors/139.png",
       "type": "armor",
       "gear": "armor",
-      "value": 169,
       "stats": {
         "defence": 9,
         "strength": 3,
         "luck": 3
-      }
+      },
+      "weight": 9.2,
+      "cost": 169
     },
     {
       "id": "armor_140",
@@ -1827,12 +1966,13 @@
       "src": "/armors/140.png",
       "type": "armor",
       "gear": "armor",
-      "value": 222,
       "stats": {
         "defence": 5,
         "stamina": 1,
         "luck": 5
-      }
+      },
+      "weight": 21.7,
+      "cost": 222
     },
     {
       "id": "armor_141",
@@ -1841,12 +1981,13 @@
       "src": "/armors/141.png",
       "type": "armor",
       "gear": "armor",
-      "value": 76,
       "stats": {
         "defence": 5,
         "intelligence": 3,
         "luck": 4
-      }
+      },
+      "weight": 5.8,
+      "cost": 76
     },
     {
       "id": "armor_142",
@@ -1855,12 +1996,13 @@
       "src": "/armors/142.png",
       "type": "armor",
       "gear": "armor",
-      "value": 483,
       "stats": {
         "defence": 1,
         "intelligence": 5,
         "stamina": 3
-      }
+      },
+      "weight": 16.8,
+      "cost": 483
     },
     {
       "id": "armor_143",
@@ -1869,11 +2011,12 @@
       "src": "/armors/143.png",
       "type": "armor",
       "gear": "armor",
-      "value": 315,
       "stats": {
         "defence": 2,
         "stamina": 1
-      }
+      },
+      "weight": 15.2,
+      "cost": 315
     },
     {
       "id": "armor_144",
@@ -1882,11 +2025,12 @@
       "src": "/armors/144.png",
       "type": "armor",
       "gear": "armor",
-      "value": 378,
       "stats": {
         "defence": 6,
         "strength": 5
-      }
+      },
+      "weight": 3.8,
+      "cost": 378
     },
     {
       "id": "armor_145",
@@ -1895,12 +2039,13 @@
       "src": "/armors/145.png",
       "type": "armor",
       "gear": "armor",
-      "value": 257,
       "stats": {
         "defence": 5,
         "mana": 5,
         "intelligence": 5
-      }
+      },
+      "weight": 18.9,
+      "cost": 257
     },
     {
       "id": "armor_146",
@@ -1909,10 +2054,11 @@
       "src": "/armors/146.png",
       "type": "armor",
       "gear": "armor",
-      "value": 358,
       "stats": {
         "defence": 4
-      }
+      },
+      "weight": 19.9,
+      "cost": 358
     },
     {
       "id": "armor_147",
@@ -1921,11 +2067,12 @@
       "src": "/armors/147.png",
       "type": "armor",
       "gear": "armor",
-      "value": 396,
       "stats": {
         "defence": 9,
         "luck": 1
-      }
+      },
+      "weight": 14.9,
+      "cost": 396
     },
     {
       "id": "armor_148",
@@ -1934,12 +2081,13 @@
       "src": "/armors/148.png",
       "type": "armor",
       "gear": "armor",
-      "value": 113,
       "stats": {
         "defence": 1,
         "intelligence": 2,
         "stamina": 4
-      }
+      },
+      "weight": 16.9,
+      "cost": 113
     },
     {
       "id": "armor_149",
@@ -1948,11 +2096,12 @@
       "src": "/armors/149.png",
       "type": "armor",
       "gear": "armor",
-      "value": 449,
       "stats": {
         "defence": 2,
         "intelligence": 4
-      }
+      },
+      "weight": 18.4,
+      "cost": 449
     },
     {
       "id": "armor_150",
@@ -1961,10 +2110,11 @@
       "src": "/armors/150.png",
       "type": "armor",
       "gear": "armor",
-      "value": 445,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 5.6,
+      "cost": 445
     },
     {
       "id": "armor_151",
@@ -1973,11 +2123,12 @@
       "src": "/armors/151.png",
       "type": "armor",
       "gear": "armor",
-      "value": 127,
       "stats": {
         "defence": 10,
         "mana": 1
-      }
+      },
+      "weight": 13.0,
+      "cost": 127
     },
     {
       "id": "armor_152",
@@ -1986,10 +2137,11 @@
       "src": "/armors/152.png",
       "type": "armor",
       "gear": "armor",
-      "value": 187,
       "stats": {
         "defence": 6
-      }
+      },
+      "weight": 12.6,
+      "cost": 187
     },
     {
       "id": "armor_153",
@@ -1998,11 +2150,12 @@
       "src": "/armors/153.png",
       "type": "armor",
       "gear": "armor",
-      "value": 454,
       "stats": {
         "defence": 9,
         "strength": 1
-      }
+      },
+      "weight": 18.9,
+      "cost": 454
     },
     {
       "id": "armor_154",
@@ -2011,10 +2164,11 @@
       "src": "/armors/154.png",
       "type": "armor",
       "gear": "armor",
-      "value": 383,
       "stats": {
         "defence": 10
-      }
+      },
+      "weight": 18.3,
+      "cost": 383
     },
     {
       "id": "armor_155",
@@ -2023,10 +2177,11 @@
       "src": "/armors/155.png",
       "type": "armor",
       "gear": "armor",
-      "value": 471,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 18.7,
+      "cost": 471
     },
     {
       "id": "armor_156",
@@ -2035,10 +2190,11 @@
       "src": "/armors/156.png",
       "type": "armor",
       "gear": "armor",
-      "value": 352,
       "stats": {
         "defence": 8
-      }
+      },
+      "weight": 14.1,
+      "cost": 352
     },
     {
       "id": "armor_157",
@@ -2047,12 +2203,13 @@
       "src": "/armors/157.png",
       "type": "armor",
       "gear": "armor",
-      "value": 375,
       "stats": {
         "defence": 3,
         "mana": 3,
         "stamina": 3
-      }
+      },
+      "weight": 20.0,
+      "cost": 375
     },
     {
       "id": "armor_158",
@@ -2061,12 +2218,13 @@
       "src": "/armors/158.png",
       "type": "armor",
       "gear": "armor",
-      "value": 291,
       "stats": {
         "defence": 5,
         "stamina": 5,
         "mana": 5
-      }
+      },
+      "weight": 16.0,
+      "cost": 291
     },
     {
       "id": "armor_159",
@@ -2075,12 +2233,13 @@
       "src": "/armors/159.png",
       "type": "armor",
       "gear": "armor",
-      "value": 214,
       "stats": {
         "defence": 9,
         "strength": 3,
         "stamina": 3
-      }
+      },
+      "weight": 16.2,
+      "cost": 214
     },
     {
       "id": "armor_160",
@@ -2089,12 +2248,13 @@
       "src": "/armors/160.png",
       "type": "armor",
       "gear": "armor",
-      "value": 425,
       "stats": {
         "defence": 3,
         "strength": 3,
         "mana": 4
-      }
+      },
+      "weight": 7.4,
+      "cost": 425
     },
     {
       "id": "armor_161",
@@ -2103,10 +2263,11 @@
       "src": "/armors/161.png",
       "type": "armor",
       "gear": "armor",
-      "value": 229,
       "stats": {
         "defence": 10
-      }
+      },
+      "weight": 3.6,
+      "cost": 229
     },
     {
       "id": "armor_162",
@@ -2115,10 +2276,11 @@
       "src": "/armors/162.png",
       "type": "armor",
       "gear": "armor",
-      "value": 308,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 5.5,
+      "cost": 308
     },
     {
       "id": "armor_163",
@@ -2127,11 +2289,12 @@
       "src": "/armors/163.png",
       "type": "armor",
       "gear": "armor",
-      "value": 115,
       "stats": {
         "defence": 6,
         "stamina": 3
-      }
+      },
+      "weight": 9.9,
+      "cost": 115
     },
     {
       "id": "armor_164",
@@ -2140,10 +2303,11 @@
       "src": "/armors/164.png",
       "type": "armor",
       "gear": "armor",
-      "value": 145,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 5.0,
+      "cost": 145
     },
     {
       "id": "armor_165",
@@ -2152,11 +2316,12 @@
       "src": "/armors/165.png",
       "type": "armor",
       "gear": "armor",
-      "value": 142,
       "stats": {
         "defence": 5,
         "intelligence": 5
-      }
+      },
+      "weight": 18.9,
+      "cost": 142
     },
     {
       "id": "armor_166",
@@ -2165,11 +2330,12 @@
       "src": "/armors/166.png",
       "type": "armor",
       "gear": "armor",
-      "value": 182,
       "stats": {
         "defence": 3,
         "stamina": 4
-      }
+      },
+      "weight": 13.6,
+      "cost": 182
     },
     {
       "id": "armor_167",
@@ -2178,10 +2344,11 @@
       "src": "/armors/167.png",
       "type": "armor",
       "gear": "armor",
-      "value": 484,
       "stats": {
         "defence": 3
-      }
+      },
+      "weight": 14.9,
+      "cost": 484
     },
     {
       "id": "armor_168",
@@ -2190,12 +2357,13 @@
       "src": "/armors/168.png",
       "type": "armor",
       "gear": "armor",
-      "value": 165,
       "stats": {
         "defence": 1,
         "intelligence": 3,
         "strength": 5
-      }
+      },
+      "weight": 14.9,
+      "cost": 165
     },
     {
       "id": "armor_169",
@@ -2204,11 +2372,12 @@
       "src": "/armors/169.png",
       "type": "armor",
       "gear": "armor",
-      "value": 68,
       "stats": {
         "defence": 2,
         "mana": 1
-      }
+      },
+      "weight": 15.9,
+      "cost": 68
     },
     {
       "id": "armor_170",
@@ -2217,12 +2386,13 @@
       "src": "/armors/170.png",
       "type": "armor",
       "gear": "armor",
-      "value": 348,
       "stats": {
         "defence": 3,
         "stamina": 4,
         "intelligence": 3
-      }
+      },
+      "weight": 12.3,
+      "cost": 348
     },
     {
       "id": "armor_171",
@@ -2231,11 +2401,12 @@
       "src": "/armors/171.png",
       "type": "armor",
       "gear": "armor",
-      "value": 249,
       "stats": {
         "defence": 7,
         "stamina": 4
-      }
+      },
+      "weight": 3.1,
+      "cost": 249
     },
     {
       "id": "armor_172",
@@ -2244,12 +2415,13 @@
       "src": "/armors/172.png",
       "type": "armor",
       "gear": "armor",
-      "value": 154,
       "stats": {
         "defence": 4,
         "luck": 1,
         "mana": 1
-      }
+      },
+      "weight": 18.2,
+      "cost": 154
     },
     {
       "id": "armor_173",
@@ -2258,10 +2430,11 @@
       "src": "/armors/173.png",
       "type": "armor",
       "gear": "armor",
-      "value": 127,
       "stats": {
         "defence": 5
-      }
+      },
+      "weight": 17.2,
+      "cost": 127
     },
     {
       "id": "armor_174",
@@ -2270,10 +2443,11 @@
       "src": "/armors/174.png",
       "type": "armor",
       "gear": "armor",
-      "value": 279,
       "stats": {
         "defence": 6
-      }
+      },
+      "weight": 12.6,
+      "cost": 279
     },
     {
       "id": "armor_175",
@@ -2282,11 +2456,12 @@
       "src": "/armors/175.png",
       "type": "armor",
       "gear": "armor",
-      "value": 143,
       "stats": {
         "defence": 6,
         "mana": 2
-      }
+      },
+      "weight": 13.2,
+      "cost": 143
     },
     {
       "id": "armor_176",
@@ -2295,10 +2470,11 @@
       "src": "/armors/176.png",
       "type": "armor",
       "gear": "armor",
-      "value": 154,
       "stats": {
         "defence": 3
-      }
+      },
+      "weight": 15.5,
+      "cost": 154
     },
     {
       "id": "armor_177",
@@ -2307,12 +2483,13 @@
       "src": "/armors/177.png",
       "type": "armor",
       "gear": "armor",
-      "value": 299,
       "stats": {
         "defence": 2,
         "intelligence": 5,
         "strength": 2
-      }
+      },
+      "weight": 4.3,
+      "cost": 299
     },
     {
       "id": "armor_178",
@@ -2321,12 +2498,13 @@
       "src": "/armors/178.png",
       "type": "armor",
       "gear": "armor",
-      "value": 89,
       "stats": {
         "defence": 5,
         "luck": 2,
         "mana": 4
-      }
+      },
+      "weight": 17.0,
+      "cost": 89
     },
     {
       "id": "armor_179",
@@ -2335,11 +2513,12 @@
       "src": "/armors/179.png",
       "type": "armor",
       "gear": "armor",
-      "value": 468,
       "stats": {
         "defence": 7,
         "mana": 1
-      }
+      },
+      "weight": 7.8,
+      "cost": 468
     },
     {
       "id": "armor_180",
@@ -2348,10 +2527,11 @@
       "src": "/armors/180.png",
       "type": "armor",
       "gear": "armor",
-      "value": 167,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 4.4,
+      "cost": 167
     },
     {
       "id": "armor_181",
@@ -2360,10 +2540,11 @@
       "src": "/armors/181.png",
       "type": "armor",
       "gear": "armor",
-      "value": 347,
       "stats": {
         "defence": 6
-      }
+      },
+      "weight": 8.0,
+      "cost": 347
     },
     {
       "id": "armor_182",
@@ -2372,12 +2553,13 @@
       "src": "/armors/182.png",
       "type": "armor",
       "gear": "armor",
-      "value": 234,
       "stats": {
         "defence": 8,
         "mana": 5,
         "luck": 4
-      }
+      },
+      "weight": 16.9,
+      "cost": 234
     },
     {
       "id": "armor_183",
@@ -2386,11 +2568,12 @@
       "src": "/armors/183.png",
       "type": "armor",
       "gear": "armor",
-      "value": 195,
       "stats": {
         "defence": 2,
         "strength": 4
-      }
+      },
+      "weight": 6.9,
+      "cost": 195
     },
     {
       "id": "armor_184",
@@ -2399,12 +2582,13 @@
       "src": "/armors/184.png",
       "type": "armor",
       "gear": "armor",
-      "value": 248,
       "stats": {
         "defence": 3,
         "mana": 1,
         "luck": 2
-      }
+      },
+      "weight": 17.1,
+      "cost": 248
     },
     {
       "id": "armor_185",
@@ -2413,10 +2597,11 @@
       "src": "/armors/185.png",
       "type": "armor",
       "gear": "armor",
-      "value": 323,
       "stats": {
         "defence": 8
-      }
+      },
+      "weight": 21.5,
+      "cost": 323
     },
     {
       "id": "armor_186",
@@ -2425,12 +2610,13 @@
       "src": "/armors/186.png",
       "type": "armor",
       "gear": "armor",
-      "value": 65,
       "stats": {
         "defence": 2,
         "luck": 5,
         "intelligence": 1
-      }
+      },
+      "weight": 12.4,
+      "cost": 65
     },
     {
       "id": "armor_187",
@@ -2439,11 +2625,12 @@
       "src": "/armors/187.png",
       "type": "armor",
       "gear": "armor",
-      "value": 460,
       "stats": {
         "defence": 2,
         "strength": 2
-      }
+      },
+      "weight": 10.3,
+      "cost": 460
     },
     {
       "id": "armor_188",
@@ -2452,12 +2639,13 @@
       "src": "/armors/188.png",
       "type": "armor",
       "gear": "armor",
-      "value": 66,
       "stats": {
         "defence": 6,
         "stamina": 4,
         "intelligence": 1
-      }
+      },
+      "weight": 12.1,
+      "cost": 66
     },
     {
       "id": "armor_189",
@@ -2466,10 +2654,11 @@
       "src": "/armors/189.png",
       "type": "armor",
       "gear": "armor",
-      "value": 307,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 16.0,
+      "cost": 307
     },
     {
       "id": "armor_190",
@@ -2478,12 +2667,13 @@
       "src": "/armors/190.png",
       "type": "armor",
       "gear": "armor",
-      "value": 417,
       "stats": {
         "defence": 6,
         "strength": 1,
         "mana": 5
-      }
+      },
+      "weight": 17.6,
+      "cost": 417
     },
     {
       "id": "armor_191",
@@ -2492,12 +2682,13 @@
       "src": "/armors/191.png",
       "type": "armor",
       "gear": "armor",
-      "value": 147,
       "stats": {
         "defence": 10,
         "luck": 1,
         "stamina": 4
-      }
+      },
+      "weight": 14.7,
+      "cost": 147
     },
     {
       "id": "armor_192",
@@ -2506,12 +2697,13 @@
       "src": "/armors/192.png",
       "type": "armor",
       "gear": "armor",
-      "value": 450,
       "stats": {
         "defence": 9,
         "mana": 5,
         "intelligence": 2
-      }
+      },
+      "weight": 15.2,
+      "cost": 450
     },
     {
       "id": "armor_193",
@@ -2520,10 +2712,11 @@
       "src": "/armors/193.png",
       "type": "armor",
       "gear": "armor",
-      "value": 500,
       "stats": {
         "defence": 3
-      }
+      },
+      "weight": 4.5,
+      "cost": 500
     },
     {
       "id": "armor_194",
@@ -2532,11 +2725,12 @@
       "src": "/armors/194.png",
       "type": "armor",
       "gear": "armor",
-      "value": 365,
       "stats": {
         "defence": 2,
         "luck": 2
-      }
+      },
+      "weight": 5.8,
+      "cost": 365
     },
     {
       "id": "armor_195",
@@ -2545,11 +2739,12 @@
       "src": "/armors/195.png",
       "type": "armor",
       "gear": "armor",
-      "value": 108,
       "stats": {
         "defence": 1,
         "stamina": 4
-      }
+      },
+      "weight": 7.8,
+      "cost": 108
     },
     {
       "id": "armor_196",
@@ -2558,11 +2753,12 @@
       "src": "/armors/196.png",
       "type": "armor",
       "gear": "armor",
-      "value": 68,
       "stats": {
         "defence": 1,
         "intelligence": 1
-      }
+      },
+      "weight": 17.1,
+      "cost": 68
     },
     {
       "id": "armor_197",
@@ -2571,11 +2767,12 @@
       "src": "/armors/197.png",
       "type": "armor",
       "gear": "armor",
-      "value": 215,
       "stats": {
         "defence": 8,
         "intelligence": 3
-      }
+      },
+      "weight": 8.8,
+      "cost": 215
     },
     {
       "id": "armor_198",
@@ -2584,12 +2781,13 @@
       "src": "/armors/198.png",
       "type": "armor",
       "gear": "armor",
-      "value": 458,
       "stats": {
         "defence": 7,
         "luck": 3,
         "intelligence": 4
-      }
+      },
+      "weight": 13.8,
+      "cost": 458
     },
     {
       "id": "armor_199",
@@ -2598,10 +2796,11 @@
       "src": "/armors/199.png",
       "type": "armor",
       "gear": "armor",
-      "value": 355,
       "stats": {
         "defence": 5
-      }
+      },
+      "weight": 3.2,
+      "cost": 355
     },
     {
       "id": "armor_200",
@@ -2610,11 +2809,12 @@
       "src": "/armors/200.png",
       "type": "armor",
       "gear": "armor",
-      "value": 334,
       "stats": {
         "defence": 3,
         "luck": 1
-      }
+      },
+      "weight": 4.2,
+      "cost": 334
     },
     {
       "id": "armor_201",
@@ -2623,10 +2823,11 @@
       "src": "/armors/201.png",
       "type": "armor",
       "gear": "armor",
-      "value": 282,
       "stats": {
         "defence": 1
-      }
+      },
+      "weight": 8.1,
+      "cost": 282
     },
     {
       "id": "armor_202",
@@ -2635,11 +2836,12 @@
       "src": "/armors/202.png",
       "type": "armor",
       "gear": "armor",
-      "value": 276,
       "stats": {
         "defence": 8,
         "intelligence": 5
-      }
+      },
+      "weight": 15.8,
+      "cost": 276
     },
     {
       "id": "armor_203",
@@ -2648,11 +2850,12 @@
       "src": "/armors/203.png",
       "type": "armor",
       "gear": "armor",
-      "value": 225,
       "stats": {
         "defence": 10,
         "intelligence": 3
-      }
+      },
+      "weight": 16.2,
+      "cost": 225
     },
     {
       "id": "armor_204",
@@ -2661,11 +2864,12 @@
       "src": "/armors/204.png",
       "type": "armor",
       "gear": "armor",
-      "value": 483,
       "stats": {
         "defence": 7,
         "intelligence": 2
-      }
+      },
+      "weight": 15.8,
+      "cost": 483
     },
     {
       "id": "armor_205",
@@ -2674,10 +2878,11 @@
       "src": "/armors/205.png",
       "type": "armor",
       "gear": "armor",
-      "value": 78,
       "stats": {
         "defence": 10
-      }
+      },
+      "weight": 8.5,
+      "cost": 78
     },
     {
       "id": "armor_206",
@@ -2686,10 +2891,11 @@
       "src": "/armors/206.png",
       "type": "armor",
       "gear": "armor",
-      "value": 481,
       "stats": {
         "defence": 1
-      }
+      },
+      "weight": 12.8,
+      "cost": 481
     },
     {
       "id": "armor_207",
@@ -2698,12 +2904,13 @@
       "src": "/armors/207.png",
       "type": "armor",
       "gear": "armor",
-      "value": 229,
       "stats": {
         "defence": 1,
         "strength": 3,
         "intelligence": 3
-      }
+      },
+      "weight": 11.8,
+      "cost": 229
     },
     {
       "id": "armor_208",
@@ -2712,11 +2919,12 @@
       "src": "/armors/208.png",
       "type": "armor",
       "gear": "armor",
-      "value": 379,
       "stats": {
         "defence": 4,
         "luck": 1
-      }
+      },
+      "weight": 11.9,
+      "cost": 379
     },
     {
       "id": "armor_209",
@@ -2725,10 +2933,11 @@
       "src": "/armors/209.png",
       "type": "armor",
       "gear": "armor",
-      "value": 199,
       "stats": {
         "defence": 9
-      }
+      },
+      "weight": 5.3,
+      "cost": 199
     },
     {
       "id": "armor_210",
@@ -2737,10 +2946,11 @@
       "src": "/armors/210.png",
       "type": "armor",
       "gear": "armor",
-      "value": 363,
       "stats": {
         "defence": 3
-      }
+      },
+      "weight": 20.0,
+      "cost": 363
     },
     {
       "id": "armor_211",
@@ -2749,11 +2959,12 @@
       "src": "/armors/211.png",
       "type": "armor",
       "gear": "armor",
-      "value": 330,
       "stats": {
         "defence": 6,
         "intelligence": 1
-      }
+      },
+      "weight": 6.8,
+      "cost": 330
     },
     {
       "id": "armor_212",
@@ -2762,10 +2973,11 @@
       "src": "/armors/212.png",
       "type": "armor",
       "gear": "armor",
-      "value": 138,
       "stats": {
         "defence": 7
-      }
+      },
+      "weight": 21.6,
+      "cost": 138
     },
     {
       "id": "armor_213",
@@ -2774,11 +2986,12 @@
       "src": "/armors/213.png",
       "type": "armor",
       "gear": "armor",
-      "value": 61,
       "stats": {
         "defence": 9,
         "mana": 4
-      }
+      },
+      "weight": 20.8,
+      "cost": 61
     },
     {
       "id": "armor_214",
@@ -2787,11 +3000,12 @@
       "src": "/armors/214.png",
       "type": "armor",
       "gear": "armor",
-      "value": 246,
       "stats": {
         "defence": 1,
         "stamina": 5
-      }
+      },
+      "weight": 3.3,
+      "cost": 246
     },
     {
       "id": "armor_215",
@@ -2800,11 +3014,12 @@
       "src": "/armors/215.png",
       "type": "armor",
       "gear": "armor",
-      "value": 56,
       "stats": {
         "defence": 3,
         "strength": 2
-      }
+      },
+      "weight": 11.7,
+      "cost": 56
     },
     {
       "id": "armor_216",
@@ -2813,11 +3028,12 @@
       "src": "/armors/216.png",
       "type": "armor",
       "gear": "armor",
-      "value": 104,
       "stats": {
         "defence": 3,
         "mana": 4
-      }
+      },
+      "weight": 18.6,
+      "cost": 104
     },
     {
       "id": "armor_217",
@@ -2826,10 +3042,11 @@
       "src": "/armors/217.png",
       "type": "armor",
       "gear": "armor",
-      "value": 432,
       "stats": {
         "defence": 1
-      }
+      },
+      "weight": 21.4,
+      "cost": 432
     },
     {
       "id": "armor_218",
@@ -2838,11 +3055,12 @@
       "src": "/armors/218.png",
       "type": "armor",
       "gear": "armor",
-      "value": 198,
       "stats": {
         "defence": 9,
         "stamina": 5
-      }
+      },
+      "weight": 11.5,
+      "cost": 198
     },
     {
       "id": "armor_219",
@@ -2851,11 +3069,12 @@
       "src": "/armors/219.png",
       "type": "armor",
       "gear": "armor",
-      "value": 214,
       "stats": {
         "defence": 9,
         "intelligence": 1
-      }
+      },
+      "weight": 8.1,
+      "cost": 214
     },
     {
       "id": "armor_220",
@@ -2864,11 +3083,12 @@
       "src": "/armors/220.png",
       "type": "armor",
       "gear": "armor",
-      "value": 490,
       "stats": {
         "defence": 4,
         "stamina": 1
-      }
+      },
+      "weight": 7.0,
+      "cost": 490
     }
   ]
 }

@@ -7,12 +7,14 @@ import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
 
 /** Space inside the tooltip's frame, and between its picture and its lines of text. */
-const PAD = 5;
-const GAP = 4;
+const PAD = 8;
+const GAP = 6;
 /** The item's picture is drawn this big (it keeps its shape). */
-const PICTURE = 48;
-const LINE_H = 10;
-const HEADER_H = 12;
+const PICTURE = 64;
+const LINE_H = 11;
+const HEADER_H = 15;
+/** The tooltip is never narrower than this. */
+const MIN_W = 150;
 /** The tooltip sits this far from the pointer. */
 const OFFSET = 10;
 const BG_ALPHA = 0.94;
@@ -22,6 +24,8 @@ function detailLines(item: InventoryItem): Array<{ text: string; color: number }
   const s = item.stats;
   const lines = s ? STAT_NAMES.flatMap((stat) => (s[stat] ? [{ text: `+${s[stat]} ${STAT_LABELS[stat]}`, color: 0x8fd18f }] : [])) : [];
   if (item.count !== undefined) lines.push({ text: `Count: ${item.count}`, color: THEME.text });
+  if (item.weight !== undefined) lines.push({ text: `Weight: ${item.weight} kg`, color: THEME.text });
+  lines.push({ text: `Value: ${item.value} gold`, color: 0xffcc00 });
   lines.push({ text: item.kind ?? item.type, color: THEME.muted });
   return lines;
 }
@@ -76,7 +80,7 @@ export class ItemTooltip {
       label.position.set(PAD + PICTURE + GAP, PAD + HEADER_H + i * LINE_H);
       this.lines.addChild(label);
     });
-    const textW = Math.max(this.header.textWidth, PICTURE + GAP + Math.max(0, ...this.lines.children.map((c) => c.width)));
+    const textW = Math.max(MIN_W, this.header.textWidth, PICTURE + GAP + Math.max(0, ...this.lines.children.map((c) => c.width)));
     const bodyH = Math.max(PICTURE, details.length * LINE_H);
     this.frame.clear()
       .rect(0, 0, textW + 2 * PAD, PAD * 2 + HEADER_H + bodyH).fill({ color: THEME.panel, alpha: BG_ALPHA })

@@ -109,7 +109,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - Tuning tables live together: sword and spell in `src/entities/WeaponStats.ts`; mobs in
   `src/entities/MobFactory.ts` (`MOB_CONFIGS`); dungeon generation in
   `src/level/generators/DungeonConfig.ts`; enemy AI knobs (sight, squad sizes, flanking, trail
-  following) in `src/ai/constants.ts`.
+  following) in `src/ai/constants.ts`; the D&D rules tables (SRD weapons and armour) in `src/rules/WeaponTable.ts`
+  and `src/rules/ArmorTable.ts`, base ability scores in `src/data/stats.json`.
 - Type such tables with `satisfies Record<Key, Shape>` so a missing or misspelt key is a compile error.
 
 ## 8. Design patterns for 2-D games in TypeScript (as used here)
@@ -143,6 +144,10 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - `src/level/` — `Level` tiles, `TileGraph`/`TileSearch` (Yuka graph search), procedural generation
   (`generators/`), terrain autotiling and rendering, fog of war and lighting.
 - `src/characters/` — side-view `CharacterDef`s and their animation-state triggers.
+- `src/rules/` — the tabletop rules: dice (`Dice.ts`: d4–d20 rolls, attacks, checks; pass a `DieRoller` in
+  tests), ability modifiers and proficiency (`Abilities.ts`), the SRD weapon and armour tables, and
+  `CharacterSheet.ts` (Armor Class, weapon damage and to-hit, hit points from the worn gear). Items name their
+  rules entry with `base` and their magic with `bonus` (+0…+3) in `src/data/*.json`.
 - `src/entities/` — factories and stat tables. `src/render/` — sheets, camera, terrain layers.
 - `src/core/` — cross-cutting: `errors/`, `log/`, `geometry.ts`, `guards.ts`, `debugHooks.ts`.
 - `src/game/` — game loop, `SceneManager`, persisted settings, player actions. `src/scenes/` — title, settings,

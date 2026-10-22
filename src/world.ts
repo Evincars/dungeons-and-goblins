@@ -280,6 +280,12 @@ export type Entity = {
     kills: number;
     /** All gold picked up this level, whatever was spent since. */
     goldEarned: number;
+    /** Mana for spells, and how much it holds (raised by the Mana stat of worn gear). */
+    mana: number;
+    maxMana: number;
+    /** Extra spell damage (from Intelligence) and the share more coins enemies drop (from Luck). */
+    spellBonus: number;
+    lootBonus: number;
   };
   inventory?: InventoryItem[];
   equipped?: Partial<Record<EquipSlot, InventoryItem>>;

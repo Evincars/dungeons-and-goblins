@@ -10,7 +10,7 @@ import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
 import { INVENTORY_COLS, INVENTORY_ROWS, moveItem, requestLoadout } from '../game/PlayerActions';
 import type { ItemPlace } from '../game/PlayerActions';
-import { SLOT_LABELS, STAT_LABELS, itemIcon, statTotals } from '../entities/Items';
+import { SLOT_LABELS, STAT_LABELS, itemIcon, slotFor, statTotals } from '../entities/Items';
 
 /** inventory.png, measured in its own pixels: the leather bag panel, the cloth gear panel, and its two tabs. */
 const ART = { w: 2752, h: 1536 };
@@ -45,6 +45,11 @@ const SCREEN_MARGIN = 8;
 const PAD = 6;
 const GAP = 3;
 const ICON_PAD = 3;
+/** The bag grid reaches this close to the leather's edges, and its squares stay at least this far apart. */
+const BAG_PAD = 2;
+const BAG_MIN_GAP = 3;
+/** Two presses on one square this quickly is a double-click: it puts the item on, or takes it off. */
+const DOUBLE_CLICK_MS = 350;
 /** Between an equipment label and its square, and between the gear and stats columns. */
 const LABEL_GAP = 6;
 const COLUMN_GAP = 10;
@@ -56,7 +61,8 @@ const GHOST_ALPHA = 0.85;
 
 type Rect = { x: number; y: number; w: number; h: number };
 /** `page`: the tab page the square is on (bag squares are always shown). */
-type Square = { place: ItemPlace; box: Rectangle; icon: Sprite; count: PixelLabel; page: Container | null };
+/** `box` is the square drawn; `zone` the area that takes a dropped item (a gear slot's whole row). */
+type Square = { place: ItemPlace; box: Rectangle; zone: Rectangle; icon: Sprite; count: PixelLabel; page: Container | null };
 type Tab = { glow: Graphics; label: PixelLabel; page: Container; hovered: boolean; w: number; h: number };
 
 /** A rect of the art, in the overlay's design space. */
@@ -86,6 +92,8 @@ export class InventoryOverlay {
   private readonly tabs: Tab[] = [];
   private activeTab = 0;
   private cell = 0;
+  /** The last press, to spot a double-click. */
+  private lastPress: { place: ItemPlace; at: number } | null = null;
   private dragging: ItemPlace | null = null;
   private readonly stopListening: () => void;
   /** What the squares show, so they are redrawn only when the player's things change. */
@@ -203,39 +211,43 @@ export class InventoryOverlay {
     tab.label.fill = active ? THEME.title : tab.hovered ? THEME.buttonHover : THEME.muted;
   }
 
-  /** The bag: the largest square cells that fit the leather panel's grid, centred in it. */
+  /**
+   * The bag: square cells as large as fit, spread out to the leather's corners (the gaps across and down
+   * stretch to fill what is left).
+   */
   private buildBag(area: Rect): void {
     const cols = INVENTORY_COLS;
     const rows = INVENTORY_ROWS;
-    // Bag and equipment squares are one size: as large as both the bag grid and the gear rows allow.
-    const gearRow = (designRect(GEAR_AREA).h - 2 * PAD) / EQUIP_SLOTS.length - GAP;
-    const bagCell = Math.min((area.w - 2 * PAD - GAP * (cols - 1)) / cols, (area.h - 2 * PAD - GAP * (rows - 1)) / rows);
-    this.cell = Math.floor(Math.min(bagCell, gearRow));
-    const x0 = area.x + (area.w - (cols * this.cell + (cols - 1) * GAP)) / 2;
-    const y0 = area.y + (area.h - (rows * this.cell + (rows - 1) * GAP)) / 2;
+    const innerW = area.w - 2 * BAG_PAD;
+    const innerH = area.h - 2 * BAG_PAD;
+    this.cell = Math.floor(Math.min((innerW - BAG_MIN_GAP * (cols - 1)) / cols, (innerH - BAG_MIN_GAP * (rows - 1)) / rows));
+    const gapX = (innerW - cols * this.cell) / (cols - 1);
+    const gapY = (innerH - rows * this.cell) / (rows - 1);
     for (let i = 0; i < cols * rows; i++) {
-      const x = x0 + (i % cols) * (this.cell + GAP);
-      const y = y0 + Math.floor(i / cols) * (this.cell + GAP);
-      this.addSquare({ bag: i }, Math.round(x), Math.round(y));
+      const x = area.x + BAG_PAD + (i % cols) * (this.cell + gapX);
+      const y = area.y + BAG_PAD + Math.floor(i / cols) * (this.cell + gapY);
+      this.addSquare({ bag: i }, Math.round(x), Math.round(y), this.cell);
     }
   }
 
   /**
    * The Gear tab: each equipment square with its name to its right, a dividing line, then the stats and
-   * their values.
+   * their values. A whole row (square and name) takes a dropped item.
    */
   private buildGear(area: Rect, page: Container): void {
     const rowH = (area.h - 2 * PAD) / EQUIP_SLOTS.length;
+    const size = Math.floor(Math.min(this.cell, rowH - GAP));
     const squareX = area.x + PAD;
-    const labelX = squareX + this.cell + LABEL_GAP;
+    const labelX = squareX + size + LABEL_GAP;
     const labels = EQUIP_SLOTS.map((slot) => new PixelLabel(SLOT_LABELS[slot], { color: THEME.text, shadow: true }));
+    const dividerX = Math.round(labelX + Math.max(...labels.map((l) => l.textWidth)) + COLUMN_GAP);
     EQUIP_SLOTS.forEach((slot, i) => {
       const y = area.y + PAD + i * rowH;
-      this.addSquare({ slot }, Math.round(squareX), Math.round(y + (rowH - this.cell) / 2), page);
+      const zone = new Rectangle(area.x, y, dividerX - area.x, rowH);
+      this.addSquare({ slot }, Math.round(squareX), Math.round(y + (rowH - size) / 2), size, page, zone);
       labels[i].position.set(Math.round(labelX), Math.round(y + (rowH - 8) / 2));
       page.addChild(labels[i]);
     });
-    const dividerX = Math.round(labelX + Math.max(...labels.map((l) => l.textWidth)) + COLUMN_GAP);
     page.addChild(new Graphics()
       .rect(dividerX, area.y + PAD, 1, area.h - 2 * PAD).fill({ color: SQUARE_EDGE, alpha: SQUARE_EDGE_ALPHA }));
     const statsX = dividerX + COLUMN_GAP;
@@ -260,8 +272,7 @@ export class InventoryOverlay {
   }
 
   /** One square (bag cell or equipment slot): a dark well with a light edge, and the icon of what is in it. */
-  private addSquare(place: ItemPlace, x: number, y: number, page: Container | null = null): void {
-    const size = this.cell;
+  private addSquare(place: ItemPlace, x: number, y: number, size: number, page: Container | null = null, zone?: Rectangle): void {
     const frame = new Graphics()
       .rect(x, y, size, size).fill({ color: 0x000000, alpha: SQUARE_FILL_ALPHA })
       .stroke({ color: SQUARE_EDGE, alpha: SQUARE_EDGE_ALPHA, width: 1, alignment: 1 });
@@ -272,7 +283,8 @@ export class InventoryOverlay {
     const count = new PixelLabel('', { color: THEME.text, align: 'right', outline: true });
     count.position.set(x + size - 1, y + size - COUNT_H);
     (page ?? this.root).addChild(frame, icon, count);
-    this.squares.push({ place, box: new Rectangle(x, y, size, size), icon, count, page });
+    const box = new Rectangle(x, y, size, size);
+    this.squares.push({ place, box, zone: zone ?? box, icon, count, page });
   }
 
   /** Scales the whole overlay to the largest size that fits the screen with a margin, centred. */
@@ -288,19 +300,19 @@ export class InventoryOverlay {
     return 'bag' in place ? player.inventory?.[place.bag] : player.equipped?.[place.slot];
   }
 
-  /** Shows an item's picture in a sprite, as large as fits a square (loading it the first time). */
-  private showIcon(sprite: Sprite, item: InventoryItem | undefined): void {
+  /** Shows an item's picture in a sprite, as large as fits a square of `size` (loading it the first time). */
+  private showIcon(sprite: Sprite, item: InventoryItem | undefined, size = this.cell): void {
     sprite.visible = !!item;
     if (!item) return;
     sprite.texture = lazyTexture(itemIcon(item));
-    const room = this.cell - 2 * ICON_PAD;
+    const room = size - 2 * ICON_PAD;
     sprite.scale.set(Math.min(room / Math.max(1, sprite.texture.width), room / Math.max(1, sprite.texture.height)));
   }
 
   private refresh(player: Player): void {
     for (const square of this.squares) {
       const item = this.itemIn(player, square.place);
-      this.showIcon(square.icon, item);
+      this.showIcon(square.icon, item, square.box.width);
       square.count.text = item?.count !== undefined ? String(item.count) : '';
     }
     const totals = statTotals(player.equipped ?? {});
@@ -319,15 +331,48 @@ export class InventoryOverlay {
     this.root.on('pointerupoutside', () => this.endDrag());
   }
 
-  private squareAt(e: FederatedPointerEvent): Square | undefined {
+  /** The square under the pointer; `forDrop` also counts a gear slot's whole row. */
+  private squareAt(e: FederatedPointerEvent, forDrop = false): Square | undefined {
     const p = this.root.toLocal(e.global);
-    return this.squares.find((s) => (!s.page || s.page.visible) && s.box.contains(p.x, p.y));
+    return this.squares.find((s) => (!s.page || s.page.visible) && (forDrop ? s.zone : s.box).contains(p.x, p.y));
+  }
+
+  /** Whether the pointer is over the Gear page (anywhere on it). */
+  private overGear(e: FederatedPointerEvent): boolean {
+    const p = this.root.toLocal(e.global);
+    const area = designRect(GEAR_AREA);
+    return this.activeTab === 0 && p.x >= area.x && p.x <= area.x + area.w && p.y >= area.y && p.y <= area.y + area.h;
+  }
+
+  /** A second press on the same square soon after the first: true when this one completes a double-click. */
+  private doubleClicked(place: ItemPlace): boolean {
+    const now = performance.now();
+    const last = this.lastPress;
+    this.lastPress = { place, at: now };
+    if (!last || now - last.at > DOUBLE_CLICK_MS || !samePlace(last.place, place)) return false;
+    this.lastPress = null;
+    return true;
+  }
+
+  /** Double-click: an item in the bag is put on where it fits; a worn one goes back in the bag. */
+  private quickMove(player: Player, place: ItemPlace): void {
+    const loadout = { inventory: player.inventory ?? [], equipped: player.equipped ?? {} };
+    const item = this.itemIn(player, place);
+    if (!item) return;
+    const slot = 'bag' in place ? slotFor(loadout.equipped, item) : null;
+    const to: ItemPlace | null = 'bag' in place ? (slot ? { slot } : null) : { bag: loadout.inventory.length };
+    const next = to ? moveItem(loadout, place, to) : null;
+    if (next) requestLoadout(player, next);
   }
 
   private startDrag(e: FederatedPointerEvent): void {
     const player = localPlayer();
     const square = this.squareAt(e);
     if (!player || !square || !this.itemIn(player, square.place)) return;
+    if (this.doubleClicked(square.place)) {
+      this.quickMove(player, square.place);
+      return;
+    }
     this.dragging = square.place;
     this.showIcon(this.ghost, this.itemIn(player, square.place));
     square.icon.alpha = 0.3;
@@ -346,13 +391,26 @@ export class InventoryOverlay {
     else this.tooltip.hide();
   }
 
+  /**
+   * Where a dragged item lands: the square (or gear row) under the pointer; dropped anywhere else on the Gear
+   * page, the slot it fits.
+   */
+  private dropTarget(e: FederatedPointerEvent, player: Player, from: ItemPlace): ItemPlace | null {
+    const square = this.squareAt(e, true);
+    if (square) return square.place;
+    const item = this.itemIn(player, from);
+    const slot = item && this.overGear(e) ? slotFor(player.equipped ?? {}, item) : null;
+    return slot ? { slot } : null;
+  }
+
   private drop(e: FederatedPointerEvent): void {
     const player = localPlayer();
     const from = this.dragging;
-    const target = this.squareAt(e);
     this.endDrag();
-    if (!player || !from || !target || samePlace(from, target.place)) return;
-    const next = moveItem({ inventory: player.inventory ?? [], equipped: player.equipped ?? {} }, from, target.place);
+    if (!player || !from) return;
+    const target = this.dropTarget(e, player, from);
+    if (!target || samePlace(from, target)) return;
+    const next = moveItem({ inventory: player.inventory ?? [], equipped: player.equipped ?? {} }, from, target);
     if (next) requestLoadout(player, next);
   }
 

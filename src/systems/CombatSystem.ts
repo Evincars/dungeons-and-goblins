@@ -12,8 +12,11 @@ import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 const PLAYER_HURT_TIME = 25;
 const PLAYER_FREEZE_TIME = 15;
 const PLAYER_KNOCKBACK = 10;
-/** Each armour tier takes this share off every hit. */
-const ARMOR_PER_TIER = 0.1;
+/** Bodies can no longer overlap, so an enemy this close to the player's body counts as touching it. */
+const CONTACT_REACH = 2;
+/** Each point of Defence takes this share off every hit, down to at most this much off. */
+const ARMOR_PER_TIER = 0.05;
+const MAX_ARMOR_SHARE = 0.75;
 /** Regeneration interval for anything without its own. */
 const DEFAULT_REGEN_TICKS = 180;
 
@@ -58,8 +61,8 @@ function vulnerable(level: Level, player: Player): boolean {
 function enemyTouching(player: Player): Entity | null {
   const r = player.radius;
   if (!r) return null;
-  const pb = boxAround(player.position.x, player.position.y, r.x, r.y, playerBox);
-  const reach = Math.hypot(r.x + MAX_MOB_RADIUS, r.y + MAX_MOB_RADIUS);
+  const pb = boxAround(player.position.x, player.position.y, r.x + CONTACT_REACH, r.y + CONTACT_REACH, playerBox);
+  const reach = Math.hypot(r.x + MAX_MOB_RADIUS + CONTACT_REACH, r.y + MAX_MOB_RADIUS + CONTACT_REACH);
   for (const mob of nearby(player.position.x, player.position.y, reach, Sense.mob, touching)) {
     if (!isMob(mob) || mob.health.current <= 0) continue;
     if (pb.intersects(boxAround(mob.position.x, mob.position.y, mob.radius.x, mob.radius.y, mobBox))) return mob;
@@ -103,7 +106,7 @@ export function hurtPlayer(player: Entity, source: Entity, damage: number): void
   const h = player.health;
   if (!h || player.falling || player.respawnTicks !== undefined || h.current <= 0) return;
 
-  const armorMod = 1.0 - (player.playerStats?.armorTier ?? 0) * ARMOR_PER_TIER;
+  const armorMod = 1.0 - Math.min(MAX_ARMOR_SHARE, (player.playerStats?.armorTier ?? 0) * ARMOR_PER_TIER);
   const finalDamage = Math.max(1, Math.round(damage * armorMod));
 
   player.hurtTime = PLAYER_HURT_TIME;

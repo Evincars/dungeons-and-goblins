@@ -1,88 +1,125 @@
-import { Container, Sprite, Graphics } from 'pixi.js';
+import { Container, Graphics, Rectangle } from 'pixi.js';
 import { localPlayer } from '../world';
-import { frameTexture } from '../render/Sheets';
-import { GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
+import type { Player } from '../world';
+import { GAME_HEIGHT, GAME_WIDTH } from '../render/Camera';
+import { quickSlotPressed } from '../systems/InputSystem';
 import { THEME } from './Theme';
 import { PixelLabel } from './PixelText';
 
-export function xpForLevel(level: number): number {
-  return level * 100;
-}
+/** The three bars, bottom left: how long, how thick, the gap between them and their distance from the edges. */
+const BAR_W = 80;
+const BAR_H = 6;
+const BAR_GAP = 4;
+const MARGIN = 8;
+/** Quick bar: this many squares across the bottom middle, each this big, this far apart. */
+export const QUICK_SLOTS = 5;
+const SLOT = 22;
+const SLOT_GAP = 3;
+const SLOT_FILL_ALPHA = 0.55;
+const SLOT_EDGE = 0xb4a488;
+const SLOT_EDGE_ALPHA = 0.6;
+/** A bar's name shows beside it, nudged up this much to line up with the bar. */
+const TIP_RAISE = 1;
 
-/** All the experience a player has earned, counting what went into the levels they have already gained. */
-export function totalXp(stats: { level: number; exp: number }): number {
-  let total = stats.exp;
-  for (let l = 1; l < stats.level; l++) total += xpForLevel(l);
-  return total;
-}
+type Bar = { label: string; color: number; fill: Graphics; value: (p: Player) => number; max: (p: Player) => number };
 
-/** Panel bars hold this many fill steps below full: row 0 is full, the last row empty. */
-const BAR_ROWS = 100;
+const BARS: ReadonlyArray<Omit<Bar, 'fill'>> = [
+  { label: 'Health', color: 0xd23c3c, value: (p) => p.health.current, max: (p) => p.health.max },
+  { label: 'Stamina', color: 0x9acd32, value: (p) => p.playerStats.maxSprint - p.playerStats.sprint, max: (p) => p.playerStats.maxSprint },
+  { label: 'Mana', color: 0x3c78dc, value: (p) => p.playerStats.mana, max: (p) => p.playerStats.maxMana },
+];
 
-/** The panel-bar row showing a fill fraction. */
-function barRow(fraction: number): number {
-  return BAR_ROWS - Math.round(BAR_ROWS * Math.max(0, Math.min(1, fraction)));
-}
-
+/**
+ * What stays on screen during play: health, stamina and mana bars (hover one to see what it is and how full),
+ * and a quick bar of five squares — numbered 1–5, picked with those keys — for spells, weapons and abilities
+ * to be dragged into later.
+ */
 export class HudPanel {
   readonly container = new Container();
-  private bg!: Sprite;
-  private hpLabel!: PixelLabel;
-  private goldLabel!: PixelLabel;
-  private levelLabel!: PixelLabel;
-  private swordLabel!: PixelLabel;
-  private killsLabel!: PixelLabel;
-  private hpBar!: Sprite;
-  private xpBar!: Sprite;
+  private readonly bars: Bar[] = [];
+  private readonly slots: Graphics[] = [];
+  private readonly tip = new PixelLabel('', { color: THEME.text, outline: true });
+  private hovered: Bar | null = null;
+  private activeSlot = 0;
 
   constructor() {
-    this.build();
+    // Only the bars listen (for their names); nothing else here may catch the pointer.
+    this.container.eventMode = 'passive';
+    BARS.forEach((spec, i) => this.addBar(spec, i));
+    for (let i = 0; i < QUICK_SLOTS; i++) this.addSlot(i);
+    this.tip.visible = false;
+    this.tip.eventMode = 'none';
+    this.container.addChild(this.tip);
+    this.drawSlots();
   }
 
-  private build(): void {
-    // Dark HUD panel background
-    const bg = new Graphics();
-    bg.rect(0, 0, GAME_WIDTH, 80).fill({ color: THEME.panel });
-    bg.rect(0, 0, GAME_WIDTH, 2).fill({ color: THEME.panelBorder });
-    this.container.addChild(bg);
+  /** Which quick-bar square is picked (0 for the first). */
+  get quickSlot(): number {
+    return this.activeSlot;
+  }
 
-    // Panel bars hold 101 fill steps, row 0 = full, row 100 = empty.
-    this.hpBar = new Sprite(frameTexture('panel_healthbar', 0, 0));
-    this.hpBar.x = 8; this.hpBar.y = 50;
-    this.hpBar.scale.set(1.2, 1);
-    this.xpBar = new Sprite(frameTexture('panel_xpbar', 0, 100));
-    this.xpBar.x = 8; this.xpBar.y = 62;
-    this.xpBar.scale.set(1.2, 1);
-    this.container.addChild(this.hpBar, this.xpBar);
+  private addBar(spec: Omit<Bar, 'fill'>, i: number): void {
+    const x = MARGIN;
+    const y = GAME_HEIGHT - MARGIN - (BARS.length - i) * (BAR_H + BAR_GAP) + BAR_GAP;
+    const frame = new Graphics().rect(x, y, BAR_W, BAR_H).fill({ color: THEME.well }).stroke({ color: THEME.panelBorder, width: 1, alignment: 1 });
+    const fill = new Graphics();
+    fill.eventMode = 'none';
+    fill.position.set(x, y);
+    const bar: Bar = { ...spec, fill };
+    frame.eventMode = 'static';
+    frame.hitArea = new Rectangle(x - 1, y - 2, BAR_W + 2, BAR_H + 4);
+    frame.on('pointerover', () => { this.hovered = bar; });
+    frame.on('pointerout', () => { if (this.hovered === bar) this.hovered = null; });
+    this.bars.push(bar);
+    this.container.addChild(frame, fill);
+  }
 
-    this.hpLabel    = new PixelLabel('HP: 100/100', { color: 0xff6666, shadow: true });
-    this.goldLabel  = new PixelLabel('Gold: 0',     { color: 0xffcc00, shadow: true });
-    this.levelLabel = new PixelLabel('Lv.1',        { color: 0x88ccff, shadow: true });
-    this.swordLabel = new PixelLabel('Sword+1',     { color: 0xdddddd, shadow: true });
-    this.killsLabel = new PixelLabel('Kills: 0',    { color: 0xff8844, shadow: true });
+  private addSlot(i: number): void {
+    const total = QUICK_SLOTS * SLOT + (QUICK_SLOTS - 1) * SLOT_GAP;
+    const x = Math.round((GAME_WIDTH - total) / 2) + i * (SLOT + SLOT_GAP);
+    const y = GAME_HEIGHT - MARGIN - SLOT;
+    const square = new Graphics();
+    square.eventMode = 'none';
+    square.position.set(x, y);
+    const number = new PixelLabel(String(i + 1), { color: THEME.buttonText, align: 'right', outline: true });
+    number.eventMode = 'none';
+    number.position.set(x + SLOT - 1, y + SLOT - 9);
+    this.slots.push(square);
+    this.container.addChild(square, number);
+  }
 
-    this.hpLabel.x    = 8;   this.hpLabel.y    = 6;
-    this.goldLabel.x  = 8;   this.goldLabel.y  = 20;
-    this.levelLabel.x = 8;   this.levelLabel.y = 34;
-    this.swordLabel.x = 140; this.swordLabel.y = 6;
-    this.killsLabel.x = 140; this.killsLabel.y = 20;
-
-    this.container.addChild(this.hpLabel, this.goldLabel, this.levelLabel, this.swordLabel, this.killsLabel);
-    this.container.y = VIEW_HEIGHT;
+  /** Each square a dark well; the picked one edged in gold. */
+  private drawSlots(): void {
+    this.slots.forEach((square, i) => {
+      const active = i === this.activeSlot;
+      square.clear().rect(0, 0, SLOT, SLOT).fill({ color: 0x000000, alpha: SLOT_FILL_ALPHA })
+        .stroke({ color: active ? THEME.title : SLOT_EDGE, alpha: active ? 1 : SLOT_EDGE_ALPHA, width: active ? 2 : 1, alignment: 1 });
+    });
   }
 
   update(): void {
+    const picked = quickSlotPressed();
+    if (picked >= 0 && picked !== this.activeSlot) {
+      this.activeSlot = picked;
+      this.drawSlots();
+    }
     const player = localPlayer();
     if (!player) return;
-    const h = player.health;
-    const s = player.playerStats;
-    this.hpLabel.text    = `HP: ${Math.max(0, Math.floor(h.current))}/${h.max}`;
-    this.goldLabel.text  = `Gold: ${s.gold}`;
-    this.levelLabel.text = `Lv.${s.level} (${s.exp}/${xpForLevel(s.level)} xp)`;
-    this.swordLabel.text = `Sword+${s.swordTier} Armor+${s.armorTier}`;
-    this.killsLabel.text = `Kills: ${s.kills}`;
-    this.hpBar.texture = frameTexture('panel_healthbar', 0, barRow(h.current / h.max));
-    this.xpBar.texture = frameTexture('panel_xpbar', 0, barRow(s.exp / xpForLevel(s.level)));
+    for (const bar of this.bars) {
+      const max = Math.max(1, bar.max(player));
+      const share = Math.max(0, Math.min(1, bar.value(player) / max));
+      bar.fill.clear().rect(0, 0, Math.round(BAR_W * share), BAR_H).fill({ color: bar.color });
+    }
+    this.showTip(player);
+  }
+
+  /** Over a bar, its name and how full it is, just above it. */
+  private showTip(player: Player): void {
+    const bar = this.hovered;
+    this.tip.visible = !!bar;
+    if (!bar) return;
+    this.tip.text = `${bar.label} ${Math.round(bar.value(player))}/${Math.round(bar.max(player))}`;
+    this.tip.position.set(MARGIN + BAR_W + 6, bar.fill.y - TIP_RAISE);
   }
 
   destroy(): void {

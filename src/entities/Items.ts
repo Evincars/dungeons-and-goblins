@@ -1,4 +1,4 @@
-import { STAT_NAMES } from '../world';
+import { EQUIP_SLOTS, STAT_NAMES } from '../world';
 import type { EquipSlot, GearKind, InventoryItem, StatName } from '../world';
 
 /** How the inventory screen names each equipment slot. */
@@ -39,6 +39,12 @@ const SLOT_GEAR = {
 export function fitsSlot(item: InventoryItem, slot: EquipSlot): boolean {
   const kinds: readonly GearKind[] = SLOT_GEAR[slot];
   return item.gear !== undefined && kinds.includes(item.gear);
+}
+
+/** The slot an item would go to if worn now: the first that fits and is free, else the first that fits. */
+export function slotFor(equipped: Partial<Record<EquipSlot, InventoryItem>>, item: InventoryItem): EquipSlot | null {
+  const fitting = EQUIP_SLOTS.filter((slot) => fitsSlot(item, slot));
+  return fitting.find((slot) => !equipped[slot]) ?? fitting[0] ?? null;
 }
 
 /** What the worn gear adds up to, stat by stat (every stat starts at 0). */

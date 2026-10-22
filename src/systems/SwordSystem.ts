@@ -4,6 +4,7 @@ import { sound } from '../audio/SoundPlayer';
 import { createSwordSwingFx } from '../entities/FxFactory';
 import { SWORD_STATS, swingDamage, swingRange } from '../entities/WeaponStats';
 import { nearby, Sense } from '../ai/perception/spatial';
+import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 
 /** A mob that takes a hit flinches (can't act) for this long, and shows hurt for this long. */
 const MOB_FREEZE_TICKS = 6;
@@ -40,6 +41,11 @@ export function hitMob(mob: Entity, attacker: Entity, damage: number): void {
   sound.playSound('sword_hit', mp?.x ?? 0, mp?.y ?? 0);
 }
 
+/** How far a body stretches from its centre: a blow that reaches its edge lands. */
+function bodyReach(target: Entity): number {
+  return Math.max(target.radius?.x ?? 0, target.radius?.y ?? 0);
+}
+
 function canSwing(player: Player): boolean {
   return player.playerInput.intents.attack && player.swordCooldown === 0 && player.health.current > 0
     && !player.casting && !player.falling;
@@ -63,19 +69,19 @@ function startSwing(player: Player): void {
   sound.playSound('sword_swing', pos.x, pos.y);
 }
 
-/** Whether a mob stands inside the swing's arc and reach, and has not been hit by this swing yet. */
+/** Whether a target stands inside the swing's arc and reach (to the edge of its body), and has not been hit by this swing yet. */
 function inArc(player: Player, swing: Swing, mob: Entity, mobId: number): boolean {
   if (!mob.position || swing.hitIds.includes(mobId)) return false;
   const dx = mob.position.x - player.position.x;
   const dy = mob.position.y - player.position.y;
   const dist = Math.hypot(dx, dy);
-  if (dist > swing.range) return false;
+  if (dist > swing.range + bodyReach(mob)) return false;
   return (dx * swing.dirX + dy * swing.dirY) / (dist || 1) >= SWORD_STATS.arcCos;
 }
 
 /** Hits every enemy (and the training dummy) inside the live swing's arc, each once per swing. */
 function resolveSwing(player: Player, swing: Swing): void {
-  for (const mob of nearby(player.position.x, player.position.y, swing.range, Sense.mob, struck)) {
+  for (const mob of nearby(player.position.x, player.position.y, swing.range + MAX_MOB_RADIUS, Sense.mob, struck)) {
     if (!isTarget(mob) || mob.health.current <= 0 || mob.team === Team.Player) continue;
     const mobId = world.id(mob);
     if (mobId === undefined || !inArc(player, swing, mob, mobId)) continue;

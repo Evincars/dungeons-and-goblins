@@ -1,7 +1,10 @@
 import { Rectangle } from 'pixi.js';
 import { world, q } from '../world';
 import type { Level } from '../level/Level';
-import { boxAround } from '../core/geometry';
+import { BoxPool, boxAround } from '../core/geometry';
+import { nearby, Sense } from '../ai/perception/spatial';
+import type { Entity } from '../world';
+import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 import { screenToWorld } from '../render/Camera';
 import { TileType } from '../level/TileType';
 import { AIM_HEIGHT } from '../entities/ProjectileFactory';
@@ -22,6 +25,14 @@ const SPRINT_FACTOR = 1.5;
 const walkers = world.with('position', 'playerInput', 'playerStats', 'health', 'velocity');
 
 const fromBox = new Rectangle();
+/** Every box a body moves among this tick: the level's, then the bodies around it. Reused, never kept. */
+const obstacles: Rectangle[] = [];
+const bodyBoxes = new BoxPool();
+const neighbours: Entity[] = [];
+/** Bodies further than this (centre to centre) can't be touched in one tick's move. */
+const BODY_REACH = MAX_MOB_RADIUS * 2 + 8;
+/** What a moving body bumps into: players, enemies, and the things that stand in the way (chests, the dummy…). */
+const BODY_SENSES = Sense.player | Sense.mob | Sense.usable;
 const aimPoint = { x: 0, y: 0 };
 
 /** How far `from` may move along x before touching `to`. */
@@ -90,7 +101,31 @@ function keepOutOfHoles(level: Level, entity: Body, fromX: number, fromY: number
   if (entity.bump) entity.bump.x = entity.bump.y = 0;
 }
 
-/** One tick of velocity plus knockback, clipped against the level, then friction. */
+/**
+ * Whether two bodies keep each other out: anything solid does, except enemies among themselves (they steer
+ * apart instead, or a squad would jam in a corridor). Fallen bodies stop nobody.
+ */
+function blocks(mover: Entity, other: Entity): boolean {
+  if (other === mover || !other.blocking || !other.radius || !other.position) return false;
+  if ((other.health?.current ?? 1) <= 0 || other.respawnTicks !== undefined || other.falling) return false;
+  return !(mover.ai && other.ai);
+}
+
+/** The level's boxes round a body, and the boxes of the bodies it must not walk into. */
+function obstaclesFor(level: Level, entity: Body): readonly Rectangle[] {
+  const { position: p, radius: r } = entity;
+  obstacles.length = 0;
+  for (const box of level.getClipBBs(p.x, p.y, r.x, r.y)) obstacles.push(box);
+  if (!entity.blocking || (entity.health?.current ?? 1) <= 0) return obstacles;
+  bodyBoxes.reset();
+  for (const other of nearby(p.x, p.y, BODY_REACH, BODY_SENSES, neighbours)) {
+    if (!blocks(entity, other) || !other.position || !other.radius) continue;
+    obstacles.push(bodyBoxes.around(other.position.x, other.position.y, other.radius.x, other.radius.y));
+  }
+  return obstacles;
+}
+
+/** One tick of velocity plus knockback, clipped against the level and the bodies around it, then friction. */
 function moveBody(level: Level, entity: Body): void {
   const { position, velocity, radius, bump } = entity;
   if (entity.respawnTicks !== undefined) {
@@ -103,7 +138,7 @@ function moveBody(level: Level, entity: Body): void {
   const ya = (frozen ? 0 : velocity.y) + (bump?.y ?? 0);
   const fromX = position.x;
   const fromY = position.y;
-  move(position, radius, xa, ya, level.getClipBBs(position.x, position.y, radius.x, radius.y), entity.physicsSlide !== undefined);
+  move(position, radius, xa, ya, obstaclesFor(level, entity), entity.physicsSlide !== undefined);
   keepOutOfHoles(level, entity, fromX, fromY);
   settle(velocity, entity.friction ?? DEFAULT_FRICTION);
   if (bump) settle(bump, KNOCKBACK_FADE);

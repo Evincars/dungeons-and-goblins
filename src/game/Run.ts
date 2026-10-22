@@ -1,15 +1,19 @@
 import { q } from '../world';
-import type { Entity } from '../world';
-import { ARMORS, ARROWS, HAND_WEAPONS, randomItem } from '../entities/ItemCatalog';
+import type { Entity, InventoryItem } from '../world';
+import { ARMORS, ARROWS, HAND_WEAPONS, SHIELDS, randomItem } from '../entities/ItemCatalog';
 
-/** Arrows the starting quiver holds. */
+/** Arrows the starting quiver holds, and how many random weapons and suits of armour come with it. */
 const STARTING_ARROWS = 20;
+const STARTING_WEAPONS = 4;
+const STARTING_ARMORS = 4;
+const STARTING_SHIELDS = 1;
 
-/** What everyone sets out with, to try the inventory on: a random weapon, a quiver of arrows and armour. */
+/** What everyone sets out with, to try the inventory on: random weapons, a quiver of arrows, a shield and armour. */
 export function giveStartingKit(player: Entity): void {
   const arrows = randomItem(ARROWS);
   arrows.count = STARTING_ARROWS;
-  player.inventory = [randomItem(HAND_WEAPONS), arrows, randomItem(ARMORS)];
+  const some = (from: readonly InventoryItem[], n: number) => Array.from({ length: n }, () => randomItem(from));
+  player.inventory = [...some(HAND_WEAPONS, STARTING_WEAPONS), arrows, ...some(SHIELDS, STARTING_SHIELDS), ...some(ARMORS, STARTING_ARMORS)];
 }
 
 /** One trip into the dungeon: how deep the party has gone. A new run starts from the title screen. */
@@ -68,7 +72,7 @@ export function restorePlayer(player: Entity): void {
     giveStartingKit(player);
     return;
   }
-  Object.assign(player.playerStats, structuredClone(carry.stats), { sprinting: false, sprint: 0, sprintLocked: false });
+  Object.assign(player.playerStats, structuredClone(carry.stats), { sprinting: false, sprint: 0, sprintLocked: false, mana: carry.stats.maxMana });
   player.inventory = structuredClone(carry.inventory);
   player.equipped = structuredClone(carry.equipped);
   player.health.max = carry.maxHealth;

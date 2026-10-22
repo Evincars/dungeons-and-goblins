@@ -10,7 +10,7 @@ import { THEME } from './Theme';
 const PAD = 5;
 const GAP = 4;
 /** The item's picture is drawn this big (it keeps its shape). */
-const PICTURE = 28;
+const PICTURE = 48;
 const LINE_H = 10;
 const HEADER_H = 12;
 /** The tooltip sits this far from the pointer. */

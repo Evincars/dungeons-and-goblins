@@ -46,6 +46,14 @@ function isActionDown(action: ActionName): boolean {
   return keys.has(bindingFor(action));
 }
 
+/** The quick bar's keys: 1 to 5 along the number row. */
+const QUICK_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'] as const;
+
+/** Which quick-bar square's key went down this tick (0 for "1"), or -1. */
+export function quickSlotPressed(): number {
+  return QUICK_KEYS.findIndex((code) => pressed.has(code));
+}
+
 function wasActionPressed(action: ActionName): boolean {
   return pressed.has(bindingFor(action));
 }

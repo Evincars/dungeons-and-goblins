@@ -6,11 +6,11 @@ import { ARROW_STATS, SPELL_STATS } from './WeaponStats';
 export const AIM_HEIGHT = 22;
 
 /** A spell bolt leaving the caster at (x, y) along the unit direction (dx, dy). */
-export function createSpellBolt(x: number, y: number, dx: number, dy: number): Entity {
+export function createSpellBolt(x: number, y: number, dx: number, dy: number, damage: number = SPELL_STATS.boltDamage): Entity {
   return world.add({
     position: { x: x + dx * SPELL_STATS.boltSpawnOffset, y: y + dy * SPELL_STATS.boltSpawnOffset },
     velocity: { x: dx * SPELL_STATS.boltSpeed, y: dy * SPELL_STATS.boltSpeed },
-    projectile: { damage: SPELL_STATS.boltDamage, life: SPELL_STATS.boltLife, team: Team.Player },
+    projectile: { damage, life: SPELL_STATS.boltLife, team: Team.Player },
     visual: { sheet: 'spell_bolt' },
     // Bolts travel at hand height above the ground they're tracked on.
     yOffset: AIM_HEIGHT,

@@ -33,8 +33,14 @@ function burst(bolt: Bolt, struck: boolean): void {
 }
 
 function canCast(caster: Player): boolean {
-  return caster.health.current > 0 && caster.respawnTicks === undefined
+  return caster.health.current > 0 && caster.respawnTicks === undefined && caster.playerStats.mana >= SPELL_STATS.manaCost
     && !caster.swordSwing && !caster.falling && !(caster.castCooldown ?? 0);
+}
+
+/** Mana comes back slowly, a point at a time. */
+function regainMana(caster: Player, tick: number): void {
+  const stats = caster.playerStats;
+  if (stats.mana < stats.maxMana && tick % SPELL_STATS.manaRegenTicks === 0) stats.mana++;
 }
 
 /** Starts a cast toward the crosshair, or plays the one under way and lets the bolt fly on its release frame. */
@@ -46,12 +52,13 @@ function updateCaster(caster: Player): void {
     const aim = caster.aimVector ?? { x: 0, y: 1 };
     world.addComponent(caster, 'casting', { ticks: 0, dirX: aim.x, dirY: aim.y, released: false });
     caster.castCooldown = SPELL_STATS.cooldown;
+    caster.playerStats.mana -= SPELL_STATS.manaCost;
     return;
   }
   cast.ticks++;
   if (!cast.released && cast.ticks >= SPELL_STATS.releaseTick) {
     cast.released = true;
-    createSpellBolt(caster.position.x, caster.position.y, cast.dirX, cast.dirY);
+    createSpellBolt(caster.position.x, caster.position.y, cast.dirX, cast.dirY, SPELL_STATS.boltDamage + caster.playerStats.spellBonus);
     sound.playSound('spell', caster.position.x, caster.position.y);
   }
   if (cast.ticks >= SPELL_STATS.castTicks) world.removeComponent(caster, 'casting');
@@ -84,8 +91,11 @@ function flyBolt(level: Level, bolt: Bolt): void {
 }
 
 /** Casting (right mouse / Q) toward the crosshair, and flying spell bolts and arrows. */
-export function updateSpells(level: Level): void {
-  for (const caster of q.players) updateCaster(caster);
+export function updateSpells(level: Level, tick: number): void {
+  for (const caster of q.players) {
+    regainMana(caster, tick);
+    updateCaster(caster);
+  }
   for (const bolt of bolts) {
     if (!bolt.removed) flyBolt(level, bolt);
   }

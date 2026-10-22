@@ -56,6 +56,8 @@ const { createTrainingDummy } = await load('entities/DungeonFactory');
 const { WEAPONS, SHIELDS, ARMORS, ARROWS, HAND_WEAPONS } = await load('entities/ItemCatalog');
 const { EFFECT_SHAPES, EFFECT_COLOURS } = await load('assets/Effects');
 const { giveStartingKit } = await load('game/Run');
+const PlayerActions = await load('game/PlayerActions');
+const { slotFor } = await load('entities/Items');
 const { prepareLevel } = await load('level/DungeonGenerator');
 
 const centre = (t) => t * TILE_WIDTH + TILE_WIDTH / 2;
@@ -675,14 +677,47 @@ test('the item catalogues load every weapon, shield and armour, each with a name
   assert.equal(EFFECT_COLOURS.length, 9);
 });
 
-test('a new run starts with a weapon, twenty arrows and armour in the bag', () => {
+test('a new run starts with random weapons, twenty arrows, a shield and armour in the bag', () => {
   const player = playerAt(2, 2);
   giveStartingKit(player);
-  const [weapon, arrows, armour] = player.inventory;
-  assert.ok(HAND_WEAPONS.some((w) => w.id === weapon.id));
-  assert.equal(arrows.gear, 'ammo');
-  assert.equal(arrows.count, 20);
-  assert.equal(armour.gear, 'armor');
+  const bag = player.inventory;
+  assert.equal(bag.filter((i) => HAND_WEAPONS.some((w) => w.id === i.id)).length, 4);
+  assert.equal(bag.find((i) => i.gear === 'ammo').count, 20);
+  assert.equal(bag.filter((i) => i.gear === 'armor').length, 4);
+  assert.equal(bag.filter((i) => i.gear === 'offhand').length, 1);
+});
+
+test('worn gear applies all its stats, and an item dropped on the gear panel finds its slot', () => {
+  const player = playerAt(2, 2);
+  const gear = { primary: { type: 'weapon', name: 'w', value: 1, gear: 'weapon', stats: { strength: 3, intelligence: 2 } },
+    armor: { type: 'armor', name: 'a', value: 1, gear: 'armor', stats: { defence: 4, stamina: 2, mana: 3, luck: 2 } } };
+  const { applyLoadout } = PlayerActions;
+  applyLoadout(player, { inventory: [], equipped: gear });
+  const ps = player.playerStats;
+  assert.equal(ps.swordTier, 4);
+  assert.equal(ps.armorTier, 4);
+  assert.equal(ps.maxSprint, 140);
+  assert.equal(ps.maxMana, 65);
+  assert.equal(ps.spellBonus, 4);
+  assert.ok(Math.abs(ps.lootBonus - 0.1) < 1e-9);
+  assert.equal(slotFor({}, ARROWS[0]), 'ammo');
+  assert.equal(slotFor({ primary: gear.primary }, HAND_WEAPONS[0]), 'secondary', 'a second weapon goes to the free hand');
+});
+
+test('enemies cannot walk onto the player: bodies collide, and touching still hurts', () => {
+  const level = arena(12, 6);
+  const player = playerAt(6, 3);
+  const mob = mobAt(level, 'goblin', 4, 3);
+  for (let t = 0; t < 60; t++) {
+    mob.velocity.x = 2;
+    beginPerception();
+    updateMovement(level);
+  }
+  const gap = player.position.x - mob.position.x;
+  assert.ok(gap >= player.radius.x + mob.radius.x - 0.5, `kept apart (${gap.toFixed(1)})`);
+  const before = player.health.current;
+  updateContactDamage(level);
+  assert.ok(player.health.current < before, 'a touch still hurts');
 });
 
 test('with arrows in the Arrows slot an attack looses one at the crosshair (no swing), until the quiver is empty', () => {

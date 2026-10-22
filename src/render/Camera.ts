@@ -18,8 +18,8 @@ export const GAME_WIDTH = fittedWidth();
 /** Menus are laid out for the 4:3 width and centred on wider screens, this far from the left edge. */
 export const LAYOUT_WIDTH = MIN_WIDTH;
 export const LAYOUT_LEFT = Math.floor((GAME_WIDTH - LAYOUT_WIDTH) / 2);
-export const PANEL_HEIGHT = 80;
-export const VIEW_HEIGHT  = GAME_HEIGHT - PANEL_HEIGHT;
+/** The world fills the whole screen; the HUD (bars and quick bar) floats over its bottom edge. */
+export const VIEW_HEIGHT = GAME_HEIGHT;
 
 /** Screen pixels per game pixel that make the picture as large as the window allows. */
 export function displayScale(): number {

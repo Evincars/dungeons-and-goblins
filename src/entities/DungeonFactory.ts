@@ -171,7 +171,7 @@ export function createTrainingDummy(x: number, y: number): Entity {
     position: { x, y },
     health: { current: DUMMY_HEALTH, max: DUMMY_HEALTH },
     hurtTime: 0, freezeTime: 0,
-    radius: { x: 7, y: 4 },
+    radius: { x: 10, y: 6 },
     blocking: true,
     team: Team.Neutral,
     dummy: { row: 0 },

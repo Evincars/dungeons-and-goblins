@@ -8,7 +8,7 @@ import type { SfxName } from '../audio/SoundPlayer';
 import { destroyAttachments } from './BarSystem';
 import { stateDuration } from '../characters/Characters';
 import { startDying } from './RespawnSystem';
-import { xpForLevel } from '../ui/HudPanel';
+import { xpForLevel } from '../game/Progress';
 
 const DEATH_SOUNDS = {
   goblin: 'enemy_death',
@@ -53,6 +53,15 @@ function awardExperience(points: number): void {
   }
 }
 
+/** The luckiest living player's share of extra coins: luck makes kills richer. */
+function bestLootBonus(): number {
+  let best = 0;
+  for (const player of earners) {
+    if (player.health.current > 0) best = Math.max(best, player.playerStats.lootBonus);
+  }
+  return best;
+}
+
 /** What dying leaves behind, by kind of entity: sound, smoke, experience and loot. */
 function die(entity: Entity, pos: { x: number; y: number }): void {
   const deathPts = entity.deathPoints ?? 0;
@@ -67,7 +76,7 @@ function die(entity: Entity, pos: { x: number; y: number }): void {
     sound.playSound(entity.mobType ? DEATH_SOUNDS[entity.mobType] : 'enemy_death', pos.x, pos.y);
     createDeathFx(pos.x, pos.y);
     awardExperience(deathPts);
-    dropLoot(pos.x, pos.y, deathPts);
+    dropLoot(pos.x, pos.y, Math.round(deathPts * (1 + bestLootBonus())));
   }
 }
 

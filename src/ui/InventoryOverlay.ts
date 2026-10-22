@@ -6,13 +6,19 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
 import { getTexture } from '../assets/Textures';
 import { lazyTexture, onArtLoaded } from '../assets/LazyArt';
 import { ItemTooltip } from './ItemTooltip';
-import { StatTooltip } from './StatTooltip';
+import { InfoTooltip } from './InfoTooltip';
+import type { TipTopic } from './InfoTooltip';
+import { SheetField } from './SheetField';
+import { armorClassTopic, damageTopic, hitPointsTopic, statTopic } from './SheetTopics';
 import { text } from '../core/texts';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
 import { INVENTORY_COLS, INVENTORY_ROWS, MAX_CARRY_KG, carriedWeight, freeSquare, moveItem, requestLoadout } from '../game/PlayerActions';
 import type { ItemPlace } from '../game/PlayerActions';
-import { itemIcon, slotFor, slotLabel, statShort, statTotals } from '../entities/Items';
+import { itemIcon, slotFor, slotLabel, statShort } from '../entities/Items';
+import { characterSheet } from '../rules/CharacterSheet';
+import type { CharacterSheet } from '../rules/CharacterSheet';
+import { formatDice, formatModifier } from '../rules/Dice';
 
 /** inventory.png, measured in its own pixels: the leather bag panel, the cloth gear panel, and its two tabs. */
 const ART = { w: 2752, h: 1536 };
@@ -46,9 +52,9 @@ const SCREEN_MARGIN = 8;
 const PAD = 6;
 const GAP = 3;
 const ICON_PAD = 3;
-/** The bag grid reaches this close to the leather's edges, and its squares stay at least this far apart. */
+/** The bag grid keeps this far inside the leather's edges, and its squares this far apart (the grid is centred). */
 const BAG_PAD = 2;
-const BAG_MIN_GAP = 3;
+const BAG_GAP = 1;
 /** Two presses on one square this quickly (the usual desktop double-click time) is a double-click: it puts the item on, or takes it off. */
 const DOUBLE_CLICK_MS = 500;
 /** The part of a stat's short name that reacts to the pointer reaches this far past the letters. */
@@ -56,6 +62,13 @@ const STAT_HIT_PAD = 2;
 /** Between an equipment label and its square, and between the gear and stats columns. */
 const LABEL_GAP = 6;
 const COLUMN_GAP = 10;
+/** The stats take this share of the Gear page's height; the Armor Class, hit point and damage fields fill the rest. */
+const STATS_SHARE = 0.6;
+/** A stat's score sits this far left of its modifier (the modifier, what rolls add, is the number that matters). */
+const SCORE_COLUMN = 24;
+/** Space round the rule under the stats, and between the fields. */
+const RULE_GAP = 4;
+const FIELD_GAP = 4;
 const SQUARE_FILL_ALPHA = 0.35;
 const SQUARE_EDGE = 0xb4a488;
 const SQUARE_EDGE_ALPHA = 0.55;
@@ -66,8 +79,19 @@ type Rect = { x: number; y: number; w: number; h: number };
 /** `page`: the tab page the square is on (bag squares are always shown). */
 /** `box` is the square drawn; `zone` the area that takes a dropped item (a gear slot's whole row). */
 type Square = { place: ItemPlace; box: Rectangle; zone: Rectangle; icon: Sprite; page: Container | null };
-/** A stat's short name on the Gear page, and the area that shows its tooltip. */
+/** A stat's row on the Gear page, and the area that shows its tooltip. */
 type StatRow = { stat: StatName; hit: Rectangle };
+type StatValue = { score: PixelLabel; modifier: PixelLabel };
+/** A read-only field of the character sheet: what it shows, and its tooltip. */
+type FieldDef = { caption: string; accent: number; value: (sheet: CharacterSheet) => string; topic: (sheet: CharacterSheet) => TipTopic };
+type Field = { field: SheetField; def: FieldDef };
+
+/** Under the stats: Armor Class and hit points side by side, the weapon's damage roll across the row below. */
+const FIELDS: readonly FieldDef[] = [
+  { caption: text('sheet.ac.short'), accent: THEME.armorClass, value: (s) => String(s.armorClass.total), topic: armorClassTopic },
+  { caption: text('sheet.hp.short'), accent: THEME.hitPoints, value: (s) => String(s.hitPoints.current), topic: hitPointsTopic },
+  { caption: text('sheet.dmg.short'), accent: THEME.damage, value: (s) => formatDice(s.attack.damage, true), topic: damageTopic },
+];
 type Tab = { glow: Graphics; label: PixelLabel; page: Container; hovered: boolean; w: number; h: number };
 
 /** A rect of the art, in the overlay's design space. */
@@ -93,16 +117,20 @@ function samePlace(a: ItemPlace, b: ItemPlace): boolean {
 
 /**
  * Tab opens it: the bag as a grid of squares on the left; on the right two tabs, Gear (the equipment slots,
- * each a square of the same kind, and the six stats the worn gear adds up to) and Stats (to come). Items are
- * dragged between squares.
+ * each a square of the same kind, the six ability scores and modifiers, and the Armor Class, hit points and
+ * weapon damage the rules make of them) and Stats (to come). Items are dragged between squares, and every
+ * value is worked out again whenever the gear changes.
  */
 export class InventoryOverlay {
   readonly container = new Container();
   private readonly root = new Container();
   private readonly squares: Square[] = [];
-  private readonly statValues = new Map<StatName, PixelLabel>();
+  private readonly statValues = new Map<StatName, StatValue>();
   private readonly statRows: StatRow[] = [];
-  private readonly statTip = new StatTooltip();
+  private readonly fields: Field[] = [];
+  /** What the rules make of the player's gear, as last drawn (for the tooltips). */
+  private sheet: CharacterSheet | null = null;
+  private readonly infoTip = new InfoTooltip();
   private readonly gold = new PixelLabel('', { color: 0xffcc00, align: 'right', shadow: true });
   private readonly tooltip = new ItemTooltip();
   private readonly ghost = new Sprite();
@@ -114,7 +142,7 @@ export class InventoryOverlay {
   private dragging: ItemPlace | null = null;
   private readonly stopListening: () => void;
   /** What the screen shows, so it is redrawn only when the player's things change. */
-  private shown: { inventory: unknown; equipped: unknown; contents: number; gold: number } | null = null;
+  private shown: { inventory: unknown; equipped: unknown; contents: number; gold: number; hp: number; maxHp: number } | null = null;
   private readonly weight = new PixelLabel('', { color: THEME.buttonText, align: 'right', shadow: true });
 
   constructor() {
@@ -136,7 +164,7 @@ export class InventoryOverlay {
     this.shown = null;
     if (!visible) {
       this.endDrag();
-      this.statTip.hide();
+      this.infoTip.hide();
     }
   }
 
@@ -147,8 +175,10 @@ export class InventoryOverlay {
     const equipped = player.equipped ?? {};
     const contents = contentsMark(inventory, equipped);
     const s = this.shown;
-    if (s && s.inventory === inventory && s.equipped === equipped && s.contents === contents && s.gold === player.playerStats.gold) return;
-    this.shown = { inventory, equipped, contents, gold: player.playerStats.gold };
+    const { gold } = player.playerStats;
+    const { current: hp, max: maxHp } = player.health;
+    if (s && s.inventory === inventory && s.equipped === equipped && s.contents === contents && s.gold === gold && s.hp === hp && s.maxHp === maxHp) return;
+    this.shown = { inventory, equipped, contents, gold, hp, maxHp };
     this.refresh(player);
   }
 
@@ -179,7 +209,7 @@ export class InventoryOverlay {
     this.ghost.anchor.set(0.5);
     this.ghost.alpha = GHOST_ALPHA;
     this.ghost.visible = false;
-    this.root.addChild(this.ghost, this.tooltip.view, this.statTip.view);
+    this.root.addChild(this.ghost, this.tooltip.view, this.infoTip.view);
   }
 
   /** A clickable tab over the art's tab: it lights up under the pointer and when open, and shows its page. */
@@ -214,7 +244,7 @@ export class InventoryOverlay {
   /** Opens a tab: its page shows, the others hide, and every tab redraws its look. */
   private showTab(index: number): void {
     this.activeTab = index;
-    this.statTip.hide();
+    this.infoTip.hide();
     this.tabs.forEach((tab, i) => {
       tab.page.visible = i === index;
       this.drawTab(tab);
@@ -235,28 +265,26 @@ export class InventoryOverlay {
     tab.label.fill = active ? THEME.title : tab.hovered ? THEME.buttonHover : THEME.muted;
   }
 
-  /**
-   * The bag: square cells as large as fit, spread out to the leather's corners (the gaps across and down
-   * stretch to fill what is left).
-   */
+  /** The bag: borderless square cells as large as fit, packed close together and centred on the leather. */
   private buildBag(area: Rect): void {
     const cols = INVENTORY_COLS;
     const rows = INVENTORY_ROWS;
     const innerW = area.w - 2 * BAG_PAD;
     const innerH = area.h - 2 * BAG_PAD;
-    this.cell = Math.floor(Math.min((innerW - BAG_MIN_GAP * (cols - 1)) / cols, (innerH - BAG_MIN_GAP * (rows - 1)) / rows));
-    const gapX = (innerW - cols * this.cell) / (cols - 1);
-    const gapY = (innerH - rows * this.cell) / (rows - 1);
+    this.cell = Math.floor(Math.min((innerW - BAG_GAP * (cols - 1)) / cols, (innerH - BAG_GAP * (rows - 1)) / rows));
+    const left = area.x + (area.w - (cols * this.cell + (cols - 1) * BAG_GAP)) / 2;
+    const top = area.y + (area.h - (rows * this.cell + (rows - 1) * BAG_GAP)) / 2;
     for (let i = 0; i < cols * rows; i++) {
-      const x = area.x + BAG_PAD + (i % cols) * (this.cell + gapX);
-      const y = area.y + BAG_PAD + Math.floor(i / cols) * (this.cell + gapY);
-      this.addSquare({ bag: i }, Math.round(x), Math.round(y), this.cell);
+      const x = left + (i % cols) * (this.cell + BAG_GAP);
+      const y = top + Math.floor(i / cols) * (this.cell + BAG_GAP);
+      this.addSquare({ bag: i }, Math.round(x), Math.round(y), this.cell, null, undefined, false);
     }
   }
 
   /**
-   * The Gear tab: each equipment square with its name to its right, a dividing line, then the stats and
-   * their values. A whole row (square and name) takes a dropped item.
+   * The Gear tab: each equipment square with its name to its right, a dividing line, then the stats (score
+   * and modifier) in the upper part and the Armor Class, hit point and damage fields under them. A whole
+   * row (square and name) takes a dropped item.
    */
   private buildGear(area: Rect, page: Container): void {
     const rowH = (area.h - 2 * PAD) / EQUIP_SLOTS.length;
@@ -276,8 +304,30 @@ export class InventoryOverlay {
       .rect(dividerX, area.y + PAD, 1, area.h - 2 * PAD).fill({ color: SQUARE_EDGE, alpha: SQUARE_EDGE_ALPHA }));
     const statsX = dividerX + COLUMN_GAP;
     const valueX = area.x + area.w - PAD;
-    const statsTop = area.y + PAD + ((EQUIP_SLOTS.length - STAT_NAMES.length) * rowH) / 2;
-    STAT_NAMES.forEach((stat, i) => this.addStatRow(stat, statsX, valueX, statsTop + i * rowH + (rowH - 8) / 2, page));
+    const statsH = (area.h - 2 * PAD) * STATS_SHARE;
+    const statRowH = statsH / STAT_NAMES.length;
+    STAT_NAMES.forEach((stat, i) => this.addStatRow(stat, statsX, valueX, area.y + PAD + i * statRowH + (statRowH - 8) / 2, page));
+    this.buildFields({ x: statsX, y: area.y + PAD + statsH, w: valueX - statsX, h: area.h - 2 * PAD - statsH }, page);
+  }
+
+  /** A rule across the stats column, then the sheet's fields: two side by side, the last across the row below. */
+  private buildFields(area: Rect, page: Container): void {
+    const ruleY = Math.round(area.y + RULE_GAP / 2);
+    page.addChild(new Graphics().rect(Math.round(area.x), ruleY, Math.round(area.w), 1).fill({ color: SQUARE_EDGE, alpha: SQUARE_EDGE_ALPHA }));
+    const top = ruleY + 1 + RULE_GAP;
+    const h = Math.floor((area.y + area.h - top - FIELD_GAP) / 2);
+    const halfW = Math.floor((area.w - FIELD_GAP) / 2);
+    const boxes = [
+      { x: area.x, y: top, w: halfW },
+      { x: area.x + area.w - halfW, y: top, w: halfW },
+      { x: area.x, y: top + h + FIELD_GAP, w: area.w },
+    ];
+    FIELDS.forEach((def, i) => {
+      const box = boxes[i];
+      const field = new SheetField(def.caption, Math.round(box.x), Math.round(box.y), Math.round(box.w), h, def.accent);
+      this.fields.push({ field, def });
+      page.addChild(field.view);
+    });
   }
 
   /** The Stats tab: nothing to show yet but a placeholder line. */
@@ -287,21 +337,23 @@ export class InventoryOverlay {
     page.addChild(placeholder);
   }
 
+  /** A stat's row: its short name, its score (quiet) and its modifier (bright); the whole row shows its tooltip. */
   private addStatRow(stat: StatName, x: number, valueX: number, y: number, page: Container): void {
     const label = new PixelLabel(statShort(stat), { color: THEME.text, shadow: true });
-    const value = new PixelLabel('0', { color: THEME.title, align: 'right', shadow: true });
+    const score = new PixelLabel('0', { color: THEME.muted, align: 'right', shadow: true });
+    const modifier = new PixelLabel('+0', { color: THEME.title, align: 'right', shadow: true });
     label.position.set(Math.round(x), Math.round(y));
-    value.position.set(Math.round(valueX), Math.round(y));
-    this.statValues.set(stat, value);
-    this.statRows.push({ stat, hit: new Rectangle(x - STAT_HIT_PAD, y - STAT_HIT_PAD, label.textWidth + 2 * STAT_HIT_PAD, 8 + 2 * STAT_HIT_PAD) });
-    page.addChild(label, value);
+    score.position.set(Math.round(valueX - SCORE_COLUMN), Math.round(y));
+    modifier.position.set(Math.round(valueX), Math.round(y));
+    this.statValues.set(stat, { score, modifier });
+    this.statRows.push({ stat, hit: new Rectangle(x - STAT_HIT_PAD, y - STAT_HIT_PAD, valueX - x + 2 * STAT_HIT_PAD, 8 + 2 * STAT_HIT_PAD) });
+    page.addChild(label, score, modifier);
   }
 
-  /** One square (bag cell or equipment slot): a dark well with a light edge, and the icon of what is in it. */
-  private addSquare(place: ItemPlace, x: number, y: number, size: number, page: Container | null = null, zone?: Rectangle): void {
-    const frame = new Graphics()
-      .rect(x, y, size, size).fill({ color: 0x000000, alpha: SQUARE_FILL_ALPHA })
-      .stroke({ color: SQUARE_EDGE, alpha: SQUARE_EDGE_ALPHA, width: 1, alignment: 1 });
+  /** One square (bag cell or equipment slot): a dark well (with a light edge if `edged`), and the icon of what is in it. */
+  private addSquare(place: ItemPlace, x: number, y: number, size: number, page: Container | null = null, zone?: Rectangle, edged = true): void {
+    const frame = new Graphics().rect(x, y, size, size).fill({ color: 0x000000, alpha: SQUARE_FILL_ALPHA });
+    if (edged) frame.stroke({ color: SQUARE_EDGE, alpha: SQUARE_EDGE_ALPHA, width: 1, alignment: 1 });
     const icon = new Sprite();
     icon.anchor.set(0.5);
     icon.position.set(x + size / 2, y + size / 2);
@@ -337,8 +389,13 @@ export class InventoryOverlay {
       const item = this.itemIn(player, square.place);
       this.showIcon(square.icon, item, square.box.width);
     }
-    const totals = statTotals(player.equipped ?? {});
-    for (const [stat, label] of this.statValues) label.text = String(totals[stat]);
+    const sheet = characterSheet(player);
+    this.sheet = sheet;
+    for (const [stat, row] of this.statValues) {
+      row.score.text = String(sheet.scores[stat]);
+      row.modifier.text = formatModifier(sheet.modifiers[stat]);
+    }
+    for (const { field, def } of this.fields) field.set(def.value(sheet));
     this.gold.text = text('inventory.gold', { amount: player.playerStats.gold });
     const kg = carriedWeight(player);
     this.weight.text = text('inventory.weight', { carried: kg.toFixed(1), max: MAX_CARRY_KG });
@@ -417,14 +474,23 @@ export class InventoryOverlay {
     const item = player && square && !this.dragging ? this.itemIn(player, square.place) : undefined;
     if (item) this.tooltip.show(item, p.x, p.y, { w: DESIGN_W, h: DESIGN_H });
     else this.tooltip.hide();
-    this.updateStatTip(p.x, p.y);
+    this.updateInfoTip(p.x, p.y);
   }
 
-  /** Over a stat's short name on the Gear page (and nothing held), its full name and what it does. */
-  private updateStatTip(x: number, y: number): void {
-    const row = this.activeTab === 0 && !this.dragging ? this.statRows.find((r) => r.hit.contains(x, y)) : undefined;
-    if (row) this.statTip.show(row.stat, x, y, { w: DESIGN_W, h: DESIGN_H });
-    else this.statTip.hide();
+  /** Over a stat or a sheet field on the Gear page (and nothing held): its full name, what it does and how it adds up. */
+  private updateInfoTip(x: number, y: number): void {
+    const topic = this.activeTab === 0 && !this.dragging ? this.topicAt(x, y) : null;
+    if (topic) this.infoTip.show(topic, x, y, { w: DESIGN_W, h: DESIGN_H });
+    else this.infoTip.hide();
+  }
+
+  private topicAt(x: number, y: number): TipTopic | null {
+    const sheet = this.sheet;
+    if (!sheet) return null;
+    const row = this.statRows.find((r) => r.hit.contains(x, y));
+    if (row) return statTopic(row.stat, sheet);
+    const entry = this.fields.find((f) => f.field.hit.contains(x, y));
+    return entry ? entry.def.topic(sheet) : null;
   }
 
   /**

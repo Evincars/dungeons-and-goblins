@@ -4,6 +4,10 @@ import type { InventoryItem } from '../world';
 import { lazyTexture } from '../assets/LazyArt';
 import { itemIcon, statShort } from '../entities/Items';
 import { text } from '../core/texts';
+import { formatDice, formatModifier } from '../rules/Dice';
+import { armorRule, magicBonus, weaponRule } from '../rules/Equipment';
+import type { ArmorRule } from '../rules/ArmorTable';
+import { armorCategoryName, armorName, damageTypeName, propertyName, rangeName, weaponCategoryName, weaponName } from '../rules/Names';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
 
@@ -20,13 +24,53 @@ const MIN_W = 150;
 const OFFSET = 10;
 const BG_ALPHA = 0.94;
 
-/** The lines under the header: each stat the item adds, how many there are, and what kind of thing it is. */
-function detailLines(item: InventoryItem): Array<{ text: string; color: number }> {
+type Line = { text: string; color: number };
+
+/** A weapon's rules: its damage dice (and two-handed dice), its magic, its properties, and what sort it is. */
+function weaponLines(item: InventoryItem): Line[] {
+  const found = weaponRule(item);
+  if (!found) return [];
+  const { base, rule } = found;
+  const lines: Line[] = [{ text: text('item.tooltip.damage', { dice: formatDice(rule.damage), type: damageTypeName(rule.type) }), color: THEME.damage }];
+  if (rule.versatile) lines.push({ text: text('item.tooltip.versatile', { dice: formatDice(rule.versatile) }), color: THEME.damage });
+  const magic = magicBonus(item);
+  if (magic) lines.push({ text: text('item.tooltip.magic_weapon', { bonus: formatModifier(magic) }), color: THEME.title });
+  if (rule.properties.length) lines.push({ text: rule.properties.map(propertyName).join(', '), color: THEME.muted });
+  lines.push({ text: text('item.tooltip.weapon_kind', { base: weaponName(base), category: weaponCategoryName(rule.category), range: rangeName(rule.range) }), color: THEME.muted });
+  return lines;
+}
+
+/** How armour sets Armor Class: its base, plus DEX (all, at most +2, or none); a shield simply adds. */
+function armorClassLine(rule: ArmorRule): string {
+  if (rule.category === 'shield') return text('item.tooltip.shield_ac', { ac: rule.ac });
+  if (rule.category === 'heavy') return text('item.tooltip.armor_ac', { ac: rule.ac });
+  if (rule.dexCap === null) return text('item.tooltip.armor_ac_dex', { ac: rule.ac });
+  return text('item.tooltip.armor_ac_dex_max', { ac: rule.ac, cap: rule.dexCap });
+}
+
+/** Armour's or a shield's rules: the AC it gives, its magic, the STR it needs, whether it is noisy, and what sort it is. */
+function armorLines(item: InventoryItem): Line[] {
+  const found = armorRule(item);
+  if (!found) return [];
+  const { base, rule } = found;
+  const lines: Line[] = [{ text: armorClassLine(rule), color: THEME.armorClass }];
+  const magic = magicBonus(item);
+  if (magic) lines.push({ text: text('item.tooltip.magic_armor', { bonus: formatModifier(magic) }), color: THEME.title });
+  if (rule.strength) lines.push({ text: text('item.tooltip.strength_needed', { score: rule.strength }), color: THEME.muted });
+  if (rule.stealthDisadvantage) lines.push({ text: text('item.tooltip.stealth'), color: THEME.muted });
+  lines.push({ text: text('item.tooltip.armor_kind', { base: armorName(base), category: armorCategoryName(rule.category) }), color: THEME.muted });
+  return lines;
+}
+
+/** The lines under the header: the item's rules, each stat it adds, how much it weighs and is worth, and what kind of thing it is. */
+function detailLines(item: InventoryItem): Line[] {
   const s = item.stats;
-  const lines = s ? STAT_NAMES.flatMap((stat) => (s[stat] ? [{ text: text('item.tooltip.stat_bonus', { amount: s[stat] ?? 0, stat: statShort(stat) }), color: 0x8fd18f }] : [])) : [];
+  const rules = [...weaponLines(item), ...armorLines(item)];
+  const lines = rules.slice(0, -1);
+  if (s) lines.push(...STAT_NAMES.flatMap((stat) => (s[stat] ? [{ text: text('item.tooltip.stat_bonus', { amount: s[stat] ?? 0, stat: statShort(stat) }), color: 0x8fd18f }] : [])));
   if (item.weight !== undefined) lines.push({ text: text('item.tooltip.weight', { kg: item.weight }), color: THEME.text });
   lines.push({ text: text('item.tooltip.value', { gold: item.value }), color: 0xffcc00 });
-  lines.push({ text: item.kind ?? item.type, color: THEME.muted });
+  lines.push(rules.at(-1) ?? { text: item.kind ?? item.type, color: THEME.muted });
   return lines;
 }
 

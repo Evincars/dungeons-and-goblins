@@ -1,6 +1,7 @@
 import { isGearKind, isItemType, isStatName } from '../world';
 import type { InventoryItem, ItemStats } from '../world';
 import { isRecord } from '../core/guards';
+import { isItemBase, isMagicBonus } from '../rules/Equipment';
 import weapons from '../data/weapons.json';
 import shields from '../data/shields.json';
 import armors from '../data/armors.json';
@@ -29,6 +30,8 @@ function readItem(raw: unknown): InventoryItem | null {
   if (typeof raw.weight === 'number') item.weight = raw.weight;
   if (isGearKind(raw.gear)) item.gear = raw.gear;
   if (typeof raw.kind === 'string') item.kind = raw.kind;
+  if (isItemBase(raw.base)) item.base = raw.base;
+  if (isMagicBonus(raw.bonus) && raw.bonus > 0) item.bonus = raw.bonus;
   return item;
 }
 

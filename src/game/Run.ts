@@ -1,20 +1,24 @@
 import { q } from '../world';
 import type { Entity, InventoryItem } from '../world';
-import { ARMORS, HAND_WEAPONS, MEDALS, SHIELDS, randomItem } from '../entities/ItemCatalog';
+import { ARMORS, HAND_WEAPONS, SHIELDS } from '../entities/ItemCatalog';
+import { WEAPON_BASES } from '../rules/WeaponTable';
+import { ARMOR_BASES } from '../rules/ArmorTable';
+import type { ItemBase } from '../rules/Equipment';
 
-/** How many random weapons, shields, suits of armour and medals a run starts with. */
-const STARTING_WEAPONS = 4;
-const STARTING_ARMORS = 4;
-const STARTING_SHIELDS = 1;
-const STARTING_MEDALS = 2;
+/** A fresh copy of the first catalogue entry of each of these D&D bases (in that order), skipping any the catalogue lacks. */
+function onePerBase(from: readonly InventoryItem[], bases: readonly ItemBase[]): InventoryItem[] {
+  return bases.flatMap((base) => {
+    const item = from.find((entry) => entry.base === base);
+    return item ? [structuredClone(item)] : [];
+  });
+}
 
-/** What everyone sets out with, to try the inventory on: random weapons, a shield, armour and medals. */
+/**
+ * What everyone sets out with, to try the rules on: one weapon of every type (dagger, longsword, longbow…),
+ * a shield and one suit of every armour type, so each Armor Class and damage roll can be tested.
+ */
 export function giveStartingKit(player: Entity): void {
-  const some = (from: readonly InventoryItem[], n: number) => Array.from({ length: n }, () => randomItem(from));
-  player.inventory = [
-    ...some(HAND_WEAPONS, STARTING_WEAPONS), ...some(SHIELDS, STARTING_SHIELDS), ...some(ARMORS, STARTING_ARMORS),
-    ...some(MEDALS, STARTING_MEDALS),
-  ];
+  player.inventory = [...onePerBase(HAND_WEAPONS, WEAPON_BASES), ...onePerBase(SHIELDS, ['shield']), ...onePerBase(ARMORS, ARMOR_BASES)];
 }
 
 /** One trip into the dungeon: how deep the party has gone. A new run starts from the title screen. */

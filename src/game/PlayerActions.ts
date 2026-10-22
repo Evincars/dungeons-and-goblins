@@ -172,7 +172,8 @@ export function requestLoadout(player: Player, loadout: Loadout): void {
   if (coop.role === 'guest') coop.sendCommand({ kind: 'loadout', ...loadout });
 }
 
-const itemKey = (item: InventoryItem): string => JSON.stringify([item.type, item.name, item.value, item.gear, item.icon, item.stats]);
+const itemKey = (item: InventoryItem): string =>
+  JSON.stringify([item.type, item.name, item.value, item.gear, item.icon, item.stats, item.base, item.bonus]);
 
 /** Every item a loadout holds, bag and equipment alike, as a sorted list of keys. */
 function contents(loadout: Loadout): string[] {

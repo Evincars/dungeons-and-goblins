@@ -4,6 +4,7 @@ import type { SfxName } from '../audio/SoundPlayer';
 import { cleanName } from '../game/Settings';
 import { ValidationError } from '../core/errors';
 import { isFiniteNumber, isRecord } from '../core/guards';
+import { isItemBase, isMagicBonus } from '../rules/Equipment';
 
 /**
  * What co-op peers say to each other, and the checks every incoming message passes before the game
@@ -110,7 +111,8 @@ export function isInventoryItem(value: unknown): value is InventoryItem {
   const iconOk = value.icon === undefined || isShortKey(value.icon);
   const idOk = (value.id === undefined || isShortKey(value.id)) && (value.kind === undefined || isShortKey(value.kind));
   const weightOk = value.weight === undefined || (isFiniteNumber(value.weight) && Number(value.weight) >= 0 && Number(value.weight) <= MAX_ITEM_WEIGHT);
-  return gearOk && iconOk && idOk && weightOk && validStats(value.stats);
+  const rulesOk = (value.base === undefined || isItemBase(value.base)) && (value.bonus === undefined || isMagicBonus(value.bonus));
+  return gearOk && iconOk && idOk && weightOk && rulesOk && validStats(value.stats);
 }
 
 function validEquipped(value: unknown): value is Partial<Record<EquipSlot, InventoryItem>> {

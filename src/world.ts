@@ -3,6 +3,7 @@ import type { Sprite, Container, Graphics } from 'pixi.js';
 import type { PixelLabel } from './ui/PixelText';
 import type { CharacterState } from './characters/CharacterDef';
 import type { DropTableId } from './entities/Drops';
+import type { ItemBase } from './rules/Equipment';
 
 export const enum Team { Neutral = 0, Player = 1 }
 
@@ -48,6 +49,10 @@ export type InventoryItem = {
   id?: string;
   /** What sort of weapon or thing it is ('bow', 'axe'…), for game rules and tooltips. */
   kind?: string;
+  /** The D&D weapon or armour it plays as (its damage dice or Armor Class, src/rules/). */
+  base?: ItemBase;
+  /** Magic +1…+3: to hit and damage for a weapon, to Armor Class for armour or a shield. */
+  bonus?: number;
   /** Equipment fits the slots of its kind; anything without one only goes in the bag. */
   gear?: GearKind;
   /** Texture key of its picture. */

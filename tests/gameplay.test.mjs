@@ -722,14 +722,17 @@ test('the item catalogues load every weapon, shield and armour, each with a name
   assert.equal(EFFECT_COLOURS.length, 9);
 });
 
-test('a new run starts with random weapons, a shield and armour in the bag', () => {
+test('a new run starts with one weapon of every type, a shield and every type of armour in the bag', async () => {
+  const { WEAPON_BASES } = await load('rules/WeaponTable');
+  const { ARMOR_BASES } = await load('rules/ArmorTable');
   const player = playerAt(2, 2);
   giveStartingKit(player);
   const bag = player.inventory;
-  assert.equal(bag.filter((i) => HAND_WEAPONS.some((w) => w.id === i.id)).length, 4);
-  assert.equal(bag.filter((i) => i.gear === 'armor').length, 4);
-  assert.equal(bag.filter((i) => i.gear === 'offhand').length, 1);
-  assert.equal(bag.filter((i) => i.gear === 'medal').length, 2, 'and two medals for the medal slot');
+  const bases = new Set(bag.map((i) => i.base));
+  for (const base of [...WEAPON_BASES, ...ARMOR_BASES].filter((b) => b !== 'unarmed')) assert.ok(bases.has(base), `${base} is in the bag`);
+  assert.equal(bag.length, bases.size, 'one of each');
+  assert.ok(bag.length <= PlayerActions.MAX_INVENTORY, 'and it all fits');
+  assert.notEqual(bag[0], HAND_WEAPONS.find((w) => w.base === bag[0].base), 'copies, not the catalogue entries');
 });
 
 test('worn gear applies all its stats, and an item dropped on the gear panel finds its slot', () => {
@@ -980,4 +983,95 @@ test('the six stats are Strength to Charisma, each with a short name, a full nam
     assert.ok(text(`stat.${stat}.description`).length > 10);
   }
   assert.equal(text('inventory.gold', { amount: 7 }), 'Gold: 7', 'placeholders are filled in');
+});
+
+test('dice: notation, ranges, criticals, advantage and attack rolls', async () => {
+  const { parseDice, formatDice, diceRange, rollDice, rollD20, rollAttack, rollCheck, dice } = await load('rules/Dice');
+  assert.deepEqual(parseDice('2d6+3'), { count: 2, sides: 6, bonus: 3 });
+  assert.deepEqual(parseDice('1d20 - 1'), { count: 1, sides: 20, bonus: -1 });
+  assert.equal(parseDice('1d7'), null, 'no seven-sided dice');
+  assert.equal(parseDice('d20'), null);
+  assert.equal(formatDice(dice(1, 4, 1)), '1d4 + 1');
+  assert.equal(formatDice(dice(1, 8, -1)), '1d8 - 1');
+  assert.equal(formatDice(dice(1, 12, 3), true), '1d12+3');
+  assert.equal(formatDice(dice(0, 4, 1)), '1', 'a punch is a flat number');
+  assert.deepEqual(diceRange(dice(2, 6, 1)), { min: 3, max: 13, average: 8 });
+  const sixes = () => 6;
+  assert.equal(rollDice(dice(2, 6, 1), false, sixes), 13);
+  assert.equal(rollDice(dice(2, 6, 1), true, sixes), 25, 'a critical doubles the dice, not the bonus');
+  const rolls = [3, 17];
+  const next = () => rolls.shift();
+  assert.equal(rollD20('advantage', next), 17);
+  for (let i = 0; i < 200; i++) {
+    const r = rollDice(dice(1, 4));
+    assert.ok(r >= 1 && r <= 4 && Number.isInteger(r));
+  }
+  assert.deepEqual(rollAttack(5, 30, 'normal', () => 20), { natural: 20, total: 25, hit: true, critical: true }, 'a natural 20 always hits');
+  assert.equal(rollAttack(50, 10, 'normal', () => 1).hit, false, 'a natural 1 always misses');
+  assert.equal(rollAttack(3, 15, 'normal', () => 12).hit, true, 'meeting the AC hits');
+  assert.equal(rollCheck(-1, 10, 'normal', () => 10).success, false);
+});
+
+test('ability modifiers and proficiency follow the tabletop tables', async () => {
+  const { abilityModifier, abilities, proficiencyBonus, BASE_ABILITIES } = await load('rules/Abilities');
+  const table = { 1: -5, 3: -4, 8: -1, 9: -1, 10: 0, 11: 0, 12: 1, 15: 2, 18: 4, 20: 5, 30: 10 };
+  for (const [score, mod] of Object.entries(table)) assert.equal(abilityModifier(Number(score)), mod, `score ${score}`);
+  assert.equal(BASE_ABILITIES.strength, 8);
+  const { scores, modifiers } = abilities({ primary: { type: 'weapon', name: 'w', value: 1, gear: 'weapon', stats: { strength: 4 } } });
+  assert.equal(scores.strength, 12);
+  assert.equal(modifiers.strength, 1);
+  assert.equal(modifiers.dexterity, -1, '8 gives -1');
+  assert.deepEqual([1, 4, 5, 9, 13, 17, 20].map(proficiencyBonus), [2, 2, 3, 4, 5, 6, 6]);
+});
+
+test('Armor Class: 10 + DEX bare, armour sets its own base, heavy ignores DEX, medium caps it, a shield adds 2', async () => {
+  const { armorClass } = await load('rules/CharacterSheet');
+  const armor = (base, bonus) => ({ type: 'armor', name: base, value: 1, gear: 'armor', base, bonus });
+  const shield = { type: 'shield', name: 's', value: 1, gear: 'offhand', base: 'shield' };
+  assert.equal(armorClass({}, -1).total, 9, 'no armour: 10 + DEX');
+  assert.equal(armorClass({}, 3).total, 13);
+  assert.equal(armorClass({ armor: armor('leather') }, 3).total, 14, 'light armour adds all of DEX');
+  assert.equal(armorClass({ armor: armor('breastplate') }, 4).total, 16, 'medium armour adds at most +2');
+  assert.equal(armorClass({ armor: armor('breastplate') }, -1).total, 13, 'but a penalty still counts');
+  assert.equal(armorClass({ armor: armor('chain_mail') }, 4).total, 16, 'heavy armour ignores DEX');
+  assert.equal(armorClass({ armor: armor('plate') }, -1).total, 18, 'either way');
+  assert.equal(armorClass({ armor: armor('plate', 1), secondary: shield }, 0).total, 21, 'plate +1 with a shield');
+  assert.equal(armorClass({ secondary: { ...shield, bonus: 2 } }, 0).total, 14, 'a +2 shield adds 4');
+});
+
+test('weapon damage: the dice, plus STR in melee, DEX at range, the better for finesse, plus magic', async () => {
+  const { weaponAttack, characterSheet } = await load('rules/CharacterSheet');
+  const { formatDice } = await load('rules/Dice');
+  const mods = (strength, dexterity) => ({ strength, dexterity, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 });
+  const weapon = (base, bonus) => ({ type: 'weapon', name: base, value: 1, gear: 'weapon', base, bonus });
+  const damage = (equipped, m) => formatDice(weaponAttack(equipped, m, 1).damage);
+  assert.equal(damage({ primary: weapon('dagger', 1) }, mods(-1, -1)), '1d4', 'a +1 dagger with STR and DEX -1');
+  assert.equal(damage({ primary: weapon('dagger') }, mods(-1, 3)), '1d4 + 3', 'finesse takes the better ability');
+  assert.equal(damage({ primary: weapon('longbow', 2) }, mods(4, 1)), '1d8 + 3', 'ranged uses DEX');
+  assert.equal(damage({ primary: weapon('greataxe') }, mods(2, 5)), '1d12 + 2', 'melee uses STR');
+  assert.equal(damage({ primary: weapon('greatsword') }, mods(0, 0)), '2d6');
+  assert.equal(damage({ primary: weapon('longsword') }, mods(1, 0)), '1d10 + 1', 'versatile, the other hand free');
+  assert.equal(damage({ primary: weapon('longsword'), secondary: { type: 'shield', name: 's', value: 1, gear: 'offhand', base: 'shield' } }, mods(1, 0)), '1d8 + 1');
+  assert.equal(damage({ secondary: weapon('shortsword') }, mods(0, 2)), '1d6 + 2', 'a weapon in the second hand when the first is empty');
+  assert.equal(damage({}, mods(3, 0)), '4', 'bare-handed: 1 + STR');
+  const attack = weaponAttack({ primary: weapon('scimitar', 3) }, mods(0, 2), 5);
+  assert.equal(attack.attackBonus, 3 + 2 + 3, 'to hit: proficiency + DEX + magic');
+  const player = playerAt(2, 2);
+  player.equipped = { primary: weapon('dagger', 1), armor: { type: 'armor', name: 'a', value: 1, gear: 'armor', base: 'chain_shirt' } };
+  const sheet = characterSheet(player);
+  assert.equal(sheet.armorClass.total, 12, 'chain shirt 13, DEX -1');
+  assert.equal(formatDice(sheet.attack.damage), '1d4');
+  assert.deepEqual(sheet.hitPoints, { current: 100, max: 100 }, 'every hero has 100 hit points for now');
+});
+
+test('every catalogue weapon, armour and shield plays as a D&D base, and a guest cannot forge a better one', async () => {
+  const { isWeaponBase } = await load('rules/WeaponTable');
+  const { isArmorBase } = await load('rules/ArmorTable');
+  for (const item of HAND_WEAPONS) assert.ok(isWeaponBase(item.base), `${item.id} has a weapon base`);
+  for (const item of [...ARMORS, ...SHIELDS]) assert.ok(isArmorBase(item.base), `${item.id} has an armour base`);
+  assert.ok(HAND_WEAPONS.every((w) => (w.bonus ?? 0) <= 3) && HAND_WEAPONS.some((w) => w.bonus === 3), 'magic up to +3');
+  const sword = HAND_WEAPONS.find((w) => !w.bonus);
+  assert.equal(validCommand({ kind: 'loadout', inventory: [{ ...sword, bonus: 4 }], equipped: {} }), false, 'no +4');
+  assert.equal(validCommand({ kind: 'loadout', inventory: [{ ...sword, base: 'vorpal_sword' }], equipped: {} }), false);
+  assert.equal(sameItems({ inventory: [sword], equipped: {} }, { inventory: [{ ...sword, bonus: 3 }], equipped: {} }), false, 'enchanting it in a loadout is caught');
 });

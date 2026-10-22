@@ -30,4 +30,8 @@ export const THEME = {
   /** Plain text, and quieter hints. */
   text: 0xffffff,
   muted: 0x8a929c,
+  /** The character sheet's fields: steel-blue Armor Class, blood-red hit points, ember-orange damage. */
+  armorClass: 0x9cc4ff,
+  hitPoints: 0xff6b6b,
+  damage: 0xffb060,
 } as const;

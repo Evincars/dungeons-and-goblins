@@ -1,12 +1,15 @@
 import { Container, NineSliceSprite } from 'pixi.js';
 import { frameTexture } from '../render/Sheets';
 import { PixelLabel } from './PixelText';
+import { THEME } from './Theme';
 
 const BUTTON_W = 128;
 const BUTTON_H = 24;
-const NORMAL_COLOR = 0xfff0d0;
-const HOVER_COLOR = 0xffd860;
-/** Border of the stone-and-copper frame in button.png, kept unstretched. */
+const NORMAL_COLOR = THEME.buttonText;
+const HOVER_COLOR = THEME.buttonHover;
+/** The steel version of Redux's button art (see AssetLoader). */
+const SHEET = 'button_steel';
+/** Border of the stone frame in the button art, kept unstretched. */
 const BORDER = 8;
 /** Frame rows in button.png. */
 const STATE_NORMAL = 0;
@@ -30,7 +33,7 @@ export class PixelButton extends Container {
     this.h = height;
 
     this.bg = new NineSliceSprite({
-      texture: frameTexture('button', 0, STATE_NORMAL),
+      texture: frameTexture(SHEET, 0, STATE_NORMAL),
       leftWidth: BORDER,
       topHeight: BORDER,
       rightWidth: BORDER,
@@ -72,7 +75,7 @@ export class PixelButton extends Container {
 
   private refresh(): void {
     const state = !this._enabled ? STATE_DISABLED : this._hovered ? STATE_HOVER : STATE_NORMAL;
-    this.bg.texture = frameTexture('button', 0, state);
+    this.bg.texture = frameTexture(SHEET, 0, state);
     this.btnLabel.fill = this._hovered && this._enabled ? HOVER_COLOR : NORMAL_COLOR;
   }
 

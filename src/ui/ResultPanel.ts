@@ -1,6 +1,7 @@
 import { Container, Graphics } from 'pixi.js';
 import { GAME_WIDTH, GAME_HEIGHT, LAYOUT_LEFT, LAYOUT_WIDTH } from '../render/Camera';
 import { PixelButton } from './PixelButton';
+import { THEME } from './Theme';
 import { makeText } from './PixelText';
 
 const DIM_ALPHA = 0.75;
@@ -39,7 +40,7 @@ export class ResultPanel {
     this.container.removeChildren().forEach((c) => c.destroy({ children: true }));
     const dim = new Graphics().rect(0, 0, GAME_WIDTH, GAME_HEIGHT).fill({ color: 0x000000, alpha: DIM_ALPHA });
     dim.eventMode = 'static';
-    const panel = new Graphics().rect(PANEL.x, PANEL.y, PANEL.w, PANEL.h).fill(0x241a13).stroke({ color: 0x8b613d, width: 2 });
+    const panel = new Graphics().rect(PANEL.x, PANEL.y, PANEL.w, PANEL.h).fill(THEME.panel).stroke({ color: THEME.panelBorder, width: 2 });
     const title = makeText(content.title, content.titleColor, 16, 'center');
     title.x = GAME_WIDTH / 2;
     title.y = PANEL.y + TITLE_Y;

@@ -29,9 +29,9 @@ function moving(e: Entity): boolean {
   return travelling(e) || (!e.playerInput && !!e.chasing);
 }
 
-/** Players run while sprinting; enemies run at whoever they are fighting. */
+/** Players run while sprinting; enemies run once they have spotted a player (fighting or tracking them). */
 function running(e: Entity): boolean {
-  const hurrying = e.playerInput ? !!e.playerStats?.sprinting : e.ai?.state === 'engage';
+  const hurrying = e.playerInput ? !!e.playerStats?.sprinting : e.ai?.state === 'engage' || e.ai?.state === 'search';
   return hurrying && travelling(e);
 }
 

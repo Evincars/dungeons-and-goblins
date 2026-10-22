@@ -2,11 +2,12 @@ import { Container, Graphics } from 'pixi.js';
 import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
 import { PixelLabel } from './PixelText';
 import type { PixelTextAlign } from './PixelText';
+import { THEME } from './Theme';
 
-const BACKGROUND = 0x241b18;
-const BORDER = 0xd9a454;
-const TEXT = 0xffffff;
-const PLACEHOLDER = 0x8a7a6a;
+const BACKGROUND = THEME.input;
+const BORDER = THEME.inputBorder;
+const TEXT = THEME.text;
+const PLACEHOLDER = THEME.placeholder;
 /** Space between the border and the text, in game pixels. */
 const PADDING = 6;
 /** The bitmap font's glyphs are this tall. */

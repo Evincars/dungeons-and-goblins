@@ -1,12 +1,15 @@
-import { FOG_REVEAL_TILES, TILE_WIDTH } from '../level/TileType';
+import { TILE_WIDTH } from '../level/TileType';
 import type { MobType, TacticRole } from '../world';
 
 /** Enemy AI tuning: senses, squad tactics, routing and trail following. */
 
 // ── Senses ────────────────────────────────────────────────────────────────────
 
-/** How far an enemy sees a player in the open, in every direction: as far as the fog of war lifts. */
-export const SIGHT_RANGE = FOG_REVEAL_TILES * TILE_WIDTH;
+/**
+ * How far an enemy sees a player in the open, in every direction: a little beyond the edge of the player's
+ * lantern, so enemies lurking in the dark notice them. Only walls block sight; furniture and pits do not.
+ */
+export const SIGHT_RANGE = 7 * TILE_WIDTH;
 /** Ticks between looks around: sight is a ray march, too costly every tick for every enemy. */
 export const SENSE_TICKS = 6;
 /** An enemy that spots a player shouts; idle allies this close join the hunt. */
@@ -93,6 +96,15 @@ export function maxTemperament(role: TacticRole): number {
 export const REPATH_TICKS = 20;
 /** Fallback walk push for enemies without their own speed. */
 export const WALK_SPEED = 0.8;
+/** Enemies run at a player they have spotted (and play their run clip): their push is this many times a stroll. */
+export const CHASE_SPEED_FACTOR = 2;
+/**
+ * Squad mates heading for a player out of sight take different ways round: a mate's route keeps off the
+ * routes of those nearer the player, unless that detour is more than this many times the shortest way
+ * (plus slack, in tiles).
+ */
+export const SPLIT_MAX_DETOUR = 2;
+export const SPLIT_DETOUR_SLACK = 6;
 /** How far ahead of its feet an enemy checks for a pit before stepping. */
 export const PIT_LOOKAHEAD = 16;
 /** Extra step cost of a tile beside a pit, where a shove would tip an enemy in. */

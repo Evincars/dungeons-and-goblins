@@ -2,6 +2,7 @@ import { world, q, isPlayer } from '../world';
 import type { Entity, Player } from '../world';
 import { sound } from '../audio/SoundPlayer';
 import { nearby, Sense } from '../ai/perception/spatial';
+import { LOOT_BURST_TICKS, LOOT_REST_LIFT, lootSound } from '../entities/LootFactory';
 
 const LOOT_FRICTION = 0.85;
 /** Airborne loot (still bursting out of a kill) barely slows down. */
@@ -12,11 +13,8 @@ const GLIDE_ACCEL = 0.18;
 const GLIDE_MAX = 5;
 const BLINK_TICKS = 180;
 const BLINK_PERIOD = 4;
-/** Hit points a potion pickup restores. */
-const POTION_HEAL = 30;
-/** Coins and gems worth at least this much play the bigger pickup sound. */
-const BIG_COIN = 20;
-const BIG_GEM = 100;
+/** How high a dropped coin arcs on its way out (Redux's burst). */
+const BURST_ARC = 12;
 
 type Loot = (typeof q.loot)['entities'][number];
 
@@ -41,19 +39,9 @@ function nearestPlayer(x: number, y: number, range: number): Nearest {
 
 function collect(coin: Loot, player: Player): void {
   const ld = coin.loot;
-  const { x, y } = coin.position;
-  if (ld.kind === 'potion') {
-    player.health.current = Math.min(player.health.max, player.health.current + POTION_HEAL);
-    sound.playSound('potion', x, y);
-  } else if (ld.kind === 'gem') {
-    player.playerStats.gold += ld.value;
-    player.playerStats.goldEarned += ld.value;
-    sound.playSound(ld.value >= BIG_GEM ? 'gem_big' : 'gem', x, y);
-  } else {
-    player.playerStats.gold += ld.value;
-    player.playerStats.goldEarned += ld.value;
-    sound.playSound(ld.value >= BIG_COIN ? 'coin_big' : 'coin', x, y);
-  }
+  player.playerStats.gold += ld.value;
+  player.playerStats.goldEarned += ld.value;
+  sound.playSound(lootSound(ld.kind), coin.position.x, coin.position.y);
   world.removeComponent(coin, 'loot');
   world.addComponent(coin, 'removed', true);
 }
@@ -96,7 +84,10 @@ function updateCoin(coin: Loot): void {
   const friction = airborne ? AIR_FRICTION : LOOT_FRICTION;
   ld.velX *= friction;
   ld.velY *= friction;
-  if (airborne) ld.burstTicks = (ld.burstTicks ?? 0) - 1;
+  if (airborne) {
+    ld.burstTicks = (ld.burstTicks ?? 0) - 1;
+    coin.yOffset = LOOT_REST_LIFT + BURST_ARC * Math.sin((Math.PI * ld.burstTicks) / LOOT_BURST_TICKS);
+  }
 
   const nearPlayer = nearestPlayer(lp.x, lp.y, ld.suckRadius).player;
   if (!airborne && nearPlayer && near.dist <= PICKUP_RADIUS) {

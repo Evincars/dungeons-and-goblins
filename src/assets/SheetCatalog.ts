@@ -196,9 +196,22 @@ const UI_SHEETS = [
   // Menu art from Catacomb Snatch Redux: three 128×24 button states, and the PAUSE title overlay.
   new SpriteSheet('button',       '/ui/button.png', { grid: { frameWidth: 128, frameHeight: 24 } }),
   new SpriteSheet('pause_screen', '/ui/pause_screen.png'),
+  // Painted art: the menu background, and the inventory's two framed panels.
+  new SpriteSheet('menu_background', '/menu-1.jpg', { smooth: true }),
+  // The inventory art has a stray white strip down its right edge; the region stops short of it.
+  new SpriteSheet('inventory_panels', '/inventory.png', {
+    smooth: true, regions: { inventory_art: { x: 0, y: 0, w: 2732, h: 1536 } },
+  }),
 
   // Catacomb Snatch Redux's main font: 16×16 glyphs of 8×8 for character codes 0–255, drawn white and tinted.
   new SpriteSheet('font_default', '/ui/fonts/font_default.png', { grid: { frameWidth: 8, frameHeight: 8 } }),
+
+  // Coins and gems from Catacomb Snatch Redux, each a strip of spin frames.
+  ...[
+    ['pickup_coin_bronze_small_8', 8], ['pickup_coin_silver_small_8', 8], ['pickup_coin_gold_small_8', 8],
+    ['pickup_coin_bronze_16', 16], ['pickup_coin_silver_16', 16], ['pickup_coin_gold_16', 16],
+    ['pickup_gem_emerald_12', 16], ['pickup_gem_ruby_12', 16], ['pickup_gem_diamond_24', 24],
+  ].map(([key, size]) => new SpriteSheet(String(key), `/ui/pickup/${key}.png`, { grid: { frameWidth: Number(size), frameHeight: Number(size) } })),
 
   // Effects from Catacomb Snatch Redux: the "!" over a falling player, and footstep dust recoloured to dark dirt.
   new SpriteSheet('exclamation_mark', '/ui/effects/exclamation_mark.png', { grid: { frameWidth: 4, frameHeight: 13 } }),

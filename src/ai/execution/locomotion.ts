@@ -2,7 +2,7 @@ import type { Level } from '../../level/Level';
 import { TileType } from '../../level/TileType';
 import { Facing } from '../../world';
 import type { Mob } from '../../world';
-import { PIT_LOOKAHEAD, WALK_SPEED, WANDER_TURN_TICKS } from '../constants';
+import { CHASE_SPEED_FACTOR, PIT_LOOKAHEAD, WALK_SPEED, WANDER_TURN_TICKS } from '../constants';
 
 /** Unit steps for each Facing: north, east, south, west. */
 const FACING_STEPS = [[0, -1], [1, 0], [0, 1], [-1, 0]] as const;
@@ -15,6 +15,11 @@ function pitAhead(level: Level, mob: Mob, dx: number, dy: number): boolean {
   const len = Math.hypot(dx, dy) || 1;
   const ahead = level.getTileAt(mob.position.x + (dx / len) * PIT_LOOKAHEAD, mob.position.y + (dy / len) * PIT_LOOKAHEAD);
   return ahead?.type === TileType.Hole;
+}
+
+/** An enemy after a player it has spotted (fighting or tracking them) runs instead of strolling. */
+export function hunting(mob: Mob): boolean {
+  return mob.ai.state === 'engage' || mob.ai.state === 'search';
 }
 
 /** Turns the mob's facing and its sight heading toward (dx, dy). */
@@ -33,7 +38,7 @@ export function faceTowards(mob: Mob, dx: number, dy: number): void {
  */
 export function walkTowards(_level: Level, mob: Mob, dx: number, dy: number): boolean {
   const len = Math.hypot(dx, dy) || 1;
-  const speed = mob.speed ?? WALK_SPEED;
+  const speed = (mob.speed ?? WALK_SPEED) * (hunting(mob) ? CHASE_SPEED_FACTOR : 1);
   mob.velocity.x += (dx / len) * speed;
   mob.velocity.y += (dy / len) * speed;
   faceTowards(mob, dx, dy);

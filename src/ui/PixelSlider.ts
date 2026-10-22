@@ -1,5 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 import { makeText } from './PixelText';
+import { THEME } from './Theme';
 import type { PixelLabel } from './PixelText';
 
 const HEIGHT = 22;
@@ -63,12 +64,12 @@ export class PixelSlider extends Container {
   private draw(): void {
     this.bar.clear();
     this.bar.rect(0, 0, this.barWidth, HEIGHT).fill(0x000000);
-    this.bar.rect(1, 1, this.barWidth - 2, HEIGHT - 2).fill(0x1a0f00);
-    this.bar.rect(1, 1, (this.barWidth - 2) * this._value, HEIGHT - 2).fill(0x6a3a10);
+    this.bar.rect(1, 1, this.barWidth - 2, HEIGHT - 2).fill(THEME.well);
+    this.bar.rect(1, 1, (this.barWidth - 2) * this._value, HEIGHT - 2).fill(THEME.fill);
 
     const knobX = Math.min(this.barWidth - KNOB - 1, Math.max(1, this._value * (this.barWidth - KNOB)));
-    this.bar.rect(knobX, 1, KNOB, HEIGHT - 2).fill(0xffcc44);
-    this.bar.rect(0, 0, this.barWidth, HEIGHT).stroke({ color: 0x9a5a20, width: 1 });
+    this.bar.rect(knobX, 1, KNOB, HEIGHT - 2).fill(THEME.knob);
+    this.bar.rect(0, 0, this.barWidth, HEIGHT).stroke({ color: THEME.control, width: 1 });
 
     this.text.text = `${this.caption}: ${Math.round(this._value * 100)}%`;
   }

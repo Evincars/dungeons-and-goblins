@@ -549,7 +549,7 @@ export class DungeonBuilder {
     }
     if (!middleTaken && this.rng() < CENTREPIECE_CHANCE) this.centrepiece(room, centrepieces, props, keep);
     if (this.rng() < STORE_CHANCE) this.storeroom(room, props, keep);
-    this.urnsAlongWalls(room, roll >= 0.4 && roll < 0.7 ? 4 : 2, props);
+    this.urnsAlongWalls(room, roll >= 0.4 && roll < 0.7 ? 4 : 2, props, keep);
   }
 
   // ── Centrepieces and large props ────────────────────────────────────────────
@@ -775,8 +775,8 @@ export class DungeonBuilder {
     }
   }
 
-  /** Urns (non-blocking) standing against the walls. */
-  private urnsAlongWalls(room: RoomData, count: number, props: PropPlacement[]): void {
+  /** Urns (they block, like the barrels they look like) and broken pots standing against the walls. */
+  private urnsAlongWalls(room: RoomData, count: number, props: PropPlacement[], keep: Keep): void {
     const spots: Array<[number, number]> = [];
     const againstWall = (tx: number, ty: number) => this.isWall(tx - 1, ty) || this.isWall(tx + 1, ty) || this.isWall(tx, ty - 1);
     forEachTile(room.x, room.y, room.x + room.w - 1, room.y + room.h - 1, (tx, ty) => {
@@ -784,8 +784,14 @@ export class DungeonBuilder {
     });
     for (let i = 0; i < count && spots.length; i++) {
       const [tx, ty] = spots.splice(Math.floor(this.rng() * spots.length), 1)[0];
+      const kind = this.pick(URNS);
+      const def: PropDef = PROPS[kind];
+      if (def.solid) {
+        this.placeSolid([[tx, ty]], [kind], props, keep);
+        continue;
+      }
       this.claim(tx, ty);
-      props.push({ kind: this.pick(URNS), tx, ty });
+      props.push({ kind, tx, ty });
     }
   }
 

@@ -42,7 +42,7 @@ export function createPlayer(x: number, y: number): Entity {
       mouseX: 0, mouseY: 0,
       mouseAiming: true,
       keyAim: null,
-      intents: { use: false, attack: false, cast: false, inventoryOpen: false, inventoryUse: false },
+      intents: { use: false, attack: false, cast: false, inventoryOpen: false },
     },
     trail: createTrail(),
     playerStats: {

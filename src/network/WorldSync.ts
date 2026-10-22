@@ -2,6 +2,7 @@ import { world, isEquipSlot, isItemType, isMobType, isPlayerSlot, MOB_STATES, TA
 import type { Entity, PlayerSlot } from '../world';
 import { cleanName } from '../game/Settings';
 import { hasCharacter } from '../characters/Characters';
+import { isDropTableId } from '../entities/Drops';
 import { isCharacterState } from '../characters/CharacterDef';
 import { destroyAttachments } from '../systems/BarSystem';
 import { setVisualFrame } from '../render/AnimatedVisual';
@@ -79,9 +80,9 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   playerStats: { level: 'number', exp: 'number', gold: 'number', swordTier: 'number', armorTier: 'number',
     sprinting: 'boolean', sprint: 'number', maxSprint: 'number', sprintLocked: 'boolean', kills: 'number', goldEarned: 'number' },
   swordSwing: { ticks: 'number', dirX: 'number', dirY: 'number', damage: 'number', range: 'number', hitIds: 'object' },
-  loot: { value: 'number', kind: 'string', velX: 'number', velY: 'number', suckRadius: 'number', glide: 'number', age: 'number', life: 'number' },
+  loot: { value: 'number', kind: 'number', velX: 'number', velY: 'number', suckRadius: 'number', glide: 'number', age: 'number', life: 'number' },
   item: { type: 'string', name: 'string', value: 'number' },
-  chest: { opened: 'boolean', disappearTicks: 'number' },
+  chest: { opened: 'boolean', disappearTicks: 'number', drops: 'string' },
   spawner: { mobType: 'string', interval: 'number', timer: 'number', spawnCount: 'number', maxSpawns: 'number' },
   torch: { radius: 'number', color: 'number', flicker: 'number' },
   ai: { state: 'string', role: 'string', route: 'object', step: 'number', routeGoal: 'number', repathIn: 'number',
@@ -136,6 +137,7 @@ function checkDetails(data: EntityState): void {
   ensure(data.playerSlot === undefined || isPlayerSlot(data.playerSlot), 'Invalid player slot');
   ensure(data.playerName === undefined || cleanName(data.playerName) === data.playerName, 'Invalid player name');
   ensure(data.mobType === undefined || isMobType(data.mobType), 'Invalid mob type');
+  ensure(!data.chest || isDropTableId(data.chest.drops), 'Invalid chest');
   ensure(!data.spawner || isMobType(data.spawner.mobType), 'Invalid spawner');
   ensure(!data.character || (hasCharacter(data.character.def) && isCharacterState(data.character.state)), 'Invalid character');
   ensure(!data.ai || (MOB_STATES.includes(data.ai.state) && TACTIC_ROLES.includes(data.ai.role)), 'Invalid enemy state');
@@ -146,7 +148,7 @@ function checkDetails(data: EntityState): void {
   ensure(!data.door || (Array.isArray(data.door.tiles) && data.door.tiles.length <= MAX_DOOR_TILES && data.door.tiles.every(isTile)), 'Invalid door');
   ensure(!data.swordSwing || isIntList(data.swordSwing.hitIds), 'Invalid sword swing');
   const intents = data.playerInput?.intents;
-  ensure(!intents || ['use', 'attack', 'cast', 'inventoryOpen', 'inventoryUse'].every((k) => hasKey(intents, k) && typeof intents[k] === 'boolean'),
+  ensure(!intents || ['use', 'attack', 'cast', 'inventoryOpen'].every((k) => hasKey(intents, k) && typeof intents[k] === 'boolean'),
     'Invalid controls');
 }
 

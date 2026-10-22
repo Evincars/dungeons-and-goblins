@@ -123,6 +123,5 @@ export function updateInput(): void {
     it.cast         = !captured && (wasActionPressed('cast') || rightDown);
     it.use          = wasActionPressed('use');
     it.inventoryOpen = wasActionPressed('inventory');
-    it.inventoryUse  = false;
   }
 }

@@ -1,5 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 import { makeText } from './PixelText';
+import { THEME } from './Theme';
 
 const BOX = 22;
 
@@ -39,10 +40,10 @@ export class PixelCheckbox extends Container {
   private draw(): void {
     this.box.clear();
     this.box.rect(0, 0, BOX, BOX).fill(0x000000);
-    this.box.rect(1, 1, BOX - 2, BOX - 2).fill(0x3a1a00);
-    this.box.moveTo(1, BOX - 2).lineTo(1, 1).lineTo(BOX - 2, 1).stroke({ color: 0x9a5a20, width: 1 });
+    this.box.rect(1, 1, BOX - 2, BOX - 2).fill(THEME.well);
+    this.box.moveTo(1, BOX - 2).lineTo(1, 1).lineTo(BOX - 2, 1).stroke({ color: THEME.control, width: 1 });
     if (this._checked) {
-      this.box.rect(5, 5, BOX - 10, BOX - 10).fill(0xffcc44);
+      this.box.rect(5, 5, BOX - 10, BOX - 10).fill(THEME.knob);
     }
   }
 }

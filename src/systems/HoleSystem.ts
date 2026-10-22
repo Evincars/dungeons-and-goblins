@@ -2,7 +2,7 @@ import { world } from '../world';
 import type { Entity } from '../world';
 import type { Level } from '../level/Level';
 import { TileType } from '../level/TileType';
-import { createCoin } from '../entities/LootFactory';
+import { createLoot } from '../entities/LootFactory';
 import { spawnExclamation } from '../entities/FxFactory';
 import { characterDef, headAboveFeet } from '../characters/Characters';
 import { sound } from '../audio/SoundPlayer';
@@ -90,7 +90,7 @@ function scatterPurse(player: Entity, x: number, y: number): void {
   for (let i = 0; remaining > 0 && i < MAX_SCATTER_COINS; i++) {
     const value = Math.max(1, Math.floor(remaining / 2));
     const dir = Math.random() * Math.PI * 2;
-    createCoin(x, y, Math.cos(dir), Math.sin(dir), value);
+    createLoot(x, y, Math.cos(dir), Math.sin(dir), value, true);
     remaining -= value;
   }
 }

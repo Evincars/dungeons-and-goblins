@@ -190,6 +190,7 @@ export class Level {
     ));
   };
 
+  /** Whether nothing but open floor, furniture or pits lies between two points: only walls block sight. */
   checkLineOfSight(x0: number, y0: number, x1: number, y1: number): boolean {
     let tx0 = Math.floor(x0 / TILE_WIDTH);
     let ty0 = Math.floor(y0 / TILE_HEIGHT);
@@ -200,7 +201,7 @@ export class Level {
     let err = dx - dy;
     while (tx0 !== tx1 || ty0 !== ty1) {
       const tile = this.getTile(tx0, ty0);
-      if (!tile || !tile.passable) return false;
+      if (!tile || isWallType(tile)) return false;
       const e2 = 2 * err;
       if (e2 > -dy) { err -= dy; tx0 += sx; }
       if (e2 < dx) { err += dx; ty0 += sy; }

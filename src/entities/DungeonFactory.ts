@@ -30,17 +30,23 @@ const PROP_GROUND = TILE_HEIGHT - 4;
 /** Wall props hang from just under the face's cap molding. */
 const HANG_TOP = 54;
 const CHEST_HEALTH = 20;
-/** The chest art (chest_small.png) is a 32×53 frame with the chest standing on its bottom edge; this lifts it so it rests on its tile. */
-const CHEST_LIFT = 17;
+/**
+ * Chests are drawn at a fixed three-quarter size; the art (chest_small.png) is a 32×53 frame with the chest
+ * on its bottom edge, so this lift (at that size) rests it on its tile.
+ */
+const CHEST_SCALE = 0.75;
+const CHEST_LIFT = 12;
 
+/** What the shop keeper sells: gear for every slot (icons index ITEM_ICONS in entities/Items.ts). */
 export const SHOP_ITEMS: readonly InventoryItem[] = [
-  { type: 'weapon', name: 'Short Sword',  value: 50,  slot: 'weapon', icon: 0, stats: { attack: 2 } },
-  { type: 'weapon', name: 'Long Sword',   value: 120, slot: 'weapon', icon: 0, stats: { attack: 4 } },
-  { type: 'helmet', name: 'Iron Helm',    value: 40,  slot: 'helmet', icon: 1, stats: { defense: 1 } },
-  { type: 'chest',  name: 'Chain Mail',   value: 80,  slot: 'chest',  icon: 2, stats: { defense: 2 } },
-  { type: 'boots',  name: 'Leather Boots',value: 30,  slot: 'boots',  icon: 4, stats: { defense: 1 } },
-  { type: 'health_potion', name: 'Health Potion', value: 20, icon: 6, stats: { hp: 30 } },
-  { type: 'health_potion', name: 'Big Potion',    value: 50, icon: 6, stats: { hp: 80 } },
+  { type: 'weapon', name: 'Short Sword',   value: 50,  gear: 'weapon',  icon: 0, stats: { strength: 2 } },
+  { type: 'weapon', name: 'Long Sword',    value: 120, gear: 'weapon',  icon: 1, stats: { strength: 4 } },
+  { type: 'weapon', name: 'Hand Axe',      value: 70,  gear: 'weapon',  icon: 7, stats: { strength: 3 } },
+  { type: 'shield', name: 'Wooden Shield', value: 45,  gear: 'offhand', icon: 6, stats: { defence: 1 } },
+  { type: 'helmet', name: 'Iron Helm',     value: 40,  gear: 'head',    icon: 2, stats: { defence: 1 } },
+  { type: 'armor',  name: 'Chain Mail',    value: 80,  gear: 'armor',   icon: 3, stats: { defence: 2, stamina: 1 } },
+  { type: 'boots',  name: 'Leather Boots', value: 30,  gear: 'legs',    icon: 4, stats: { defence: 1 } },
+  { type: 'ring',   name: 'Copper Ring',   value: 60,  gear: 'trinket', icon: 5, stats: { luck: 2 } },
 ];
 
 /** ECS metadata for a room of the layout. */
@@ -139,13 +145,13 @@ export function createProp(p: PropPlacement): Entity {
 export function createChest(x: number, y: number): Entity {
   return world.add({
     position: { x, y },
-    chest: { opened: false, disappearTicks: -1 },
+    chest: { opened: false, disappearTicks: -1, drops: 'chest' },
     health: { current: CHEST_HEALTH, max: CHEST_HEALTH },
     hurtTime: 0, freezeTime: 0,
-    radius: { x: 12, y: 10 },
+    radius: { x: 9, y: 7 },
     blocking: true,
     physicsSlide: true,
-    visual: { sheet: 'chest', col: 0, row: 0 },
+    visual: { sheet: 'chest_dark', col: 0, row: 0, scale: CHEST_SCALE },
     yOffset: CHEST_LIFT,
     healthBarOffset: 14,
     minimapColor: 0xffd040,

@@ -45,6 +45,10 @@ const { updateCharacterState } = await load('systems/CharacterStateSystem');
 const { characterDef, facingRow } = await load('characters/Characters');
 const { PROPS, HANGINGS, STORE_FURNITURE, CAVE_CENTREPIECES, CAVE_PLANTS, CAVE_CRYSTALS, CRYPT_CENTREPIECES, STORE_CENTREPIECES, HALL_CENTREPIECES } = await load('level/Props');
 const { updateHoles } = await load('systems/HoleSystem');
+const { moveItem } = await load('game/PlayerActions');
+const { statTotals } = await load('entities/Items');
+const { spawnDrops } = await load('entities/Drops');
+const { createLoot, LOOT_KINDS } = await load('entities/LootFactory');
 const { prepareLevel } = await load('level/DungeonGenerator');
 
 const centre = (t) => t * TILE_WIDTH + TILE_WIDTH / 2;
@@ -155,16 +159,18 @@ test('the rbush index answers by kind and radius, and sees moves after beginPerc
 
 // ── Senses ───────────────────────────────────────────────────────────────────
 
-test('enemies see players in the open as far as the fog lifts, in any direction, never through walls', () => {
+test('enemies see players in the open within sight range, in any direction, past furniture but never through walls', () => {
   const level = arena(20, 8);
   const mob = mobAt(level, 'goblin', 4, 3, { x: 1, y: 0 });
   const player = playerAt(8, 3);
   assert.equal(canSee(level, mob, player), true, 'in range');
   mob.aimVector = { x: -1, y: 0 };
   assert.equal(canSee(level, mob, player), true, 'facing away makes no difference');
-  player.position.x = centre(10);
-  assert.equal(canSee(level, mob, player), false, 'beyond the fog radius');
+  player.position.x = mob.position.x + C.SIGHT_RANGE + TILE_WIDTH;
+  assert.equal(canSee(level, mob, player), false, 'beyond sight range');
   player.position.x = centre(8);
+  level.setTile(6, 3, createTile(TileType.Obstacle));
+  assert.equal(canSee(level, mob, player), true, 'a crate does not hide the player');
   wallRect(level, 6, 1, 6, 6);
   assert.equal(canSee(level, mob, player), false, 'a wall blocks sight');
 });
@@ -279,16 +285,18 @@ test('a flanker goes round the other side of the block from the lead attacker', 
 // ── Pursuit ──────────────────────────────────────────────────────────────────
 
 test('an enemy that loses sight of the player follows their trail and finds them again', () => {
-  const level = arena(22, 14);
+  const level = arena(28, 14);
   // A wall with a gap at the bottom: the player slips round it, out of sight.
   wallRect(level, 9, 1, 10, 9);
   const mob = mobAt(level, 'goblin', 3, 5, { x: 1, y: 0 });
+  // A slow chaser, left behind once the player is round the wall, so it has to track them.
+  mob.speed /= C.CHASE_SPEED_FACTOR;
   const player = playerAt(7, 5);
   mob.ai.senseIn = 1;
   const path = [];
   for (let y = 5; y <= 11; y++) path.push([7, y]);
-  for (let x = 8; x <= 15; x++) path.push([x, 11]);
-  for (let y = 10; y >= 4; y--) path.push([15, y]);
+  for (let x = 8; x <= 21; x++) path.push([x, 11]);
+  for (let y = 10; y >= 4; y--) path.push([21, y]);
   let tick = 0;
   let searched = false;
   let trailAdvanced = false;
@@ -297,6 +305,8 @@ test('an enemy that loses sight of the player follows their trail and finds them
       player.position.x = centre(x);
       player.position.y = centre(y);
       tickWorld(level, ++tick);
+      if (mob.ai.state === 'search') searched = true;
+      if (mob.ai.state === 'search' && mob.ai.trailTick > mob.ai.lastSeenTick) trailAdvanced = true;
     }
   }
   for (let i = 0; i < 1500 && !(mob.ai.state === 'engage' && searched); i++) {
@@ -308,6 +318,32 @@ test('an enemy that loses sight of the player follows their trail and finds them
   assert.ok(trailAdvanced, 'it walked along the trail crumbs');
   assert.equal(mob.ai.state, 'engage', 'it found the player again');
   assert.ok(tileOf(level, mob).x > 10, 'it came round the wall');
+});
+
+test('two enemies after a player hidden behind a block come at them both ways round', () => {
+  const level = arena(22, 14);
+  // A block with a way round above it and below it.
+  wallRect(level, 9, 3, 12, 10);
+  const player = playerAt(16, 6);
+  // Both start above the block's middle, so the shortest way for each is over it; orcs take players head on,
+  // so neither flanks: only the squad's split routes can send one round the other side.
+  const a = mobAt(level, 'orc', 5, 5);
+  const b = mobAt(level, 'orc', 4, 5);
+  for (const m of [a, b]) {
+    m.ai.targetId = world.id(player);
+    engage(m, player, 0);
+    m.ai.role = 'direct';
+  }
+  const sides = new Map([[a, new Set()], [b, new Set()]]);
+  for (let tick = 1; tick <= 600; tick++) {
+    tickWorld(level, tick);
+    for (const [m, seen] of sides) {
+      const ty = Math.floor(m.position.y / TILE_WIDTH);
+      if (m.position.x > centre(9) && m.position.x < centre(12)) seen.add(ty < 3 ? 'over' : ty > 10 ? 'under' : 'through');
+    }
+  }
+  const ways = [...sides.values()].map((seen) => [...seen].join('+'));
+  assert.deepEqual(ways.sort(), ['over', 'under'], `one went over, the other under (${ways})`);
 });
 
 test('an enemy reaches a player whose feet sink into the wall edge, and hurts them', () => {
@@ -377,7 +413,7 @@ test('kills, XP, gold and gear carry down to the next level, and a new run start
   player.playerStats.exp = 40;
   player.playerStats.goldEarned = 90;
   player.playerStats.gold = 25;
-  player.inventory.push({ id: 'potion' });
+  player.inventory.push({ type: 'weapon', name: 'Short Sword', value: 50, gear: 'weapon' });
   descend();
   world.clear();
   const next = playerAt(2, 2);
@@ -561,6 +597,38 @@ test('a level generated ahead of time is the same level the seed builds on the s
   assert.deepEqual(ready.spawns, fresh.spawns);
 });
 
+test('dragging items: gear is worn only where it fits, swaps with what was worn, and comes back off', () => {
+  const sword = SHOP_ITEMS.find((i) => i.name === 'Short Sword');
+  const axe = SHOP_ITEMS.find((i) => i.name === 'Hand Axe');
+  const helm = SHOP_ITEMS.find((i) => i.gear === 'head');
+  const start = { inventory: [sword, helm, axe], equipped: {} };
+  assert.equal(moveItem(start, { bag: 1 }, { slot: 'legs' }), null, 'a helm is not worn on the legs');
+  const armed = moveItem(start, { bag: 0 }, { slot: 'primary' });
+  assert.equal(armed.equipped.primary, sword);
+  assert.deepEqual(armed.inventory, [helm, axe]);
+  const swapped = moveItem(armed, { bag: 1 }, { slot: 'primary' });
+  assert.equal(swapped.equipped.primary, axe, 'the axe takes the sword hand');
+  assert.deepEqual(swapped.inventory, [helm, sword], 'and the sword goes back to the bag');
+  const offhand = moveItem(swapped, { slot: 'primary' }, { slot: 'secondary' });
+  assert.equal(offhand.equipped.secondary, axe, 'weapons fit either hand');
+  const off = moveItem(offhand, { slot: 'secondary' }, { bag: 0 });
+  assert.deepEqual(off.equipped, {});
+  assert.deepEqual(off.inventory, [axe, helm, sword]);
+  assert.equal(start.inventory.length, 3, 'the old arrangement is left alone');
+  assert.deepEqual(statTotals({ primary: axe, head: helm }), { strength: 3, intelligence: 0, stamina: 0, defence: 1, luck: 0, mana: 0 });
+});
+
+test('an opened chest throws out coins from its drop table, as Catacomb Snatch Redux pickups', () => {
+  spawnDrops(centre(3), centre(3), 'chest');
+  const coins = world.entities.filter((e) => e.loot);
+  const total = coins.reduce((sum, e) => sum + e.loot.value, 0);
+  assert.ok(coins.length > 0 && total >= 20 && total <= 60, `${coins.length} pieces worth ${total}`);
+  for (const c of coins) assert.equal(c.animation.frameCount, LOOT_KINDS[c.loot.kind].frames);
+  const gem = createLoot(0, 0, 0, 0, 200, true);
+  assert.equal(LOOT_KINDS[gem.loot.kind].sheet, 'pickup_gem_ruby_12', 'an exact 200 is a ruby');
+  assert.equal(gem.animation.frameTime, 3, 'spinning at Redux pace');
+});
+
 // ── Typed errors ─────────────────────────────────────────────────────────────
 
 test('typed errors and results', () => {
@@ -605,9 +673,11 @@ test('guest controls, commands, rosters and level starts are checked before they
 
   assert.equal(validCommand({ kind: 'buy', index: 2 }), true);
   assert.equal(validCommand({ kind: 'buy', index: 1.5 }), false);
-  assert.equal(validCommand({ kind: 'loadout', inventory: [SHOP_ITEMS[0]], equipped: { helmet: SHOP_ITEMS[2] } }), true);
+  const helm = SHOP_ITEMS.find((item) => item.gear === 'head');
+  assert.equal(validCommand({ kind: 'loadout', inventory: [SHOP_ITEMS[0]], equipped: { head: helm } }), true);
+  assert.equal(validCommand({ kind: 'loadout', inventory: [{ ...SHOP_ITEMS[0], stats: { attack: 9 } }], equipped: {} }), false, 'unknown stat');
   assert.equal(validCommand({ kind: 'loadout', inventory: [{ type: 'dragon', name: 'x', value: 1 }], equipped: {} }), false);
-  assert.equal(validCommand({ kind: 'loadout', inventory: [], equipped: { hat: SHOP_ITEMS[2] } }), false);
+  assert.equal(validCommand({ kind: 'loadout', inventory: [], equipped: { hat: helm } }), false);
 
   assert.equal(validRoster([{ slot: 'host', name: 'Ana' }, { slot: 'p2', name: 'Bo' }]), true);
   assert.equal(validRoster([{ slot: 'host', name: 'Ana' }, { slot: 'host', name: 'Bo' }]), false, 'seats are unique');
@@ -694,13 +764,15 @@ test('the host carries out guest purchases near the shop, and only rearrangement
   const sword = guest.inventory[0];
   handleGuestCommand('p2', { kind: 'loadout', inventory: [sword, SHOP_ITEMS[1]], equipped: {} });
   assert.equal(guest.inventory.length, 1, 'cannot conjure a second sword');
-  handleGuestCommand('p2', { kind: 'loadout', inventory: [], equipped: { helmet: sword } });
+  handleGuestCommand('p2', { kind: 'loadout', inventory: [], equipped: { head: sword } });
   assert.deepEqual(guest.equipped, {}, 'a sword is not a helmet');
-  handleGuestCommand('p2', { kind: 'loadout', inventory: [], equipped: { weapon: sword } });
-  assert.equal(guest.equipped.weapon.name, sword.name);
-  assert.equal(guest.playerStats.swordTier, 1 + sword.stats.attack);
+  handleGuestCommand('p2', { kind: 'loadout', inventory: [], equipped: { secondary: sword } });
+  assert.equal(guest.equipped.secondary.name, sword.name, 'a sword fits either hand');
+  handleGuestCommand('p2', { kind: 'loadout', inventory: [], equipped: { primary: sword } });
+  assert.equal(guest.equipped.primary.name, sword.name);
+  assert.equal(guest.playerStats.swordTier, 1 + sword.stats.strength, 'strength sharpens the sword');
   assert.equal(playerInSlot('p2'), guest);
-  assert.ok(sameItems({ inventory: [sword], equipped: {} }, { inventory: [], equipped: { weapon: sword } }));
+  assert.ok(sameItems({ inventory: [sword], equipped: {} }, { inventory: [], equipped: { primary: sword } }));
 });
 
 test('every machine builds the same level from a seed; only the authority adds what changes in play', () => {

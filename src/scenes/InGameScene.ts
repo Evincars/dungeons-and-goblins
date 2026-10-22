@@ -17,7 +17,7 @@ import { SIMULATION, PRESENTATION, runSystems } from '../systems/Simulation';
 import type { FrameContext } from '../systems/Simulation';
 import { resetNameTags, updateNameTags } from '../systems/NameTagSystem';
 import { HudPanel, totalXp } from '../ui/HudPanel';
-import { InventoryPanel } from '../ui/InventoryPanel';
+import { InventoryOverlay } from '../ui/InventoryOverlay';
 import { ShopPanel } from '../ui/ShopPanel';
 import { PauseMenu } from '../ui/PauseMenu';
 import { closeInventory, isInventoryOpen } from '../systems/InventorySystem';
@@ -69,7 +69,7 @@ export class InGameScene implements Scene {
   private readonly darkness = new DarknessRenderer();
   private readonly lights = new LightRenderer();
   private readonly hud = new HudPanel();
-  private readonly inv = new InventoryPanel();
+  private readonly inv = new InventoryOverlay();
   private readonly shop = new ShopPanel();
   private readonly pause: PauseMenu;
   private shopWasOpen = false;

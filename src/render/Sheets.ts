@@ -19,15 +19,14 @@ const SHEETS: Record<string, SheetInfo> = {
   campfire:           { frameWidth: 24, frameHeight: 24 },
 
   // ── Procedural UI / FX sheets ───────────────────────────────────────────────
-  pickup_coin_16:     { frameWidth: 8,   frameHeight: 8   },
-  pickup_potion:      { frameWidth: 12,  frameHeight: 16  },
-  pickup_gem:         { frameWidth: 12,  frameHeight: 12  },
   spell_bolt:         { frameWidth: 16,  frameHeight: 16  },
   spawner:            { frameWidth: 32,  frameHeight: 40  },
   exit_button:        { frameWidth: 32,  frameHeight: 32  },
   fx_sword_swing:     { frameWidth: 48,  frameHeight: 48  },
   fx_death:           { frameWidth: 48,  frameHeight: 48  },
   dark:               { frameWidth: 32,  frameHeight: 32  },
+  icon_boots:         { frameWidth: 12,  frameHeight: 12  },
+  icon_ring:          { frameWidth: 10,  frameHeight: 10  },
 };
 
 const DEFAULT_SHEET: SheetInfo = { frameWidth: 32, frameHeight: 32 };

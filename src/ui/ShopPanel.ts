@@ -1,6 +1,7 @@
 import { Container, Graphics, Rectangle } from 'pixi.js';
-import { localPlayer } from '../world';
-import type { InventoryItem, Player } from '../world';
+import { localPlayer, STAT_NAMES } from '../world';
+import type { InventoryItem, Player, StatName } from '../world';
+import { THEME } from './Theme';
 import { PixelLabel } from './PixelText';
 import { GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
 import { requestBuy } from '../game/PlayerActions';
@@ -8,19 +9,20 @@ import { requestBuy } from '../game/PlayerActions';
 const PW = 320;
 const ROW_H = 26;
 const PAD = 12;
-const BORDER = 0x8a6030;
-const BG = 0x0c0a08;
-const ROW_BG = 0x1c1610;
-const ROW_HOVER = 0x2c2418;
+const BORDER = THEME.panelBorder;
+const BG = THEME.panel;
+const ROW_BG = THEME.row;
+const ROW_HOVER = THEME.rowHover;
+
+/** Three-letter names for the stats a shop row lists. */
+const STAT_SHORT = {
+  strength: 'STR', intelligence: 'INT', stamina: 'STA', defence: 'DEF', luck: 'LCK', mana: 'MNA',
+} as const satisfies Record<StatName, string>;
 
 function statText(item: InventoryItem): string {
   const s = item.stats;
   if (!s) return '';
-  const parts: string[] = [];
-  if (s.attack) parts.push(`+${s.attack} ATK`);
-  if (s.defense) parts.push(`+${s.defense} DEF`);
-  if (s.hp) parts.push(`+${s.hp} HP`);
-  return parts.join('  ');
+  return STAT_NAMES.flatMap((stat) => (s[stat] ? [`+${s[stat]} ${STAT_SHORT[stat]}`] : [])).join('  ');
 }
 
 export class ShopPanel {

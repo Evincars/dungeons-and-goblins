@@ -6,7 +6,7 @@ import { ALERT_RADIUS, ALERT_TICKS, LOSE_SIGHT_TICKS, SENSE_TICKS } from '../con
 import { canSee, huntable, spotPlayer } from '../perception/sight';
 import { nearby, Sense } from '../perception/spatial';
 import { faceTowards, wander } from '../execution/locomotion';
-import { flank, followTrail, strike, support } from '../execution/pursuit';
+import { cutOff, flank, followTrail, strike, support } from '../execution/pursuit';
 import { squadOf } from './squads';
 
 /**
@@ -16,8 +16,9 @@ import { squadOf } from './squads';
  *   engage — fights in the role its squad gave it (direct / flank / support); when the whole squad has
  *            lost sight of the target for a while, it starts searching. Hunts never time out: only the
  *            player reaching a safe room or dying (or the enemy dying) ends one.
- *   search — follows the player's trail from where they were last seen; a sighting re-engages, a cold
- *            trail sends it back to a direct chase.
+ *   search — the squad's nearest member follows the player's trail from where they were last seen, the
+ *            others head for where it ends by other ways round; a sighting re-engages, a cold trail sends
+ *            it back to a direct chase.
  */
 export class MobAgent extends GameEntity {
   readonly mob: Mob;
@@ -209,7 +210,8 @@ class SearchState extends State<MobAgent> {
       agent.go('engage');
       return;
     }
-    if (followTrail(level, mob, target)) return;
+    // The squad's nearest member tracks the trail; the rest go round other ways to cut the player off.
+    if (cutOff(level, mob, target) || followTrail(level, mob, target)) return;
     // A cold trail doesn't end the hunt: the enemy goes straight for the player for a while, then tries the trail again.
     noteSighting(mob, target, tick);
     agent.go('engage');

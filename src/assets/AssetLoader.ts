@@ -3,14 +3,15 @@ import { context2d, createCanvas, imageOf } from '../render/canvas';
 import { LoadError } from '../core/errors';
 import { getTexture, hasTexture, setTexture } from './Textures';
 import { loadSheets } from './SpriteSheet';
+import { registerSheet } from '../render/Sheets';
 import { allSheets } from './SheetCatalog';
 import {
-  genCoinSheet, genPotionSheet, genGemSheet, genSpellBoltSheet,
+  genSpellBoltSheet,
   genSpawnerSheet, genExitButtonSheet,
   genSwordSwingSheet, genDeathFxSheet,
   genDarkSheet,
   genPanelBg, genPortrait, genMinimapIcons,
-  CAMPFIRE_CELL, drawCampfireBase,
+  CAMPFIRE_CELL, drawCampfireBase, genBootsIcon, genRingIcon,
 } from './SpriteGen';
 
 /** The torch animation is four separate 16×16 images, composited into one strip. */
@@ -29,9 +30,6 @@ const INVENTORY_PANEL = { w: 320, h: 240 };
 
 /** Procedural UI/FX textures, drawn on canvases at load time. */
 const PROCEDURAL: Record<string, () => HTMLCanvasElement> = {
-  pickup_coin_16:     genCoinSheet,
-  pickup_potion:      genPotionSheet,
-  pickup_gem:         genGemSheet,
   spell_bolt:         genSpellBoltSheet,
   spawner:            genSpawnerSheet,
   exit_button:        genExitButtonSheet,
@@ -40,6 +38,8 @@ const PROCEDURAL: Record<string, () => HTMLCanvasElement> = {
   dark:               genDarkSheet,
   portrait:           genPortrait,
   mapicons:           genMinimapIcons,
+  icon_boots:         genBootsIcon,
+  icon_ring:          genRingIcon,
 };
 
 /** A loaded image as a drawable source; missing art is a load failure, not something to draw around. */
@@ -81,10 +81,45 @@ function buildCampfireStrip(): void {
   setTexture('campfire', strip);
 }
 
+type Rgb = { r: number; g: number; b: number };
+
+/**
+ * A loaded image redrawn in other colours, registered under `key` with the same frames: every pixel's
+ * brightness is mapped to `tint` (each channel a share of the brightness), keeping its alpha.
+ */
+function recolor(sourceKey: string, key: string, tint: Rgb, frame: { w: number; h: number }): void {
+  const source = getTexture(sourceKey);
+  const canvas = createCanvas(source.width, source.height);
+  const ctx = context2d(canvas, { willReadFrequently: true });
+  ctx.drawImage(imageFor(sourceKey), 0, 0);
+  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = pixels.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const lum = 0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2];
+    d[i] = lum * tint.r;
+    d[i + 1] = lum * tint.g;
+    d[i + 2] = lum * tint.b;
+  }
+  ctx.putImageData(pixels, 0, 0);
+  const texture = Texture.from(canvas);
+  texture.source.scaleMode = 'nearest';
+  setTexture(key, texture);
+  registerSheet(key, { frameWidth: frame.w, frameHeight: frame.h });
+}
+
+/** The menu buttons: Redux's copper button art turned to cold steel, to match the dark interface. */
+const STEEL: Rgb = { r: 0.62, g: 0.68, b: 0.78 };
+const BUTTON_FRAME = { w: 128, h: 24 };
+/** Chests in old, dark wood, so they sit in the gloom of the dungeon instead of glowing orange. */
+const DARK_WOOD: Rgb = { r: 0.72, g: 0.56, b: 0.44 };
+const CHEST_FRAME = { w: 32, h: 53 };
+
 export async function loadAllAssets(onProgress?: (fraction: number) => void): Promise<void> {
   await loadSheets(allSheets());
   buildTorchStrip();
   buildCampfireStrip();
+  recolor('button', 'button_steel', STEEL, BUTTON_FRAME);
+  recolor('chest', 'chest_dark', DARK_WOOD, CHEST_FRAME);
   for (const [key, draw] of Object.entries(PROCEDURAL)) setTexture(key, Texture.from(draw()));
   setTexture('panel_hud', Texture.from(genPanelBg(HUD_PANEL.w, HUD_PANEL.h)));
   setTexture('panel_inv', Texture.from(genPanelBg(INVENTORY_PANEL.w, INVENTORY_PANEL.h)));

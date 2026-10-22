@@ -3,7 +3,7 @@ import type { Mob, Player } from '../../world';
 import { DROPPED_CALM_TICKS, MAX_SQUAD } from '../constants';
 
 /**
- * A squad is every enemy fighting the same player. Squads are re-formed each tick from the enemies'
+ * A squad is every enemy fighting (or tracking) the same player. Squads are re-formed each tick from the enemies'
  * own state, so nothing has to be kept in step when one dies or gives up. Members share what they know:
  * if any of them sees the target, all of them know where it is — that is what lets a flanker slip out
  * of sight round the block without losing the hunt.
@@ -80,7 +80,7 @@ export function formSquads(): ReadonlyMap<number, Squad> {
   dropped.length = 0;
   for (const mob of q.walkingMobs) {
     const id = mob.ai.targetId;
-    if (mob.ai.state !== 'engage' || id === undefined) continue;
+    if ((mob.ai.state !== 'engage' && mob.ai.state !== 'search') || id === undefined) continue;
     const target = world.entity(id);
     if (!isPlayer(target)) continue;
     squadFor(target, id).members.push(mob);

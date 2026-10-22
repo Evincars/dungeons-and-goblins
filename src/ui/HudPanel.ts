@@ -2,6 +2,7 @@ import { Container, Sprite, Graphics } from 'pixi.js';
 import { localPlayer } from '../world';
 import { frameTexture } from '../render/Sheets';
 import { GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
+import { THEME } from './Theme';
 import { PixelLabel } from './PixelText';
 
 export function xpForLevel(level: number): number {
@@ -41,8 +42,8 @@ export class HudPanel {
   private build(): void {
     // Dark HUD panel background
     const bg = new Graphics();
-    bg.rect(0, 0, GAME_WIDTH, 80).fill({ color: 0x0a0608 });
-    bg.rect(0, 0, GAME_WIDTH, 2).fill({ color: 0x4a3520 });
+    bg.rect(0, 0, GAME_WIDTH, 80).fill({ color: THEME.panel });
+    bg.rect(0, 0, GAME_WIDTH, 2).fill({ color: THEME.panelBorder });
     this.container.addChild(bg);
 
     // Panel bars hold 101 fill steps, row 0 = full, row 100 = empty.

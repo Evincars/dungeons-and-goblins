@@ -1,0 +1,272 @@
+import { Container, Graphics, Rectangle, Sprite } from 'pixi.js';
+import type { FederatedPointerEvent } from 'pixi.js';
+import { EQUIP_SLOTS, STAT_NAMES, localPlayer } from '../world';
+import type { InventoryItem, Player, StatName } from '../world';
+import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
+import { getTexture } from '../assets/Textures';
+import { PixelLabel } from './PixelText';
+import { THEME } from './Theme';
+import { INVENTORY_COLS, INVENTORY_ROWS, moveItem, requestLoadout } from '../game/PlayerActions';
+import type { ItemPlace } from '../game/PlayerActions';
+import { SLOT_LABELS, STAT_LABELS, itemIcon, statTotals } from '../entities/Items';
+
+/** inventory.png, measured in its own pixels: the leather bag panel, the cloth gear panel, and its two tabs. */
+const ART = { w: 2752, h: 1536 };
+const BAG_AREA = { x: 78, y: 284, w: 1108, h: 1174 };
+const GEAR_AREA = { x: 1404, y: 320, w: 1264, h: 1138 };
+const TABS = [{ x: 1331, y: 5, w: 378, h: 210 }, { x: 1765, y: 5, w: 378, h: 210 }];
+const TAB_TITLES = ['GEAR', 'STATS'];
+/** Where the title and the line about the item under the pointer sit, above the bag panel. */
+const TITLE = { x: 80, y: 6 };
+const INFO_Y = 30;
+
+/**
+ * The screen is laid out once at this width (the art scaled down to it) and then scaled whole to fit the
+ * screen, so it looks the same on a tablet, a small laptop or an ultra-wide monitor.
+ */
+const DESIGN_W = 560;
+const K = DESIGN_W / ART.w;
+const DESIGN_H = ART.h * K;
+/** Space kept round the overlay, in screen pixels. */
+const SCREEN_MARGIN = 8;
+/** Inside a panel: padding to its edge, the gap between squares, and between an icon and its square. */
+const PAD = 6;
+const GAP = 3;
+const ICON_PAD = 3;
+/** Between an equipment label and its square, and between the gear and stats columns. */
+const LABEL_GAP = 6;
+const COLUMN_GAP = 10;
+const SQUARE_FILL_ALPHA = 0.35;
+const SQUARE_EDGE = 0xb4a488;
+const SQUARE_EDGE_ALPHA = 0.55;
+const DIM_ALPHA = 0.6;
+const GHOST_ALPHA = 0.85;
+
+type Rect = { x: number; y: number; w: number; h: number };
+type Square = { place: ItemPlace; box: Rectangle; icon: Sprite };
+
+/** A rect of the art, in the overlay's design space. */
+function designRect(r: Rect): Rect {
+  return { x: r.x * K, y: r.y * K, w: r.w * K, h: r.h * K };
+}
+
+function samePlace(a: ItemPlace, b: ItemPlace): boolean {
+  if ('bag' in a) return 'bag' in b && a.bag === b.bag;
+  return 'slot' in b && a.slot === b.slot;
+}
+
+function statLine(item: InventoryItem): string {
+  const s = item.stats;
+  const parts = s ? STAT_NAMES.flatMap((stat) => (s[stat] ? [`+${s[stat]} ${STAT_LABELS[stat]}`] : [])) : [];
+  return [item.name, ...parts].join('  ');
+}
+
+/**
+ * Tab opens it: the bag as a grid of squares on the left; on the right the equipment slots (each a square
+ * of the same kind) and the stats the worn gear adds up to. Items are dragged between squares.
+ */
+export class InventoryOverlay {
+  readonly container = new Container();
+  private readonly root = new Container();
+  private readonly squares: Square[] = [];
+  private readonly statValues = new Map<StatName, PixelLabel>();
+  private readonly gold = new PixelLabel('', { color: 0xffcc00, align: 'right', shadow: true });
+  private readonly info = new PixelLabel('', { color: THEME.muted, shadow: true });
+  private readonly ghost = new Sprite();
+  private cell = 0;
+  private dragging: ItemPlace | null = null;
+  /** What the squares show, so they are redrawn only when the player's things change. */
+  private shown: { inventory: unknown; count: number; equipped: unknown; gold: number } | null = null;
+
+  constructor() {
+    this.container.visible = false;
+    this.container.addChild(new Graphics().rect(0, 0, GAME_WIDTH, GAME_HEIGHT).fill({ color: THEME.backdrop, alpha: DIM_ALPHA }), this.root);
+    this.build();
+    this.fitToScreen();
+    this.listen();
+  }
+
+  setVisible(visible: boolean): void {
+    if (this.container.visible === visible) return;
+    this.container.visible = visible;
+    this.shown = null;
+    if (!visible) this.endDrag();
+  }
+
+  update(): void {
+    const player = localPlayer();
+    if (!this.container.visible || !player) return;
+    const inventory = player.inventory ?? [];
+    const equipped = player.equipped ?? {};
+    const s = this.shown;
+    if (s && s.inventory === inventory && s.count === inventory.length && s.equipped === equipped && s.gold === player.playerStats.gold) return;
+    this.shown = { inventory, count: inventory.length, equipped, gold: player.playerStats.gold };
+    this.refresh(player);
+  }
+
+  destroy(): void {
+    this.container.destroy({ children: true });
+  }
+
+  // ── Layout ──────────────────────────────────────────────────────────────────
+
+  private build(): void {
+    const art = new Sprite(getTexture('inventory_art'));
+    art.scale.set(K);
+    this.root.addChild(art);
+    const title = new PixelLabel('INVENTORY', { color: THEME.title, scale: 2, shadow: true });
+    title.position.set(TITLE.x * K, TITLE.y);
+    this.gold.position.set((BAG_AREA.x + BAG_AREA.w) * K, TITLE.y + 4);
+    this.info.position.set(TITLE.x * K, INFO_Y);
+    this.root.addChild(title, this.gold, this.info);
+    TABS.forEach((tab, i) => this.addTabTitle(designRect(tab), TAB_TITLES[i]));
+    this.buildBag(designRect(BAG_AREA));
+    this.buildGear(designRect(GEAR_AREA));
+    this.ghost.anchor.set(0.5);
+    this.ghost.alpha = GHOST_ALPHA;
+    this.ghost.visible = false;
+    this.root.addChild(this.ghost);
+  }
+
+  private addTabTitle(tab: Rect, text: string): void {
+    const label = new PixelLabel(text, { color: THEME.buttonText, align: 'center', shadow: true });
+    label.position.set(Math.round(tab.x + tab.w / 2), Math.round(tab.y + tab.h / 2 - 4));
+    this.root.addChild(label);
+  }
+
+  /** The bag: the largest square cells that fit the leather panel's grid, centred in it. */
+  private buildBag(area: Rect): void {
+    const cols = INVENTORY_COLS;
+    const rows = INVENTORY_ROWS;
+    this.cell = Math.floor(Math.min((area.w - 2 * PAD - GAP * (cols - 1)) / cols, (area.h - 2 * PAD - GAP * (rows - 1)) / rows));
+    const x0 = area.x + (area.w - (cols * this.cell + (cols - 1) * GAP)) / 2;
+    const y0 = area.y + (area.h - (rows * this.cell + (rows - 1) * GAP)) / 2;
+    for (let i = 0; i < cols * rows; i++) {
+      const x = x0 + (i % cols) * (this.cell + GAP);
+      const y = y0 + Math.floor(i / cols) * (this.cell + GAP);
+      this.addSquare({ bag: i }, Math.round(x), Math.round(y));
+    }
+  }
+
+  /** The gear panel: equipment labels with their squares in one column, stats and their values in the other. */
+  private buildGear(area: Rect): void {
+    const rowH = (area.h - 2 * PAD) / EQUIP_SLOTS.length;
+    const labels = EQUIP_SLOTS.map((slot) => new PixelLabel(SLOT_LABELS[slot], { color: THEME.text, shadow: true }));
+    const squareX = area.x + PAD + Math.max(...labels.map((l) => l.textWidth)) + LABEL_GAP;
+    EQUIP_SLOTS.forEach((slot, i) => {
+      const y = area.y + PAD + i * rowH;
+      labels[i].position.set(Math.round(area.x + PAD), Math.round(y + (rowH - 8) / 2));
+      this.root.addChild(labels[i]);
+      this.addSquare({ slot }, Math.round(squareX), Math.round(y + (rowH - this.cell) / 2));
+    });
+    const statsX = squareX + this.cell + COLUMN_GAP;
+    const valueX = area.x + area.w - PAD;
+    STAT_NAMES.forEach((stat, i) => this.addStatRow(stat, statsX, valueX, area.y + PAD + i * rowH + (rowH - 8) / 2));
+  }
+
+  private addStatRow(stat: StatName, x: number, valueX: number, y: number): void {
+    const label = new PixelLabel(STAT_LABELS[stat], { color: THEME.text, shadow: true });
+    const value = new PixelLabel('0', { color: THEME.title, align: 'right', shadow: true });
+    label.position.set(Math.round(x), Math.round(y));
+    value.position.set(Math.round(valueX), Math.round(y));
+    this.statValues.set(stat, value);
+    this.root.addChild(label, value);
+  }
+
+  /** One square (bag cell or equipment slot): a dark well with a light edge, and the icon of what is in it. */
+  private addSquare(place: ItemPlace, x: number, y: number): void {
+    const size = this.cell;
+    const frame = new Graphics()
+      .rect(x, y, size, size).fill({ color: 0x000000, alpha: SQUARE_FILL_ALPHA })
+      .stroke({ color: SQUARE_EDGE, alpha: SQUARE_EDGE_ALPHA, width: 1, alignment: 1 });
+    const icon = new Sprite();
+    icon.anchor.set(0.5);
+    icon.position.set(x + size / 2, y + size / 2);
+    this.root.addChild(frame, icon);
+    this.squares.push({ place, box: new Rectangle(x, y, size, size), icon });
+  }
+
+  /** Scales the whole overlay to the largest size that fits the screen with a margin, centred. */
+  private fitToScreen(): void {
+    const scale = Math.min((GAME_WIDTH - 2 * SCREEN_MARGIN) / DESIGN_W, (GAME_HEIGHT - 2 * SCREEN_MARGIN) / DESIGN_H);
+    this.root.scale.set(scale);
+    this.root.position.set(Math.round((GAME_WIDTH - DESIGN_W * scale) / 2), Math.round((GAME_HEIGHT - DESIGN_H * scale) / 2));
+  }
+
+  // ── Contents ────────────────────────────────────────────────────────────────
+
+  private itemIn(player: Player, place: ItemPlace): InventoryItem | undefined {
+    return 'bag' in place ? player.inventory?.[place.bag] : player.equipped?.[place.slot];
+  }
+
+  /** Shows an item's picture in a sprite, as large as fits a square. */
+  private showIcon(sprite: Sprite, item: InventoryItem | undefined): void {
+    sprite.visible = !!item;
+    if (!item) return;
+    sprite.texture = getTexture(itemIcon(item));
+    sprite.texture.source.scaleMode = 'nearest';
+    const room = this.cell - 2 * ICON_PAD;
+    sprite.scale.set(Math.min(room / Math.max(1, sprite.texture.width), room / Math.max(1, sprite.texture.height)));
+  }
+
+  private refresh(player: Player): void {
+    for (const square of this.squares) this.showIcon(square.icon, this.itemIn(player, square.place));
+    const totals = statTotals(player.equipped ?? {});
+    for (const [stat, label] of this.statValues) label.text = String(totals[stat]);
+    this.gold.text = `Gold: ${player.playerStats.gold}`;
+  }
+
+  // ── Dragging ────────────────────────────────────────────────────────────────
+
+  private listen(): void {
+    this.root.eventMode = 'static';
+    this.root.hitArea = new Rectangle(0, 0, DESIGN_W, DESIGN_H);
+    this.root.on('pointerdown', (e) => this.startDrag(e));
+    this.root.on('globalpointermove', (e) => this.moveDrag(e));
+    this.root.on('pointerup', (e) => this.drop(e));
+    this.root.on('pointerupoutside', () => this.endDrag());
+  }
+
+  private squareAt(e: FederatedPointerEvent): Square | undefined {
+    const p = this.root.toLocal(e.global);
+    return this.squares.find((s) => s.box.contains(p.x, p.y));
+  }
+
+  private startDrag(e: FederatedPointerEvent): void {
+    const player = localPlayer();
+    const square = this.squareAt(e);
+    if (!player || !square || !this.itemIn(player, square.place)) return;
+    this.dragging = square.place;
+    this.showIcon(this.ghost, this.itemIn(player, square.place));
+    square.icon.alpha = 0.3;
+    this.moveDrag(e);
+  }
+
+  /** The ghost follows the pointer; with nothing held, the line above the bag names what is under it. */
+  private moveDrag(e: FederatedPointerEvent): void {
+    if (!this.container.visible) return;
+    const p = this.root.toLocal(e.global);
+    this.ghost.position.set(p.x, p.y);
+    const player = localPlayer();
+    const square = this.squareAt(e);
+    const item = player && square ? this.itemIn(player, square.place) : undefined;
+    this.info.text = item ? statLine(item) : '';
+  }
+
+  private drop(e: FederatedPointerEvent): void {
+    const player = localPlayer();
+    const from = this.dragging;
+    const target = this.squareAt(e);
+    this.endDrag();
+    if (!player || !from || !target || samePlace(from, target.place)) return;
+    const next = moveItem({ inventory: player.inventory ?? [], equipped: player.equipped ?? {} }, from, target.place);
+    if (next) requestLoadout(player, next);
+  }
+
+  private endDrag(): void {
+    this.dragging = null;
+    this.ghost.visible = false;
+    for (const square of this.squares) square.icon.alpha = 1;
+    this.shown = null;
+  }
+}

@@ -2,21 +2,38 @@ import { World } from 'miniplex';
 import type { Sprite, Container, Graphics } from 'pixi.js';
 import type { PixelLabel } from './ui/PixelText';
 import type { CharacterState } from './characters/CharacterDef';
+import type { DropTableId } from './entities/Drops';
 
 export const enum Team { Neutral = 0, Player = 1 }
 
 export const enum Facing { North = 0, East = 1, South = 2, West = 3 }
 
-export const EQUIP_SLOTS = ['weapon', 'helmet', 'chest', 'gloves', 'boots', 'ring'] as const;
+/** Where a player wears or holds gear, in the order the inventory screen lists them. */
+export const EQUIP_SLOTS = ['head', 'armor', 'primary', 'secondary', 'legs', 'other1', 'other2'] as const;
 export type EquipSlot = (typeof EQUIP_SLOTS)[number];
 
 export function isEquipSlot(value: string): value is EquipSlot {
   return EQUIP_SLOTS.some((slot) => slot === value);
 }
 
-export const ITEM_TYPES = [
-  'health_potion', 'mana_potion', 'weapon', 'helmet', 'chest', 'gloves', 'boots', 'ring', 'sword_scroll', 'armor_piece',
-] as const;
+/** What kind of gear an item is, which decides the slots it fits (see entities/Items.ts). */
+export const GEAR_KINDS = ['head', 'armor', 'weapon', 'offhand', 'legs', 'trinket'] as const;
+export type GearKind = (typeof GEAR_KINDS)[number];
+
+export function isGearKind(value: unknown): value is GearKind {
+  return GEAR_KINDS.some((kind) => kind === value);
+}
+
+/** A character's attributes, shown on the inventory screen; gear adds to them. */
+export const STAT_NAMES = ['strength', 'intelligence', 'stamina', 'defence', 'luck', 'mana'] as const;
+export type StatName = (typeof STAT_NAMES)[number];
+export type ItemStats = Partial<Record<StatName, number>>;
+
+export function isStatName(value: unknown): value is StatName {
+  return STAT_NAMES.some((stat) => stat === value);
+}
+
+export const ITEM_TYPES = ['weapon', 'shield', 'helmet', 'armor', 'boots', 'ring'] as const;
 export type ItemType = (typeof ITEM_TYPES)[number];
 
 export function isItemType(value: unknown): value is ItemType {
@@ -27,9 +44,11 @@ export type InventoryItem = {
   type: ItemType;
   name: string;
   value: number;
-  slot?: EquipSlot;
-  icon?: number;   // column index in item icon sheet
-  stats?: { attack?: number; defense?: number; hp?: number };
+  /** Equipment fits the slots of its kind; anything without one only goes in the bag. */
+  gear?: GearKind;
+  /** Index into ITEM_ICONS (entities/Items.ts). */
+  icon?: number;
+  stats?: ItemStats;
 };
 
 /** Who controls a player character: the host, or one of up to three guests in a co-op room. */
@@ -217,7 +236,7 @@ export type Entity = {
     mouseAiming: boolean;
     keyAim: { x: number; y: number } | null;
     /** One-shot requests raised for a single tick by key presses. */
-    intents: { use: boolean; attack: boolean; cast: boolean; inventoryOpen: boolean; inventoryUse: boolean };
+    intents: { use: boolean; attack: boolean; cast: boolean; inventoryOpen: boolean };
   };
   /** Breadcrumbs of where this player walked, for enemies to follow. */
   trail?: Trail;
@@ -271,7 +290,8 @@ export type Entity = {
   // --- loot ---
   loot?: {
     value: number;
-    kind: 'coin' | 'gem' | 'potion' | 'sword_scroll' | 'armor_piece';
+    /** Index into LOOT_KINDS (entities/LootFactory.ts): which coin or gem it is. */
+    kind: number;
     velX: number;
     velY: number;
     suckRadius: number;
@@ -285,7 +305,8 @@ export type Entity = {
   item?: { type: ItemType; name: string; value: number };
 
   // --- chest ---
-  chest?: { opened: boolean; disappearTicks: number };
+  /** `drops`: the DROP_TABLES entry (entities/Drops.ts) it throws out when opened. */
+  chest?: { opened: boolean; disappearTicks: number; drops: DropTableId };
 
   // --- spawner / nest ---
   spawner?: {
@@ -383,7 +404,7 @@ export type PlayerInput = NonNullable<Entity['playerInput']>;
 export type Intents = PlayerInput['intents'];
 
 export function noIntents(): Intents {
-  return { use: false, attack: false, cast: false, inventoryOpen: false, inventoryUse: false };
+  return { use: false, attack: false, cast: false, inventoryOpen: false };
 }
 
 /** Lets go of every key and button, e.g. for a remote player whose input stopped arriving. */

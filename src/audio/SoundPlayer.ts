@@ -41,7 +41,7 @@ const CLIPS = {
 } as const;
 
 type ClipName = keyof typeof CLIPS;
-type SynthName = 'sword_swing' | 'sword_miss' | 'boss_death' | 'potion' | 'chest_open' | 'door_open' | 'spell';
+type SynthName = 'sword_swing' | 'sword_miss' | 'boss_death' | 'chest_open' | 'door_open' | 'spell';
 export type SfxName = ClipName | SynthName;
 
 function isClip(name: SfxName): name is ClipName {
@@ -60,7 +60,6 @@ const SYNTHS = {
   sword_swing: [noise(0.08, 0.3), osc(400, 'sawtooth', 0.07, 0.2)],
   sword_miss: [noise(0.05, 0.15)],
   boss_death: [osc(80, 'sawtooth', 1.0, 0.5), osc(160, 'square', 0.8, 0.3), noise(0.5, 0.4)],
-  potion: [osc(440, 'sine', 0.15, 0.25), osc(550, 'sine', 0.1, 0.2), noise(0.1, 0.1)],
   spell: [osc(520, 'triangle', 0.25, 0.25), osc(780, 'sine', 0.2, 0.15), noise(0.12, 0.08)],
   chest_open: [osc(220, 'sine', 0.2, 0.2), osc(330, 'sine', 0.15, 0.25), osc(440, 'sine', 0.1, 0.3)],
   door_open: [noise(0.2, 0.3), osc(100, 'sawtooth', 0.3, 0.2)],

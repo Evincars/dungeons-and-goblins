@@ -22,6 +22,8 @@ export type SpriteSheetOptions = {
   grid?: SheetInfo;
   /** Parts of the image registered as sheets of their own, by texture key. */
   regions?: Readonly<Record<string, SheetRegion>>;
+  /** Painted art much larger than it is drawn (menu backgrounds, panels): scaled smoothly, through mipmaps. */
+  smooth?: boolean;
 };
 
 /** `count` frames of one size, `dx`/`dy` apart: an animation laid out in a row or a column. */
@@ -50,13 +52,24 @@ export class SpriteSheet {
   register(): void {
     const texture = Assets.get<Texture | undefined>(this.key);
     if (!texture) throw new LoadError(`Image "${this.key}" did not load`, { context: { key: this.key, src: this.src } });
-    texture.source.scaleMode = 'nearest';
+    this.filter(texture);
     setTexture(this.key, texture);
     if (this.options.grid) registerSheet(this.key, this.options.grid);
     for (const [key, region] of Object.entries(this.options.regions ?? {})) {
       if (isAnimation(region)) this.registerStrip(key, texture, region.frames);
       else this.registerStill(key, texture, region);
     }
+  }
+
+  /** Pixel art stays crisp; painted art is smoothed and mipmapped so shrinking it doesn't shimmer. */
+  private filter(texture: Texture): void {
+    if (!this.options.smooth) {
+      texture.source.scaleMode = 'nearest';
+      return;
+    }
+    texture.source.scaleMode = 'linear';
+    texture.source.autoGenerateMipmaps = true;
+    texture.source.updateMipmaps();
   }
 
   /** A still region shares the image's GPU source; only its frame differs. */

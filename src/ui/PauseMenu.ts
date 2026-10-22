@@ -2,6 +2,7 @@ import { Container, Graphics, Sprite } from 'pixi.js';
 import { GAME_WIDTH, GAME_HEIGHT, LAYOUT_LEFT, LAYOUT_WIDTH } from '../render/Camera';
 import { getTexture } from '../assets/Textures';
 import { PixelButton } from './PixelButton';
+import { THEME } from './Theme';
 import { makeText } from './PixelText';
 
 const BTN_W = 220;
@@ -91,7 +92,7 @@ export class PauseMenu {
     const dialog = new Container();
     const dim = new Graphics().rect(0, 0, GAME_WIDTH, GAME_HEIGHT).fill({ color: 0x000000, alpha: DIALOG_ALPHA });
     dim.eventMode = 'static';
-    const panel = new Graphics().rect(DIALOG.x, DIALOG.y, DIALOG.w, DIALOG.h).fill(0x241a13).stroke({ color: 0x8b613d, width: 2 });
+    const panel = new Graphics().rect(DIALOG.x, DIALOG.y, DIALOG.w, DIALOG.h).fill(THEME.panel).stroke({ color: THEME.panelBorder, width: 2 });
     const title = makeText('RETURN TO MAIN MENU?', 0xffdd88, 16, 'center');
     title.x = GAME_WIDTH / 2;
     title.y = DIALOG.y + 18;

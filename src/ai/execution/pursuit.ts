@@ -4,10 +4,11 @@ import { isMob, world } from '../../world';
 import type { Mob, Player, Trail } from '../../world';
 import {
   ASSIST_RADIUS, FLANK_DETOUR_SLACK, FLANK_DISTANCE, FLANK_MAX_DETOUR, FLANK_SNAP_TILES, LOOKAHEAD_TILES,
-  REPATH_TICKS, SENSE_TICKS, STRIKE_RANGE, TRAIL_LOOKAHEAD,
+  REPATH_TICKS, SENSE_TICKS, SPLIT_DETOUR_SLACK, SPLIT_MAX_DETOUR, STRIKE_RANGE, TRAIL_LOOKAHEAD,
 } from '../constants';
 import { clearLine, mobRoute, nearestStandable, standable } from '../perception/navigation';
 import { crumbAfter, crumbCount, crumbTick, crumbX, crumbY } from '../perception/trail';
+import { squadOf } from '../decision/squads';
 import type { Squad } from '../decision/squads';
 import { driveRoute, driveTo } from './driving';
 
@@ -50,13 +51,45 @@ function advanceStep(level: Level, mob: Mob): void {
   }
 }
 
+/**
+ * Marks the routes of the squad mates nearer the target than this enemy (they picked their ways first);
+ * returns the marks, or null when none of them is on a route.
+ */
+function markMatesRoutes(level: Level, mob: Mob): Uint8Array | null {
+  const squad = squadOf(mob.ai.targetId);
+  if (!squad) return null;
+  if (lane.length !== level.width * level.height) lane = new Uint8Array(level.width * level.height);
+  for (const mate of squad.members) {
+    if (mate === mob) break;
+    for (let i = mate.ai.step; i < mate.ai.route.length; i++) {
+      const t = mate.ai.route[i];
+      markLaneTile(level, t % level.width, Math.floor(t / level.width));
+    }
+  }
+  return marked.length > 0 ? lane : null;
+}
+
+/**
+ * The way to `goal`: the shortest, unless squad mates nearer the target already take it — then another way
+ * round, so a player behind a wall is come at from both sides. A far longer detour is not worth it.
+ */
+function squadRoute(level: Level, mob: Mob, from: number, goal: number): number[] {
+  const shortest = mobRoute(level, from, goal);
+  const taken = markMatesRoutes(level, mob);
+  if (!taken) return shortest;
+  const other = mobRoute(level, from, goal, taken);
+  clearLane();
+  return other.length <= shortest.length * SPLIT_MAX_DETOUR + SPLIT_DETOUR_SLACK ? other : shortest;
+}
+
 /** Walks toward a tile by route, planning one when due; `avoid` makes the route keep off those tiles. Returns whether it moved. */
 function walkToTile(level: Level, mob: Mob, goal: number, avoid: Uint8Array | null = null): boolean {
   const ai = mob.ai;
   ai.repathIn--;
   const exhausted = ai.step >= ai.route.length;
   if (ai.repathIn <= 0 || (exhausted && ai.routeGoal !== goal)) {
-    ai.route = mobRoute(level, level.tileIndexAt(mob.position.x, mob.position.y), goal, avoid);
+    const from = level.tileIndexAt(mob.position.x, mob.position.y);
+    ai.route = avoid ? mobRoute(level, from, goal, avoid) : squadRoute(level, mob, from, goal);
     ai.step = 0;
     ai.routeGoal = goal;
     ai.repathIn = REPATH_TICKS;
@@ -271,6 +304,19 @@ export function followTrail(level: Level, mob: Mob, target: Player | undefined):
   if (i < 0) return false;
   const j = farthestCrumbInSight(level, mob, trail, i);
   walkToPoint(level, mob, crumbX(trail, j), crumbY(trail, j));
+  return true;
+}
+
+/**
+ * Searching squad mates who are not the tracker cut the player off instead: they head for where the trail
+ * now ends, each by another way round (see squadRoute). Returns false when there is no trail to cut off.
+ */
+export function cutOff(level: Level, mob: Mob, target: Player | undefined): boolean {
+  const trail = target?.trail;
+  const squad = squadOf(mob.ai.targetId);
+  if (!trail || !squad || squad.members[0] === mob || crumbCount(trail) === 0) return false;
+  const last = crumbCount(trail) - 1;
+  walkToPoint(level, mob, crumbX(trail, last), crumbY(trail, last));
   return true;
 }
 

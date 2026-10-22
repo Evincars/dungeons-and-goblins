@@ -32,26 +32,6 @@ function noise(seed: number): number {
 
 // ── PICKUP SPRITES ───────────────────────────────────────────────────────────
 
-export function genCoinSheet(): HTMLCanvasElement {
-  const [c, ctx] = mkCanvas(32, 8);
-  const GOLD = [0xffd840, 0xffb820, 0xffe870, 0xffa000];
-  const EDGE = 0xa06800;
-  for (let f = 0; f < 4; f++) {
-    const ox = f * 8;
-    if (f === 1 || f === 3) {
-      rect(ctx, ox + 3, 2, 2, 5, GOLD[f]);
-      rect(ctx, ox + 3, 2, 2, 1, GOLD[0]);
-    } else {
-      rect(ctx, ox + 1, 1, 6, 6, EDGE);
-      rect(ctx, ox + 2, 1, 4, 6, GOLD[f]);
-      rect(ctx, ox + 1, 2, 6, 4, GOLD[f]);
-      rect(ctx, ox + 3, 2, 2, 1, 0xfff0a0);
-    }
-  }
-  return c;
-}
-
-/** Glowing spell orb: a bright core inside two fading halos. */
 export function genSpellBoltSheet(): HTMLCanvasElement {
   const [c, ctx] = mkCanvas(16, 16);
   rect(ctx, 4, 4, 8, 8, 0xb8800c);
@@ -60,43 +40,6 @@ export function genSpellBoltSheet(): HTMLCanvasElement {
   rect(ctx, 4, 6, 8, 4, 0xffd840);
   rect(ctx, 6, 6, 4, 4, 0xfff0a0);
   rect(ctx, 7, 7, 2, 2, 0xffffff);
-  return c;
-}
-
-export function genPotionSheet(): HTMLCanvasElement {
-  const [c, ctx] = mkCanvas(12, 16);
-  rect(ctx, 4, 0, 4, 3, 0x8a6030);
-  rect(ctx, 4, 2, 4, 3, 0x5088b0);
-  rect(ctx, 2, 5, 8, 10, 0x4070a0);
-  rect(ctx, 3, 6, 6, 8, 0x60a0d0);
-  rect(ctx, 3, 8, 6, 6, 0xff2050);
-  rect(ctx, 4, 8, 4, 6, 0xff4060);
-  rect(ctx, 3, 6, 2, 3, 0xa0d0f0);
-  rect(ctx, 2, 14, 8, 1, 0x304050);
-  return c;
-}
-
-export function genGemSheet(): HTMLCanvasElement {
-  const [c, ctx] = mkCanvas(12, 12);
-  const GEM = 0x40d0ff;
-  const GEM_L = 0xa0f0ff;
-  const GEM_D = 0x2080a0;
-  const EDGE = 0x104060;
-  ctx.fillStyle = hex(EDGE);
-  ctx.beginPath();
-  ctx.moveTo(6, 0); ctx.lineTo(12, 5); ctx.lineTo(6, 12); ctx.lineTo(0, 5);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = hex(GEM);
-  ctx.beginPath();
-  ctx.moveTo(6, 1); ctx.lineTo(11, 5); ctx.lineTo(6, 11); ctx.lineTo(1, 5);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = hex(GEM_L);
-  ctx.beginPath();
-  ctx.moveTo(6, 1); ctx.lineTo(11, 5); ctx.lineTo(6, 6); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = hex(GEM_D);
-  ctx.beginPath();
-  ctx.moveTo(6, 6); ctx.lineTo(11, 5); ctx.lineTo(6, 11); ctx.closePath(); ctx.fill();
-  rect(ctx, 4, 2, 2, 2, 0xffffff);
   return c;
 }
 
@@ -379,4 +322,38 @@ export function drawCampfireBase(ctx: CanvasRenderingContext2D, ox: number, fram
     px(ctx, ox + 6 + i, 18 - Math.floor(i / 3), LOG_LIGHT);
   }
   for (let i = 0; i < 5; i++) px(ctx, ox + 9 + i + (frame % 2), 17 + (i % 2), (i + frame) % 3 === 0 ? EMBER_HOT : EMBER);
+}
+
+// ── ITEM ICONS (no art for these in the asset packs) ─────────────────────────
+
+const LEATHER = 0x6a4428;
+const LEATHER_DARK = 0x3e2614;
+const LEATHER_LIGHT = 0x8a5c38;
+const GOLD = 0xd4a030;
+const GOLD_DARK = 0x7a5010;
+const GOLD_LIGHT = 0xf4d070;
+
+/** A pair of leather boots, 12×12. */
+export function genBootsIcon(): HTMLCanvasElement {
+  const [c, ctx] = mkCanvas(12, 12);
+  for (const ox of [1, 6]) {
+    rect(ctx, ox, 1, 3, 7, LEATHER);
+    rect(ctx, ox, 8, 5, 3, LEATHER);
+    rect(ctx, ox, 1, 1, 7, LEATHER_LIGHT);
+    rect(ctx, ox, 10, 5, 1, LEATHER_DARK);
+    rect(ctx, ox, 3, 3, 1, LEATHER_DARK);
+  }
+  return c;
+}
+
+/** A gold ring with a little gem, 10×10. */
+export function genRingIcon(): HTMLCanvasElement {
+  const [c, ctx] = mkCanvas(10, 10);
+  rect(ctx, 2, 3, 6, 1, GOLD_LIGHT);
+  rect(ctx, 1, 4, 1, 4, GOLD);
+  rect(ctx, 8, 4, 1, 4, GOLD_DARK);
+  rect(ctx, 2, 8, 6, 1, GOLD_DARK);
+  rect(ctx, 4, 1, 2, 2, 0x50c8e8);
+  px(ctx, 4, 1, 0xc8f4ff);
+  return c;
 }

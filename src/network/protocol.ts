@@ -1,4 +1,4 @@
-import { isEquipSlot, isItemType, isPlayerSlot, PLAYER_SLOTS } from '../world';
+import { isEquipSlot, isGearKind, isItemType, isPlayerSlot, isStatName, PLAYER_SLOTS, STAT_NAMES } from '../world';
 import type { EquipSlot, InventoryItem, PlayerInput, PlayerSlot } from '../world';
 import type { SfxName } from '../audio/SoundPlayer';
 import { cleanName } from '../game/Settings';
@@ -39,10 +39,11 @@ export type Message =
   | { type: 'ping' };
 
 const BUTTONS = ['up', 'down', 'left', 'right', 'attack', 'use', 'sprint', 'mouseAiming'] as const satisfies readonly (keyof PlayerInput)[];
-const INTENTS = ['use', 'attack', 'cast', 'inventoryOpen', 'inventoryUse'] as const satisfies readonly (keyof PlayerInput['intents'])[];
+const INTENTS = ['use', 'attack', 'cast', 'inventoryOpen'] as const satisfies readonly (keyof PlayerInput['intents'])[];
 /** Aim points farther than this from the origin are not a real cursor. */
 const MAX_AIM = 100000;
-const MAX_ITEMS = 32;
+/** More than any bag (MAX_INVENTORY) or shop holds, so honest messages always fit. */
+const MAX_ITEMS = 64;
 const MAX_ITEM_NAME = 40;
 const MAX_ITEM_STAT = 1000;
 const MAX_ITEM_VALUE = 1e6;
@@ -84,16 +85,16 @@ export function validStart(seed: unknown, depth: unknown): boolean {
 function validStats(stats: unknown): boolean {
   if (stats === undefined) return true;
   if (!isRecord(stats)) return false;
-  return ['attack', 'defense', 'hp'].every((k) => stats[k] === undefined
+  return Object.keys(stats).every((k) => isStatName(k)) && STAT_NAMES.every((k) => stats[k] === undefined
     || (isFiniteNumber(stats[k]) && Math.abs(Number(stats[k])) <= MAX_ITEM_STAT));
 }
 
 export function isInventoryItem(value: unknown): value is InventoryItem {
   if (!isRecord(value) || !isItemType(value.type) || typeof value.name !== 'string' || value.name.length > MAX_ITEM_NAME) return false;
   if (!isFiniteNumber(value.value) || value.value < 0 || value.value > MAX_ITEM_VALUE) return false;
-  const slotOk = value.slot === undefined || (typeof value.slot === 'string' && isEquipSlot(value.slot));
+  const gearOk = value.gear === undefined || isGearKind(value.gear);
   const iconOk = value.icon === undefined || Number.isInteger(value.icon);
-  return slotOk && iconOk && validStats(value.stats);
+  return gearOk && iconOk && validStats(value.stats);
 }
 
 function validEquipped(value: unknown): value is Partial<Record<EquipSlot, InventoryItem>> {

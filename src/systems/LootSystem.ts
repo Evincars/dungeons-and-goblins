@@ -1,4 +1,5 @@
 import { world, q, isPlayer } from '../world';
+import type { Level } from '../level/Level';
 import type { Entity, Player } from '../world';
 import { sound } from '../audio/SoundPlayer';
 import { nearby, Sense } from '../ai/perception/spatial';
@@ -15,6 +16,10 @@ const BLINK_TICKS = 180;
 const BLINK_PERIOD = 4;
 /** How high a dropped coin arcs on its way out (Redux's burst). */
 const BURST_ARC = 12;
+/** A coin stops this far short of a wall or anything solid, so it lies on the floor in front of it, never on it. */
+const WALL_MARGIN = 4;
+/** Speed a coin keeps when it bounces off a wall (reversed). */
+const WALL_BOUNCE = 0.3;
 
 type Loot = (typeof q.loot)['entities'][number];
 
@@ -73,14 +78,26 @@ function glide(coin: Loot, nearPlayer: Player | null): void {
   if (target.dist - step <= PICKUP_RADIUS) collect(coin, player);
 }
 
-function updateCoin(coin: Loot): void {
+/** Whether a coin at (x, y) would lie on a wall or a solid prop (with a margin, so it stops at the edge). */
+function blocked(level: Level, x: number, y: number): boolean {
+  return level.getTileAt(x, y - WALL_MARGIN)?.passable === false || level.getTileAt(x, y)?.passable === false;
+}
+
+/** A coin flies on, one axis at a time, bouncing off walls instead of landing on top of them. */
+function slide(level: Level, coin: Loot): void {
+  const lp = coin.position;
+  const ld = coin.loot;
+  if (blocked(level, lp.x + ld.velX, lp.y)) ld.velX *= -WALL_BOUNCE;
+  else lp.x += ld.velX;
+  if (blocked(level, lp.x, lp.y + ld.velY)) ld.velY *= -WALL_BOUNCE;
+  else lp.y += ld.velY;
+}
+
+function updateCoin(level: Level, coin: Loot): void {
   const lp = coin.position;
   const ld = coin.loot;
   const airborne = (ld.burstTicks ?? 0) > 0;
-  if (ld.glide === 0) {
-    lp.x += ld.velX;
-    lp.y += ld.velY;
-  }
+  if (ld.glide === 0) slide(level, coin);
   const friction = airborne ? AIR_FRICTION : LOOT_FRICTION;
   ld.velX *= friction;
   ld.velY *= friction;
@@ -101,8 +118,8 @@ function updateCoin(coin: Loot): void {
   glide(coin, nearPlayer);
 }
 
-export function updateLoot(): void {
+export function updateLoot(level: Level): void {
   for (const coin of q.loot) {
-    if (!coin.removed) updateCoin(coin);
+    if (!coin.removed) updateCoin(level, coin);
   }
 }

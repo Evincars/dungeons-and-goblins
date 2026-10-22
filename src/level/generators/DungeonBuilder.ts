@@ -21,9 +21,10 @@ import { isPillarColumn } from '../TerrainAutotile';
 import {
   CAVE_CENTREPIECES, CAVE_CRYSTALS, CAVE_PLANTS, CAVE_SPIRES, CAVE_STONES, COFFINS, CRATES, CRYPT_CENTREPIECES,
   HALL_CENTREPIECES, HANGINGS, PEDESTALS, POSTS, PROPS, SARCOPHAGI, STORE_CENTREPIECES, STORE_FURNITURE, STORE_GOODS, URNS,
-  propWeight,
+  propBlockRect, propWeight,
 } from '../Props';
-import type { PropDef, PropKind, PropPlacement } from '../Props';
+import type { BlockRect, PropDef, PropKind, PropPlacement } from '../Props';
+import { MathUtils } from 'yuka';
 
 type TileChange = { x: number; y: number; prev: TileType };
 type Keep = (apply: () => TileChange[]) => boolean;
@@ -51,6 +52,8 @@ const PILLAR_W = 2;
 const PILLAR_H = 3;
 /** Rooms at least this tall get four pillar blocks instead of two. */
 const FOUR_PILLAR_ROOM_H = 12;
+/** Chance a wide room with a pit gets a second one. */
+const SECOND_PIT_CHANCE = 0.2;
 /** Tries to find a free spot for each pit. */
 const PIT_ATTEMPTS = 6;
 /** Chance a tomb niche spot is skipped, and that a candle stands beside a niche coffin. */
@@ -81,7 +84,15 @@ const PLANT_COLOURS = ['yellow', 'red', 'lilac', 'teal'] as const;
 /** Exit room: campfires this many tiles either side of the exit, banners every other tile of its north wall. */
 const CAMPFIRE_SPREAD = 3;
 const EXIT_BANNERS: readonly PropKind[] = ['banner_red', 'banner_blue', 'pennant_red', 'pennant_blue'];
-const EXIT_CORNER_PROPS: readonly PropKind[] = ['barrel', 'barrel2', 'supplies_barrel', 'supplies_crates'];
+/** Casks, crates and heaps stood in the corners of the safe and exit rooms. */
+const GATHERING_CORNERS: readonly PropKind[] = [
+  'barrel', 'barrel2', 'supplies_barrel', 'supplies_crates', 'supplies_crate', 'supplies_heap', 'crate_stack', 'crate_stack2',
+];
+/** A campfire's art fills the middle of its tile; only its ring of stones blocks. */
+const CAMPFIRE_BLOCK: BlockRect = { x0: 3, y0: 14, x1: 29, y1: 24 };
+/** Urns and pots, and sacks and bowls, stood along the walls of the safe and exit rooms. */
+const GATHERING_URNS = 4;
+const GATHERING_GOODS = 5;
 /** Torch flames hang this far above the foot of their wall. */
 const TORCH_FLAME_LIFT = 30;
 /** Rows above which walls are too thin for wall fixtures. */
@@ -240,8 +251,17 @@ export class DungeonBuilder {
 
     const torchTiles = this.placeTorches();
     this.placeHangings(torchTiles, props);
-    this.usedTiles.add(exitTile.x + exitTile.y * W);
-    const campfires = this.dressExitRoom(exit, exitTile, torchTiles, props, keepIfReachable);
+    const shopTile = { x: safe.x + Math.floor(safe.w / 2), y: safe.y + 1 };
+    // The exit, the spawn and the shop keeper's spot (and the wall behind and floor in front of it) stay clear.
+    for (const t of [exitTile, playerTile, shopTile, { x: shopTile.x, y: safe.y }, { x: shopTile.x, y: shopTile.y + 1 }]) {
+      this.usedTiles.add(t.x + t.y * W);
+    }
+    const safeFire = { x: shopTile.x, y: safe.y + Math.floor(safe.h / 2) + 1 };
+    const exitFires = [exitTile.x - CAMPFIRE_SPREAD, exitTile.x + CAMPFIRE_SPREAD].map((x) => ({ x, y: exitTile.y }));
+    const campfires = [
+      ...this.dressGatheringRoom(safe, [safeFire], torchTiles, props, keepIfReachable),
+      ...this.dressGatheringRoom(exit, exitFires, torchTiles, props, keepIfReachable),
+    ];
 
     const playerSpawn = tileCenter(playerTile.x, playerTile.y);
     this.level.addSpawnPoint(playerSpawn.x, playerSpawn.y);
@@ -253,7 +273,7 @@ export class DungeonBuilder {
       props,
       campfires: campfires.map((t) => tileCenter(t.x, t.y)),
       exitButtonPos: tileCenter(exitTile.x, exitTile.y),
-      shopPos: tileCenter(safe.x + Math.floor(safe.w / 2), safe.y + 1),
+      shopPos: tileCenter(shopTile.x, shopTile.y),
       safeDoor: { tiles: doorTiles, boundaryX: (doorX + 1) * TILE_WIDTH + TILE_WIDTH / 2 },
     };
   }
@@ -501,7 +521,7 @@ export class DungeonBuilder {
   /** One or two framed 2×2 pits, each with a ring of floor around it and 2 tiles clear of the walls. */
   private pits(room: RoomData, keep: Keep): boolean {
     let placed = false;
-    const count = room.w >= 10 && this.rng() < 0.5 ? 2 : 1;
+    const count = room.w >= 10 && this.rng() < SECOND_PIT_CHANCE ? 2 : 1;
     const maxX = room.x + room.w - 4;
     const maxY = room.y + room.h - 4;
     for (let i = 0; i < count && maxX >= room.x + 2 && maxY >= room.y + 2; i++) {
@@ -528,8 +548,28 @@ export class DungeonBuilder {
   private placeSolid(cells: Array<[number, number]>, kinds: PropKind[], props: PropPlacement[], keep: Keep): boolean {
     if (cells.length === 0 || !cells.every(([x, y]) => this.free(x, y))) return false;
     if (!keep(() => this.setTiles(cells, TileType.Obstacle))) return false;
-    cells.forEach(([x, y], i) => { this.claim(x, y); props.push({ kind: kinds[i % kinds.length], tx: x, ty: y }); });
+    cells.forEach(([x, y], i) => {
+      const kind = kinds[i % kinds.length];
+      this.claim(x, y);
+      this.blockFoot(propBlockRect(PROPS[kind]), x, y, [[x, y]]);
+      props.push({ kind, tx: x, ty: y });
+    });
     return true;
+  }
+
+  /**
+   * Records how much of each blocked tile a prop anchored at (tx, ty) really fills: `rect` (from the anchor
+   * tile's corner) cut to each tile, so only the prop's foot stops characters.
+   */
+  private blockFoot(rect: BlockRect, tx: number, ty: number, cells: Array<[number, number]>): void {
+    for (const [x, y] of cells) {
+      const ox = (x - tx) * TILE_WIDTH;
+      const oy = (y - ty) * TILE_HEIGHT;
+      this.level.blockBoxes.set(x + y * this.cfg.mapWidth, {
+        x0: MathUtils.clamp(rect.x0 - ox, 0, TILE_WIDTH), x1: MathUtils.clamp(rect.x1 - ox, 0, TILE_WIDTH),
+        y0: MathUtils.clamp(rect.y0 - oy, 0, TILE_HEIGHT), y1: MathUtils.clamp(rect.y1 - oy, 0, TILE_HEIGHT),
+      });
+    }
   }
 
   /** Dresses a dungeon room by theme: a crypt, a storeroom or a plain hall. */
@@ -607,6 +647,7 @@ export class DungeonBuilder {
     if (!cells.every(([x, y]) => this.free(x, y))) return false;
     if (!keep(() => this.setTiles(cells, TileType.Obstacle))) return false;
     for (const [x, y] of cells) this.claim(x, y);
+    this.blockFoot(propBlockRect(PROPS[kind]), tx, ty, cells);
     props.push({ kind, tx, ty });
     return true;
   }
@@ -663,22 +704,37 @@ export class DungeonBuilder {
     }
   }
 
-  // ── Exit room ───────────────────────────────────────────────────────────────
+  // ── Safe and exit rooms ─────────────────────────────────────────────────────
 
   /**
-   * The way down is a place to gather: campfires either side of the exit, banners between the torches on
-   * its north wall and casks in its upper corners. Returns the campfire tiles.
+   * The rooms either end of the dungeon are places to gather: campfires with candles beside them, banners
+   * between the torches, casks and crates in the corners with goods strewn about, and shelves or racks on
+   * the north wall. Returns the campfires that were lit.
    */
-  private dressExitRoom(exit: RoomData, exitTile: TilePos, torches: TilePos[], props: PropPlacement[], keep: Keep): TilePos[] {
-    const campfires: TilePos[] = [];
-    for (const x of [exitTile.x - CAMPFIRE_SPREAD, exitTile.x + CAMPFIRE_SPREAD]) {
-      if (!this.free(x, exitTile.y) || !keep(() => this.setTiles([[x, exitTile.y]], TileType.Obstacle))) continue;
-      this.claim(x, exitTile.y);
-      campfires.push({ x, y: exitTile.y });
+  private dressGatheringRoom(room: RoomData, fires: TilePos[], torches: TilePos[], props: PropPlacement[], keep: Keep): TilePos[] {
+    const lit = fires.filter((t) => this.placeFire(t, keep));
+    for (const fire of lit) {
+      for (const x of [fire.x - 1, fire.x + 1]) this.placeCandle(x, fire.y + 1, props);
     }
-    this.hangBanners(exit, torches, props);
-    for (const x of [exit.x, exit.x + exit.w - 1]) this.placeSolid([[x, exit.y]], [this.pick(EXIT_CORNER_PROPS)], props, keep);
-    return campfires;
+    this.hangBanners(room, torches, props);
+    const corners: Array<[number, number]> = [
+      [room.x, room.y], [room.x + room.w - 1, room.y], [room.x, room.y + room.h - 1], [room.x + room.w - 1, room.y + room.h - 1],
+    ];
+    for (const [x, y] of corners) {
+      if (this.placeSolid([[x, y]], [this.pickProp(GATHERING_CORNERS)], props, keep)) this.scatterGoods(x, y, props);
+    }
+    this.storeroom(room, props, keep);
+    this.urnsAlongWalls(room, GATHERING_URNS, props, keep);
+    this.scatterLoose(this.shuffledFreeTiles(room).filter((t) => this.againstWall(t.x, t.y)), STORE_GOODS, GATHERING_GOODS, props);
+    return lit;
+  }
+
+  /** A campfire on its tile, which it blocks (at its stones), if the way through stays open. */
+  private placeFire(t: TilePos, keep: Keep): boolean {
+    if (!this.free(t.x, t.y) || !keep(() => this.setTiles([[t.x, t.y]], TileType.Obstacle))) return false;
+    this.claim(t.x, t.y);
+    this.blockFoot(CAMPFIRE_BLOCK, t.x, t.y, [[t.x, t.y]]);
+    return true;
   }
 
   /** Banners on every other free stretch of the room's north wall, clear of the torches. */
@@ -775,12 +831,16 @@ export class DungeonBuilder {
     }
   }
 
+  /** Whether a tile has a wall beside it or above it. */
+  private againstWall(tx: number, ty: number): boolean {
+    return this.isWall(tx - 1, ty) || this.isWall(tx + 1, ty) || this.isWall(tx, ty - 1);
+  }
+
   /** Urns (they block, like the barrels they look like) and broken pots standing against the walls. */
   private urnsAlongWalls(room: RoomData, count: number, props: PropPlacement[], keep: Keep): void {
     const spots: Array<[number, number]> = [];
-    const againstWall = (tx: number, ty: number) => this.isWall(tx - 1, ty) || this.isWall(tx + 1, ty) || this.isWall(tx, ty - 1);
     forEachTile(room.x, room.y, room.x + room.w - 1, room.y + room.h - 1, (tx, ty) => {
-      if (this.free(tx, ty) && againstWall(tx, ty)) spots.push([tx, ty]);
+      if (this.free(tx, ty) && this.againstWall(tx, ty)) spots.push([tx, ty]);
     });
     for (let i = 0; i < count && spots.length; i++) {
       const [tx, ty] = spots.splice(Math.floor(this.rng() * spots.length), 1)[0];

@@ -28,7 +28,21 @@ export const PROP_IMAGES = {
 
 export type PropImage = keyof typeof PROP_IMAGES;
 
+import { TILE_HEIGHT, TILE_WIDTH } from './TileType';
+
 type Rect = { x: number; y: number; w: number; h: number };
+
+/** Floor props rest this far down their tile (just above its bottom edge), so they depth-sort with whoever stands around them. */
+export const PROP_GROUND = TILE_HEIGHT - 4;
+/**
+ * A solid prop blocks only a strip at its foot this deep (or its own height, if shorter), as wide as its
+ * art less a little each side: characters walk right up to an urn, and behind a tall crate stack.
+ */
+const BASE_DEPTH = 12;
+const BASE_INSET = 2;
+
+/** Where a prop blocks, in pixels from the top-left of its tile (it may reach into the tiles of its footprint). */
+export type BlockRect = { x0: number; y0: number; x1: number; y1: number };
 /** One frame of an animated prop; it may come from another prop image than the prop's own. */
 export type PropFrame = Rect & { image?: PropImage };
 
@@ -42,6 +56,8 @@ export type PropDef = {
   solid?: boolean;
   /** Tiles a large solid prop blocks: `w` across (odd, centred on its tile) and `h` up from its tile. */
   footprint?: { w: number; h: number };
+  /** How much of its foot a solid prop blocks, when not worked out from its art (`w` wide, `d` deep). */
+  base?: { w: number; d: number };
   /** Light radius, for candles and crystals. */
   glow?: number;
   /** The glow is cold (crystals) rather than firelight. */
@@ -86,10 +102,10 @@ export const PROPS = {
   coffin:            { image: 'decorative', rect: { x: 87, y: 69, w: 18, h: 43 }, mount: 'floor', solid: true },
   coffin_cracked:    { image: 'decorative', rect: { x: 55, y: 69, w: 18, h: 43 }, mount: 'floor', solid: true },
   coffin_open:       { image: 'decorative', rect: { x: 87, y: 122, w: 18, h: 38 }, mount: 'floor', solid: true },
-  sarcophagus:       { image: 'decorative', rect: { x: 5, y: 101, w: 37, h: 27 }, mount: 'floor', solid: true },
-  sarcophagus2:      { image: 'decorative', rect: { x: 5, y: 197, w: 37, h: 27 }, mount: 'floor', solid: true },
-  sarcophagus_open:  { image: 'decorative', rect: { x: 5, y: 69, w: 37, h: 27 }, mount: 'floor', solid: true },
-  sarcophagus_open2: { image: 'decorative', rect: { x: 5, y: 165, w: 37, h: 27 }, mount: 'floor', solid: true },
+  sarcophagus:       { image: 'decorative', rect: { x: 5, y: 101, w: 37, h: 27 }, mount: 'floor', solid: true, base: { w: 30, d: 20 } },
+  sarcophagus2:      { image: 'decorative', rect: { x: 5, y: 197, w: 37, h: 27 }, mount: 'floor', solid: true, base: { w: 30, d: 20 } },
+  sarcophagus_open:  { image: 'decorative', rect: { x: 5, y: 69, w: 37, h: 27 }, mount: 'floor', solid: true, base: { w: 30, d: 20 } },
+  sarcophagus_open2: { image: 'decorative', rect: { x: 5, y: 165, w: 37, h: 27 }, mount: 'floor', solid: true, base: { w: 30, d: 20 } },
   crate:             { image: 'decorative', rect: { x: 130, y: 75, w: 12, h: 21 }, mount: 'floor', solid: true },
   crate2:            { image: 'decorative', rect: { x: 170, y: 75, w: 12, h: 21 }, mount: 'floor', solid: true },
   crate_stack:       { image: 'decorative', rect: { x: 144, y: 71, w: 16, h: 41 }, mount: 'floor', solid: true },
@@ -384,6 +400,16 @@ export const PROPS = {
 export type PropKind = keyof typeof PROPS;
 
 export type PropPlacement = { kind: PropKind; tx: number; ty: number };
+
+/** The strip at a solid prop's foot that blocks movement (the rest of its tile can be walked through, behind it). */
+export function propBlockRect(def: PropDef): BlockRect {
+  const across = def.footprint?.w ?? 1;
+  const up = def.footprint?.h ?? 1;
+  const w = def.base?.w ?? Math.min(def.rect.w - 2 * BASE_INSET, across * TILE_WIDTH);
+  const d = def.base?.d ?? Math.min(BASE_DEPTH, def.rect.h);
+  const cx = TILE_WIDTH / 2;
+  return { x0: cx - w / 2, x1: cx + w / 2, y0: PROP_GROUND - d - (up - 1) * TILE_HEIGHT, y1: PROP_GROUND };
+}
 
 /** How often a prop is picked against the others in its group. */
 export function propWeight(kind: PropKind): number {

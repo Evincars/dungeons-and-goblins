@@ -49,6 +49,7 @@ const { moveItem } = await load('game/PlayerActions');
 const { statTotals } = await load('entities/Items');
 const { spawnDrops } = await load('entities/Drops');
 const { createLoot, LOOT_KINDS } = await load('entities/LootFactory');
+const { updateLoot } = await load('systems/LootSystem');
 const { prepareLevel } = await load('level/DungeonGenerator');
 
 const centre = (t) => t * TILE_WIDTH + TILE_WIDTH / 2;
@@ -520,7 +521,8 @@ test('wall decor hangs only on north-wall faces, and storerooms are rare corners
     for (const p of props) {
       const backed = level.getTile(p.tx, p.ty - 1)?.type === TileType.Wall;
       if (HANGINGS.includes(p.kind)) assert.ok(backed, `${p.kind} hangs on a wall face`);
-      if (!STORE_FURNITURE.includes(p.kind)) continue;
+      // The safe and exit rooms are dressed as gathering places, casks in every corner.
+      if (!STORE_FURNITURE.includes(p.kind) || roomAt(p)?.type !== 'dungeon') continue;
       assert.ok(backed, `${p.kind} stands against a north wall`);
       assert.equal(PROPS[p.kind].solid, true);
       stores.add(`${seed}:${roomAt(p)?.id}`);
@@ -566,10 +568,13 @@ test('rooms get a centrepiece in the middle (or nearby) with open floor around i
   assert.ok(centred > rooms * 0.3, `${centred} of ${rooms} rooms have something in the middle`);
 });
 
-test('the exit room has campfires beside the exit and banners on its wall', () => {
+test('the safe and exit rooms have campfires (two beside the exit) and banners on their walls', () => {
   const { campfires, rooms, props, exitButtonPos, level } = new DungeonBuilder({ ...DEFAULT_CONFIG, seed: 7 }).build();
   const exit = rooms.find((r) => r.type === 'exit');
-  assert.equal(campfires.length, 2);
+  const safe = rooms.find((r) => r.type === 'safe');
+  const inRoom = (r) => (c) => c.x >= r.x * 32 && c.x < (r.x + r.w) * 32;
+  assert.equal(campfires.filter(inRoom(exit)).length, 2);
+  assert.equal(campfires.filter(inRoom(safe)).length, 1, 'a fire in the safe room too');
   for (const c of campfires) assert.equal(level.getTileAt(c.x, c.y).type, TileType.Obstacle, 'a campfire blocks its tile');
   assert.equal(level.getTileAt(exitButtonPos.x, exitButtonPos.y).type, TileType.Floor, 'the exit stays clear');
   assert.ok(props.some((p) => p.ty === exit.y && HANGINGS.includes(p.kind)), 'banners');
@@ -627,6 +632,28 @@ test('an opened chest throws out coins from its drop table, as Catacomb Snatch R
   const gem = createLoot(0, 0, 0, 0, 200, true);
   assert.equal(LOOT_KINDS[gem.loot.kind].sheet, 'pickup_gem_ruby_12', 'an exact 200 is a ruby');
   assert.equal(gem.animation.frameTime, 3, 'spinning at Redux pace');
+});
+
+test('solid props block only the strip at their foot, so characters walk behind tall ones and up to urns', () => {
+  const { level, props } = new DungeonBuilder({ ...DEFAULT_CONFIG, seed: 11 }).build();
+  const solid = props.filter((p) => PROPS[p.kind].solid && !PROPS[p.kind].footprint);
+  assert.ok(solid.length > 0);
+  const covers = (x, y) => level.getClipBBs(x, y, 1, 1).some((b) => b.contains(x, y));
+  for (const p of solid) {
+    const x = p.tx * 32 + 16;
+    assert.equal(covers(x, p.ty * 32 + 4), false, `${p.kind}: the top of its tile is open`);
+    assert.equal(covers(x, p.ty * 32 + 26), true, `${p.kind}: its foot blocks`);
+  }
+});
+
+test('coins flung at a wall stop at its edge instead of landing on top of it', () => {
+  const level = arena(8, 8);
+  for (let i = 0; i < 12; i++) createLoot(centre(4), centre(1), (Math.random() - 0.5) * 3, -3, 5);
+  for (let t = 0; t < 60; t++) updateLoot(level);
+  for (const coin of world.entities.filter((e) => e.loot)) {
+    const { x, y } = coin.position;
+    assert.ok(level.getTileAt(x, y).passable && level.getTileAt(x, y - 4).passable, `coin at ${Math.round(x)},${Math.round(y)}`);
+  }
 });
 
 // ── Typed errors ─────────────────────────────────────────────────────────────

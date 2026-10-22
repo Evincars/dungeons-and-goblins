@@ -1,7 +1,7 @@
 import { world } from '../world';
 import type { Entity, InventoryItem } from '../world';
 import { TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
-import { PROPS } from '../level/Props';
+import { PROPS, PROP_GROUND } from '../level/Props';
 import type { PropDef, PropPlacement } from '../level/Props';
 import type { DoorData, RoomData } from '../level/generators/DungeonBuilder';
 
@@ -25,8 +25,6 @@ const TORCH_COLOR = 0xffcc66;
 const TORCH_SCALE = 1.5;
 const TORCH_FRAMES = 4;
 const TORCH_FRAME_TICKS = 7;
-/** Floor props rest just above their tile's bottom edge, so they depth-sort with whoever stands around them. */
-const PROP_GROUND = TILE_HEIGHT - 4;
 /** Wall props hang from just under the face's cap molding. */
 const HANG_TOP = 54;
 const CHEST_HEALTH = 20;
@@ -148,7 +146,7 @@ export function createChest(x: number, y: number): Entity {
     chest: { opened: false, disappearTicks: -1, drops: 'chest' },
     health: { current: CHEST_HEALTH, max: CHEST_HEALTH },
     hurtTime: 0, freezeTime: 0,
-    radius: { x: 9, y: 7 },
+    radius: { x: 7, y: 4 },
     blocking: true,
     physicsSlide: true,
     visual: { sheet: 'chest_dark', col: 0, row: 0, scale: CHEST_SCALE },

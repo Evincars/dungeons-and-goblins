@@ -18,6 +18,8 @@ export const LOOT_BURST_TICKS = 24;
 const SPIN_FRAME_TICKS = 3;
 /** Pickups rest this far above their ground position. */
 export const LOOT_REST_LIFT = 2;
+/** Coins and gems are drawn at this size (Redux's art is large next to this game's characters). */
+const LOOT_SCALE = 0.7;
 
 type LootKind = { sheet: string; frames: number; value: number; sound: SfxName };
 
@@ -78,7 +80,7 @@ export function createLoot(x: number, y: number, velX: number, velY: number, val
       burstTicks: LOOT_BURST_TICKS,
     },
     radius: { x: 4, y: 4 },
-    visual: { sheet: spec.sheet },
+    visual: { sheet: spec.sheet, scale: LOOT_SCALE },
     animation: {
       sheet: spec.sheet,
       frameX: Math.floor(Math.random() * spec.frames),

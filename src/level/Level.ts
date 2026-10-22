@@ -3,6 +3,7 @@ import { createTile, TileType, TILE_WIDTH, TILE_HEIGHT } from './TileType';
 import type { TileData } from './TileType';
 import { BoxPool } from '../core/geometry';
 import { forEachTile } from './Grid';
+import type { BlockRect } from './Props';
 
 export type SpawnPoint = { x: number; y: number };
 
@@ -34,6 +35,11 @@ export class Level {
   readonly wallDecor = new Map<number, WallDecor>();
   /** Tiles (index x + y·width) of cave halls, whose floor is laid with patches of cave ground. */
   readonly caveFloor = new Set<number>();
+  /**
+   * Obstacle tiles that block less than the whole tile (a prop blocks only a strip at its foot), by tile index,
+   * in pixels from the tile's top-left. Obstacles without an entry block the whole tile.
+   */
+  readonly blockBoxes = new Map<number, BlockRect>();
   /** Top-left tiles of 2×2 pits (each is four Hole tiles drawn as one framed pit). */
   readonly pits: Array<{ x: number; y: number }> = [];
 
@@ -179,10 +185,20 @@ export class Level {
     return result;
   }
 
-  /** Adds the collision box of one tile, if it blocks; a wall with floor north of it lets feet sink in. */
+  /**
+   * Adds the collision box of one tile, if it blocks: a wall with floor north of it lets feet sink in, and
+   * a prop blocks only the strip at its foot.
+   */
   private readonly addTileClip = (tx: number, ty: number): void => {
     const tile = this.getTile(tx, ty);
     if (tile && tile.passable) return;
+    const part = tile?.type === TileType.Obstacle ? this.blockBoxes.get(tx + ty * this.width) : undefined;
+    if (part) {
+      if (part.x1 > part.x0 && part.y1 > part.y0) {
+        this.clipBoxes.push(this.clipPool.between(tx * TILE_WIDTH + part.x0, ty * TILE_HEIGHT + part.y0, tx * TILE_WIDTH + part.x1, ty * TILE_HEIGHT + part.y1));
+      }
+      return;
+    }
     const sink = isWallType(tile) && this.getTile(tx, ty - 1)?.passable ? WALL_SINK : 0;
     this.clipBoxes.push(this.clipPool.between(
       tx * TILE_WIDTH, ty * TILE_HEIGHT + sink,

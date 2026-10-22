@@ -46,7 +46,7 @@ export const DEFAULT_CONFIG: DungeonConfig = {
   corridorW:     2,
   splitDepth:    4,
   pillarChance: 0.45,
-  pitChance:    0.5,
+  pitChance:    0.25,
   enemyDensity:  3,
   torchSpacing:  5,
   hallChance:    0.55,

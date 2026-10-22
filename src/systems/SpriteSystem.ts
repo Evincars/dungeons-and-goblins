@@ -3,6 +3,7 @@ import type { Container } from 'pixi.js';
 import { q, world } from '../world';
 import { frameTexture } from '../render/Sheets';
 import { createAnimatedVisual, setVisualFrame } from '../render/AnimatedVisual';
+import { anchorX, characterDef } from '../characters/Characters';
 
 /** Nests crack through this many frames as they lose health. */
 const NEST_CRACK_FRAMES = 3;
@@ -16,8 +17,9 @@ function createSprites(gameLayer: Container): void {
     const sprite = entity.animation
       ? createAnimatedVisual(v.sheet, v.col ?? 0, v.row ?? 0)
       : new Sprite(frameTexture(v.sheet, v.col ?? 0, v.row ?? 0));
-    sprite.anchor.set(0.5, 0.5);
+    sprite.anchor.set(entity.character ? anchorX(characterDef(entity.character.def)) : 0.5, 0.5);
     if (v.scale) sprite.scale.set(v.scale);
+    if (v.rotation) sprite.rotation = v.rotation;
     gameLayer.addChild(sprite);
     world.addComponent(entity, 'sprite', sprite);
   }

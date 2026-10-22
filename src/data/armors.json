@@ -1,0 +1,2874 @@
+{
+  "$comment": "Body armour (icons in /armors). Tune name, value and stats freely.",
+  "items": [
+    {
+      "id": "armor_001",
+      "name": "Gloom Plate",
+      "icon": "armor_001",
+      "src": "/armors/01.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 62,
+      "stats": {
+        "defence": 2,
+        "strength": 5,
+        "mana": 5
+      }
+    },
+    {
+      "id": "armor_002",
+      "name": "Hallowed Plate",
+      "icon": "armor_002",
+      "src": "/armors/02.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 68,
+      "stats": {
+        "defence": 2,
+        "strength": 3,
+        "luck": 4
+      }
+    },
+    {
+      "id": "armor_003",
+      "name": "Queen's Robe",
+      "icon": "armor_003",
+      "src": "/armors/03.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 79,
+      "stats": {
+        "defence": 10,
+        "luck": 1,
+        "mana": 5
+      }
+    },
+    {
+      "id": "armor_004",
+      "name": "Iron Garb",
+      "icon": "armor_004",
+      "src": "/armors/04.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 292,
+      "stats": {
+        "defence": 10,
+        "strength": 4,
+        "stamina": 4
+      }
+    },
+    {
+      "id": "armor_005",
+      "name": "Rusted Mail",
+      "icon": "armor_005",
+      "src": "/armors/05.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 258,
+      "stats": {
+        "defence": 1,
+        "strength": 2
+      }
+    },
+    {
+      "id": "armor_006",
+      "name": "Iron Garb of Ash",
+      "icon": "armor_006",
+      "src": "/armors/06.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 273,
+      "stats": {
+        "defence": 8,
+        "strength": 4,
+        "stamina": 1
+      }
+    },
+    {
+      "id": "armor_007",
+      "name": "Rusted Garb",
+      "icon": "armor_007",
+      "src": "/armors/07.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 116,
+      "stats": {
+        "defence": 8,
+        "luck": 1,
+        "stamina": 2
+      }
+    },
+    {
+      "id": "armor_008",
+      "name": "Jade Mail of Dawn",
+      "icon": "armor_008",
+      "src": "/armors/08.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 184,
+      "stats": {
+        "defence": 4,
+        "mana": 5
+      }
+    },
+    {
+      "id": "armor_009",
+      "name": "Grim Plate",
+      "icon": "armor_009",
+      "src": "/armors/09.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 482,
+      "stats": {
+        "defence": 6,
+        "mana": 5
+      }
+    },
+    {
+      "id": "armor_010",
+      "name": "Hallowed Hauberk",
+      "icon": "armor_010",
+      "src": "/armors/10.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 485,
+      "stats": {
+        "defence": 2
+      }
+    },
+    {
+      "id": "armor_011",
+      "name": "Wyrm Garb",
+      "icon": "armor_011",
+      "src": "/armors/11.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 169,
+      "stats": {
+        "defence": 5,
+        "luck": 2
+      }
+    },
+    {
+      "id": "armor_012",
+      "name": "Pale Plate",
+      "icon": "armor_012",
+      "src": "/armors/12.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 105,
+      "stats": {
+        "defence": 2,
+        "mana": 5,
+        "luck": 5
+      }
+    },
+    {
+      "id": "armor_013",
+      "name": "Ashen Vestments",
+      "icon": "armor_013",
+      "src": "/armors/13.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 285,
+      "stats": {
+        "defence": 4,
+        "mana": 5,
+        "luck": 1
+      }
+    },
+    {
+      "id": "armor_014",
+      "name": "Hallowed Brigandine",
+      "icon": "armor_014",
+      "src": "/armors/14.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 469,
+      "stats": {
+        "defence": 3
+      }
+    },
+    {
+      "id": "armor_015",
+      "name": "Molten Garb",
+      "icon": "armor_015",
+      "src": "/armors/15.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 304,
+      "stats": {
+        "defence": 8,
+        "luck": 2,
+        "mana": 2
+      }
+    },
+    {
+      "id": "armor_016",
+      "name": "Zealot's Mail",
+      "icon": "armor_016",
+      "src": "/armors/16.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 209,
+      "stats": {
+        "defence": 6
+      }
+    },
+    {
+      "id": "armor_017",
+      "name": "Thorn Brigandine",
+      "icon": "armor_017",
+      "src": "/armors/17.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 318,
+      "stats": {
+        "defence": 3
+      }
+    },
+    {
+      "id": "armor_018",
+      "name": "Molten Brigandine",
+      "icon": "armor_018",
+      "src": "/armors/18.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 393,
+      "stats": {
+        "defence": 6
+      }
+    },
+    {
+      "id": "armor_019",
+      "name": "Warden's Plate of Ruin",
+      "icon": "armor_019",
+      "src": "/armors/19.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 141,
+      "stats": {
+        "defence": 4
+      }
+    },
+    {
+      "id": "armor_020",
+      "name": "Jade Vestments of the Moon",
+      "icon": "armor_020",
+      "src": "/armors/20.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 281,
+      "stats": {
+        "defence": 8
+      }
+    },
+    {
+      "id": "armor_021",
+      "name": "Gilded Mail of Despair",
+      "icon": "armor_021",
+      "src": "/armors/21.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 397,
+      "stats": {
+        "defence": 5
+      }
+    },
+    {
+      "id": "armor_022",
+      "name": "Obsidian Hauberk",
+      "icon": "armor_022",
+      "src": "/armors/22.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 113,
+      "stats": {
+        "defence": 8
+      }
+    },
+    {
+      "id": "armor_023",
+      "name": "Shadow Cuirass",
+      "icon": "armor_023",
+      "src": "/armors/23.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 441,
+      "stats": {
+        "defence": 4
+      }
+    },
+    {
+      "id": "armor_024",
+      "name": "Jade Vestments",
+      "icon": "armor_024",
+      "src": "/armors/24.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 358,
+      "stats": {
+        "defence": 10,
+        "mana": 1
+      }
+    },
+    {
+      "id": "armor_025",
+      "name": "Zealot's Plate",
+      "icon": "armor_025",
+      "src": "/armors/25.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 106,
+      "stats": {
+        "defence": 2
+      }
+    },
+    {
+      "id": "armor_026",
+      "name": "Sun Brigandine of Despair",
+      "icon": "armor_026",
+      "src": "/armors/26.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 388,
+      "stats": {
+        "defence": 1
+      }
+    },
+    {
+      "id": "armor_027",
+      "name": "Wyrm Brigandine",
+      "icon": "armor_027",
+      "src": "/armors/27.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 55,
+      "stats": {
+        "defence": 10,
+        "luck": 2,
+        "strength": 4
+      }
+    },
+    {
+      "id": "armor_028",
+      "name": "Bone Plate of the Moon",
+      "icon": "armor_028",
+      "src": "/armors/28.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 86,
+      "stats": {
+        "defence": 2
+      }
+    },
+    {
+      "id": "armor_029",
+      "name": "Shadow Plate of Ash",
+      "icon": "armor_029",
+      "src": "/armors/29.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 225,
+      "stats": {
+        "defence": 8,
+        "stamina": 5,
+        "mana": 3
+      }
+    },
+    {
+      "id": "armor_030",
+      "name": "Zealot's Garb of Dawn",
+      "icon": "armor_030",
+      "src": "/armors/30.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 330,
+      "stats": {
+        "defence": 3,
+        "strength": 1
+      }
+    },
+    {
+      "id": "armor_031",
+      "name": "Molten Robe",
+      "icon": "armor_031",
+      "src": "/armors/31.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 152,
+      "stats": {
+        "defence": 3,
+        "intelligence": 4
+      }
+    },
+    {
+      "id": "armor_032",
+      "name": "Ember Brigandine",
+      "icon": "armor_032",
+      "src": "/armors/32.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 409,
+      "stats": {
+        "defence": 8,
+        "strength": 2,
+        "luck": 4
+      }
+    },
+    {
+      "id": "armor_033",
+      "name": "Hollow Hauberk",
+      "icon": "armor_033",
+      "src": "/armors/33.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 251,
+      "stats": {
+        "defence": 9,
+        "stamina": 2
+      }
+    },
+    {
+      "id": "armor_034",
+      "name": "Sun Robe",
+      "icon": "armor_034",
+      "src": "/armors/34.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 494,
+      "stats": {
+        "defence": 6
+      }
+    },
+    {
+      "id": "armor_035",
+      "name": "Pale Cuirass",
+      "icon": "armor_035",
+      "src": "/armors/35.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 378,
+      "stats": {
+        "defence": 9
+      }
+    },
+    {
+      "id": "armor_036",
+      "name": "Shadow Cuirass",
+      "icon": "armor_036",
+      "src": "/armors/36.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 336,
+      "stats": {
+        "defence": 6,
+        "intelligence": 5,
+        "mana": 1
+      }
+    },
+    {
+      "id": "armor_037",
+      "name": "Iron Brigandine of Valor",
+      "icon": "armor_037",
+      "src": "/armors/37.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 101,
+      "stats": {
+        "defence": 4
+      }
+    },
+    {
+      "id": "armor_038",
+      "name": "Queen's Cuirass",
+      "icon": "armor_038",
+      "src": "/armors/38.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 230,
+      "stats": {
+        "defence": 4,
+        "luck": 2
+      }
+    },
+    {
+      "id": "armor_039",
+      "name": "Ember Brigandine",
+      "icon": "armor_039",
+      "src": "/armors/39.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 251,
+      "stats": {
+        "defence": 5,
+        "mana": 1
+      }
+    },
+    {
+      "id": "armor_040",
+      "name": "Iron Garb",
+      "icon": "armor_040",
+      "src": "/armors/40.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 255,
+      "stats": {
+        "defence": 4
+      }
+    },
+    {
+      "id": "armor_041",
+      "name": "Sun Garb",
+      "icon": "armor_041",
+      "src": "/armors/41.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 228,
+      "stats": {
+        "defence": 2,
+        "luck": 1
+      }
+    },
+    {
+      "id": "armor_042",
+      "name": "Runed Cuirass",
+      "icon": "armor_042",
+      "src": "/armors/42.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 222,
+      "stats": {
+        "defence": 9,
+        "strength": 2,
+        "luck": 2
+      }
+    },
+    {
+      "id": "armor_043",
+      "name": "Warden's Hauberk",
+      "icon": "armor_043",
+      "src": "/armors/43.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 371,
+      "stats": {
+        "defence": 10,
+        "mana": 1,
+        "stamina": 4
+      }
+    },
+    {
+      "id": "armor_044",
+      "name": "Crimson Robe",
+      "icon": "armor_044",
+      "src": "/armors/44.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 475,
+      "stats": {
+        "defence": 10,
+        "stamina": 1
+      }
+    },
+    {
+      "id": "armor_045",
+      "name": "Gilded Garb",
+      "icon": "armor_045",
+      "src": "/armors/45.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 350,
+      "stats": {
+        "defence": 3,
+        "intelligence": 4
+      }
+    },
+    {
+      "id": "armor_046",
+      "name": "Sun Cuirass",
+      "icon": "armor_046",
+      "src": "/armors/46.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 334,
+      "stats": {
+        "defence": 6,
+        "stamina": 1
+      }
+    },
+    {
+      "id": "armor_047",
+      "name": "Kingslayer Cuirass",
+      "icon": "armor_047",
+      "src": "/armors/47.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 75,
+      "stats": {
+        "defence": 10,
+        "mana": 4
+      }
+    },
+    {
+      "id": "armor_048",
+      "name": "Jade Plate of Embers",
+      "icon": "armor_048",
+      "src": "/armors/48.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 438,
+      "stats": {
+        "defence": 4
+      }
+    },
+    {
+      "id": "armor_049",
+      "name": "Ember Mail",
+      "icon": "armor_049",
+      "src": "/armors/49.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 471,
+      "stats": {
+        "defence": 6,
+        "stamina": 3
+      }
+    },
+    {
+      "id": "armor_050",
+      "name": "Blighted Garb of Whispers",
+      "icon": "armor_050",
+      "src": "/armors/50.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 481,
+      "stats": {
+        "defence": 1
+      }
+    },
+    {
+      "id": "armor_051",
+      "name": "Storm Robe",
+      "icon": "armor_051",
+      "src": "/armors/51.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 299,
+      "stats": {
+        "defence": 6,
+        "strength": 3,
+        "intelligence": 4
+      }
+    },
+    {
+      "id": "armor_052",
+      "name": "Silent Robe of the Moon",
+      "icon": "armor_052",
+      "src": "/armors/52.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 231,
+      "stats": {
+        "defence": 4,
+        "strength": 3,
+        "luck": 5
+      }
+    },
+    {
+      "id": "armor_053",
+      "name": "Silent Hauberk of Embers",
+      "icon": "armor_053",
+      "src": "/armors/53.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 138,
+      "stats": {
+        "defence": 8,
+        "strength": 5
+      }
+    },
+    {
+      "id": "armor_054",
+      "name": "Ashen Plate",
+      "icon": "armor_054",
+      "src": "/armors/54.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 148,
+      "stats": {
+        "defence": 8,
+        "luck": 3
+      }
+    },
+    {
+      "id": "armor_055",
+      "name": "Molten Brigandine of Dawn",
+      "icon": "armor_055",
+      "src": "/armors/55.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 313,
+      "stats": {
+        "defence": 9
+      }
+    },
+    {
+      "id": "armor_056",
+      "name": "Thorn Vestments",
+      "icon": "armor_056",
+      "src": "/armors/56.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 73,
+      "stats": {
+        "defence": 4,
+        "luck": 3
+      }
+    },
+    {
+      "id": "armor_057",
+      "name": "Bone Brigandine of Dawn",
+      "icon": "armor_057",
+      "src": "/armors/57.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 273,
+      "stats": {
+        "defence": 5,
+        "stamina": 3
+      }
+    },
+    {
+      "id": "armor_058",
+      "name": "Warden's Hauberk",
+      "icon": "armor_058",
+      "src": "/armors/58.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 448,
+      "stats": {
+        "defence": 1,
+        "strength": 4
+      }
+    },
+    {
+      "id": "armor_059",
+      "name": "Sun Vestments of Embers",
+      "icon": "armor_059",
+      "src": "/armors/59.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 214,
+      "stats": {
+        "defence": 1,
+        "strength": 3,
+        "intelligence": 2
+      }
+    },
+    {
+      "id": "armor_060",
+      "name": "Pale Plate",
+      "icon": "armor_060",
+      "src": "/armors/60.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 203,
+      "stats": {
+        "defence": 7,
+        "luck": 2,
+        "mana": 5
+      }
+    },
+    {
+      "id": "armor_061",
+      "name": "Blighted Cuirass",
+      "icon": "armor_061",
+      "src": "/armors/61.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 65,
+      "stats": {
+        "defence": 4,
+        "intelligence": 3,
+        "strength": 5
+      }
+    },
+    {
+      "id": "armor_062",
+      "name": "Crimson Hauberk of the Crypt",
+      "icon": "armor_062",
+      "src": "/armors/62.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 144,
+      "stats": {
+        "defence": 4,
+        "stamina": 2,
+        "luck": 1
+      }
+    },
+    {
+      "id": "armor_063",
+      "name": "Hallowed Brigandine",
+      "icon": "armor_063",
+      "src": "/armors/63.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 104,
+      "stats": {
+        "defence": 10,
+        "strength": 1
+      }
+    },
+    {
+      "id": "armor_064",
+      "name": "Iron Mail",
+      "icon": "armor_064",
+      "src": "/armors/64.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 483,
+      "stats": {
+        "defence": 2,
+        "strength": 1,
+        "luck": 3
+      }
+    },
+    {
+      "id": "armor_065",
+      "name": "Night Cuirass of the Crypt",
+      "icon": "armor_065",
+      "src": "/armors/65.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 477,
+      "stats": {
+        "defence": 7,
+        "stamina": 2
+      }
+    },
+    {
+      "id": "armor_066",
+      "name": "Hallowed Cuirass",
+      "icon": "armor_066",
+      "src": "/armors/66.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 384,
+      "stats": {
+        "defence": 4,
+        "strength": 1
+      }
+    },
+    {
+      "id": "armor_067",
+      "name": "Iron Plate of Woe",
+      "icon": "armor_067",
+      "src": "/armors/67.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 452,
+      "stats": {
+        "defence": 6,
+        "mana": 5,
+        "luck": 1
+      }
+    },
+    {
+      "id": "armor_068",
+      "name": "Vile Cuirass of Woe",
+      "icon": "armor_068",
+      "src": "/armors/68.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 395,
+      "stats": {
+        "defence": 10,
+        "strength": 1
+      }
+    },
+    {
+      "id": "armor_069",
+      "name": "Gilded Brigandine",
+      "icon": "armor_069",
+      "src": "/armors/69.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 478,
+      "stats": {
+        "defence": 9
+      }
+    },
+    {
+      "id": "armor_070",
+      "name": "Night Mail",
+      "icon": "armor_070",
+      "src": "/armors/70.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 239,
+      "stats": {
+        "defence": 7,
+        "luck": 3,
+        "mana": 5
+      }
+    },
+    {
+      "id": "armor_071",
+      "name": "Jade Cuirass of the Goblin King",
+      "icon": "armor_071",
+      "src": "/armors/71.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 220,
+      "stats": {
+        "defence": 2,
+        "mana": 1
+      }
+    },
+    {
+      "id": "armor_072",
+      "name": "Dread Hauberk of Despair",
+      "icon": "armor_072",
+      "src": "/armors/72.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 457,
+      "stats": {
+        "defence": 1
+      }
+    },
+    {
+      "id": "armor_073",
+      "name": "Lunar Mail",
+      "icon": "armor_073",
+      "src": "/armors/73.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 470,
+      "stats": {
+        "defence": 6,
+        "strength": 3
+      }
+    },
+    {
+      "id": "armor_074",
+      "name": "Silent Hauberk",
+      "icon": "armor_074",
+      "src": "/armors/74.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 186,
+      "stats": {
+        "defence": 1,
+        "strength": 5,
+        "intelligence": 5
+      }
+    },
+    {
+      "id": "armor_075",
+      "name": "Umbral Plate",
+      "icon": "armor_075",
+      "src": "/armors/75.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 232,
+      "stats": {
+        "defence": 9,
+        "strength": 1
+      }
+    },
+    {
+      "id": "armor_076",
+      "name": "Night Vestments of Woe",
+      "icon": "armor_076",
+      "src": "/armors/76.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 149,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "armor_077",
+      "name": "Lunar Mail",
+      "icon": "armor_077",
+      "src": "/armors/77.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 334,
+      "stats": {
+        "defence": 6,
+        "mana": 3,
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "armor_078",
+      "name": "Obsidian Hauberk",
+      "icon": "armor_078",
+      "src": "/armors/78.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 268,
+      "stats": {
+        "defence": 8
+      }
+    },
+    {
+      "id": "armor_079",
+      "name": "Hallowed Robe",
+      "icon": "armor_079",
+      "src": "/armors/79.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 198,
+      "stats": {
+        "defence": 8,
+        "strength": 1,
+        "luck": 2
+      }
+    },
+    {
+      "id": "armor_080",
+      "name": "Umbral Plate of the Crypt",
+      "icon": "armor_080",
+      "src": "/armors/80.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 498,
+      "stats": {
+        "defence": 8,
+        "luck": 1,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "armor_081",
+      "name": "Thorn Robe of the Moon",
+      "icon": "armor_081",
+      "src": "/armors/81.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 249,
+      "stats": {
+        "defence": 6,
+        "intelligence": 2,
+        "stamina": 1
+      }
+    },
+    {
+      "id": "armor_082",
+      "name": "Hallowed Hauberk of Dawn",
+      "icon": "armor_082",
+      "src": "/armors/82.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 446,
+      "stats": {
+        "defence": 4
+      }
+    },
+    {
+      "id": "armor_083",
+      "name": "Storm Cuirass",
+      "icon": "armor_083",
+      "src": "/armors/83.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 76,
+      "stats": {
+        "defence": 2
+      }
+    },
+    {
+      "id": "armor_084",
+      "name": "Obsidian Brigandine of the Crypt",
+      "icon": "armor_084",
+      "src": "/armors/84.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 299,
+      "stats": {
+        "defence": 9
+      }
+    },
+    {
+      "id": "armor_085",
+      "name": "Zealot's Mail",
+      "icon": "armor_085",
+      "src": "/armors/85.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 326,
+      "stats": {
+        "defence": 9,
+        "luck": 2
+      }
+    },
+    {
+      "id": "armor_086",
+      "name": "Shadow Plate",
+      "icon": "armor_086",
+      "src": "/armors/86.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 113,
+      "stats": {
+        "defence": 5,
+        "strength": 4
+      }
+    },
+    {
+      "id": "armor_087",
+      "name": "Grim Brigandine",
+      "icon": "armor_087",
+      "src": "/armors/87.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 196,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "armor_088",
+      "name": "Shadow Garb",
+      "icon": "armor_088",
+      "src": "/armors/88.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 190,
+      "stats": {
+        "defence": 10,
+        "strength": 4
+      }
+    },
+    {
+      "id": "armor_089",
+      "name": "Runed Vestments",
+      "icon": "armor_089",
+      "src": "/armors/89.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 128,
+      "stats": {
+        "defence": 2,
+        "strength": 1,
+        "mana": 5
+      }
+    },
+    {
+      "id": "armor_090",
+      "name": "Zealot's Hauberk of Thorns",
+      "icon": "armor_090",
+      "src": "/armors/90.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 223,
+      "stats": {
+        "defence": 9,
+        "intelligence": 4,
+        "mana": 2
+      }
+    },
+    {
+      "id": "armor_091",
+      "name": "Ember Garb",
+      "icon": "armor_091",
+      "src": "/armors/91.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 305,
+      "stats": {
+        "defence": 6,
+        "stamina": 5,
+        "strength": 1
+      }
+    },
+    {
+      "id": "armor_092",
+      "name": "Molten Cuirass of the Deep",
+      "icon": "armor_092",
+      "src": "/armors/92.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 241,
+      "stats": {
+        "defence": 1,
+        "strength": 1,
+        "intelligence": 5
+      }
+    },
+    {
+      "id": "armor_093",
+      "name": "Zealot's Mail",
+      "icon": "armor_093",
+      "src": "/armors/93.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 218,
+      "stats": {
+        "defence": 3,
+        "luck": 3,
+        "strength": 3
+      }
+    },
+    {
+      "id": "armor_094",
+      "name": "Night Mail of Whispers",
+      "icon": "armor_094",
+      "src": "/armors/94.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 265,
+      "stats": {
+        "defence": 5
+      }
+    },
+    {
+      "id": "armor_095",
+      "name": "Shadow Plate",
+      "icon": "armor_095",
+      "src": "/armors/95.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 204,
+      "stats": {
+        "defence": 2,
+        "strength": 4
+      }
+    },
+    {
+      "id": "armor_096",
+      "name": "Sun Mail",
+      "icon": "armor_096",
+      "src": "/armors/96.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 416,
+      "stats": {
+        "defence": 5,
+        "mana": 5,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "armor_097",
+      "name": "Kingslayer Robe of Valor",
+      "icon": "armor_097",
+      "src": "/armors/97.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 85,
+      "stats": {
+        "defence": 7,
+        "strength": 2
+      }
+    },
+    {
+      "id": "armor_098",
+      "name": "Pale Robe",
+      "icon": "armor_098",
+      "src": "/armors/98.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 186,
+      "stats": {
+        "defence": 1,
+        "luck": 4,
+        "strength": 4
+      }
+    },
+    {
+      "id": "armor_099",
+      "name": "Storm Mail",
+      "icon": "armor_099",
+      "src": "/armors/99.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 174,
+      "stats": {
+        "defence": 9,
+        "luck": 3
+      }
+    },
+    {
+      "id": "armor_100",
+      "name": "Warden's Plate",
+      "icon": "armor_100",
+      "src": "/armors/100.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 60,
+      "stats": {
+        "defence": 9,
+        "intelligence": 5
+      }
+    },
+    {
+      "id": "armor_101",
+      "name": "Pale Vestments",
+      "icon": "armor_101",
+      "src": "/armors/101.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 390,
+      "stats": {
+        "defence": 7,
+        "mana": 5,
+        "intelligence": 5
+      }
+    },
+    {
+      "id": "armor_102",
+      "name": "Runed Mail of Embers",
+      "icon": "armor_102",
+      "src": "/armors/102.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 213,
+      "stats": {
+        "defence": 3,
+        "luck": 3,
+        "strength": 2
+      }
+    },
+    {
+      "id": "armor_103",
+      "name": "Jade Cuirass",
+      "icon": "armor_103",
+      "src": "/armors/103.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 322,
+      "stats": {
+        "defence": 4
+      }
+    },
+    {
+      "id": "armor_104",
+      "name": "Crimson Robe of the Goblin King",
+      "icon": "armor_104",
+      "src": "/armors/104.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 86,
+      "stats": {
+        "defence": 3
+      }
+    },
+    {
+      "id": "armor_105",
+      "name": "Hallowed Plate of the Crypt",
+      "icon": "armor_105",
+      "src": "/armors/105.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 483,
+      "stats": {
+        "defence": 1
+      }
+    },
+    {
+      "id": "armor_106",
+      "name": "Ashen Plate",
+      "icon": "armor_106",
+      "src": "/armors/106.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 291,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "armor_107",
+      "name": "Shadow Hauberk",
+      "icon": "armor_107",
+      "src": "/armors/107.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 361,
+      "stats": {
+        "defence": 5,
+        "luck": 3,
+        "stamina": 1
+      }
+    },
+    {
+      "id": "armor_108",
+      "name": "Grim Robe of Storms",
+      "icon": "armor_108",
+      "src": "/armors/108.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 109,
+      "stats": {
+        "defence": 10
+      }
+    },
+    {
+      "id": "armor_109",
+      "name": "Sun Garb",
+      "icon": "armor_109",
+      "src": "/armors/109.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 324,
+      "stats": {
+        "defence": 8,
+        "stamina": 5
+      }
+    },
+    {
+      "id": "armor_110",
+      "name": "Lunar Hauberk of Ash",
+      "icon": "armor_110",
+      "src": "/armors/110.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 158,
+      "stats": {
+        "defence": 3,
+        "stamina": 5,
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "armor_111",
+      "name": "Ember Plate",
+      "icon": "armor_111",
+      "src": "/armors/111.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 230,
+      "stats": {
+        "defence": 9
+      }
+    },
+    {
+      "id": "armor_112",
+      "name": "Wyrm Robe",
+      "icon": "armor_112",
+      "src": "/armors/112.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 154,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "armor_113",
+      "name": "Ashen Garb of Storms",
+      "icon": "armor_113",
+      "src": "/armors/113.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 330,
+      "stats": {
+        "defence": 2
+      }
+    },
+    {
+      "id": "armor_114",
+      "name": "Blighted Robe",
+      "icon": "armor_114",
+      "src": "/armors/114.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 234,
+      "stats": {
+        "defence": 5
+      }
+    },
+    {
+      "id": "armor_115",
+      "name": "Shadow Garb",
+      "icon": "armor_115",
+      "src": "/armors/115.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 463,
+      "stats": {
+        "defence": 2,
+        "luck": 5
+      }
+    },
+    {
+      "id": "armor_116",
+      "name": "Sun Vestments",
+      "icon": "armor_116",
+      "src": "/armors/116.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 288,
+      "stats": {
+        "defence": 6,
+        "mana": 5,
+        "luck": 5
+      }
+    },
+    {
+      "id": "armor_117",
+      "name": "Ember Robe",
+      "icon": "armor_117",
+      "src": "/armors/117.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 106,
+      "stats": {
+        "defence": 6,
+        "stamina": 3,
+        "strength": 2
+      }
+    },
+    {
+      "id": "armor_118",
+      "name": "Lunar Mail of Valor",
+      "icon": "armor_118",
+      "src": "/armors/118.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 81,
+      "stats": {
+        "defence": 9,
+        "stamina": 4,
+        "strength": 1
+      }
+    },
+    {
+      "id": "armor_119",
+      "name": "Ember Brigandine of Storms",
+      "icon": "armor_119",
+      "src": "/armors/119.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 257,
+      "stats": {
+        "defence": 8,
+        "strength": 5,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "armor_120",
+      "name": "Dread Robe of the Goblin King",
+      "icon": "armor_120",
+      "src": "/armors/120.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 284,
+      "stats": {
+        "defence": 3,
+        "mana": 5,
+        "strength": 3
+      }
+    },
+    {
+      "id": "armor_121",
+      "name": "Bone Robe",
+      "icon": "armor_121",
+      "src": "/armors/121.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 156,
+      "stats": {
+        "defence": 5,
+        "luck": 1,
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "armor_122",
+      "name": "Gloom Cuirass",
+      "icon": "armor_122",
+      "src": "/armors/122.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 348,
+      "stats": {
+        "defence": 8
+      }
+    },
+    {
+      "id": "armor_123",
+      "name": "Umbral Mail of Ash",
+      "icon": "armor_123",
+      "src": "/armors/123.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 202,
+      "stats": {
+        "defence": 6
+      }
+    },
+    {
+      "id": "armor_124",
+      "name": "Shadow Cuirass",
+      "icon": "armor_124",
+      "src": "/armors/124.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 231,
+      "stats": {
+        "defence": 10
+      }
+    },
+    {
+      "id": "armor_125",
+      "name": "Shadow Robe",
+      "icon": "armor_125",
+      "src": "/armors/125.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 284,
+      "stats": {
+        "defence": 9,
+        "intelligence": 2
+      }
+    },
+    {
+      "id": "armor_126",
+      "name": "Grim Mail of Embers",
+      "icon": "armor_126",
+      "src": "/armors/126.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 86,
+      "stats": {
+        "defence": 5
+      }
+    },
+    {
+      "id": "armor_127",
+      "name": "Storm Hauberk of Storms",
+      "icon": "armor_127",
+      "src": "/armors/127.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 331,
+      "stats": {
+        "defence": 5,
+        "luck": 3,
+        "strength": 3
+      }
+    },
+    {
+      "id": "armor_128",
+      "name": "Hollow Robe of Woe",
+      "icon": "armor_128",
+      "src": "/armors/128.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 83,
+      "stats": {
+        "defence": 4,
+        "mana": 3,
+        "strength": 2
+      }
+    },
+    {
+      "id": "armor_129",
+      "name": "Molten Cuirass",
+      "icon": "armor_129",
+      "src": "/armors/129.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 185,
+      "stats": {
+        "defence": 6,
+        "stamina": 3
+      }
+    },
+    {
+      "id": "armor_130",
+      "name": "Ember Vestments",
+      "icon": "armor_130",
+      "src": "/armors/130.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 374,
+      "stats": {
+        "defence": 3,
+        "intelligence": 3,
+        "mana": 2
+      }
+    },
+    {
+      "id": "armor_131",
+      "name": "Bone Cuirass",
+      "icon": "armor_131",
+      "src": "/armors/131.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 398,
+      "stats": {
+        "defence": 5,
+        "stamina": 5
+      }
+    },
+    {
+      "id": "armor_132",
+      "name": "Storm Garb",
+      "icon": "armor_132",
+      "src": "/armors/132.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 246,
+      "stats": {
+        "defence": 6,
+        "intelligence": 4
+      }
+    },
+    {
+      "id": "armor_133",
+      "name": "Jade Robe",
+      "icon": "armor_133",
+      "src": "/armors/133.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 87,
+      "stats": {
+        "defence": 9,
+        "stamina": 5,
+        "intelligence": 5
+      }
+    },
+    {
+      "id": "armor_134",
+      "name": "Lunar Robe",
+      "icon": "armor_134",
+      "src": "/armors/134.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 266,
+      "stats": {
+        "defence": 7,
+        "strength": 3,
+        "luck": 1
+      }
+    },
+    {
+      "id": "armor_135",
+      "name": "Kingslayer Hauberk of Ash",
+      "icon": "armor_135",
+      "src": "/armors/135.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 384,
+      "stats": {
+        "defence": 5,
+        "stamina": 3
+      }
+    },
+    {
+      "id": "armor_136",
+      "name": "Blighted Brigandine",
+      "icon": "armor_136",
+      "src": "/armors/136.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 193,
+      "stats": {
+        "defence": 7,
+        "luck": 2
+      }
+    },
+    {
+      "id": "armor_137",
+      "name": "Blighted Plate of Dawn",
+      "icon": "armor_137",
+      "src": "/armors/137.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 218,
+      "stats": {
+        "defence": 8,
+        "mana": 4,
+        "stamina": 4
+      }
+    },
+    {
+      "id": "armor_138",
+      "name": "Jade Robe",
+      "icon": "armor_138",
+      "src": "/armors/138.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 278,
+      "stats": {
+        "defence": 2,
+        "stamina": 4,
+        "luck": 4
+      }
+    },
+    {
+      "id": "armor_139",
+      "name": "Pale Robe",
+      "icon": "armor_139",
+      "src": "/armors/139.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 169,
+      "stats": {
+        "defence": 9,
+        "strength": 3,
+        "luck": 3
+      }
+    },
+    {
+      "id": "armor_140",
+      "name": "Hollow Vestments",
+      "icon": "armor_140",
+      "src": "/armors/140.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 222,
+      "stats": {
+        "defence": 5,
+        "stamina": 1,
+        "luck": 5
+      }
+    },
+    {
+      "id": "armor_141",
+      "name": "Shadow Vestments of the Deep",
+      "icon": "armor_141",
+      "src": "/armors/141.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 76,
+      "stats": {
+        "defence": 5,
+        "intelligence": 3,
+        "luck": 4
+      }
+    },
+    {
+      "id": "armor_142",
+      "name": "Thorn Cuirass",
+      "icon": "armor_142",
+      "src": "/armors/142.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 483,
+      "stats": {
+        "defence": 1,
+        "intelligence": 5,
+        "stamina": 3
+      }
+    },
+    {
+      "id": "armor_143",
+      "name": "Ashen Garb",
+      "icon": "armor_143",
+      "src": "/armors/143.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 315,
+      "stats": {
+        "defence": 2,
+        "stamina": 1
+      }
+    },
+    {
+      "id": "armor_144",
+      "name": "Blighted Garb",
+      "icon": "armor_144",
+      "src": "/armors/144.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 378,
+      "stats": {
+        "defence": 6,
+        "strength": 5
+      }
+    },
+    {
+      "id": "armor_145",
+      "name": "Dread Cuirass",
+      "icon": "armor_145",
+      "src": "/armors/145.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 257,
+      "stats": {
+        "defence": 5,
+        "mana": 5,
+        "intelligence": 5
+      }
+    },
+    {
+      "id": "armor_146",
+      "name": "Gloom Hauberk",
+      "icon": "armor_146",
+      "src": "/armors/146.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 358,
+      "stats": {
+        "defence": 4
+      }
+    },
+    {
+      "id": "armor_147",
+      "name": "Iron Robe of Whispers",
+      "icon": "armor_147",
+      "src": "/armors/147.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 396,
+      "stats": {
+        "defence": 9,
+        "luck": 1
+      }
+    },
+    {
+      "id": "armor_148",
+      "name": "Warden's Vestments",
+      "icon": "armor_148",
+      "src": "/armors/148.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 113,
+      "stats": {
+        "defence": 1,
+        "intelligence": 2,
+        "stamina": 4
+      }
+    },
+    {
+      "id": "armor_149",
+      "name": "Pale Vestments",
+      "icon": "armor_149",
+      "src": "/armors/149.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 449,
+      "stats": {
+        "defence": 2,
+        "intelligence": 4
+      }
+    },
+    {
+      "id": "armor_150",
+      "name": "Gloom Vestments",
+      "icon": "armor_150",
+      "src": "/armors/150.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 445,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "armor_151",
+      "name": "Wyrm Garb",
+      "icon": "armor_151",
+      "src": "/armors/151.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 127,
+      "stats": {
+        "defence": 10,
+        "mana": 1
+      }
+    },
+    {
+      "id": "armor_152",
+      "name": "Crimson Cuirass of the Fallen",
+      "icon": "armor_152",
+      "src": "/armors/152.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 187,
+      "stats": {
+        "defence": 6
+      }
+    },
+    {
+      "id": "armor_153",
+      "name": "Kingslayer Garb",
+      "icon": "armor_153",
+      "src": "/armors/153.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 454,
+      "stats": {
+        "defence": 9,
+        "strength": 1
+      }
+    },
+    {
+      "id": "armor_154",
+      "name": "Grim Brigandine",
+      "icon": "armor_154",
+      "src": "/armors/154.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 383,
+      "stats": {
+        "defence": 10
+      }
+    },
+    {
+      "id": "armor_155",
+      "name": "Rusted Brigandine",
+      "icon": "armor_155",
+      "src": "/armors/155.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 471,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "armor_156",
+      "name": "Jade Cuirass",
+      "icon": "armor_156",
+      "src": "/armors/156.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 352,
+      "stats": {
+        "defence": 8
+      }
+    },
+    {
+      "id": "armor_157",
+      "name": "Queen's Robe",
+      "icon": "armor_157",
+      "src": "/armors/157.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 375,
+      "stats": {
+        "defence": 3,
+        "mana": 3,
+        "stamina": 3
+      }
+    },
+    {
+      "id": "armor_158",
+      "name": "Crimson Mail of Storms",
+      "icon": "armor_158",
+      "src": "/armors/158.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 291,
+      "stats": {
+        "defence": 5,
+        "stamina": 5,
+        "mana": 5
+      }
+    },
+    {
+      "id": "armor_159",
+      "name": "Zealot's Garb",
+      "icon": "armor_159",
+      "src": "/armors/159.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 214,
+      "stats": {
+        "defence": 9,
+        "strength": 3,
+        "stamina": 3
+      }
+    },
+    {
+      "id": "armor_160",
+      "name": "Vile Brigandine",
+      "icon": "armor_160",
+      "src": "/armors/160.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 425,
+      "stats": {
+        "defence": 3,
+        "strength": 3,
+        "mana": 4
+      }
+    },
+    {
+      "id": "armor_161",
+      "name": "Zealot's Mail",
+      "icon": "armor_161",
+      "src": "/armors/161.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 229,
+      "stats": {
+        "defence": 10
+      }
+    },
+    {
+      "id": "armor_162",
+      "name": "Hollow Garb",
+      "icon": "armor_162",
+      "src": "/armors/162.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 308,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "armor_163",
+      "name": "Pale Cuirass",
+      "icon": "armor_163",
+      "src": "/armors/163.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 115,
+      "stats": {
+        "defence": 6,
+        "stamina": 3
+      }
+    },
+    {
+      "id": "armor_164",
+      "name": "Jade Brigandine of the Fallen",
+      "icon": "armor_164",
+      "src": "/armors/164.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 145,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "armor_165",
+      "name": "Molten Cuirass",
+      "icon": "armor_165",
+      "src": "/armors/165.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 142,
+      "stats": {
+        "defence": 5,
+        "intelligence": 5
+      }
+    },
+    {
+      "id": "armor_166",
+      "name": "Thorn Brigandine",
+      "icon": "armor_166",
+      "src": "/armors/166.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 182,
+      "stats": {
+        "defence": 3,
+        "stamina": 4
+      }
+    },
+    {
+      "id": "armor_167",
+      "name": "Pale Plate",
+      "icon": "armor_167",
+      "src": "/armors/167.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 484,
+      "stats": {
+        "defence": 3
+      }
+    },
+    {
+      "id": "armor_168",
+      "name": "Umbral Cuirass",
+      "icon": "armor_168",
+      "src": "/armors/168.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 165,
+      "stats": {
+        "defence": 1,
+        "intelligence": 3,
+        "strength": 5
+      }
+    },
+    {
+      "id": "armor_169",
+      "name": "Crimson Mail of Valor",
+      "icon": "armor_169",
+      "src": "/armors/169.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 68,
+      "stats": {
+        "defence": 2,
+        "mana": 1
+      }
+    },
+    {
+      "id": "armor_170",
+      "name": "Runed Garb",
+      "icon": "armor_170",
+      "src": "/armors/170.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 348,
+      "stats": {
+        "defence": 3,
+        "stamina": 4,
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "armor_171",
+      "name": "Kingslayer Vestments of the Fallen",
+      "icon": "armor_171",
+      "src": "/armors/171.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 249,
+      "stats": {
+        "defence": 7,
+        "stamina": 4
+      }
+    },
+    {
+      "id": "armor_172",
+      "name": "Iron Hauberk",
+      "icon": "armor_172",
+      "src": "/armors/172.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 154,
+      "stats": {
+        "defence": 4,
+        "luck": 1,
+        "mana": 1
+      }
+    },
+    {
+      "id": "armor_173",
+      "name": "Hollow Mail",
+      "icon": "armor_173",
+      "src": "/armors/173.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 127,
+      "stats": {
+        "defence": 5
+      }
+    },
+    {
+      "id": "armor_174",
+      "name": "Runed Robe",
+      "icon": "armor_174",
+      "src": "/armors/174.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 279,
+      "stats": {
+        "defence": 6
+      }
+    },
+    {
+      "id": "armor_175",
+      "name": "Molten Brigandine",
+      "icon": "armor_175",
+      "src": "/armors/175.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 143,
+      "stats": {
+        "defence": 6,
+        "mana": 2
+      }
+    },
+    {
+      "id": "armor_176",
+      "name": "Blighted Cuirass of Whispers",
+      "icon": "armor_176",
+      "src": "/armors/176.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 154,
+      "stats": {
+        "defence": 3
+      }
+    },
+    {
+      "id": "armor_177",
+      "name": "Night Hauberk",
+      "icon": "armor_177",
+      "src": "/armors/177.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 299,
+      "stats": {
+        "defence": 2,
+        "intelligence": 5,
+        "strength": 2
+      }
+    },
+    {
+      "id": "armor_178",
+      "name": "Rusted Plate",
+      "icon": "armor_178",
+      "src": "/armors/178.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 89,
+      "stats": {
+        "defence": 5,
+        "luck": 2,
+        "mana": 4
+      }
+    },
+    {
+      "id": "armor_179",
+      "name": "Umbral Robe",
+      "icon": "armor_179",
+      "src": "/armors/179.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 468,
+      "stats": {
+        "defence": 7,
+        "mana": 1
+      }
+    },
+    {
+      "id": "armor_180",
+      "name": "Warden's Robe of Ruin",
+      "icon": "armor_180",
+      "src": "/armors/180.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 167,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "armor_181",
+      "name": "Silent Mail of the Goblin King",
+      "icon": "armor_181",
+      "src": "/armors/181.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 347,
+      "stats": {
+        "defence": 6
+      }
+    },
+    {
+      "id": "armor_182",
+      "name": "Silent Garb of Embers",
+      "icon": "armor_182",
+      "src": "/armors/182.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 234,
+      "stats": {
+        "defence": 8,
+        "mana": 5,
+        "luck": 4
+      }
+    },
+    {
+      "id": "armor_183",
+      "name": "Thorn Hauberk of the Moon",
+      "icon": "armor_183",
+      "src": "/armors/183.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 195,
+      "stats": {
+        "defence": 2,
+        "strength": 4
+      }
+    },
+    {
+      "id": "armor_184",
+      "name": "Pale Mail",
+      "icon": "armor_184",
+      "src": "/armors/184.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 248,
+      "stats": {
+        "defence": 3,
+        "mana": 1,
+        "luck": 2
+      }
+    },
+    {
+      "id": "armor_185",
+      "name": "Zealot's Robe",
+      "icon": "armor_185",
+      "src": "/armors/185.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 323,
+      "stats": {
+        "defence": 8
+      }
+    },
+    {
+      "id": "armor_186",
+      "name": "Warden's Cuirass",
+      "icon": "armor_186",
+      "src": "/armors/186.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 65,
+      "stats": {
+        "defence": 2,
+        "luck": 5,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "armor_187",
+      "name": "Hollow Cuirass",
+      "icon": "armor_187",
+      "src": "/armors/187.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 460,
+      "stats": {
+        "defence": 2,
+        "strength": 2
+      }
+    },
+    {
+      "id": "armor_188",
+      "name": "Dread Garb of Despair",
+      "icon": "armor_188",
+      "src": "/armors/188.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 66,
+      "stats": {
+        "defence": 6,
+        "stamina": 4,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "armor_189",
+      "name": "Runed Robe",
+      "icon": "armor_189",
+      "src": "/armors/189.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 307,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "armor_190",
+      "name": "Molten Brigandine of Whispers",
+      "icon": "armor_190",
+      "src": "/armors/190.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 417,
+      "stats": {
+        "defence": 6,
+        "strength": 1,
+        "mana": 5
+      }
+    },
+    {
+      "id": "armor_191",
+      "name": "Jade Cuirass",
+      "icon": "armor_191",
+      "src": "/armors/191.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 147,
+      "stats": {
+        "defence": 10,
+        "luck": 1,
+        "stamina": 4
+      }
+    },
+    {
+      "id": "armor_192",
+      "name": "Warden's Garb",
+      "icon": "armor_192",
+      "src": "/armors/192.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 450,
+      "stats": {
+        "defence": 9,
+        "mana": 5,
+        "intelligence": 2
+      }
+    },
+    {
+      "id": "armor_193",
+      "name": "Blighted Hauberk",
+      "icon": "armor_193",
+      "src": "/armors/193.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 500,
+      "stats": {
+        "defence": 3
+      }
+    },
+    {
+      "id": "armor_194",
+      "name": "Runed Garb of Whispers",
+      "icon": "armor_194",
+      "src": "/armors/194.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 365,
+      "stats": {
+        "defence": 2,
+        "luck": 2
+      }
+    },
+    {
+      "id": "armor_195",
+      "name": "Jade Brigandine of Despair",
+      "icon": "armor_195",
+      "src": "/armors/195.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 108,
+      "stats": {
+        "defence": 1,
+        "stamina": 4
+      }
+    },
+    {
+      "id": "armor_196",
+      "name": "Ember Plate",
+      "icon": "armor_196",
+      "src": "/armors/196.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 68,
+      "stats": {
+        "defence": 1,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "armor_197",
+      "name": "Blighted Hauberk",
+      "icon": "armor_197",
+      "src": "/armors/197.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 215,
+      "stats": {
+        "defence": 8,
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "armor_198",
+      "name": "Jade Robe of the Crypt",
+      "icon": "armor_198",
+      "src": "/armors/198.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 458,
+      "stats": {
+        "defence": 7,
+        "luck": 3,
+        "intelligence": 4
+      }
+    },
+    {
+      "id": "armor_199",
+      "name": "Sun Cuirass of the Fallen",
+      "icon": "armor_199",
+      "src": "/armors/199.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 355,
+      "stats": {
+        "defence": 5
+      }
+    },
+    {
+      "id": "armor_200",
+      "name": "Dread Vestments",
+      "icon": "armor_200",
+      "src": "/armors/200.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 334,
+      "stats": {
+        "defence": 3,
+        "luck": 1
+      }
+    },
+    {
+      "id": "armor_201",
+      "name": "Umbral Plate",
+      "icon": "armor_201",
+      "src": "/armors/201.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 282,
+      "stats": {
+        "defence": 1
+      }
+    },
+    {
+      "id": "armor_202",
+      "name": "Kingslayer Brigandine",
+      "icon": "armor_202",
+      "src": "/armors/202.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 276,
+      "stats": {
+        "defence": 8,
+        "intelligence": 5
+      }
+    },
+    {
+      "id": "armor_203",
+      "name": "Bone Brigandine",
+      "icon": "armor_203",
+      "src": "/armors/203.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 225,
+      "stats": {
+        "defence": 10,
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "armor_204",
+      "name": "Molten Garb of Embers",
+      "icon": "armor_204",
+      "src": "/armors/204.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 483,
+      "stats": {
+        "defence": 7,
+        "intelligence": 2
+      }
+    },
+    {
+      "id": "armor_205",
+      "name": "Night Garb",
+      "icon": "armor_205",
+      "src": "/armors/205.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 78,
+      "stats": {
+        "defence": 10
+      }
+    },
+    {
+      "id": "armor_206",
+      "name": "Storm Cuirass of Despair",
+      "icon": "armor_206",
+      "src": "/armors/206.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 481,
+      "stats": {
+        "defence": 1
+      }
+    },
+    {
+      "id": "armor_207",
+      "name": "Ember Garb",
+      "icon": "armor_207",
+      "src": "/armors/207.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 229,
+      "stats": {
+        "defence": 1,
+        "strength": 3,
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "armor_208",
+      "name": "Night Mail of the Deep",
+      "icon": "armor_208",
+      "src": "/armors/208.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 379,
+      "stats": {
+        "defence": 4,
+        "luck": 1
+      }
+    },
+    {
+      "id": "armor_209",
+      "name": "Rusted Hauberk",
+      "icon": "armor_209",
+      "src": "/armors/209.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 199,
+      "stats": {
+        "defence": 9
+      }
+    },
+    {
+      "id": "armor_210",
+      "name": "Thorn Cuirass of Despair",
+      "icon": "armor_210",
+      "src": "/armors/210.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 363,
+      "stats": {
+        "defence": 3
+      }
+    },
+    {
+      "id": "armor_211",
+      "name": "Gilded Mail",
+      "icon": "armor_211",
+      "src": "/armors/211.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 330,
+      "stats": {
+        "defence": 6,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "armor_212",
+      "name": "Crimson Hauberk",
+      "icon": "armor_212",
+      "src": "/armors/212.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 138,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "armor_213",
+      "name": "Wyrm Mail of Woe",
+      "icon": "armor_213",
+      "src": "/armors/213.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 61,
+      "stats": {
+        "defence": 9,
+        "mana": 4
+      }
+    },
+    {
+      "id": "armor_214",
+      "name": "Frost Vestments",
+      "icon": "armor_214",
+      "src": "/armors/214.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 246,
+      "stats": {
+        "defence": 1,
+        "stamina": 5
+      }
+    },
+    {
+      "id": "armor_215",
+      "name": "Night Brigandine of the Deep",
+      "icon": "armor_215",
+      "src": "/armors/215.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 56,
+      "stats": {
+        "defence": 3,
+        "strength": 2
+      }
+    },
+    {
+      "id": "armor_216",
+      "name": "Bone Cuirass",
+      "icon": "armor_216",
+      "src": "/armors/216.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 104,
+      "stats": {
+        "defence": 3,
+        "mana": 4
+      }
+    },
+    {
+      "id": "armor_217",
+      "name": "Ashen Garb of Thorns",
+      "icon": "armor_217",
+      "src": "/armors/217.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 432,
+      "stats": {
+        "defence": 1
+      }
+    },
+    {
+      "id": "armor_218",
+      "name": "Wyrm Vestments",
+      "icon": "armor_218",
+      "src": "/armors/218.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 198,
+      "stats": {
+        "defence": 9,
+        "stamina": 5
+      }
+    },
+    {
+      "id": "armor_219",
+      "name": "Blighted Brigandine of the Crypt",
+      "icon": "armor_219",
+      "src": "/armors/219.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 214,
+      "stats": {
+        "defence": 9,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "armor_220",
+      "name": "Hallowed Plate",
+      "icon": "armor_220",
+      "src": "/armors/220.png",
+      "type": "armor",
+      "gear": "armor",
+      "value": 490,
+      "stats": {
+        "defence": 4,
+        "stamina": 1
+      }
+    }
+  ]
+}

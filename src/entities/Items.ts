@@ -10,6 +10,7 @@ export const SLOT_LABELS = {
   legs: 'Legs',
   other1: 'Other 1',
   other2: 'Other 2',
+  ammo: 'Arrows',
 } as const satisfies Record<EquipSlot, string>;
 
 /** How the inventory screen names each stat. */
@@ -31,6 +32,7 @@ const SLOT_GEAR = {
   legs: ['legs'],
   other1: ['trinket'],
   other2: ['trinket'],
+  ammo: ['ammo'],
 } as const satisfies Record<EquipSlot, readonly GearKind[]>;
 
 /** Whether an item can go in an equipment slot. */
@@ -48,24 +50,10 @@ export function statTotals(equipped: Partial<Record<EquipSlot, InventoryItem>>):
   return totals;
 }
 
-/**
- * Item pictures, by `InventoryItem.icon`: weapons and shields from the supplies sheet, armour busts from the
- * wall decor, and the two drawn at load time (there is no boot or ring art).
- */
-export const ITEM_ICONS = [
-  'item_arms_00', // 0 sword
-  'item_arms_11', // 1 long sword
-  'prop_armor_bust2', // 2 helm
-  'prop_armor_bust', // 3 mail
-  'icon_boots', // 4 boots
-  'icon_ring', // 5 ring
-  'item_arms_08', // 6 round wooden shield
-  'item_arms_13', // 7 axe
-  'item_arms_04', // 8 dagger
-  'item_arms_30', // 9 kite shield
-] as const;
+/** The picture shown for an item without one of its own. */
+const FALLBACK_ICON = 'item_arms_00';
 
-/** The texture key of an item's picture (a plain sword when it has none). */
+/** The texture key of an item's picture. */
 export function itemIcon(item: InventoryItem): string {
-  return ITEM_ICONS[item.icon ?? 0] ?? ITEM_ICONS[0];
+  return item.icon ?? FALLBACK_ICON;
 }

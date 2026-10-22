@@ -1,4 +1,4 @@
-import { world, q, Team, isMob } from '../world';
+import { world, q, Team, isTarget } from '../world';
 import type { Entity, Player } from '../world';
 import { sound } from '../audio/SoundPlayer';
 import { createSwordSwingFx } from '../entities/FxFactory';
@@ -73,10 +73,10 @@ function inArc(player: Player, swing: Swing, mob: Entity, mobId: number): boolea
   return (dx * swing.dirX + dy * swing.dirY) / (dist || 1) >= SWORD_STATS.arcCos;
 }
 
-/** Hits every enemy inside the live swing's arc, each once per swing. */
+/** Hits every enemy (and the training dummy) inside the live swing's arc, each once per swing. */
 function resolveSwing(player: Player, swing: Swing): void {
   for (const mob of nearby(player.position.x, player.position.y, swing.range, Sense.mob, struck)) {
-    if (!isMob(mob) || mob.health.current <= 0 || mob.team === Team.Player) continue;
+    if (!isTarget(mob) || mob.health.current <= 0 || mob.team === Team.Player) continue;
     const mobId = world.id(mob);
     if (mobId === undefined || !inArc(player, swing, mob, mobId)) continue;
     swing.hitIds.push(mobId);

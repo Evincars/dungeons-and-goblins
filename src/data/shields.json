@@ -1,0 +1,1761 @@
+{
+  "$comment": "Shields (icons in /shields). Tune name, value and stats freely.",
+  "items": [
+    {
+      "id": "shield_001",
+      "name": "Vile Bulwark",
+      "icon": "shield_001",
+      "src": "/shields/01.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 179,
+      "stats": {
+        "defence": 9
+      }
+    },
+    {
+      "id": "shield_002",
+      "name": "Grim Shield",
+      "icon": "shield_002",
+      "src": "/shields/02.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 41,
+      "stats": {
+        "defence": 4,
+        "stamina": 5
+      }
+    },
+    {
+      "id": "shield_003",
+      "name": "Rusted Ward",
+      "icon": "shield_003",
+      "src": "/shields/03.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 199,
+      "stats": {
+        "defence": 4
+      }
+    },
+    {
+      "id": "shield_004",
+      "name": "Iron Shield",
+      "icon": "shield_004",
+      "src": "/shields/04.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 252,
+      "stats": {
+        "defence": 1,
+        "intelligence": 2
+      }
+    },
+    {
+      "id": "shield_005",
+      "name": "Blighted Buckler of Dawn",
+      "icon": "shield_005",
+      "src": "/shields/05.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 360,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "shield_006",
+      "name": "Jade Buckler",
+      "icon": "shield_006",
+      "src": "/shields/06.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 221,
+      "stats": {
+        "defence": 8
+      }
+    },
+    {
+      "id": "shield_007",
+      "name": "Night Ward",
+      "icon": "shield_007",
+      "src": "/shields/07.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 241,
+      "stats": {
+        "defence": 3
+      }
+    },
+    {
+      "id": "shield_008",
+      "name": "Ember Shield",
+      "icon": "shield_008",
+      "src": "/shields/08.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 241,
+      "stats": {
+        "defence": 6,
+        "mana": 2
+      }
+    },
+    {
+      "id": "shield_009",
+      "name": "Crimson Buckler of Ash",
+      "icon": "shield_009",
+      "src": "/shields/09.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 311,
+      "stats": {
+        "defence": 8
+      }
+    },
+    {
+      "id": "shield_010",
+      "name": "Shadow Shield",
+      "icon": "shield_010",
+      "src": "/shields/10.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 303,
+      "stats": {
+        "defence": 10
+      }
+    },
+    {
+      "id": "shield_011",
+      "name": "Night Bulwark",
+      "icon": "shield_011",
+      "src": "/shields/11.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 309,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "shield_012",
+      "name": "Molten Ward",
+      "icon": "shield_012",
+      "src": "/shields/12.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 86,
+      "stats": {
+        "defence": 5,
+        "strength": 2
+      }
+    },
+    {
+      "id": "shield_013",
+      "name": "Silent Bulwark",
+      "icon": "shield_013",
+      "src": "/shields/13.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 186,
+      "stats": {
+        "defence": 9,
+        "strength": 1
+      }
+    },
+    {
+      "id": "shield_014",
+      "name": "Ember Buckler of Ash",
+      "icon": "shield_014",
+      "src": "/shields/14.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 275,
+      "stats": {
+        "defence": 3,
+        "luck": 3
+      }
+    },
+    {
+      "id": "shield_015",
+      "name": "Molten Kite Shield of Valor",
+      "icon": "shield_015",
+      "src": "/shields/15.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 288,
+      "stats": {
+        "defence": 7,
+        "mana": 1
+      }
+    },
+    {
+      "id": "shield_016",
+      "name": "Kingslayer Aegis",
+      "icon": "shield_016",
+      "src": "/shields/16.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 286,
+      "stats": {
+        "defence": 2
+      }
+    },
+    {
+      "id": "shield_017",
+      "name": "Frost Kite Shield",
+      "icon": "shield_017",
+      "src": "/shields/17.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 353,
+      "stats": {
+        "defence": 5
+      }
+    },
+    {
+      "id": "shield_018",
+      "name": "Warden's Kite Shield",
+      "icon": "shield_018",
+      "src": "/shields/18.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 192,
+      "stats": {
+        "defence": 8,
+        "intelligence": 5
+      }
+    },
+    {
+      "id": "shield_019",
+      "name": "Frost Ward",
+      "icon": "shield_019",
+      "src": "/shields/19.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 259,
+      "stats": {
+        "defence": 3
+      }
+    },
+    {
+      "id": "shield_020",
+      "name": "Ember Kite Shield",
+      "icon": "shield_020",
+      "src": "/shields/20.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 207,
+      "stats": {
+        "defence": 6,
+        "intelligence": 2
+      }
+    },
+    {
+      "id": "shield_021",
+      "name": "Shadow Ward of Thorns",
+      "icon": "shield_021",
+      "src": "/shields/21.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 313,
+      "stats": {
+        "defence": 8
+      }
+    },
+    {
+      "id": "shield_022",
+      "name": "Ember Kite Shield",
+      "icon": "shield_022",
+      "src": "/shields/22.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 340,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "shield_023",
+      "name": "Kingslayer Shield of Despair",
+      "icon": "shield_023",
+      "src": "/shields/23.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 86,
+      "stats": {
+        "defence": 6,
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "shield_024",
+      "name": "Obsidian Buckler of Storms",
+      "icon": "shield_024",
+      "src": "/shields/24.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 197,
+      "stats": {
+        "defence": 10
+      }
+    },
+    {
+      "id": "shield_025",
+      "name": "Rusted Buckler",
+      "icon": "shield_025",
+      "src": "/shields/25.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 117,
+      "stats": {
+        "defence": 4,
+        "mana": 2
+      }
+    },
+    {
+      "id": "shield_026",
+      "name": "Ashen Shield",
+      "icon": "shield_026",
+      "src": "/shields/26.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 212,
+      "stats": {
+        "defence": 10
+      }
+    },
+    {
+      "id": "shield_027",
+      "name": "Molten Bulwark",
+      "icon": "shield_027",
+      "src": "/shields/27.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 201,
+      "stats": {
+        "defence": 5
+      }
+    },
+    {
+      "id": "shield_028",
+      "name": "Wyrm Buckler of Thorns",
+      "icon": "shield_028",
+      "src": "/shields/28.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 366,
+      "stats": {
+        "defence": 10,
+        "intelligence": 4
+      }
+    },
+    {
+      "id": "shield_029",
+      "name": "Kingslayer Ward",
+      "icon": "shield_029",
+      "src": "/shields/29.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 381,
+      "stats": {
+        "defence": 6,
+        "strength": 5
+      }
+    },
+    {
+      "id": "shield_030",
+      "name": "Frost Ward",
+      "icon": "shield_030",
+      "src": "/shields/30.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 43,
+      "stats": {
+        "defence": 4,
+        "mana": 4
+      }
+    },
+    {
+      "id": "shield_031",
+      "name": "Gloom Buckler",
+      "icon": "shield_031",
+      "src": "/shields/31.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 306,
+      "stats": {
+        "defence": 10,
+        "strength": 5
+      }
+    },
+    {
+      "id": "shield_032",
+      "name": "Zealot's Kite Shield of Despair",
+      "icon": "shield_032",
+      "src": "/shields/32.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 240,
+      "stats": {
+        "defence": 5
+      }
+    },
+    {
+      "id": "shield_033",
+      "name": "Crimson Shield of the Moon",
+      "icon": "shield_033",
+      "src": "/shields/33.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 171,
+      "stats": {
+        "defence": 10,
+        "stamina": 3
+      }
+    },
+    {
+      "id": "shield_034",
+      "name": "Wyrm Bulwark of Despair",
+      "icon": "shield_034",
+      "src": "/shields/34.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 355,
+      "stats": {
+        "defence": 4,
+        "stamina": 4
+      }
+    },
+    {
+      "id": "shield_035",
+      "name": "Kingslayer Buckler of Ash",
+      "icon": "shield_035",
+      "src": "/shields/35.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 51,
+      "stats": {
+        "defence": 6
+      }
+    },
+    {
+      "id": "shield_036",
+      "name": "Runed Kite Shield of the Fallen",
+      "icon": "shield_036",
+      "src": "/shields/36.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 301,
+      "stats": {
+        "defence": 5,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "shield_037",
+      "name": "Shadow Kite Shield",
+      "icon": "shield_037",
+      "src": "/shields/37.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 44,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "shield_038",
+      "name": "Queen's Ward",
+      "icon": "shield_038",
+      "src": "/shields/38.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 41,
+      "stats": {
+        "defence": 1
+      }
+    },
+    {
+      "id": "shield_039",
+      "name": "Vile Buckler",
+      "icon": "shield_039",
+      "src": "/shields/39.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 148,
+      "stats": {
+        "defence": 10
+      }
+    },
+    {
+      "id": "shield_040",
+      "name": "Gilded Aegis",
+      "icon": "shield_040",
+      "src": "/shields/40.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 280,
+      "stats": {
+        "defence": 7,
+        "mana": 2
+      }
+    },
+    {
+      "id": "shield_041",
+      "name": "Molten Bulwark",
+      "icon": "shield_041",
+      "src": "/shields/41.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 228,
+      "stats": {
+        "defence": 5
+      }
+    },
+    {
+      "id": "shield_042",
+      "name": "Hollow Kite Shield",
+      "icon": "shield_042",
+      "src": "/shields/42.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 101,
+      "stats": {
+        "defence": 5,
+        "strength": 2
+      }
+    },
+    {
+      "id": "shield_043",
+      "name": "Umbral Aegis of Dawn",
+      "icon": "shield_043",
+      "src": "/shields/43.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 290,
+      "stats": {
+        "defence": 4,
+        "strength": 4
+      }
+    },
+    {
+      "id": "shield_044",
+      "name": "Night Aegis",
+      "icon": "shield_044",
+      "src": "/shields/44.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 67,
+      "stats": {
+        "defence": 9
+      }
+    },
+    {
+      "id": "shield_045",
+      "name": "Queen's Buckler",
+      "icon": "shield_045",
+      "src": "/shields/45.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 68,
+      "stats": {
+        "defence": 7,
+        "strength": 4
+      }
+    },
+    {
+      "id": "shield_046",
+      "name": "Crimson Aegis",
+      "icon": "shield_046",
+      "src": "/shields/46.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 115,
+      "stats": {
+        "defence": 10,
+        "luck": 2
+      }
+    },
+    {
+      "id": "shield_047",
+      "name": "Queen's Bulwark",
+      "icon": "shield_047",
+      "src": "/shields/47.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 339,
+      "stats": {
+        "defence": 5
+      }
+    },
+    {
+      "id": "shield_048",
+      "name": "Bone Kite Shield",
+      "icon": "shield_048",
+      "src": "/shields/48.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 243,
+      "stats": {
+        "defence": 2,
+        "mana": 1
+      }
+    },
+    {
+      "id": "shield_049",
+      "name": "Queen's Shield",
+      "icon": "shield_049",
+      "src": "/shields/49.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 232,
+      "stats": {
+        "defence": 3,
+        "luck": 4
+      }
+    },
+    {
+      "id": "shield_050",
+      "name": "Ashen Kite Shield",
+      "icon": "shield_050",
+      "src": "/shields/50.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 251,
+      "stats": {
+        "defence": 9,
+        "intelligence": 2
+      }
+    },
+    {
+      "id": "shield_051",
+      "name": "Rusted Shield",
+      "icon": "shield_051",
+      "src": "/shields/51.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 131,
+      "stats": {
+        "defence": 3,
+        "mana": 4
+      }
+    },
+    {
+      "id": "shield_052",
+      "name": "Molten Bulwark",
+      "icon": "shield_052",
+      "src": "/shields/52.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 400,
+      "stats": {
+        "defence": 7,
+        "luck": 4
+      }
+    },
+    {
+      "id": "shield_053",
+      "name": "Queen's Buckler",
+      "icon": "shield_053",
+      "src": "/shields/53.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 108,
+      "stats": {
+        "defence": 4,
+        "mana": 3
+      }
+    },
+    {
+      "id": "shield_054",
+      "name": "Grim Kite Shield",
+      "icon": "shield_054",
+      "src": "/shields/54.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 326,
+      "stats": {
+        "defence": 9,
+        "mana": 4
+      }
+    },
+    {
+      "id": "shield_055",
+      "name": "Vile Buckler",
+      "icon": "shield_055",
+      "src": "/shields/55.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 309,
+      "stats": {
+        "defence": 3,
+        "luck": 2
+      }
+    },
+    {
+      "id": "shield_056",
+      "name": "Wyrm Aegis",
+      "icon": "shield_056",
+      "src": "/shields/56.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 89,
+      "stats": {
+        "defence": 9
+      }
+    },
+    {
+      "id": "shield_057",
+      "name": "Obsidian Aegis of the Fallen",
+      "icon": "shield_057",
+      "src": "/shields/57.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 70,
+      "stats": {
+        "defence": 7,
+        "strength": 2
+      }
+    },
+    {
+      "id": "shield_058",
+      "name": "Hallowed Buckler",
+      "icon": "shield_058",
+      "src": "/shields/58.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 261,
+      "stats": {
+        "defence": 6,
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "shield_059",
+      "name": "Shadow Kite Shield",
+      "icon": "shield_059",
+      "src": "/shields/59.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 58,
+      "stats": {
+        "defence": 6,
+        "strength": 3
+      }
+    },
+    {
+      "id": "shield_060",
+      "name": "Silent Kite Shield",
+      "icon": "shield_060",
+      "src": "/shields/60.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 117,
+      "stats": {
+        "defence": 3,
+        "luck": 5
+      }
+    },
+    {
+      "id": "shield_061",
+      "name": "Jade Kite Shield",
+      "icon": "shield_061",
+      "src": "/shields/61.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 307,
+      "stats": {
+        "defence": 8,
+        "mana": 3
+      }
+    },
+    {
+      "id": "shield_062",
+      "name": "Silent Shield",
+      "icon": "shield_062",
+      "src": "/shields/62.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 297,
+      "stats": {
+        "defence": 3
+      }
+    },
+    {
+      "id": "shield_063",
+      "name": "Dread Buckler",
+      "icon": "shield_063",
+      "src": "/shields/63.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 217,
+      "stats": {
+        "defence": 3
+      }
+    },
+    {
+      "id": "shield_064",
+      "name": "Pale Kite Shield",
+      "icon": "shield_064",
+      "src": "/shields/64.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 184,
+      "stats": {
+        "defence": 5,
+        "mana": 4
+      }
+    },
+    {
+      "id": "shield_065",
+      "name": "Runed Kite Shield",
+      "icon": "shield_065",
+      "src": "/shields/65.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 283,
+      "stats": {
+        "defence": 3,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "shield_066",
+      "name": "Frost Kite Shield",
+      "icon": "shield_066",
+      "src": "/shields/66.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 174,
+      "stats": {
+        "defence": 5,
+        "luck": 1
+      }
+    },
+    {
+      "id": "shield_067",
+      "name": "Kingslayer Bulwark of the Deep",
+      "icon": "shield_067",
+      "src": "/shields/67.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 103,
+      "stats": {
+        "defence": 10,
+        "strength": 5
+      }
+    },
+    {
+      "id": "shield_068",
+      "name": "Silent Ward",
+      "icon": "shield_068",
+      "src": "/shields/68.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 242,
+      "stats": {
+        "defence": 9,
+        "luck": 5
+      }
+    },
+    {
+      "id": "shield_069",
+      "name": "Molten Ward",
+      "icon": "shield_069",
+      "src": "/shields/69.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 306,
+      "stats": {
+        "defence": 6,
+        "mana": 2
+      }
+    },
+    {
+      "id": "shield_070",
+      "name": "Vile Aegis of Embers",
+      "icon": "shield_070",
+      "src": "/shields/70.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 101,
+      "stats": {
+        "defence": 1,
+        "luck": 5
+      }
+    },
+    {
+      "id": "shield_071",
+      "name": "Warden's Buckler",
+      "icon": "shield_071",
+      "src": "/shields/71.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 214,
+      "stats": {
+        "defence": 9,
+        "luck": 5
+      }
+    },
+    {
+      "id": "shield_072",
+      "name": "Grim Shield",
+      "icon": "shield_072",
+      "src": "/shields/72.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 385,
+      "stats": {
+        "defence": 2
+      }
+    },
+    {
+      "id": "shield_073",
+      "name": "Hallowed Ward",
+      "icon": "shield_073",
+      "src": "/shields/73.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 225,
+      "stats": {
+        "defence": 1
+      }
+    },
+    {
+      "id": "shield_074",
+      "name": "Silent Aegis",
+      "icon": "shield_074",
+      "src": "/shields/74.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 284,
+      "stats": {
+        "defence": 7,
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "shield_075",
+      "name": "Lunar Ward of Despair",
+      "icon": "shield_075",
+      "src": "/shields/75.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 374,
+      "stats": {
+        "defence": 8
+      }
+    },
+    {
+      "id": "shield_076",
+      "name": "Gilded Bulwark",
+      "icon": "shield_076",
+      "src": "/shields/76.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 100,
+      "stats": {
+        "defence": 6
+      }
+    },
+    {
+      "id": "shield_077",
+      "name": "Blighted Aegis of Embers",
+      "icon": "shield_077",
+      "src": "/shields/77.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 207,
+      "stats": {
+        "defence": 4
+      }
+    },
+    {
+      "id": "shield_078",
+      "name": "Grim Buckler of the Goblin King",
+      "icon": "shield_078",
+      "src": "/shields/78.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 188,
+      "stats": {
+        "defence": 2,
+        "stamina": 1
+      }
+    },
+    {
+      "id": "shield_079",
+      "name": "Shadow Aegis",
+      "icon": "shield_079",
+      "src": "/shields/79.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 273,
+      "stats": {
+        "defence": 4,
+        "strength": 2
+      }
+    },
+    {
+      "id": "shield_080",
+      "name": "Hollow Shield",
+      "icon": "shield_080",
+      "src": "/shields/80.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 213,
+      "stats": {
+        "defence": 2
+      }
+    },
+    {
+      "id": "shield_081",
+      "name": "Molten Buckler",
+      "icon": "shield_081",
+      "src": "/shields/81.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 367,
+      "stats": {
+        "defence": 8,
+        "mana": 3
+      }
+    },
+    {
+      "id": "shield_082",
+      "name": "Molten Bulwark of Embers",
+      "icon": "shield_082",
+      "src": "/shields/82.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 213,
+      "stats": {
+        "defence": 8
+      }
+    },
+    {
+      "id": "shield_083",
+      "name": "Iron Bulwark of the Fallen",
+      "icon": "shield_083",
+      "src": "/shields/83.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 187,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "shield_084",
+      "name": "Warden's Ward",
+      "icon": "shield_084",
+      "src": "/shields/84.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 394,
+      "stats": {
+        "defence": 3
+      }
+    },
+    {
+      "id": "shield_085",
+      "name": "Vile Aegis of the Moon",
+      "icon": "shield_085",
+      "src": "/shields/85.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 107,
+      "stats": {
+        "defence": 5
+      }
+    },
+    {
+      "id": "shield_086",
+      "name": "Thorn Aegis of the Deep",
+      "icon": "shield_086",
+      "src": "/shields/86.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 100,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "shield_087",
+      "name": "Queen's Aegis",
+      "icon": "shield_087",
+      "src": "/shields/87.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 56,
+      "stats": {
+        "defence": 8,
+        "luck": 1
+      }
+    },
+    {
+      "id": "shield_088",
+      "name": "Obsidian Bulwark",
+      "icon": "shield_088",
+      "src": "/shields/88.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 304,
+      "stats": {
+        "defence": 7,
+        "luck": 5
+      }
+    },
+    {
+      "id": "shield_089",
+      "name": "Thorn Shield",
+      "icon": "shield_089",
+      "src": "/shields/89.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 73,
+      "stats": {
+        "defence": 10
+      }
+    },
+    {
+      "id": "shield_090",
+      "name": "Pale Bulwark",
+      "icon": "shield_090",
+      "src": "/shields/90.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 369,
+      "stats": {
+        "defence": 9,
+        "luck": 5
+      }
+    },
+    {
+      "id": "shield_091",
+      "name": "Umbral Buckler",
+      "icon": "shield_091",
+      "src": "/shields/91.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 215,
+      "stats": {
+        "defence": 5
+      }
+    },
+    {
+      "id": "shield_092",
+      "name": "Gloom Kite Shield",
+      "icon": "shield_092",
+      "src": "/shields/92.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 63,
+      "stats": {
+        "defence": 9
+      }
+    },
+    {
+      "id": "shield_093",
+      "name": "Obsidian Shield of Whispers",
+      "icon": "shield_093",
+      "src": "/shields/93.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 265,
+      "stats": {
+        "defence": 6,
+        "stamina": 1
+      }
+    },
+    {
+      "id": "shield_094",
+      "name": "Silent Aegis",
+      "icon": "shield_094",
+      "src": "/shields/94.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 254,
+      "stats": {
+        "defence": 6
+      }
+    },
+    {
+      "id": "shield_095",
+      "name": "Runed Ward of the Crypt",
+      "icon": "shield_095",
+      "src": "/shields/95.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 239,
+      "stats": {
+        "defence": 3
+      }
+    },
+    {
+      "id": "shield_096",
+      "name": "Night Buckler",
+      "icon": "shield_096",
+      "src": "/shields/96.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 135,
+      "stats": {
+        "defence": 6,
+        "luck": 1
+      }
+    },
+    {
+      "id": "shield_097",
+      "name": "Zealot's Shield",
+      "icon": "shield_097",
+      "src": "/shields/97.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 195,
+      "stats": {
+        "defence": 2,
+        "stamina": 2
+      }
+    },
+    {
+      "id": "shield_098",
+      "name": "Sun Shield of Ash",
+      "icon": "shield_098",
+      "src": "/shields/98.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 343,
+      "stats": {
+        "defence": 4,
+        "mana": 4
+      }
+    },
+    {
+      "id": "shield_099",
+      "name": "Queen's Kite Shield of the Deep",
+      "icon": "shield_099",
+      "src": "/shields/99.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 237,
+      "stats": {
+        "defence": 1
+      }
+    },
+    {
+      "id": "shield_100",
+      "name": "Umbral Ward",
+      "icon": "shield_100",
+      "src": "/shields/100.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 242,
+      "stats": {
+        "defence": 10
+      }
+    },
+    {
+      "id": "shield_101",
+      "name": "Jade Ward",
+      "icon": "shield_101",
+      "src": "/shields/101.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 100,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "shield_102",
+      "name": "Dread Shield of Storms",
+      "icon": "shield_102",
+      "src": "/shields/102.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 235,
+      "stats": {
+        "defence": 6,
+        "stamina": 2
+      }
+    },
+    {
+      "id": "shield_103",
+      "name": "Dread Buckler",
+      "icon": "shield_103",
+      "src": "/shields/103.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 227,
+      "stats": {
+        "defence": 1,
+        "stamina": 4
+      }
+    },
+    {
+      "id": "shield_104",
+      "name": "Rusted Buckler",
+      "icon": "shield_104",
+      "src": "/shields/104.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 79,
+      "stats": {
+        "defence": 5,
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "shield_105",
+      "name": "Vile Kite Shield",
+      "icon": "shield_105",
+      "src": "/shields/105.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 398,
+      "stats": {
+        "defence": 5
+      }
+    },
+    {
+      "id": "shield_106",
+      "name": "Jade Buckler",
+      "icon": "shield_106",
+      "src": "/shields/106.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 113,
+      "stats": {
+        "defence": 6,
+        "luck": 5
+      }
+    },
+    {
+      "id": "shield_107",
+      "name": "Obsidian Buckler of the Moon",
+      "icon": "shield_107",
+      "src": "/shields/107.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 169,
+      "stats": {
+        "defence": 2,
+        "luck": 2
+      }
+    },
+    {
+      "id": "shield_108",
+      "name": "Iron Buckler of Valor",
+      "icon": "shield_108",
+      "src": "/shields/108.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 176,
+      "stats": {
+        "defence": 5
+      }
+    },
+    {
+      "id": "shield_109",
+      "name": "Rusted Kite Shield",
+      "icon": "shield_109",
+      "src": "/shields/109.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 276,
+      "stats": {
+        "defence": 1,
+        "mana": 3
+      }
+    },
+    {
+      "id": "shield_110",
+      "name": "Blighted Buckler of Ruin",
+      "icon": "shield_110",
+      "src": "/shields/110.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 133,
+      "stats": {
+        "defence": 3
+      }
+    },
+    {
+      "id": "shield_111",
+      "name": "Blighted Aegis",
+      "icon": "shield_111",
+      "src": "/shields/111.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 336,
+      "stats": {
+        "defence": 5,
+        "luck": 5
+      }
+    },
+    {
+      "id": "shield_112",
+      "name": "Rusted Shield of Storms",
+      "icon": "shield_112",
+      "src": "/shields/112.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 173,
+      "stats": {
+        "defence": 2
+      }
+    },
+    {
+      "id": "shield_113",
+      "name": "Molten Aegis",
+      "icon": "shield_113",
+      "src": "/shields/113.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 207,
+      "stats": {
+        "defence": 5
+      }
+    },
+    {
+      "id": "shield_114",
+      "name": "Queen's Buckler",
+      "icon": "shield_114",
+      "src": "/shields/114.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 220,
+      "stats": {
+        "defence": 9
+      }
+    },
+    {
+      "id": "shield_115",
+      "name": "Rusted Shield of Whispers",
+      "icon": "shield_115",
+      "src": "/shields/115.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 133,
+      "stats": {
+        "defence": 2,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "shield_116",
+      "name": "Lunar Buckler of Woe",
+      "icon": "shield_116",
+      "src": "/shields/116.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 262,
+      "stats": {
+        "defence": 3
+      }
+    },
+    {
+      "id": "shield_117",
+      "name": "Molten Buckler",
+      "icon": "shield_117",
+      "src": "/shields/117.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 121,
+      "stats": {
+        "defence": 3,
+        "intelligence": 2
+      }
+    },
+    {
+      "id": "shield_118",
+      "name": "Warden's Ward of the Deep",
+      "icon": "shield_118",
+      "src": "/shields/118.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 60,
+      "stats": {
+        "defence": 4,
+        "luck": 3
+      }
+    },
+    {
+      "id": "shield_119",
+      "name": "Blighted Shield",
+      "icon": "shield_119",
+      "src": "/shields/119.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 255,
+      "stats": {
+        "defence": 3
+      }
+    },
+    {
+      "id": "shield_120",
+      "name": "Storm Aegis",
+      "icon": "shield_120",
+      "src": "/shields/120.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 120,
+      "stats": {
+        "defence": 7,
+        "stamina": 3
+      }
+    },
+    {
+      "id": "shield_121",
+      "name": "Bone Buckler",
+      "icon": "shield_121",
+      "src": "/shields/121.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 265,
+      "stats": {
+        "defence": 6
+      }
+    },
+    {
+      "id": "shield_122",
+      "name": "Pale Bulwark",
+      "icon": "shield_122",
+      "src": "/shields/122.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 127,
+      "stats": {
+        "defence": 8,
+        "mana": 5
+      }
+    },
+    {
+      "id": "shield_123",
+      "name": "Thorn Kite Shield",
+      "icon": "shield_123",
+      "src": "/shields/123.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 301,
+      "stats": {
+        "defence": 6,
+        "luck": 5
+      }
+    },
+    {
+      "id": "shield_124",
+      "name": "Iron Aegis",
+      "icon": "shield_124",
+      "src": "/shields/124.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 276,
+      "stats": {
+        "defence": 10
+      }
+    },
+    {
+      "id": "shield_125",
+      "name": "Shadow Shield",
+      "icon": "shield_125",
+      "src": "/shields/125.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 265,
+      "stats": {
+        "defence": 4,
+        "strength": 3
+      }
+    },
+    {
+      "id": "shield_127",
+      "name": "Wyrm Shield",
+      "icon": "shield_127",
+      "src": "/shields/127.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 245,
+      "stats": {
+        "defence": 3,
+        "strength": 4
+      }
+    },
+    {
+      "id": "shield_128",
+      "name": "Silent Shield",
+      "icon": "shield_128",
+      "src": "/shields/128.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 86,
+      "stats": {
+        "defence": 9
+      }
+    },
+    {
+      "id": "shield_129",
+      "name": "Dread Aegis of Woe",
+      "icon": "shield_129",
+      "src": "/shields/129.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 169,
+      "stats": {
+        "defence": 9,
+        "stamina": 2
+      }
+    },
+    {
+      "id": "shield_130",
+      "name": "Grim Shield of Whispers",
+      "icon": "shield_130",
+      "src": "/shields/130.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 223,
+      "stats": {
+        "defence": 8,
+        "intelligence": 5
+      }
+    },
+    {
+      "id": "shield_131",
+      "name": "Zealot's Shield",
+      "icon": "shield_131",
+      "src": "/shields/131.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 334,
+      "stats": {
+        "defence": 7,
+        "mana": 5
+      }
+    },
+    {
+      "id": "shield_132",
+      "name": "Rusted Aegis of Woe",
+      "icon": "shield_132",
+      "src": "/shields/132.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 332,
+      "stats": {
+        "defence": 7,
+        "mana": 2
+      }
+    },
+    {
+      "id": "shield_133",
+      "name": "Umbral Ward",
+      "icon": "shield_133",
+      "src": "/shields/133.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 50,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "shield_134",
+      "name": "Kingslayer Aegis",
+      "icon": "shield_134",
+      "src": "/shields/134.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 345,
+      "stats": {
+        "defence": 4
+      }
+    },
+    {
+      "id": "shield_135",
+      "name": "Gilded Shield of the Deep",
+      "icon": "shield_135",
+      "src": "/shields/135.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 303,
+      "stats": {
+        "defence": 9
+      }
+    },
+    {
+      "id": "shield_136",
+      "name": "Kingslayer Bulwark",
+      "icon": "shield_136",
+      "src": "/shields/136.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 271,
+      "stats": {
+        "defence": 3
+      }
+    },
+    {
+      "id": "shield_137",
+      "name": "Kingslayer Buckler",
+      "icon": "shield_137",
+      "src": "/shields/137.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 301,
+      "stats": {
+        "defence": 10
+      }
+    },
+    {
+      "id": "shield_138",
+      "name": "Umbral Buckler",
+      "icon": "shield_138",
+      "src": "/shields/138.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 329,
+      "stats": {
+        "defence": 7
+      }
+    },
+    {
+      "id": "shield_139",
+      "name": "Queen's Bulwark",
+      "icon": "shield_139",
+      "src": "/shields/139.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 195,
+      "stats": {
+        "defence": 2,
+        "stamina": 2
+      }
+    },
+    {
+      "id": "shield_140",
+      "name": "Obsidian Shield",
+      "icon": "shield_140",
+      "src": "/shields/140.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 395,
+      "stats": {
+        "defence": 9,
+        "strength": 1
+      }
+    },
+    {
+      "id": "shield_141",
+      "name": "Bone Shield",
+      "icon": "shield_141",
+      "src": "/shields/141.png",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 40,
+      "stats": {
+        "defence": 7
+      }
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import type { Level } from '../level/Level';
 import { characterComponents, characterDef, groundOffset, headAboveCenter } from '../characters/Characters';
 import { ORC } from '../characters/Orc';
 import { GOBLIN_GRUNT, GOBLIN_ROGUE, GOBLIN_WARRIOR } from '../characters/Goblins';
+import { EVIL_WIZARD, GHOST_WIZARD } from '../characters/Wizards';
 import { NEVER_TICK, SENSE_TICKS } from '../ai/constants';
 import stats from '../data/stats.json';
 
@@ -62,6 +63,14 @@ export const MOB_CONFIGS = {
   goblin_warrior: {
     ...STATS.goblin_warrior, character: GOBLIN_WARRIOR.id, speed: 0.55, limp: 3,
     radius: { x: 11, y: 11 }, yOffset: groundOffset(GOBLIN_WARRIOR), scale: GOBLIN_WARRIOR.scale, minimapColor: 0xff6020,
+  },
+  ghost_wizard: {
+    ...STATS.ghost_wizard, character: GHOST_WIZARD.id, speed: 0.75, limp: 0,
+    radius: { x: 9, y: 9 }, yOffset: groundOffset(GHOST_WIZARD), scale: GHOST_WIZARD.scale, minimapColor: 0xb040ff,
+  },
+  evil_wizard: {
+    ...STATS.evil_wizard, character: EVIL_WIZARD.id, speed: 0.5, limp: 3,
+    radius: { x: 11, y: 11 }, yOffset: groundOffset(EVIL_WIZARD), scale: EVIL_WIZARD.scale, minimapColor: 0xff2060,
   },
 } as const satisfies Record<MobType, MobConfig>;
 

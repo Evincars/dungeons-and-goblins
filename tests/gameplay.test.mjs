@@ -50,6 +50,12 @@ const { statTotals } = await load('entities/Items');
 const { spawnDrops } = await load('entities/Drops');
 const { createLoot, LOOT_KINDS } = await load('entities/LootFactory');
 const { updateLoot } = await load('systems/LootSystem');
+const { updateArrows } = await load('systems/ArrowSystem');
+const { updateDummies } = await load('systems/DummySystem');
+const { createTrainingDummy } = await load('entities/DungeonFactory');
+const { WEAPONS, SHIELDS, ARMORS, ARROWS, HAND_WEAPONS } = await load('entities/ItemCatalog');
+const { EFFECT_SHAPES, EFFECT_COLOURS } = await load('assets/Effects');
+const { giveStartingKit } = await load('game/Run');
 const { prepareLevel } = await load('level/DungeonGenerator');
 
 const centre = (t) => t * TILE_WIDTH + TILE_WIDTH / 2;
@@ -654,6 +660,73 @@ test('coins flung at a wall stop at its edge instead of landing on top of it', (
     const { x, y } = coin.position;
     assert.ok(level.getTileAt(x, y).passable && level.getTileAt(x, y - 4).passable, `coin at ${Math.round(x)},${Math.round(y)}`);
   }
+});
+
+test('the item catalogues load every weapon, shield and armour, each with a name and stats to tune', () => {
+  assert.equal(WEAPONS.length, 165);
+  assert.equal(SHIELDS.length, 140);
+  assert.equal(ARMORS.length, 220);
+  for (const item of [...WEAPONS, ...SHIELDS, ...ARMORS]) {
+    assert.ok(item.name && item.icon && item.gear && item.stats, item.id);
+    assert.ok(validCommand({ kind: 'loadout', inventory: [item], equipped: {} }), `${item.id} passes the network checks`);
+  }
+  assert.ok(ARROWS.every((a) => a.gear === 'ammo' && a.count > 0));
+  assert.equal(Object.keys(EFFECT_SHAPES).length, 252, 'every effect sheet has a shape name');
+  assert.equal(EFFECT_COLOURS.length, 9);
+});
+
+test('a new run starts with a weapon, twenty arrows and armour in the bag', () => {
+  const player = playerAt(2, 2);
+  giveStartingKit(player);
+  const [weapon, arrows, armour] = player.inventory;
+  assert.ok(HAND_WEAPONS.some((w) => w.id === weapon.id));
+  assert.equal(arrows.gear, 'ammo');
+  assert.equal(arrows.count, 20);
+  assert.equal(armour.gear, 'armor');
+});
+
+test('with arrows in the Arrows slot an attack looses one at the crosshair (no swing), until the quiver is empty', () => {
+  const player = playerAt(3, 3);
+  player.aimVector = { x: 1, y: 0 };
+  player.equipped = { ammo: { ...ARROWS[0], count: 2 } };
+  player.playerInput.intents.attack = true;
+  updateArrows();
+  updateSword();
+  const arrow = world.entities.find((e) => e.projectile?.arrow);
+  assert.ok(arrow && arrow.velocity.x > 0, 'an arrow flies right');
+  assert.equal(player.swordSwing, undefined, 'no swing');
+  assert.equal(player.equipped.ammo.count, 1);
+  player.arrowCooldown = 0;
+  player.playerInput.intents.attack = true;
+  updateArrows();
+  assert.equal(player.equipped.ammo, undefined, 'the empty quiver comes off');
+  player.playerInput.intents.attack = true;
+  updateArrows();
+  updateSword();
+  assert.ok(player.swordSwing, 'and the sword is back');
+});
+
+test('the training dummy takes sword hits but never falls', () => {
+  const player = playerAt(4, 2);
+  player.aimVector = { x: 1, y: 0 };
+  const dummy = createTrainingDummy(centre(4.5), centre(2));
+  beginPerception();
+  player.playerInput.intents.attack = true;
+  updateSword();
+  updateSword();
+  assert.ok(dummy.health.current < dummy.health.max, 'the blow lands');
+  updateDummies();
+  assert.equal(dummy.health.current, dummy.health.max, 'and it is whole again');
+  assert.notEqual(dummy.dummy.row, 0, 'playing its hit');
+});
+
+test('the wizards spawn as enemies with their own art', () => {
+  const level = arena(8, 6);
+  const ghost = mobAt(level, 'ghost_wizard', 3, 3);
+  const evil = mobAt(level, 'evil_wizard', 5, 3);
+  assert.equal(ghost.character.def, 'ghost_wizard');
+  assert.equal(evil.character.def, 'evil_wizard');
+  assert.equal(isMobType('ghost_wizard'), true);
 });
 
 // ── Typed errors ─────────────────────────────────────────────────────────────

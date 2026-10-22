@@ -1,0 +1,2193 @@
+{
+  "$comment": "Weapons and arrows (icons in /weapons and weapons-1.png). Tune name, value and stats freely; gear decides the slot (weapon, offhand, ammo); count is the stack size of arrows.",
+  "items": [
+    {
+      "id": "weapon_arrows_001",
+      "name": "Warden's Arrows",
+      "icon": "weapon_arrows_001",
+      "src": "/weapons/WR_NightBoundSet _Arrows_001.png",
+      "kind": "arrows",
+      "type": "ammo",
+      "gear": "ammo",
+      "count": 20,
+      "value": 37,
+      "stats": {
+        "strength": 2
+      }
+    },
+    {
+      "id": "weapon_arrows_002",
+      "name": "Dread Arrows",
+      "icon": "weapon_arrows_002",
+      "src": "/weapons/WR_NightBoundSet _Arrows_002.png",
+      "kind": "arrows",
+      "type": "ammo",
+      "gear": "ammo",
+      "count": 20,
+      "value": 17,
+      "stats": {
+        "strength": 2
+      }
+    },
+    {
+      "id": "weapon_arrows_003",
+      "name": "Pale Arrows of the Goblin King",
+      "icon": "weapon_arrows_003",
+      "src": "/weapons/WR_NightBoundSet _Arrows_003.png",
+      "kind": "arrows",
+      "type": "ammo",
+      "gear": "ammo",
+      "count": 20,
+      "value": 27,
+      "stats": {
+        "strength": 2
+      }
+    },
+    {
+      "id": "weapon_arrows_004",
+      "name": "Dread Arrows of Woe",
+      "icon": "weapon_arrows_004",
+      "src": "/weapons/WR_NightBoundSet _Arrows_004.png",
+      "kind": "arrows",
+      "type": "ammo",
+      "gear": "ammo",
+      "count": 20,
+      "value": 30,
+      "stats": {
+        "strength": 1
+      }
+    },
+    {
+      "id": "weapon_arrows_005",
+      "name": "Molten Arrows",
+      "icon": "weapon_arrows_005",
+      "src": "/weapons/WR_NightBoundSet _Arrows_005.png",
+      "kind": "arrows",
+      "type": "ammo",
+      "gear": "ammo",
+      "count": 20,
+      "value": 26,
+      "stats": {
+        "strength": 1
+      }
+    },
+    {
+      "id": "weapon_axe_001",
+      "name": "Night Axe",
+      "icon": "weapon_axe_001",
+      "src": "/weapons/WR_NightBoundSet _Axe_001.png",
+      "kind": "axe",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 32,
+      "stats": {
+        "strength": 2,
+        "stamina": 3
+      }
+    },
+    {
+      "id": "weapon_axe_002",
+      "name": "Rusted Axe of the Goblin King",
+      "icon": "weapon_axe_002",
+      "src": "/weapons/WR_NightBoundSet _Axe_002.png",
+      "kind": "axe",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 105,
+      "stats": {
+        "strength": 3,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "weapon_axe_003",
+      "name": "Obsidian Axe",
+      "icon": "weapon_axe_003",
+      "src": "/weapons/WR_NightBoundSet _Axe_003.png",
+      "kind": "axe",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 292,
+      "stats": {
+        "strength": 6
+      }
+    },
+    {
+      "id": "weapon_axe_004",
+      "name": "Lunar Axe",
+      "icon": "weapon_axe_004",
+      "src": "/weapons/WR_NightBoundSet _Axe_004.png",
+      "kind": "axe",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 243,
+      "stats": {
+        "strength": 2,
+        "luck": 1
+      }
+    },
+    {
+      "id": "weapon_bladed_knuckle_001",
+      "name": "Iron Knuckles",
+      "icon": "weapon_bladed_knuckle_001",
+      "src": "/weapons/WR_NightBoundSet _BladedKnuckle_001.png",
+      "kind": "bladedknuckle",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 300,
+      "stats": {
+        "strength": 4
+      }
+    },
+    {
+      "id": "weapon_bladed_knuckle_002",
+      "name": "Ember Knuckles",
+      "icon": "weapon_bladed_knuckle_002",
+      "src": "/weapons/WR_NightBoundSet _BladedKnuckle_002.png",
+      "kind": "bladedknuckle",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 182,
+      "stats": {
+        "strength": 9
+      }
+    },
+    {
+      "id": "weapon_bladed_knuckle_003",
+      "name": "Ashen Knuckles of Whispers",
+      "icon": "weapon_bladed_knuckle_003",
+      "src": "/weapons/WR_NightBoundSet _BladedKnuckle_003.png",
+      "kind": "bladedknuckle",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 142,
+      "stats": {
+        "strength": 8,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "weapon_bladed_knuckle_004",
+      "name": "Wyrm Knuckles of Ash",
+      "icon": "weapon_bladed_knuckle_004",
+      "src": "/weapons/WR_NightBoundSet _BladedKnuckle_004.png",
+      "kind": "bladedknuckle",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 223,
+      "stats": {
+        "strength": 1,
+        "intelligence": 2
+      }
+    },
+    {
+      "id": "weapon_bladed_knuckle_005",
+      "name": "Blighted Knuckles",
+      "icon": "weapon_bladed_knuckle_005",
+      "src": "/weapons/WR_NightBoundSet _BladedKnuckle_005.png",
+      "kind": "bladedknuckle",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 112,
+      "stats": {
+        "strength": 5,
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "weapon_bladed_knuckle_006",
+      "name": "Hollow Knuckles of the Deep",
+      "icon": "weapon_bladed_knuckle_006",
+      "src": "/weapons/WR_NightBoundSet _BladedKnuckle_006.png",
+      "kind": "bladedknuckle",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 45,
+      "stats": {
+        "strength": 5
+      }
+    },
+    {
+      "id": "weapon_bow_001",
+      "name": "Crimson Bow",
+      "icon": "weapon_bow_001",
+      "src": "/weapons/WR_NightBoundSet _Bow_001.png",
+      "kind": "bow",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 37,
+      "stats": {
+        "strength": 7,
+        "luck": 1
+      }
+    },
+    {
+      "id": "weapon_bow_002",
+      "name": "Hollow Bow",
+      "icon": "weapon_bow_002",
+      "src": "/weapons/WR_NightBoundSet _Bow_002.png",
+      "kind": "bow",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 132,
+      "stats": {
+        "strength": 6,
+        "defence": 3
+      }
+    },
+    {
+      "id": "weapon_bow_003",
+      "name": "Umbral Bow",
+      "icon": "weapon_bow_003",
+      "src": "/weapons/WR_NightBoundSet _Bow_003.png",
+      "kind": "bow",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 233,
+      "stats": {
+        "strength": 9,
+        "defence": 2
+      }
+    },
+    {
+      "id": "weapon_bow_004",
+      "name": "Jade Bow",
+      "icon": "weapon_bow_004",
+      "src": "/weapons/WR_NightBoundSet _Bow_004.png",
+      "kind": "bow",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 268,
+      "stats": {
+        "strength": 9,
+        "luck": 2
+      }
+    },
+    {
+      "id": "weapon_bow_005",
+      "name": "Ashen Bow of Valor",
+      "icon": "weapon_bow_005",
+      "src": "/weapons/WR_NightBoundSet _Bow_005.png",
+      "kind": "bow",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 265,
+      "stats": {
+        "strength": 5
+      }
+    },
+    {
+      "id": "weapon_crossbow_001",
+      "name": "Hallowed Crossbow",
+      "icon": "weapon_crossbow_001",
+      "src": "/weapons/WR_NightBoundSet _Crossbow_001.png",
+      "kind": "crossbow",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 279,
+      "stats": {
+        "strength": 7
+      }
+    },
+    {
+      "id": "weapon_crossbow_002",
+      "name": "Jade Crossbow",
+      "icon": "weapon_crossbow_002",
+      "src": "/weapons/WR_NightBoundSet _Crossbow_002.png",
+      "kind": "crossbow",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 39,
+      "stats": {
+        "strength": 7,
+        "intelligence": 2
+      }
+    },
+    {
+      "id": "weapon_crossbow_003",
+      "name": "Grim Crossbow of Ruin",
+      "icon": "weapon_crossbow_003",
+      "src": "/weapons/WR_NightBoundSet _Crossbow_003.png",
+      "kind": "crossbow",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 190,
+      "stats": {
+        "strength": 2
+      }
+    },
+    {
+      "id": "weapon_crossbow_004",
+      "name": "Ashen Crossbow",
+      "icon": "weapon_crossbow_004",
+      "src": "/weapons/WR_NightBoundSet _Crossbow_004.png",
+      "kind": "crossbow",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 213,
+      "stats": {
+        "strength": 7,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "weapon_glaive_001",
+      "name": "Jade Glaive of Storms",
+      "icon": "weapon_glaive_001",
+      "src": "/weapons/WR_NightBoundSet _Glaive_001.png",
+      "kind": "glaive",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 133,
+      "stats": {
+        "strength": 7
+      }
+    },
+    {
+      "id": "weapon_glaive_002",
+      "name": "Gloom Glaive",
+      "icon": "weapon_glaive_002",
+      "src": "/weapons/WR_NightBoundSet _Glaive_002.png",
+      "kind": "glaive",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 272,
+      "stats": {
+        "strength": 4
+      }
+    },
+    {
+      "id": "weapon_great_hammer_001",
+      "name": "Grim Warhammer",
+      "icon": "weapon_great_hammer_001",
+      "src": "/weapons/WR_NightBoundSet _GreatHammer_001.png",
+      "kind": "greathammer",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 219,
+      "stats": {
+        "strength": 3,
+        "defence": 3
+      }
+    },
+    {
+      "id": "weapon_great_hammer_002",
+      "name": "Dread Warhammer of Valor",
+      "icon": "weapon_great_hammer_002",
+      "src": "/weapons/WR_NightBoundSet _GreatHammer_002.png",
+      "kind": "greathammer",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 262,
+      "stats": {
+        "strength": 9
+      }
+    },
+    {
+      "id": "weapon_great_hammer_003",
+      "name": "Rusted Warhammer of Woe",
+      "icon": "weapon_great_hammer_003",
+      "src": "/weapons/WR_NightBoundSet _GreatHammer_003.png",
+      "kind": "greathammer",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 121,
+      "stats": {
+        "strength": 8,
+        "luck": 3
+      }
+    },
+    {
+      "id": "weapon_great_mace_001",
+      "name": "Grim Mace of the Crypt",
+      "icon": "weapon_great_mace_001",
+      "src": "/weapons/WR_NightBoundSet _GreatMace_001.png",
+      "kind": "greatmace",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 144,
+      "stats": {
+        "strength": 9
+      }
+    },
+    {
+      "id": "weapon_great_mace_002",
+      "name": "Obsidian Mace",
+      "icon": "weapon_great_mace_002",
+      "src": "/weapons/WR_NightBoundSet _GreatMace_002.png",
+      "kind": "greatmace",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 265,
+      "stats": {
+        "strength": 2,
+        "mana": 1
+      }
+    },
+    {
+      "id": "weapon_greataxe_001",
+      "name": "Lunar Greataxe",
+      "icon": "weapon_greataxe_001",
+      "src": "/weapons/WR_NightBoundSet _Greataxe_001.png",
+      "kind": "greataxe",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 68,
+      "stats": {
+        "strength": 8
+      }
+    },
+    {
+      "id": "weapon_greataxe_002",
+      "name": "Obsidian Greataxe",
+      "icon": "weapon_greataxe_002",
+      "src": "/weapons/WR_NightBoundSet _Greataxe_002.png",
+      "kind": "greataxe",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 189,
+      "stats": {
+        "strength": 3,
+        "defence": 2
+      }
+    },
+    {
+      "id": "weapon_greataxe_003",
+      "name": "Runed Greataxe",
+      "icon": "weapon_greataxe_003",
+      "src": "/weapons/WR_NightBoundSet _Greataxe_003.png",
+      "kind": "greataxe",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 208,
+      "stats": {
+        "strength": 1
+      }
+    },
+    {
+      "id": "weapon_greataxe_004",
+      "name": "Runed Greataxe of Embers",
+      "icon": "weapon_greataxe_004",
+      "src": "/weapons/WR_NightBoundSet _Greataxe_004.png",
+      "kind": "greataxe",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 175,
+      "stats": {
+        "strength": 6,
+        "intelligence": 2
+      }
+    },
+    {
+      "id": "weapon_greater_axe_001",
+      "name": "Jade Cleaver",
+      "icon": "weapon_greater_axe_001",
+      "src": "/weapons/WR_NightBoundSet _GreaterAxe_001.png",
+      "kind": "greateraxe",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 249,
+      "stats": {
+        "strength": 3,
+        "luck": 3
+      }
+    },
+    {
+      "id": "weapon_greater_axe_002",
+      "name": "Zealot's Cleaver of Thorns",
+      "icon": "weapon_greater_axe_002",
+      "src": "/weapons/WR_NightBoundSet _GreaterAxe_002.png",
+      "kind": "greateraxe",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 132,
+      "stats": {
+        "strength": 1
+      }
+    },
+    {
+      "id": "weapon_gun_000",
+      "name": "Hallowed Handgonne",
+      "icon": "weapon_gun_000",
+      "src": "/weapons/WR_NightBoundSet _Gun_000.png",
+      "kind": "gun",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 223,
+      "stats": {
+        "strength": 6,
+        "defence": 2
+      }
+    },
+    {
+      "id": "weapon_gun_001",
+      "name": "Vile Handgonne",
+      "icon": "weapon_gun_001",
+      "src": "/weapons/WR_NightBoundSet _Gun_001.png",
+      "kind": "gun",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 158,
+      "stats": {
+        "strength": 8
+      }
+    },
+    {
+      "id": "weapon_gun_002",
+      "name": "Wyrm Handgonne of the Crypt",
+      "icon": "weapon_gun_002",
+      "src": "/weapons/WR_NightBoundSet _Gun_002.png",
+      "kind": "gun",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 282,
+      "stats": {
+        "strength": 8
+      }
+    },
+    {
+      "id": "weapon_gun_003",
+      "name": "Shadow Handgonne",
+      "icon": "weapon_gun_003",
+      "src": "/weapons/WR_NightBoundSet _Gun_003.png",
+      "kind": "gun",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 91,
+      "stats": {
+        "strength": 6,
+        "intelligence": 4
+      }
+    },
+    {
+      "id": "weapon_gun_004",
+      "name": "Zealot's Handgonne of Woe",
+      "icon": "weapon_gun_004",
+      "src": "/weapons/WR_NightBoundSet _Gun_004.png",
+      "kind": "gun",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 88,
+      "stats": {
+        "strength": 3
+      }
+    },
+    {
+      "id": "weapon_gun_005",
+      "name": "Jade Handgonne of Ruin",
+      "icon": "weapon_gun_005",
+      "src": "/weapons/WR_NightBoundSet _Gun_005.png",
+      "kind": "gun",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 207,
+      "stats": {
+        "strength": 5
+      }
+    },
+    {
+      "id": "weapon_gun_006",
+      "name": "Queen's Handgonne of Ash",
+      "icon": "weapon_gun_006",
+      "src": "/weapons/WR_NightBoundSet _Gun_006.png",
+      "kind": "gun",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 119,
+      "stats": {
+        "strength": 9
+      }
+    },
+    {
+      "id": "weapon_gun_007",
+      "name": "Zealot's Handgonne",
+      "icon": "weapon_gun_007",
+      "src": "/weapons/WR_NightBoundSet _Gun_007.png",
+      "kind": "gun",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 38,
+      "stats": {
+        "strength": 6
+      }
+    },
+    {
+      "id": "weapon_gun_008",
+      "name": "Warden's Handgonne of Despair",
+      "icon": "weapon_gun_008",
+      "src": "/weapons/WR_NightBoundSet _Gun_008.png",
+      "kind": "gun",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 262,
+      "stats": {
+        "strength": 5
+      }
+    },
+    {
+      "id": "weapon_gun_009",
+      "name": "Umbral Handgonne",
+      "icon": "weapon_gun_009",
+      "src": "/weapons/WR_NightBoundSet _Gun_009.png",
+      "kind": "gun",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 57,
+      "stats": {
+        "strength": 6,
+        "luck": 1
+      }
+    },
+    {
+      "id": "weapon_gun_010",
+      "name": "Gloom Handgonne",
+      "icon": "weapon_gun_010",
+      "src": "/weapons/WR_NightBoundSet _Gun_010.png",
+      "kind": "gun",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 162,
+      "stats": {
+        "strength": 6,
+        "stamina": 3
+      }
+    },
+    {
+      "id": "weapon_gun_011",
+      "name": "Frost Handgonne of the Crypt",
+      "icon": "weapon_gun_011",
+      "src": "/weapons/WR_NightBoundSet _Gun_011.png",
+      "kind": "gun",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 172,
+      "stats": {
+        "strength": 4
+      }
+    },
+    {
+      "id": "weapon_gun_012",
+      "name": "Thorn Handgonne",
+      "icon": "weapon_gun_012",
+      "src": "/weapons/WR_NightBoundSet _Gun_012.png",
+      "kind": "gun",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 142,
+      "stats": {
+        "strength": 7
+      }
+    },
+    {
+      "id": "weapon_gun_013",
+      "name": "Dread Handgonne of Despair",
+      "icon": "weapon_gun_013",
+      "src": "/weapons/WR_NightBoundSet _Gun_013.png",
+      "kind": "gun",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 113,
+      "stats": {
+        "strength": 2
+      }
+    },
+    {
+      "id": "weapon_katar_001",
+      "name": "Obsidian Katar",
+      "icon": "weapon_katar_001",
+      "src": "/weapons/WR_NightBoundSet _Katar_001.png",
+      "kind": "katar",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 241,
+      "stats": {
+        "strength": 1
+      }
+    },
+    {
+      "id": "weapon_katar_002",
+      "name": "Dread Katar of the Fallen",
+      "icon": "weapon_katar_002",
+      "src": "/weapons/WR_NightBoundSet _Katar_002.png",
+      "kind": "katar",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 241,
+      "stats": {
+        "strength": 6
+      }
+    },
+    {
+      "id": "weapon_katar_003",
+      "name": "Runed Katar",
+      "icon": "weapon_katar_003",
+      "src": "/weapons/WR_NightBoundSet _Katar_003.png",
+      "kind": "katar",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 146,
+      "stats": {
+        "strength": 5,
+        "mana": 4
+      }
+    },
+    {
+      "id": "weapon_katar_004",
+      "name": "Thorn Katar of Storms",
+      "icon": "weapon_katar_004",
+      "src": "/weapons/WR_NightBoundSet _Katar_004.png",
+      "kind": "katar",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 161,
+      "stats": {
+        "strength": 8
+      }
+    },
+    {
+      "id": "weapon_leafcut_001",
+      "name": "Hallowed Leafblade of the Goblin King",
+      "icon": "weapon_leafcut_001",
+      "src": "/weapons/WR_NightBoundSet _Leafcut_001.png",
+      "kind": "leafcut",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 110,
+      "stats": {
+        "strength": 2,
+        "stamina": 1
+      }
+    },
+    {
+      "id": "weapon_leafcut_002",
+      "name": "Dread Leafblade",
+      "icon": "weapon_leafcut_002",
+      "src": "/weapons/WR_NightBoundSet _Leafcut_002.png",
+      "kind": "leafcut",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 271,
+      "stats": {
+        "strength": 1,
+        "defence": 1
+      }
+    },
+    {
+      "id": "weapon_leafcut_003",
+      "name": "Molten Leafblade",
+      "icon": "weapon_leafcut_003",
+      "src": "/weapons/WR_NightBoundSet _Leafcut_003.png",
+      "kind": "leafcut",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 164,
+      "stats": {
+        "strength": 2
+      }
+    },
+    {
+      "id": "weapon_leafcut_004",
+      "name": "Hollow Leafblade of the Moon",
+      "icon": "weapon_leafcut_004",
+      "src": "/weapons/WR_NightBoundSet _Leafcut_004.png",
+      "kind": "leafcut",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 121,
+      "stats": {
+        "strength": 7,
+        "stamina": 1
+      }
+    },
+    {
+      "id": "weapon_longsword_001",
+      "name": "Lunar Longsword",
+      "icon": "weapon_longsword_001",
+      "src": "/weapons/WR_NightBoundSet _Longsword_001.png",
+      "kind": "longsword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 68,
+      "stats": {
+        "strength": 3
+      }
+    },
+    {
+      "id": "weapon_longsword_002",
+      "name": "Dread Longsword",
+      "icon": "weapon_longsword_002",
+      "src": "/weapons/WR_NightBoundSet _Longsword_002.png",
+      "kind": "longsword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 187,
+      "stats": {
+        "strength": 3
+      }
+    },
+    {
+      "id": "weapon_longsword_003",
+      "name": "Kingslayer Longsword of the Deep",
+      "icon": "weapon_longsword_003",
+      "src": "/weapons/WR_NightBoundSet _Longsword_003.png",
+      "kind": "longsword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 156,
+      "stats": {
+        "strength": 6,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "weapon_longsword_004",
+      "name": "Kingslayer Longsword of Woe",
+      "icon": "weapon_longsword_004",
+      "src": "/weapons/WR_NightBoundSet _Longsword_004.png",
+      "kind": "longsword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 231,
+      "stats": {
+        "strength": 4
+      }
+    },
+    {
+      "id": "weapon_longsword_005",
+      "name": "Night Longsword",
+      "icon": "weapon_longsword_005",
+      "src": "/weapons/WR_NightBoundSet _Longsword_005.png",
+      "kind": "longsword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 100,
+      "stats": {
+        "strength": 3,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "weapon_machete_001",
+      "name": "Bone Machete",
+      "icon": "weapon_machete_001",
+      "src": "/weapons/WR_NightBoundSet _Machete_001.png",
+      "kind": "machete",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 167,
+      "stats": {
+        "strength": 3,
+        "stamina": 3
+      }
+    },
+    {
+      "id": "weapon_machete_002",
+      "name": "Shadow Machete",
+      "icon": "weapon_machete_002",
+      "src": "/weapons/WR_NightBoundSet _Machete_002.png",
+      "kind": "machete",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 110,
+      "stats": {
+        "strength": 9
+      }
+    },
+    {
+      "id": "weapon_machete_003",
+      "name": "Frost Machete",
+      "icon": "weapon_machete_003",
+      "src": "/weapons/WR_NightBoundSet _Machete_003.png",
+      "kind": "machete",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 163,
+      "stats": {
+        "strength": 4,
+        "luck": 2
+      }
+    },
+    {
+      "id": "weapon_scepter_001",
+      "name": "Rusted Scepter of Embers",
+      "icon": "weapon_scepter_001",
+      "src": "/weapons/WR_NightBoundSet _Scepter_001.png",
+      "kind": "scepter",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 279,
+      "stats": {
+        "intelligence": 2,
+        "luck": 3
+      }
+    },
+    {
+      "id": "weapon_scepter_002",
+      "name": "Storm Scepter of Valor",
+      "icon": "weapon_scepter_002",
+      "src": "/weapons/WR_NightBoundSet _Scepter_002.png",
+      "kind": "scepter",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 148,
+      "stats": {
+        "intelligence": 6
+      }
+    },
+    {
+      "id": "weapon_scepter_003",
+      "name": "Obsidian Scepter",
+      "icon": "weapon_scepter_003",
+      "src": "/weapons/WR_NightBoundSet _Scepter_003.png",
+      "kind": "scepter",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 145,
+      "stats": {
+        "intelligence": 4,
+        "luck": 1
+      }
+    },
+    {
+      "id": "weapon_scepter_004",
+      "name": "Crimson Scepter of Despair",
+      "icon": "weapon_scepter_004",
+      "src": "/weapons/WR_NightBoundSet _Scepter_004.png",
+      "kind": "scepter",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 234,
+      "stats": {
+        "intelligence": 6
+      }
+    },
+    {
+      "id": "weapon_shield_001",
+      "name": "Runed Shield of the Crypt",
+      "icon": "weapon_shield_001",
+      "src": "/weapons/WR_NightBoundSet _Shield_001.png",
+      "kind": "shield",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 191,
+      "stats": {
+        "defence": 4
+      }
+    },
+    {
+      "id": "weapon_shield_002",
+      "name": "Jade Shield of Ruin",
+      "icon": "weapon_shield_002",
+      "src": "/weapons/WR_NightBoundSet _Shield_002.png",
+      "kind": "shield",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 185,
+      "stats": {
+        "defence": 5,
+        "intelligence": 2
+      }
+    },
+    {
+      "id": "weapon_shuriken_001",
+      "name": "Grim Shuriken of Thorns",
+      "icon": "weapon_shuriken_001",
+      "src": "/weapons/WR_NightBoundSet _Shuriken_001.png",
+      "kind": "shuriken",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 279,
+      "stats": {
+        "strength": 3
+      }
+    },
+    {
+      "id": "weapon_shuriken_002",
+      "name": "Kingslayer Shuriken of Valor",
+      "icon": "weapon_shuriken_002",
+      "src": "/weapons/WR_NightBoundSet _Shuriken_002.png",
+      "kind": "shuriken",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 166,
+      "stats": {
+        "strength": 9
+      }
+    },
+    {
+      "id": "weapon_shuriken_003",
+      "name": "Runed Shuriken",
+      "icon": "weapon_shuriken_003",
+      "src": "/weapons/WR_NightBoundSet _Shuriken_003.png",
+      "kind": "shuriken",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 237,
+      "stats": {
+        "strength": 4
+      }
+    },
+    {
+      "id": "weapon_shuriken_004",
+      "name": "Pale Shuriken",
+      "icon": "weapon_shuriken_004",
+      "src": "/weapons/WR_NightBoundSet _Shuriken_004.png",
+      "kind": "shuriken",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 281,
+      "stats": {
+        "strength": 4
+      }
+    },
+    {
+      "id": "weapon_shuriken_005",
+      "name": "Kingslayer Shuriken",
+      "icon": "weapon_shuriken_005",
+      "src": "/weapons/WR_NightBoundSet _Shuriken_005.png",
+      "kind": "shuriken",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 168,
+      "stats": {
+        "strength": 7,
+        "mana": 1
+      }
+    },
+    {
+      "id": "weapon_shuriken_006",
+      "name": "Zealot's Shuriken of Whispers",
+      "icon": "weapon_shuriken_006",
+      "src": "/weapons/WR_NightBoundSet _Shuriken_006.png",
+      "kind": "shuriken",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 230,
+      "stats": {
+        "strength": 9,
+        "luck": 2
+      }
+    },
+    {
+      "id": "weapon_shuriken_007",
+      "name": "Hallowed Shuriken",
+      "icon": "weapon_shuriken_007",
+      "src": "/weapons/WR_NightBoundSet _Shuriken_007.png",
+      "kind": "shuriken",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 52,
+      "stats": {
+        "strength": 4
+      }
+    },
+    {
+      "id": "weapon_shuriken_008",
+      "name": "Wyrm Shuriken of Dawn",
+      "icon": "weapon_shuriken_008",
+      "src": "/weapons/WR_NightBoundSet _Shuriken_008.png",
+      "kind": "shuriken",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 161,
+      "stats": {
+        "strength": 8
+      }
+    },
+    {
+      "id": "weapon_shuriken_009",
+      "name": "Runed Shuriken",
+      "icon": "weapon_shuriken_009",
+      "src": "/weapons/WR_NightBoundSet _Shuriken_009.png",
+      "kind": "shuriken",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 220,
+      "stats": {
+        "strength": 9
+      }
+    },
+    {
+      "id": "weapon_sickle_sword_001",
+      "name": "Queen's Sickle",
+      "icon": "weapon_sickle_sword_001",
+      "src": "/weapons/WR_NightBoundSet _SickleSword_001.png",
+      "kind": "sicklesword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 281,
+      "stats": {
+        "strength": 3
+      }
+    },
+    {
+      "id": "weapon_sickle_sword_002",
+      "name": "Storm Sickle",
+      "icon": "weapon_sickle_sword_002",
+      "src": "/weapons/WR_NightBoundSet _SickleSword_002.png",
+      "kind": "sicklesword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 177,
+      "stats": {
+        "strength": 4
+      }
+    },
+    {
+      "id": "weapon_staff_001",
+      "name": "Lunar Staff",
+      "icon": "weapon_staff_001",
+      "src": "/weapons/WR_NightBoundSet _Staff_001.png",
+      "kind": "staff",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 189,
+      "stats": {
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "weapon_staff_002",
+      "name": "Runed Staff",
+      "icon": "weapon_staff_002",
+      "src": "/weapons/WR_NightBoundSet _Staff_002.png",
+      "kind": "staff",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 221,
+      "stats": {
+        "intelligence": 2
+      }
+    },
+    {
+      "id": "weapon_sword_001",
+      "name": "Night Sword of the Deep",
+      "icon": "weapon_sword_001",
+      "src": "/weapons/WR_NightBoundSet _Sword_001.png",
+      "kind": "sword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 79,
+      "stats": {
+        "strength": 8
+      }
+    },
+    {
+      "id": "weapon_sword_002",
+      "name": "Thorn Sword",
+      "icon": "weapon_sword_002",
+      "src": "/weapons/WR_NightBoundSet _Sword_002.png",
+      "kind": "sword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 71,
+      "stats": {
+        "strength": 1
+      }
+    },
+    {
+      "id": "weapon_sword_003",
+      "name": "Warden's Sword of the Goblin King",
+      "icon": "weapon_sword_003",
+      "src": "/weapons/WR_NightBoundSet _Sword_003.png",
+      "kind": "sword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 189,
+      "stats": {
+        "strength": 4
+      }
+    },
+    {
+      "id": "weapon_sword_004",
+      "name": "Dread Sword of the Fallen",
+      "icon": "weapon_sword_004",
+      "src": "/weapons/WR_NightBoundSet _Sword_004.png",
+      "kind": "sword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 156,
+      "stats": {
+        "strength": 2
+      }
+    },
+    {
+      "id": "weapon_sword_005",
+      "name": "Ember Sword",
+      "icon": "weapon_sword_005",
+      "src": "/weapons/WR_NightBoundSet _Sword_005.png",
+      "kind": "sword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 181,
+      "stats": {
+        "strength": 2
+      }
+    },
+    {
+      "id": "weapon_sword_006",
+      "name": "Ember Sword",
+      "icon": "weapon_sword_006",
+      "src": "/weapons/WR_NightBoundSet _Sword_006.png",
+      "kind": "sword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 228,
+      "stats": {
+        "strength": 2,
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "weapon_sword_007",
+      "name": "Crimson Sword",
+      "icon": "weapon_sword_007",
+      "src": "/weapons/WR_NightBoundSet _Sword_007.png",
+      "kind": "sword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 49,
+      "stats": {
+        "strength": 5,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "weapon_sword_008",
+      "name": "Rusted Sword of Storms",
+      "icon": "weapon_sword_008",
+      "src": "/weapons/WR_NightBoundSet _Sword_008.png",
+      "kind": "sword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 168,
+      "stats": {
+        "strength": 5,
+        "intelligence": 2
+      }
+    },
+    {
+      "id": "weapon_sword_009",
+      "name": "Blighted Sword",
+      "icon": "weapon_sword_009",
+      "src": "/weapons/WR_NightBoundSet _Sword_009.png",
+      "kind": "sword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 256,
+      "stats": {
+        "strength": 7
+      }
+    },
+    {
+      "id": "weapon_sword_010",
+      "name": "Runed Sword",
+      "icon": "weapon_sword_010",
+      "src": "/weapons/WR_NightBoundSet _Sword_010.png",
+      "kind": "sword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 236,
+      "stats": {
+        "strength": 1
+      }
+    },
+    {
+      "id": "weapon_sword_011",
+      "name": "Obsidian Sword of Storms",
+      "icon": "weapon_sword_011",
+      "src": "/weapons/WR_NightBoundSet _Sword_011.png",
+      "kind": "sword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 262,
+      "stats": {
+        "strength": 5
+      }
+    },
+    {
+      "id": "weapon_sword_012",
+      "name": "Obsidian Sword of Dawn",
+      "icon": "weapon_sword_012",
+      "src": "/weapons/WR_NightBoundSet _Sword_012.png",
+      "kind": "sword",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 120,
+      "stats": {
+        "strength": 2
+      }
+    },
+    {
+      "id": "weapon_tower_shield_001",
+      "name": "Warden's Tower Shield of Whispers",
+      "icon": "weapon_tower_shield_001",
+      "src": "/weapons/WR_NightBoundSet _TowerShield_001.png",
+      "kind": "towershield",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 147,
+      "stats": {
+        "defence": 4
+      }
+    },
+    {
+      "id": "weapon_tower_shield_002",
+      "name": "Blighted Tower Shield",
+      "icon": "weapon_tower_shield_002",
+      "src": "/weapons/WR_NightBoundSet _TowerShield_002.png",
+      "kind": "towershield",
+      "type": "shield",
+      "gear": "offhand",
+      "value": 50,
+      "stats": {
+        "defence": 8,
+        "intelligence": 2
+      }
+    },
+    {
+      "id": "weapon_wand_001_a",
+      "name": "Shadow Wand",
+      "icon": "weapon_wand_001_a",
+      "src": "/weapons/WR_NightBoundSet _Wand_001_A.png",
+      "kind": "wand",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 151,
+      "stats": {
+        "intelligence": 4
+      }
+    },
+    {
+      "id": "weapon_wand_001_b",
+      "name": "Molten Wand",
+      "icon": "weapon_wand_001_b",
+      "src": "/weapons/WR_NightBoundSet _Wand_001_B.png",
+      "kind": "wand",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 99,
+      "stats": {
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "weapon_wand_002_a",
+      "name": "Gilded Wand",
+      "icon": "weapon_wand_002_a",
+      "src": "/weapons/WR_NightBoundSet _Wand_002_A.png",
+      "kind": "wand",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 279,
+      "stats": {
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "weapon_wand_002_b",
+      "name": "Storm Wand",
+      "icon": "weapon_wand_002_b",
+      "src": "/weapons/WR_NightBoundSet _Wand_002_B.png",
+      "kind": "wand",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 99,
+      "stats": {
+        "intelligence": 2,
+        "strength": 3
+      }
+    },
+    {
+      "id": "weapon_wand_003_a",
+      "name": "Pale Wand of Woe",
+      "icon": "weapon_wand_003_a",
+      "src": "/weapons/WR_NightBoundSet _Wand_003_A.png",
+      "kind": "wand",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 58,
+      "stats": {
+        "intelligence": 9,
+        "stamina": 1
+      }
+    },
+    {
+      "id": "weapon_wand_003_b",
+      "name": "Frost Wand",
+      "icon": "weapon_wand_003_b",
+      "src": "/weapons/WR_NightBoundSet _Wand_003_B.png",
+      "kind": "wand",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 50,
+      "stats": {
+        "intelligence": 5
+      }
+    },
+    {
+      "id": "weapon_wand_004_a",
+      "name": "Frost Wand of the Deep",
+      "icon": "weapon_wand_004_a",
+      "src": "/weapons/WR_NightBoundSet _Wand_004_A.png",
+      "kind": "wand",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 169,
+      "stats": {
+        "intelligence": 3,
+        "mana": 1
+      }
+    },
+    {
+      "id": "weapon_wand_004_b",
+      "name": "Frost Wand",
+      "icon": "weapon_wand_004_b",
+      "src": "/weapons/WR_NightBoundSet _Wand_004_B.png",
+      "kind": "wand",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 204,
+      "stats": {
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "weapon_wand_005_a",
+      "name": "Ashen Wand",
+      "icon": "weapon_wand_005_a",
+      "src": "/weapons/WR_NightBoundSet _Wand_005_A.png",
+      "kind": "wand",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 62,
+      "stats": {
+        "intelligence": 8,
+        "stamina": 4
+      }
+    },
+    {
+      "id": "weapon_wand_005_b",
+      "name": "Runed Wand of the Fallen",
+      "icon": "weapon_wand_005_b",
+      "src": "/weapons/WR_NightBoundSet _Wand_005_B.png",
+      "kind": "wand",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 118,
+      "stats": {
+        "intelligence": 3,
+        "stamina": 4
+      }
+    },
+    {
+      "id": "weapon_wand_006_a",
+      "name": "Runed Wand of Woe",
+      "icon": "weapon_wand_006_a",
+      "src": "/weapons/WR_NightBoundSet _Wand_006_A.png",
+      "kind": "wand",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 274,
+      "stats": {
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "weapon_wand_006_b",
+      "name": "Lunar Wand",
+      "icon": "weapon_wand_006_b",
+      "src": "/weapons/WR_NightBoundSet _Wand_006_B.png",
+      "kind": "wand",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 35,
+      "stats": {
+        "intelligence": 3
+      }
+    },
+    {
+      "id": "weapon_dagger_001",
+      "name": "Ember Dagger of Ash",
+      "icon": "weapon_dagger_001",
+      "src": "/weapons/WR_NightBoundSet_Dagger_001.png",
+      "kind": "dagger",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 155,
+      "stats": {
+        "strength": 7
+      }
+    },
+    {
+      "id": "weapon_dagger_002",
+      "name": "Night Dagger",
+      "icon": "weapon_dagger_002",
+      "src": "/weapons/WR_NightBoundSet_Dagger_002.png",
+      "kind": "dagger",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 54,
+      "stats": {
+        "strength": 6,
+        "mana": 3
+      }
+    },
+    {
+      "id": "weapon_dagger_003",
+      "name": "Frost Dagger of Woe",
+      "icon": "weapon_dagger_003",
+      "src": "/weapons/WR_NightBoundSet_Dagger_003.png",
+      "kind": "dagger",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 125,
+      "stats": {
+        "strength": 3,
+        "luck": 3
+      }
+    },
+    {
+      "id": "weapon_dagger_004",
+      "name": "Blighted Dagger of the Deep",
+      "icon": "weapon_dagger_004",
+      "src": "/weapons/WR_NightBoundSet_Dagger_004.png",
+      "kind": "dagger",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 117,
+      "stats": {
+        "strength": 1
+      }
+    },
+    {
+      "id": "weapon_dagger_005",
+      "name": "Queen's Dagger",
+      "icon": "weapon_dagger_005",
+      "src": "/weapons/WR_NightBoundSet_Dagger_005.png",
+      "kind": "dagger",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 109,
+      "stats": {
+        "strength": 3
+      }
+    },
+    {
+      "id": "weapon_grappling_hook_001",
+      "name": "Queen's Grapple",
+      "icon": "weapon_grappling_hook_001",
+      "src": "/weapons/WR_NightBoundSet_GrapplingHook_001.png",
+      "kind": "grapplinghook",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 278,
+      "stats": {
+        "strength": 2,
+        "stamina": 1
+      }
+    },
+    {
+      "id": "weapon_grappling_hook_002",
+      "name": "Storm Grapple",
+      "icon": "weapon_grappling_hook_002",
+      "src": "/weapons/WR_NightBoundSet_GrapplingHook_002.png",
+      "kind": "grapplinghook",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 138,
+      "stats": {
+        "strength": 3
+      }
+    },
+    {
+      "id": "weapon_grappling_hook_003",
+      "name": "Queen's Grapple",
+      "icon": "weapon_grappling_hook_003",
+      "src": "/weapons/WR_NightBoundSet_GrapplingHook_003.png",
+      "kind": "grapplinghook",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 275,
+      "stats": {
+        "strength": 3,
+        "stamina": 2
+      }
+    },
+    {
+      "id": "weapon_grappling_hook_004",
+      "name": "Kingslayer Grapple",
+      "icon": "weapon_grappling_hook_004",
+      "src": "/weapons/WR_NightBoundSet_GrapplingHook_004.png",
+      "kind": "grapplinghook",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 234,
+      "stats": {
+        "strength": 1,
+        "luck": 1
+      }
+    },
+    {
+      "id": "weapon_grappling_hook_005",
+      "name": "Blighted Grapple",
+      "icon": "weapon_grappling_hook_005",
+      "src": "/weapons/WR_NightBoundSet_GrapplingHook_005.png",
+      "kind": "grapplinghook",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 250,
+      "stats": {
+        "strength": 5
+      }
+    },
+    {
+      "id": "weapon_grappling_hook_006",
+      "name": "Sun Grapple of Valor",
+      "icon": "weapon_grappling_hook_006",
+      "src": "/weapons/WR_NightBoundSet_GrapplingHook_006.png",
+      "kind": "grapplinghook",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 100,
+      "stats": {
+        "strength": 3
+      }
+    },
+    {
+      "id": "weapon_grappling_hook_007",
+      "name": "Gloom Grapple",
+      "icon": "weapon_grappling_hook_007",
+      "src": "/weapons/WR_NightBoundSet_GrapplingHook_007.png",
+      "kind": "grapplinghook",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 225,
+      "stats": {
+        "strength": 9,
+        "luck": 1
+      }
+    },
+    {
+      "id": "weapon_hook_001",
+      "name": "Warden's Hook",
+      "icon": "weapon_hook_001",
+      "src": "/weapons/WR_NightBoundSet_Hook_001.png",
+      "kind": "hook",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 300,
+      "stats": {
+        "strength": 6
+      }
+    },
+    {
+      "id": "weapon_hook_002",
+      "name": "Zealot's Hook",
+      "icon": "weapon_hook_002",
+      "src": "/weapons/WR_NightBoundSet_Hook_002.png",
+      "kind": "hook",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 33,
+      "stats": {
+        "strength": 9,
+        "stamina": 1
+      }
+    },
+    {
+      "id": "weapon_hook_003",
+      "name": "Rusted Hook of Despair",
+      "icon": "weapon_hook_003",
+      "src": "/weapons/WR_NightBoundSet_Hook_003.png",
+      "kind": "hook",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 33,
+      "stats": {
+        "strength": 4
+      }
+    },
+    {
+      "id": "weapon_hook_004",
+      "name": "Queen's Hook",
+      "icon": "weapon_hook_004",
+      "src": "/weapons/WR_NightBoundSet_Hook_004.png",
+      "kind": "hook",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 224,
+      "stats": {
+        "strength": 5,
+        "stamina": 4
+      }
+    },
+    {
+      "id": "weapon_blade_01",
+      "name": "Storm Pike",
+      "icon": "weapon_blade_01",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 73,
+      "stats": {
+        "strength": 2
+      }
+    },
+    {
+      "id": "weapon_blade_02",
+      "name": "Rusted Glaive",
+      "icon": "weapon_blade_02",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 63,
+      "stats": {
+        "strength": 4,
+        "defence": 3
+      }
+    },
+    {
+      "id": "weapon_blade_03",
+      "name": "Pale Falchion",
+      "icon": "weapon_blade_03",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 105,
+      "stats": {
+        "strength": 8
+      }
+    },
+    {
+      "id": "weapon_blade_04",
+      "name": "Pale Cleaver",
+      "icon": "weapon_blade_04",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 280,
+      "stats": {
+        "strength": 8
+      }
+    },
+    {
+      "id": "weapon_blade_05",
+      "name": "Queen's Halberd",
+      "icon": "weapon_blade_05",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 252,
+      "stats": {
+        "strength": 8,
+        "luck": 2
+      }
+    },
+    {
+      "id": "weapon_blade_06",
+      "name": "Ashen Glaive of Ash",
+      "icon": "weapon_blade_06",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 91,
+      "stats": {
+        "strength": 1,
+        "stamina": 4
+      }
+    },
+    {
+      "id": "weapon_blade_07",
+      "name": "Obsidian Glaive",
+      "icon": "weapon_blade_07",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 271,
+      "stats": {
+        "strength": 7
+      }
+    },
+    {
+      "id": "weapon_blade_08",
+      "name": "Zealot's Glaive",
+      "icon": "weapon_blade_08",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 294,
+      "stats": {
+        "strength": 3,
+        "intelligence": 1
+      }
+    },
+    {
+      "id": "weapon_blade_09",
+      "name": "Thorn Spear of Despair",
+      "icon": "weapon_blade_09",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 212,
+      "stats": {
+        "strength": 6,
+        "mana": 4
+      }
+    },
+    {
+      "id": "weapon_blade_10",
+      "name": "Night Falchion",
+      "icon": "weapon_blade_10",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 156,
+      "stats": {
+        "strength": 9,
+        "mana": 4
+      }
+    },
+    {
+      "id": "weapon_blade_11",
+      "name": "Ember Pike of the Deep",
+      "icon": "weapon_blade_11",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 100,
+      "stats": {
+        "strength": 7
+      }
+    },
+    {
+      "id": "weapon_blade_12",
+      "name": "Silent Cleaver",
+      "icon": "weapon_blade_12",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 71,
+      "stats": {
+        "strength": 5,
+        "stamina": 3
+      }
+    },
+    {
+      "id": "weapon_blade_13",
+      "name": "Molten Halberd",
+      "icon": "weapon_blade_13",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 191,
+      "stats": {
+        "strength": 3
+      }
+    },
+    {
+      "id": "weapon_blade_14",
+      "name": "Jade Falchion",
+      "icon": "weapon_blade_14",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 199,
+      "stats": {
+        "strength": 4,
+        "stamina": 2
+      }
+    },
+    {
+      "id": "weapon_blade_15",
+      "name": "Pale Falchion of Ash",
+      "icon": "weapon_blade_15",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 127,
+      "stats": {
+        "strength": 2,
+        "stamina": 3
+      }
+    },
+    {
+      "id": "weapon_blade_16",
+      "name": "Hollow Halberd",
+      "icon": "weapon_blade_16",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 292,
+      "stats": {
+        "strength": 3
+      }
+    },
+    {
+      "id": "weapon_blade_17",
+      "name": "Storm Glaive of Ruin",
+      "icon": "weapon_blade_17",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 46,
+      "stats": {
+        "strength": 2
+      }
+    },
+    {
+      "id": "weapon_blade_18",
+      "name": "Ashen Spear",
+      "icon": "weapon_blade_18",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 100,
+      "stats": {
+        "strength": 1
+      }
+    },
+    {
+      "id": "weapon_blade_19",
+      "name": "Storm Pike",
+      "icon": "weapon_blade_19",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 283,
+      "stats": {
+        "strength": 1,
+        "mana": 1
+      }
+    },
+    {
+      "id": "weapon_blade_20",
+      "name": "Hollow Spear of Ash",
+      "icon": "weapon_blade_20",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 286,
+      "stats": {
+        "strength": 1
+      }
+    },
+    {
+      "id": "weapon_blade_21",
+      "name": "Lunar Halberd of Embers",
+      "icon": "weapon_blade_21",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 126,
+      "stats": {
+        "strength": 6
+      }
+    },
+    {
+      "id": "weapon_blade_22",
+      "name": "Pale Cleaver of the Moon",
+      "icon": "weapon_blade_22",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 51,
+      "stats": {
+        "strength": 7,
+        "stamina": 2
+      }
+    },
+    {
+      "id": "weapon_blade_23",
+      "name": "Dread Spear",
+      "icon": "weapon_blade_23",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 118,
+      "stats": {
+        "strength": 9,
+        "defence": 2
+      }
+    },
+    {
+      "id": "weapon_blade_24",
+      "name": "Queen's Spear of the Goblin King",
+      "icon": "weapon_blade_24",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 272,
+      "stats": {
+        "strength": 9,
+        "luck": 2
+      }
+    },
+    {
+      "id": "weapon_blade_25",
+      "name": "Silent Blade of Dawn",
+      "icon": "weapon_blade_25",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 208,
+      "stats": {
+        "strength": 1
+      }
+    },
+    {
+      "id": "weapon_blade_26",
+      "name": "Pale Glaive",
+      "icon": "weapon_blade_26",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 125,
+      "stats": {
+        "strength": 1
+      }
+    },
+    {
+      "id": "weapon_blade_27",
+      "name": "Night Glaive",
+      "icon": "weapon_blade_27",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 117,
+      "stats": {
+        "strength": 2,
+        "stamina": 3
+      }
+    },
+    {
+      "id": "weapon_blade_28",
+      "name": "Wyrm Pike",
+      "icon": "weapon_blade_28",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 152,
+      "stats": {
+        "strength": 3,
+        "luck": 4
+      }
+    },
+    {
+      "id": "weapon_blade_29",
+      "name": "Night Blade",
+      "icon": "weapon_blade_29",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 116,
+      "stats": {
+        "strength": 6,
+        "stamina": 3
+      }
+    },
+    {
+      "id": "weapon_blade_30",
+      "name": "Obsidian Halberd of Ruin",
+      "icon": "weapon_blade_30",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 162,
+      "stats": {
+        "strength": 7,
+        "mana": 4
+      }
+    },
+    {
+      "id": "weapon_blade_31",
+      "name": "Wyrm Spear",
+      "icon": "weapon_blade_31",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 254,
+      "stats": {
+        "strength": 5,
+        "luck": 2
+      }
+    },
+    {
+      "id": "weapon_blade_32",
+      "name": "Kingslayer Pike",
+      "icon": "weapon_blade_32",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 46,
+      "stats": {
+        "strength": 6,
+        "defence": 3
+      }
+    },
+    {
+      "id": "weapon_blade_33",
+      "name": "Sun Blade",
+      "icon": "weapon_blade_33",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 281,
+      "stats": {
+        "strength": 2,
+        "luck": 4
+      }
+    },
+    {
+      "id": "weapon_blade_34",
+      "name": "Iron Spear",
+      "icon": "weapon_blade_34",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 180,
+      "stats": {
+        "strength": 1,
+        "defence": 3
+      }
+    },
+    {
+      "id": "weapon_blade_35",
+      "name": "Vile Falchion",
+      "icon": "weapon_blade_35",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 194,
+      "stats": {
+        "strength": 6
+      }
+    },
+    {
+      "id": "weapon_blade_36",
+      "name": "Runed Cleaver of Embers",
+      "icon": "weapon_blade_36",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 109,
+      "stats": {
+        "strength": 4,
+        "mana": 2
+      }
+    },
+    {
+      "id": "weapon_blade_37",
+      "name": "Rusted Falchion of Dawn",
+      "icon": "weapon_blade_37",
+      "kind": "blade",
+      "type": "weapon",
+      "gear": "weapon",
+      "value": 269,
+      "stats": {
+        "strength": 8,
+        "stamina": 4
+      }
+    }
+  ]
+}

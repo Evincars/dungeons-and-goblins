@@ -29,7 +29,7 @@ const NOBODY: Entity = {};
 
 function kindOf(e: Entity): number {
   if (e.playerInput) return Sense.player;
-  if (e.ai) return Sense.mob;
+  if (e.ai || e.dummy) return Sense.mob;
   if (e.spawner) return Sense.nest;
   if (e.loot) return Sense.loot;
   if (e.item) return Sense.item;

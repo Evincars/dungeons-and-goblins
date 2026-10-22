@@ -19,7 +19,7 @@ import type { DungeonConfig } from './DungeonConfig';
 import { bspTree, bspLeaves, type BspNode } from './BSPSplit';
 import { isPillarColumn } from '../TerrainAutotile';
 import {
-  CAVE_CENTREPIECES, CAVE_CRYSTALS, CAVE_PLANTS, CAVE_SPIRES, CAVE_STONES, COFFINS, CRATES, CRYPT_CENTREPIECES,
+  CAVE_CENTREPIECES, CAVE_CRYSTALS, GEM_CRYSTALS, CAVE_PLANTS, CAVE_SPIRES, CAVE_STONES, COFFINS, CRATES, CRYPT_CENTREPIECES,
   HALL_CENTREPIECES, HANGINGS, PEDESTALS, POSTS, PROPS, SARCOPHAGI, STORE_CENTREPIECES, STORE_FURNITURE, STORE_GOODS, URNS,
   propBlockRect, propWeight,
 } from '../Props';
@@ -69,6 +69,9 @@ const STORE_FURNITURE_MAX = 2;
 const STORE_GOODS_MAX = 3;
 /** Chance a plain hall is flanked by a pair of pedestals instead of posts. */
 const PEDESTAL_CHANCE = 0.4;
+/** Chance a room (or cave hall, three times as likely) holds one of the big glowing crystals: a rare find. */
+const GEM_CRYSTAL_CHANCE = 0.04;
+const HALL_CRYSTAL_FACTOR = 3;
 /** Chance a room gets something standing in its middle (a tomb, a crate stack, a pedestal). */
 const CENTREPIECE_CHANCE = 0.7;
 /** Tiles of open floor a centrepiece keeps around it, and how far from the middle it may move to find them. */
@@ -131,6 +134,8 @@ export type DungeonLayout = {
   campfires: Array<{ x: number; y: number }>;
   exitButtonPos: { x: number; y: number };
   shopPos: { x: number; y: number };
+  /** Where the training dummy stands in the safe room. */
+  dummyPos: { x: number; y: number };
   safeDoor: DoorData;
 };
 
@@ -252,6 +257,8 @@ export class DungeonBuilder {
     const torchTiles = this.placeTorches();
     this.placeHangings(torchTiles, props);
     const shopTile = { x: safe.x + Math.floor(safe.w / 2), y: safe.y + 1 };
+    const dummyTile = { x: safe.x + 2, y: safe.y + safe.h - 3 };
+    this.usedTiles.add(dummyTile.x + dummyTile.y * W);
     // The exit, the spawn and the shop keeper's spot (and the wall behind and floor in front of it) stay clear.
     for (const t of [exitTile, playerTile, shopTile, { x: shopTile.x, y: safe.y }, { x: shopTile.x, y: shopTile.y + 1 }]) {
       this.usedTiles.add(t.x + t.y * W);
@@ -274,6 +281,7 @@ export class DungeonBuilder {
       campfires: campfires.map((t) => tileCenter(t.x, t.y)),
       exitButtonPos: tileCenter(exitTile.x, exitTile.y),
       shopPos: tileCenter(shopTile.x, shopTile.y),
+      dummyPos: tileCenter(dummyTile.x, dummyTile.y),
       safeDoor: { tiles: doorTiles, boundaryX: (doorX + 1) * TILE_WIDTH + TILE_WIDTH / 2 },
     };
   }
@@ -589,6 +597,7 @@ export class DungeonBuilder {
     }
     if (!middleTaken && this.rng() < CENTREPIECE_CHANCE) this.centrepiece(room, centrepieces, props, keep);
     if (this.rng() < STORE_CHANCE) this.storeroom(room, props, keep);
+    if (this.rng() < GEM_CRYSTAL_CHANCE) this.scatterSolid(room, this.shuffledFreeTiles(room), GEM_CRYSTALS, props, keep);
     this.urnsAlongWalls(room, roll >= 0.4 && roll < 0.7 ? 4 : 2, props, keep);
   }
 
@@ -660,6 +669,7 @@ export class DungeonBuilder {
     this.centrepiece(room, CAVE_CENTREPIECES, props, keep);
     const open = this.shuffledFreeTiles(room);
     for (let i = this.countIn(CAVE_SPIRE_COUNT); i > 0; i--) this.scatterSolid(room, open, CAVE_SPIRES, props, keep);
+    if (this.rng() < GEM_CRYSTAL_CHANCE * HALL_CRYSTAL_FACTOR) this.scatterSolid(room, open, GEM_CRYSTALS, props, keep);
     const colour = this.pick(PLANT_COLOURS);
     const plants = CAVE_PLANTS.filter((kind) => kind.endsWith(colour) || kind.includes(`${colour}_`));
     this.scatterLoose(open, CAVE_CRYSTALS, this.countIn(CAVE_CRYSTAL_COUNT), props);

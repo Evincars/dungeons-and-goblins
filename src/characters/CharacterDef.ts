@@ -29,6 +29,9 @@ export type ClipDef = {
   mode: ClipMode;
   /** Frame at which the strike lands, for clips that carry a hit (attacks). */
   impactFrame?: number;
+  /** This strip's frames, when they differ from the character's (a wider attack). */
+  frameWidth?: number;
+  frameHeight?: number;
 };
 
 export type CharacterDef = {
@@ -48,6 +51,12 @@ export type CharacterDef = {
    * use only their side rows; sheets without this are single rows facing right, mirrored for the left.
    */
   facingRows?: { left: number; right: number };
+  /** Column of the source frame (before trimming) where the body's middle is; the sprite turns about it. */
+  bodyX?: number;
+  /** The art is drawn facing left (everything else faces right). */
+  facesLeft?: boolean;
+  /** A solid background colour drawn into every strip, made transparent when it loads. */
+  keyColor?: number;
   /** Every strip the character owns, by name. */
   clips: Record<string, ClipDef>;
   /** Which clip plays for each state; states left out are skipped. Every character idles. */

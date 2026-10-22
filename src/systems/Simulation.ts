@@ -9,6 +9,7 @@ import { updateMovement } from './MovementSystem';
 import { updateTrails } from './TrailSystem';
 import { updateCombatTimers, updateContactDamage } from './CombatSystem';
 import { updateSword } from './SwordSystem';
+import { updateArrows } from './ArrowSystem';
 import { updateLoot } from './LootSystem';
 import { updateSpawners } from './SpawnerSystem';
 import { updateDeath } from './DeathSystem';
@@ -19,6 +20,7 @@ import { updateShop } from './ShopSystem';
 import { updateRespawns } from './RespawnSystem';
 import { updateSprites } from './SpriteSystem';
 import { updateFx } from './FxSystem';
+import { animateDummies, updateDummies } from './DummySystem';
 import { updateCharacterFacing } from './CharacterFacingSystem';
 import { updateCharacterState } from './CharacterStateSystem';
 import { updateCharacterAnimation } from './CharacterAnimationSystem';
@@ -52,8 +54,10 @@ export const SIMULATION: readonly System[] = [
   () => updateTargeting(),
   () => updateInventory(),
   ({ level, tick }) => updateAI(level, tick),
+  () => updateArrows(),
   () => updateSword(),
   ({ level }) => updateSpells(level),
+  () => updateDummies(),
   ({ level }) => updateMovement(level),
   () => beginPerception(),
   ({ level, tick }) => updateTrails(level, tick),
@@ -77,6 +81,7 @@ export const SIMULATION: readonly System[] = [
 export const PRESENTATION: readonly System[] = [
   ({ gameLayer }) => updateSprites(gameLayer),
   () => updateFx(),
+  () => animateDummies(),
   () => updateCharacterFacing(),
   () => updateCharacterState(),
   () => updateCharacterAnimation(),

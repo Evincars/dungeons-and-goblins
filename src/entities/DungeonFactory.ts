@@ -1,4 +1,4 @@
-import { world } from '../world';
+import { world, Team } from '../world';
 import type { Entity, InventoryItem } from '../world';
 import { TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
 import { PROPS, PROP_GROUND } from '../level/Props';
@@ -35,16 +35,16 @@ const CHEST_HEALTH = 20;
 const CHEST_SCALE = 0.75;
 const CHEST_LIFT = 12;
 
-/** What the shop keeper sells: gear for every slot (icons index ITEM_ICONS in entities/Items.ts). */
+/** What the shop keeper sells: gear for every slot. */
 export const SHOP_ITEMS: readonly InventoryItem[] = [
-  { type: 'weapon', name: 'Short Sword',   value: 50,  gear: 'weapon',  icon: 0, stats: { strength: 2 } },
-  { type: 'weapon', name: 'Long Sword',    value: 120, gear: 'weapon',  icon: 1, stats: { strength: 4 } },
-  { type: 'weapon', name: 'Hand Axe',      value: 70,  gear: 'weapon',  icon: 7, stats: { strength: 3 } },
-  { type: 'shield', name: 'Wooden Shield', value: 45,  gear: 'offhand', icon: 6, stats: { defence: 1 } },
-  { type: 'helmet', name: 'Iron Helm',     value: 40,  gear: 'head',    icon: 2, stats: { defence: 1 } },
-  { type: 'armor',  name: 'Chain Mail',    value: 80,  gear: 'armor',   icon: 3, stats: { defence: 2, stamina: 1 } },
-  { type: 'boots',  name: 'Leather Boots', value: 30,  gear: 'legs',    icon: 4, stats: { defence: 1 } },
-  { type: 'ring',   name: 'Copper Ring',   value: 60,  gear: 'trinket', icon: 5, stats: { luck: 2 } },
+  { type: 'weapon', name: 'Short Sword',   value: 50,  gear: 'weapon',  icon: 'item_arms_00', stats: { strength: 2 } },
+  { type: 'weapon', name: 'Long Sword',    value: 120, gear: 'weapon',  icon: 'item_arms_11', stats: { strength: 4 } },
+  { type: 'weapon', name: 'Hand Axe',      value: 70,  gear: 'weapon',  icon: 'item_arms_13', stats: { strength: 3 } },
+  { type: 'shield', name: 'Wooden Shield', value: 45,  gear: 'offhand', icon: 'item_arms_08', stats: { defence: 1 } },
+  { type: 'helmet', name: 'Iron Helm',     value: 40,  gear: 'head',    icon: 'prop_armor_bust2', stats: { defence: 1 } },
+  { type: 'armor',  name: 'Chain Mail',    value: 80,  gear: 'armor',   icon: 'prop_armor_bust', stats: { defence: 2, stamina: 1 } },
+  { type: 'boots',  name: 'Leather Boots', value: 30,  gear: 'legs',    icon: 'icon_boots', stats: { defence: 1 } },
+  { type: 'ring',   name: 'Copper Ring',   value: 60,  gear: 'trinket', icon: 'icon_ring', stats: { luck: 2 } },
 ];
 
 /** ECS metadata for a room of the layout. */
@@ -153,6 +153,31 @@ export function createChest(x: number, y: number): Entity {
     yOffset: CHEST_LIFT,
     healthBarOffset: 14,
     minimapColor: 0xffd040,
+  });
+}
+
+/** The dummy is drawn half as big again; its feet are 28 px down its 32 px frame. */
+const DUMMY_SCALE = 1.5;
+const DUMMY_FEET_Y = 28;
+const DUMMY_FRAME = 32;
+const DUMMY_IDLE_FRAMES = 4;
+const DUMMY_FRAME_TICKS = 6;
+/** Health only for show: the dummy is healed after every blow. */
+const DUMMY_HEALTH = 1000;
+
+/** The training dummy in the safe room: swords, spells and arrows can be tried on it. */
+export function createTrainingDummy(x: number, y: number): Entity {
+  return world.add({
+    position: { x, y },
+    health: { current: DUMMY_HEALTH, max: DUMMY_HEALTH },
+    hurtTime: 0, freezeTime: 0,
+    radius: { x: 7, y: 4 },
+    blocking: true,
+    team: Team.Neutral,
+    dummy: { row: 0 },
+    visual: { sheet: 'training_dummy', scale: DUMMY_SCALE },
+    animation: { sheet: 'training_dummy', frameX: 0, frameY: 0, frameCount: DUMMY_IDLE_FRAMES, frameTime: DUMMY_FRAME_TICKS, timer: 0, loop: true },
+    yOffset: (DUMMY_FEET_Y - DUMMY_FRAME / 2) * DUMMY_SCALE,
   });
 }
 

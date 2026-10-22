@@ -9,6 +9,8 @@
     "troll":    { "health": 120, "strength": 12, "deathPoints": 50 },
     "goblin_grunt":   { "health": 7,  "strength": 5,  "deathPoints": 50 },
     "goblin_rogue":   { "health": 12, "strength": 7,  "deathPoints": 100 },
-    "goblin_warrior": { "health": 27, "strength": 11, "deathPoints": 200 }
+    "goblin_warrior": { "health": 27, "strength": 11, "deathPoints": 200 },
+    "ghost_wizard":   { "health": 18, "strength": 9,  "deathPoints": 160 },
+    "evil_wizard":    { "health": 45, "strength": 14, "deathPoints": 320 }
   }
 }

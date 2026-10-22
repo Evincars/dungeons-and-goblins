@@ -39,6 +39,8 @@ export function createSwordSwingFx(x: number, y: number, _dirX: number, _dirY: n
 
 export type FxOptions = {
   scale?: number;
+  /** Row of the sheet to play (effects keep one colour per row). */
+  row?: number;
   cycle?: boolean;
   yOffset?: number;
   /** Draw in step with this entity (by id), `orderBias` in front of (+) or behind (−) it. */
@@ -53,7 +55,7 @@ export function spawnFx(x: number, y: number, sheet: string, frames: number, dur
   return world.add({
     position: { x, y },
     yOffset: opts.yOffset ?? 0,
-    visual: { sheet, col: 0, scale: opts.scale },
+    visual: { sheet, col: 0, row: opts.row, scale: opts.scale },
     fx: {
       age: 0, duration, frames,
       cycle: opts.cycle, scale: opts.scale, rise: opts.rise, orderId: opts.orderId, orderBias: opts.orderBias,

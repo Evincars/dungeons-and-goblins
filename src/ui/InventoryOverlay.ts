@@ -4,6 +4,8 @@ import { EQUIP_SLOTS, STAT_NAMES, localPlayer } from '../world';
 import type { InventoryItem, Player, StatName } from '../world';
 import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
 import { getTexture } from '../assets/Textures';
+import { lazyTexture, onArtLoaded } from '../assets/LazyArt';
+import { ItemTooltip } from './ItemTooltip';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
 import { INVENTORY_COLS, INVENTORY_ROWS, moveItem, requestLoadout } from '../game/PlayerActions';
@@ -25,9 +27,10 @@ const TAB_IDLE_DIM = 0.35;
 const TAB_UNDERLINE = 2;
 /** Placeholder for the Stats tab, until it has something to show. */
 const STATS_TAB_TEXT = 'test text here...';
-/** Where the title and the line about the item under the pointer sit, above the bag panel. */
+/** Where the title sits, above the bag panel. */
 const TITLE = { x: 80, y: 6 };
-const INFO_Y = 30;
+/** Height of a stack count, drawn in a square's bottom corner. */
+const COUNT_H = 9;
 
 /**
  * The screen is laid out once at this width (the art scaled down to it) and then scaled whole to fit the
@@ -53,7 +56,7 @@ const GHOST_ALPHA = 0.85;
 
 type Rect = { x: number; y: number; w: number; h: number };
 /** `page`: the tab page the square is on (bag squares are always shown). */
-type Square = { place: ItemPlace; box: Rectangle; icon: Sprite; page: Container | null };
+type Square = { place: ItemPlace; box: Rectangle; icon: Sprite; count: PixelLabel; page: Container | null };
 type Tab = { glow: Graphics; label: PixelLabel; page: Container; hovered: boolean; w: number; h: number };
 
 /** A rect of the art, in the overlay's design space. */
@@ -66,11 +69,6 @@ function samePlace(a: ItemPlace, b: ItemPlace): boolean {
   return 'slot' in b && a.slot === b.slot;
 }
 
-function statLine(item: InventoryItem): string {
-  const s = item.stats;
-  const parts = s ? STAT_NAMES.flatMap((stat) => (s[stat] ? [`+${s[stat]} ${STAT_LABELS[stat]}`] : [])) : [];
-  return [item.name, ...parts].join('  ');
-}
 
 /**
  * Tab opens it: the bag as a grid of squares on the left; on the right two tabs, Gear (the equipment slots,
@@ -83,12 +81,13 @@ export class InventoryOverlay {
   private readonly squares: Square[] = [];
   private readonly statValues = new Map<StatName, PixelLabel>();
   private readonly gold = new PixelLabel('', { color: 0xffcc00, align: 'right', shadow: true });
-  private readonly info = new PixelLabel('', { color: THEME.muted, shadow: true });
+  private readonly tooltip = new ItemTooltip();
   private readonly ghost = new Sprite();
   private readonly tabs: Tab[] = [];
   private activeTab = 0;
   private cell = 0;
   private dragging: ItemPlace | null = null;
+  private readonly stopListening: () => void;
   /** What the squares show, so they are redrawn only when the player's things change. */
   private shown: { inventory: unknown; count: number; equipped: unknown; gold: number } | null = null;
 
@@ -98,6 +97,11 @@ export class InventoryOverlay {
     this.build();
     this.fitToScreen();
     this.listen();
+    // Item pictures load the first time they are shown: draw again once they arrive.
+    this.stopListening = onArtLoaded(() => {
+      this.shown = null;
+      this.tooltip.invalidate();
+    });
   }
 
   setVisible(visible: boolean): void {
@@ -119,6 +123,7 @@ export class InventoryOverlay {
   }
 
   destroy(): void {
+    this.stopListening();
     this.container.destroy({ children: true });
   }
 
@@ -131,8 +136,7 @@ export class InventoryOverlay {
     const title = new PixelLabel('INVENTORY', { color: THEME.title, scale: 2, shadow: true });
     title.position.set(TITLE.x * K, TITLE.y);
     this.gold.position.set((BAG_AREA.x + BAG_AREA.w) * K, TITLE.y + 4);
-    this.info.position.set(TITLE.x * K, INFO_Y);
-    this.root.addChild(title, this.gold, this.info);
+    this.root.addChild(title, this.gold);
     this.buildBag(designRect(BAG_AREA));
     const gearPage = new Container();
     const statsPage = new Container();
@@ -144,7 +148,7 @@ export class InventoryOverlay {
     this.ghost.anchor.set(0.5);
     this.ghost.alpha = GHOST_ALPHA;
     this.ghost.visible = false;
-    this.root.addChild(this.ghost);
+    this.root.addChild(this.ghost, this.tooltip.view);
   }
 
   /** A clickable tab over the art's tab: it lights up under the pointer and when open, and shows its page. */
@@ -203,7 +207,10 @@ export class InventoryOverlay {
   private buildBag(area: Rect): void {
     const cols = INVENTORY_COLS;
     const rows = INVENTORY_ROWS;
-    this.cell = Math.floor(Math.min((area.w - 2 * PAD - GAP * (cols - 1)) / cols, (area.h - 2 * PAD - GAP * (rows - 1)) / rows));
+    // Bag and equipment squares are one size: as large as both the bag grid and the gear rows allow.
+    const gearRow = (designRect(GEAR_AREA).h - 2 * PAD) / EQUIP_SLOTS.length - GAP;
+    const bagCell = Math.min((area.w - 2 * PAD - GAP * (cols - 1)) / cols, (area.h - 2 * PAD - GAP * (rows - 1)) / rows);
+    this.cell = Math.floor(Math.min(bagCell, gearRow));
     const x0 = area.x + (area.w - (cols * this.cell + (cols - 1) * GAP)) / 2;
     const y0 = area.y + (area.h - (rows * this.cell + (rows - 1) * GAP)) / 2;
     for (let i = 0; i < cols * rows; i++) {
@@ -261,8 +268,11 @@ export class InventoryOverlay {
     const icon = new Sprite();
     icon.anchor.set(0.5);
     icon.position.set(x + size / 2, y + size / 2);
-    (page ?? this.root).addChild(frame, icon);
-    this.squares.push({ place, box: new Rectangle(x, y, size, size), icon, page });
+    // How many are stacked here (arrows), in the square's corner.
+    const count = new PixelLabel('', { color: THEME.text, align: 'right', outline: true });
+    count.position.set(x + size - 1, y + size - COUNT_H);
+    (page ?? this.root).addChild(frame, icon, count);
+    this.squares.push({ place, box: new Rectangle(x, y, size, size), icon, count, page });
   }
 
   /** Scales the whole overlay to the largest size that fits the screen with a margin, centred. */
@@ -278,18 +288,21 @@ export class InventoryOverlay {
     return 'bag' in place ? player.inventory?.[place.bag] : player.equipped?.[place.slot];
   }
 
-  /** Shows an item's picture in a sprite, as large as fits a square. */
+  /** Shows an item's picture in a sprite, as large as fits a square (loading it the first time). */
   private showIcon(sprite: Sprite, item: InventoryItem | undefined): void {
     sprite.visible = !!item;
     if (!item) return;
-    sprite.texture = getTexture(itemIcon(item));
-    sprite.texture.source.scaleMode = 'nearest';
+    sprite.texture = lazyTexture(itemIcon(item));
     const room = this.cell - 2 * ICON_PAD;
     sprite.scale.set(Math.min(room / Math.max(1, sprite.texture.width), room / Math.max(1, sprite.texture.height)));
   }
 
   private refresh(player: Player): void {
-    for (const square of this.squares) this.showIcon(square.icon, this.itemIn(player, square.place));
+    for (const square of this.squares) {
+      const item = this.itemIn(player, square.place);
+      this.showIcon(square.icon, item);
+      square.count.text = item?.count !== undefined ? String(item.count) : '';
+    }
     const totals = statTotals(player.equipped ?? {});
     for (const [stat, label] of this.statValues) label.text = String(totals[stat]);
     this.gold.text = `Gold: ${player.playerStats.gold}`;
@@ -321,15 +334,16 @@ export class InventoryOverlay {
     this.moveDrag(e);
   }
 
-  /** The ghost follows the pointer; with nothing held, the line above the bag names what is under it. */
+  /** The ghost follows the pointer; with nothing held, the tooltip tells about the item under it. */
   private moveDrag(e: FederatedPointerEvent): void {
     if (!this.container.visible) return;
     const p = this.root.toLocal(e.global);
     this.ghost.position.set(p.x, p.y);
     const player = localPlayer();
     const square = this.squareAt(e);
-    const item = player && square ? this.itemIn(player, square.place) : undefined;
-    this.info.text = item ? statLine(item) : '';
+    const item = player && square && !this.dragging ? this.itemIn(player, square.place) : undefined;
+    if (item) this.tooltip.show(item, p.x, p.y, { w: DESIGN_W, h: DESIGN_H });
+    else this.tooltip.hide();
   }
 
   private drop(e: FederatedPointerEvent): void {

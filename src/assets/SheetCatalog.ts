@@ -1,4 +1,7 @@
 import { SpriteSheet, frameRun } from './SpriteSheet';
+import { registerLazy } from './LazyArt';
+import { registerEffects } from './Effects';
+import { catalogIconSources } from '../entities/ItemCatalog';
 import type { Rect, SheetRegion } from './SpriteSheet';
 import { characterSheets } from '../characters/Characters';
 import { PROPS, PROP_IMAGES } from '../level/Props';
@@ -217,6 +220,9 @@ const UI_SHEETS = [
   new SpriteSheet('exclamation_mark', '/ui/effects/exclamation_mark.png', { grid: { frameWidth: 4, frameHeight: 13 } }),
   new SpriteSheet('fx_dirt', '/ui/effects/fx_dirt_12.png', { grid: { frameWidth: 12, frameHeight: 12 } }),
 
+  // The safe room's training dummy: rows of 32×32 frames — idle, a hit, a heavy hit.
+  new SpriteSheet('training_dummy', '/training_dummy.png', { grid: { frameWidth: 32, frameHeight: 32 } }),
+
   // Chests: closed and open, side by side (the open lid reaches up to the top of the frame).
   new SpriteSheet('chest',       `${OBJECTS}/chest_small.png`, { grid: { frameWidth: 32, frameHeight: 53 } }),
   new SpriteSheet('chest_large', `${OBJECTS}/chest_large.png`, { grid: { frameWidth: 64, frameHeight: 53 } }),
@@ -225,4 +231,76 @@ const UI_SHEETS = [
 /** Every image to load, in one list for the loader. */
 export function allSheets(): SpriteSheet[] {
   return [...UI_SHEETS, ...characterSheets(), ...propSheets(), ...TRAP_SHEETS];
+}
+
+// ── Art loaded on first use (see LazyArt) ─────────────────────────────────────
+
+/** The loose weapons scattered over weapons-1.png, left to right and top to bottom. */
+const BLADE_ICONS = {
+  weapon_blade_01: { x: 14, y: 40, w: 14, h: 79 },
+  weapon_blade_02: { x: 33, y: 30, w: 10, h: 54 },
+  weapon_blade_03: { x: 50, y: 34, w: 11, h: 48 },
+  weapon_blade_04: { x: 69, y: 26, w: 20, h: 74 },
+  weapon_blade_05: { x: 92, y: 28, w: 9, h: 31 },
+  weapon_blade_06: { x: 102, y: 25, w: 18, h: 59 },
+  weapon_blade_07: { x: 129, y: 24, w: 31, h: 66 },
+  weapon_blade_08: { x: 149, y: 51, w: 7, h: 21 },
+  weapon_blade_09: { x: 168, y: 37, w: 9, h: 46 },
+  weapon_blade_10: { x: 184, y: 29, w: 14, h: 56 },
+  weapon_blade_11: { x: 202, y: 26, w: 26, h: 90 },
+  weapon_blade_12: { x: 228, y: 35, w: 10, h: 47 },
+  weapon_blade_13: { x: 242, y: 36, w: 14, h: 62 },
+  weapon_blade_14: { x: 268, y: 32, w: 14, h: 84 },
+  weapon_blade_15: { x: 287, y: 40, w: 7, h: 53 },
+  weapon_blade_16: { x: 297, y: 32, w: 7, h: 61 },
+  weapon_blade_17: { x: 309, y: 47, w: 8, h: 41 },
+  weapon_blade_18: { x: 321, y: 50, w: 14, h: 79 },
+  weapon_blade_19: { x: 340, y: 48, w: 10, h: 87 },
+  weapon_blade_20: { x: 356, y: 59, w: 10, h: 60 },
+  weapon_blade_21: { x: 32, y: 92, w: 16, h: 69 },
+  weapon_blade_22: { x: 52, y: 90, w: 15, h: 41 },
+  weapon_blade_23: { x: 73, y: 107, w: 14, h: 32 },
+  weapon_blade_24: { x: 94, y: 81, w: 12, h: 38 },
+  weapon_blade_25: { x: 115, y: 96, w: 10, h: 30 },
+  weapon_blade_26: { x: 134, y: 78, w: 23, h: 56 },
+  weapon_blade_27: { x: 161, y: 91, w: 12, h: 25 },
+  weapon_blade_28: { x: 172, y: 118, w: 5, h: 19 },
+  weapon_blade_29: { x: 186, y: 94, w: 14, h: 40 },
+  weapon_blade_30: { x: 232, y: 91, w: 8, h: 44 },
+  weapon_blade_31: { x: 256, y: 115, w: 9, h: 32 },
+  weapon_blade_32: { x: 257, y: 77, w: 4, h: 32 },
+  weapon_blade_33: { x: 292, y: 99, w: 15, h: 44 },
+  weapon_blade_34: { x: 99, y: 126, w: 18, h: 39 },
+  weapon_blade_35: { x: 162, y: 140, w: 4, h: 18 },
+  weapon_blade_36: { x: 200, y: 120, w: 8, h: 29 },
+  weapon_blade_37: { x: 221, y: 120, w: 8, h: 29 },
+} as const satisfies Record<string, Rect>;
+
+/** Icons numbered 1…count in a folder (files 01.png, 02.png…), keyed `<prefix>_001`…; painted art, so smoothed. */
+function numberedIcons(prefix: string, folder: string, count: number): void {
+  for (let i = 1; i <= count; i++) {
+    const key = `${prefix}_${String(i).padStart(3, '0')}`;
+    registerLazy(new SpriteSheet(key, `/${folder}/${String(i).padStart(2, '0')}.png`, { smooth: true }), [key]);
+  }
+}
+
+/** HUD medals, gates and treasures (mapped, used later). */
+const MEDALS = 80;
+const GATES = 100;
+const TREASURES = 80;
+
+/**
+ * Registers the art that loads the first time it is drawn: item icons (weapons, shields, armour), HUD medals,
+ * gates, treasures and every effect.
+ */
+export function registerLazyArt(): void {
+  for (const { key, src } of catalogIconSources()) {
+    const painted = !src.startsWith('/weapons/');
+    registerLazy(new SpriteSheet(key, src, { smooth: painted }), [key]);
+  }
+  registerLazy(new SpriteSheet('weapons_loose', '/weapons-1.png', { regions: BLADE_ICONS }), Object.keys(BLADE_ICONS));
+  numberedIcons('medal', 'medals', MEDALS);
+  numberedIcons('gate', 'gates', GATES);
+  numberedIcons('treasure', 'treasures', TREASURES);
+  registerEffects();
 }

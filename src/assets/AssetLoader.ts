@@ -4,14 +4,14 @@ import { LoadError } from '../core/errors';
 import { getTexture, hasTexture, setTexture } from './Textures';
 import { loadSheets } from './SpriteSheet';
 import { registerSheet } from '../render/Sheets';
-import { allSheets } from './SheetCatalog';
+import { allSheets, registerLazyArt } from './SheetCatalog';
 import {
   genSpellBoltSheet,
   genSpawnerSheet, genExitButtonSheet,
   genSwordSwingSheet, genDeathFxSheet,
   genDarkSheet,
   genPanelBg, genPortrait, genMinimapIcons,
-  CAMPFIRE_CELL, drawCampfireBase, genBootsIcon, genRingIcon,
+  CAMPFIRE_CELL, drawCampfireBase, genArrowSprite, genBootsIcon, genRingIcon,
 } from './SpriteGen';
 
 /** The torch animation is four separate 16×16 images, composited into one strip. */
@@ -40,6 +40,7 @@ const PROCEDURAL: Record<string, () => HTMLCanvasElement> = {
   mapicons:           genMinimapIcons,
   icon_boots:         genBootsIcon,
   icon_ring:          genRingIcon,
+  arrow_projectile:   genArrowSprite,
 };
 
 /** A loaded image as a drawable source; missing art is a load failure, not something to draw around. */
@@ -116,6 +117,7 @@ const CHEST_FRAME = { w: 32, h: 53 };
 
 export async function loadAllAssets(onProgress?: (fraction: number) => void): Promise<void> {
   await loadSheets(allSheets());
+  registerLazyArt();
   buildTorchStrip();
   buildCampfireStrip();
   recolor('button', 'button_steel', STEEL, BUTTON_FRAME);

@@ -1,5 +1,16 @@
 import { q } from '../world';
 import type { Entity } from '../world';
+import { ARMORS, ARROWS, HAND_WEAPONS, randomItem } from '../entities/ItemCatalog';
+
+/** Arrows the starting quiver holds. */
+const STARTING_ARROWS = 20;
+
+/** What everyone sets out with, to try the inventory on: a random weapon, a quiver of arrows and armour. */
+export function giveStartingKit(player: Entity): void {
+  const arrows = randomItem(ARROWS);
+  arrows.count = STARTING_ARROWS;
+  player.inventory = [randomItem(HAND_WEAPONS), arrows, randomItem(ARMORS)];
+}
 
 /** One trip into the dungeon: how deep the party has gone. A new run starts from the title screen. */
 type RunState = {
@@ -47,10 +58,16 @@ export function descend(): void {
   run.depth++;
 }
 
-/** Gives a freshly made player what they earned on the levels before (nothing on the first). */
+/**
+ * Gives a freshly made player what they earned on the levels before; at the start of a run, when there is
+ * nothing to carry, they get the starting kit instead.
+ */
 export function restorePlayer(player: Entity): void {
   const carry = carried.get(seatOf(player));
-  if (!carry || !player.playerStats || !player.health) return;
+  if (!carry || !player.playerStats || !player.health) {
+    giveStartingKit(player);
+    return;
+  }
   Object.assign(player.playerStats, structuredClone(carry.stats), { sprinting: false, sprint: 0, sprintLocked: false });
   player.inventory = structuredClone(carry.inventory);
   player.equipped = structuredClone(carry.equipped);

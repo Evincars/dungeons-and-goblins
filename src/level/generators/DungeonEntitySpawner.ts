@@ -7,6 +7,7 @@ import { TILE_WIDTH, TILE_HEIGHT, TileType } from '../TileType';
 import { createMob } from '../../entities/MobFactory';
 import {
   createCampfire, createChest, createExitButton, createProp, createRoom, createSafeDoor, createShopNpc, createTorch,
+  createTrainingDummy,
 } from '../../entities/DungeonFactory';
 import type { Level } from '../Level';
 import { forEachTile } from '../Grid';
@@ -15,7 +16,8 @@ import type { DungeonConfig } from './DungeonConfig';
 
 /**
  * How often each kind of enemy turns up in a dungeon room, relative to the others: the old goblins and
- * orcs alongside the three goblins from /other-orcs (grunts most often, warriors least).
+ * orcs alongside the three goblins from /other-orcs (grunts most often, warriors least), and now and then
+ * a ghost wizard or, rarely, an evil wizard.
  */
 const ENEMY_MIX = [
   { type: 'goblin', weight: 3 },
@@ -23,6 +25,8 @@ const ENEMY_MIX = [
   { type: 'goblin_grunt', weight: 3 },
   { type: 'goblin_rogue', weight: 2 },
   { type: 'goblin_warrior', weight: 1.2 },
+  { type: 'ghost_wizard', weight: 0.8 },
+  { type: 'evil_wizard', weight: 0.4 },
 ] as const satisfies ReadonlyArray<{ type: MobType; weight: number }>;
 const ENEMY_MIX_TOTAL = ENEMY_MIX.reduce((sum, e) => sum + e.weight, 0);
 /** Chance a dungeon room holds a chest. */
@@ -78,11 +82,12 @@ export function spawnDecor(layout: DungeonLayout): void {
 
 /** What changes during play, made by whoever runs the game (alone, or the co-op host). */
 export function spawnLiveEntities(layout: DungeonLayout, cfg: DungeonConfig): void {
-  const { level, rooms, exitButtonPos, shopPos, safeDoor } = layout;
+  const { level, rooms, exitButtonPos, shopPos, safeDoor, dummyPos } = layout;
   createSafeDoor(safeDoor);
   for (const room of rooms) {
     if (room.type === 'dungeon') populateRoom(level, room, cfg);
   }
   createExitButton(exitButtonPos.x, exitButtonPos.y);
   createShopNpc(shopPos.x, shopPos.y);
+  createTrainingDummy(dummyPos.x, dummyPos.y);
 }

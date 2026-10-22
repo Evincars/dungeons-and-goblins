@@ -70,3 +70,26 @@ export function swingDamage(tier: number): number {
   const table = SWORD_STATS.damageByTier;
   return table[Math.max(0, Math.min(tier - 1, table.length - 1))];
 }
+
+export type ArrowStats = {
+  /** Pixels an arrow flies per tick, and ticks before it drops. */
+  speed: number;
+  life: number;
+  /** Damage of a bare arrow; each point of strength on the gear adds one. */
+  damage: number;
+  /** Ticks between shots, and how long the archer holds the release pose. */
+  cooldown: number;
+  drawTicks: number;
+  /** Arrows leave this far out from the archer's feet. */
+  spawnOffset: number;
+};
+
+export const ARROW_STATS = {
+  speed: 6,
+  life: 70,
+  damage: 8,
+  cooldown: 22,
+  drawTicks: 12,
+  spawnOffset: 10,
+} as const satisfies ArrowStats;
+

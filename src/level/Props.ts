@@ -24,6 +24,27 @@ export const PROP_IMAGES = {
   cave_plants_red:    '/caves/LedB.png',
   cave_plants_lilac:  '/caves/LedC.png',
   cave_plants_teal:   '/caves/LedD.png',
+  // Big glowing crystals (/crystals), four frames each, one file per frame.
+  gem_crystal_blue_1: '/crystals/Blue/blue_crystal_0000.png',
+  gem_crystal_blue_2: '/crystals/Blue/blue_crystal_0001.png',
+  gem_crystal_blue_3: '/crystals/Blue/blue_crystal_0002.png',
+  gem_crystal_blue_4: '/crystals/Blue/blue_crystal_0003.png',
+  gem_crystal_green_1: '/crystals/Green/green_crystal_0000.png',
+  gem_crystal_green_2: '/crystals/Green/green_crystal_0001.png',
+  gem_crystal_green_3: '/crystals/Green/green_crystal_0002.png',
+  gem_crystal_green_4: '/crystals/Green/green_crystal_0003.png',
+  gem_crystal_pink_1: '/crystals/Pink/pink_crystal_0000.png',
+  gem_crystal_pink_2: '/crystals/Pink/pink_crystal_0001.png',
+  gem_crystal_pink_3: '/crystals/Pink/pink_crystal_0002.png',
+  gem_crystal_pink_4: '/crystals/Pink/pink_crystal_0003.png',
+  gem_crystal_purple_1: '/crystals/Purple/purple_crystal_0000.png',
+  gem_crystal_purple_2: '/crystals/Purple/purple_crystal_0001.png',
+  gem_crystal_purple_3: '/crystals/Purple/purple_crystal_0002.png',
+  gem_crystal_purple_4: '/crystals/Purple/purple_crystal_0003.png',
+  gem_crystal_red_1: '/crystals/Red/red_crystal_0000.png',
+  gem_crystal_red_2: '/crystals/Red/red_crystal_0001.png',
+  gem_crystal_red_3: '/crystals/Red/red_crystal_0002.png',
+  gem_crystal_red_4: '/crystals/Red/red_crystal_0003.png',
 } as const satisfies Record<string, string>;
 
 export type PropImage = keyof typeof PROP_IMAGES;
@@ -92,6 +113,19 @@ const PLANT_RECTS = [
   { x: 8, y: 136, w: 15, h: 17 },
   { x: 0, y: 198, w: 32, h: 26 },
 ] as const;
+/** The big crystals: a 24×51 crystal (in 64×64 files) slowly glinting, with a cold glow; very rare. */
+const GEM_CRYSTAL_RECT = { x: 19, y: 9, w: 24, h: 51 };
+const GEM_CRYSTAL_FRAME_TICKS = 9;
+const GEM_CRYSTAL_GLOW = 52;
+function gemCrystal(images: readonly PropImage[]): PropDef {
+  const { x, y, w, h } = GEM_CRYSTAL_RECT;
+  return {
+    image: images[0], rect: GEM_CRYSTAL_RECT, mount: 'floor', solid: true, base: { w: 14, d: 6 },
+    glow: GEM_CRYSTAL_GLOW, coolGlow: true,
+    frames: images.map((image) => ({ x, y, w, h, image })), frameTime: GEM_CRYSTAL_FRAME_TICKS,
+  };
+}
+
 function plant(image: PropImage, kind: number): PropDef {
   const rect = PLANT_RECTS[kind];
   return { image, rect, mount: 'floor', frames: framesInRow(rect, PLANT_FRAMES, PLANT_STEP), frameTime: PLANT_FRAME_TICKS };
@@ -395,6 +429,13 @@ export const PROPS = {
   cave_plant_teal_2:   plant('cave_plants_teal', 1),
   cave_plant_teal_3:   plant('cave_plants_teal', 2),
   cave_grass_teal:     plant('cave_plants_teal', 3),
+
+  // ── Big crystals (/crystals), very rare finds ──
+  gem_crystal_blue: gemCrystal(['gem_crystal_blue_1', 'gem_crystal_blue_2', 'gem_crystal_blue_3', 'gem_crystal_blue_4']),
+  gem_crystal_green: gemCrystal(['gem_crystal_green_1', 'gem_crystal_green_2', 'gem_crystal_green_3', 'gem_crystal_green_4']),
+  gem_crystal_pink: gemCrystal(['gem_crystal_pink_1', 'gem_crystal_pink_2', 'gem_crystal_pink_3', 'gem_crystal_pink_4']),
+  gem_crystal_purple: gemCrystal(['gem_crystal_purple_1', 'gem_crystal_purple_2', 'gem_crystal_purple_3', 'gem_crystal_purple_4']),
+  gem_crystal_red: gemCrystal(['gem_crystal_red_1', 'gem_crystal_red_2', 'gem_crystal_red_3', 'gem_crystal_red_4']),
 } as const satisfies Record<string, PropDef>;
 
 export type PropKind = keyof typeof PROPS;
@@ -449,3 +490,5 @@ export const CAVE_SPIRES: PropKind[] = ['cave_spire', 'cave_spire_s', 'cave_spir
 export const CAVE_CRYSTALS: PropKind[] = propsStarting('crystal_');
 export const CAVE_STONES: PropKind[] = propsStarting('cave_stone_');
 export const CAVE_PLANTS: PropKind[] = propsStarting('cave_plant_', 'cave_grass_');
+/** The big glowing crystals, found very rarely in a room. */
+export const GEM_CRYSTALS: PropKind[] = propsStarting('gem_crystal_');

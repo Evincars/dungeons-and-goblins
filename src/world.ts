@@ -9,7 +9,7 @@ export const enum Team { Neutral = 0, Player = 1 }
 export const enum Facing { North = 0, East = 1, South = 2, West = 3 }
 
 /** Where a player wears or holds gear, in the order the inventory screen lists them. */
-export const EQUIP_SLOTS = ['head', 'armor', 'primary', 'secondary', 'legs', 'other1', 'other2'] as const;
+export const EQUIP_SLOTS = ['head', 'armor', 'primary', 'secondary', 'legs', 'other1', 'other2', 'ammo'] as const;
 export type EquipSlot = (typeof EQUIP_SLOTS)[number];
 
 export function isEquipSlot(value: string): value is EquipSlot {
@@ -17,7 +17,7 @@ export function isEquipSlot(value: string): value is EquipSlot {
 }
 
 /** What kind of gear an item is, which decides the slots it fits (see entities/Items.ts). */
-export const GEAR_KINDS = ['head', 'armor', 'weapon', 'offhand', 'legs', 'trinket'] as const;
+export const GEAR_KINDS = ['head', 'armor', 'weapon', 'offhand', 'legs', 'trinket', 'ammo'] as const;
 export type GearKind = (typeof GEAR_KINDS)[number];
 
 export function isGearKind(value: unknown): value is GearKind {
@@ -33,7 +33,7 @@ export function isStatName(value: unknown): value is StatName {
   return STAT_NAMES.some((stat) => stat === value);
 }
 
-export const ITEM_TYPES = ['weapon', 'shield', 'helmet', 'armor', 'boots', 'ring'] as const;
+export const ITEM_TYPES = ['weapon', 'shield', 'helmet', 'armor', 'boots', 'ring', 'ammo'] as const;
 export type ItemType = (typeof ITEM_TYPES)[number];
 
 export function isItemType(value: unknown): value is ItemType {
@@ -44,11 +44,17 @@ export type InventoryItem = {
   type: ItemType;
   name: string;
   value: number;
+  /** The catalogue entry it came from (src/data/*.json), if any. */
+  id?: string;
+  /** What sort of weapon or thing it is ('bow', 'axe', 'arrows'…), for game rules and tooltips. */
+  kind?: string;
   /** Equipment fits the slots of its kind; anything without one only goes in the bag. */
   gear?: GearKind;
-  /** Index into ITEM_ICONS (entities/Items.ts). */
-  icon?: number;
+  /** Texture key of its picture. */
+  icon?: string;
   stats?: ItemStats;
+  /** How many there are in this one square (arrows); a single thing has none. */
+  count?: number;
 };
 
 /** Who controls a player character: the host, or one of up to three guests in a co-op room. */
@@ -59,8 +65,10 @@ export function isPlayerSlot(value: unknown): value is PlayerSlot {
   return PLAYER_SLOTS.some((slot) => slot === value);
 }
 
-/** The goblin_* kinds are the three goblins drawn in /other-orcs; the rest share the old orc art. */
-export const MOB_TYPES = ['goblin', 'skeleton', 'orc', 'troll', 'goblin_grunt', 'goblin_rogue', 'goblin_warrior'] as const;
+/** The goblin_* kinds are the three goblins drawn in /other-orcs, the wizards have art of their own; the rest share the old orc art. */
+export const MOB_TYPES = [
+  'goblin', 'skeleton', 'orc', 'troll', 'goblin_grunt', 'goblin_rogue', 'goblin_warrior', 'ghost_wizard', 'evil_wizard',
+] as const;
 export type MobType = (typeof MOB_TYPES)[number];
 
 export function isMobType(value: string): value is MobType {
@@ -160,7 +168,8 @@ export type Entity = {
   chasing?: boolean;
 
   // --- rendering ---
-  visual?: { sheet: string; col?: number; row?: number; scale?: number };
+  /** `rotation`: radians the sprite is turned (an arrow points where it flies). */
+  visual?: { sheet: string; col?: number; row?: number; scale?: number; rotation?: number };
   frame?: number;
   sprite?: Sprite;
   container?: Container;
@@ -247,7 +256,8 @@ export type Entity = {
   castCooldown?: number;
 
   // --- projectiles ---
-  projectile?: { damage: number; life: number; team: number };
+  /** `arrow`: an arrow, which glints where it strikes, where a spell bolt bursts in dirt. */
+  projectile?: { damage: number; life: number; team: number; arrow?: boolean };
 
   /** Point light this entity emits (spell bolts, …). */
   glow?: {
@@ -286,6 +296,8 @@ export type Entity = {
     hitIds: number[];
   };
   swordCooldown?: number;
+  /** Ticks until the next arrow can be loosed. */
+  arrowCooldown?: number;
 
   // --- loot ---
   loot?: {
@@ -307,6 +319,10 @@ export type Entity = {
   // --- chest ---
   /** `drops`: the DROP_TABLES entry (entities/Drops.ts) it throws out when opened. */
   chest?: { opened: boolean; disappearTicks: number; drops: DropTableId };
+
+  // --- training dummy (safe room): takes every kind of hit, never falls ---
+  /** `row`: the strip it is playing (0 idle, 1 a hit, 2 a heavy hit). */
+  dummy?: { row: number };
 
   // --- spawner / nest ---
   spawner?: {
@@ -420,6 +436,13 @@ export function isPlayer(e: Entity | undefined): e is Player {
 
 export function isMob(e: Entity | undefined): e is Mob {
   return !!e && !!e.position && !!e.velocity && !!e.radius && !!e.health && !!e.ai;
+}
+
+/** Something a sword, spell or arrow can hit: a live enemy, or the training dummy. */
+export type Target = Entity & { position: { x: number; y: number }; radius: { x: number; y: number }; health: { current: number; max: number } };
+
+export function isTarget(e: Entity | undefined): e is Target {
+  return !!e && !!e.position && !!e.radius && !!e.health && (!!e.ai || !!e.dummy);
 }
 
 /** Whether a player can be hurt, hunted or interact right now. */

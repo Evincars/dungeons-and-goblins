@@ -68,6 +68,7 @@ const POINT: Schema = { x: 'number', y: 'number' };
 const SCHEMAS: Readonly<Record<string, Schema>> = {
   position: POINT, velocity: POINT, radius: POINT, aimVector: POINT, bump: POINT,
   health: { current: 'number', max: 'number' },
+  dummy: { row: 'number' },
   visual: { sheet: 'string' },
   animation: { sheet: 'string', frameX: 'number', frameY: 'number', frameCount: 'number', frameTime: 'number', timer: 'number', loop: 'boolean' },
   character: { def: 'string', state: 'string', frame: 'number', timer: 'number', finished: 'boolean', flipX: 'boolean' },
@@ -104,7 +105,7 @@ const VALUES: Readonly<Record<string, FieldType>> = {
   bounceWallTime: 'number', regenInterval: 'number', regenAmount: 'number', regenTimer: 'number', deathPoints: 'number',
   facing: 'number', speed: 'number', friction: 'number', strength: 'number', walkTime: 'number', limp: 'number',
   chasing: 'boolean', frame: 'number', yOffset: 'number', flashTime: 'number', healthBarOffset: 'number',
-  mobType: 'string', castCooldown: 'number', swordCooldown: 'number', spawnedBy: 'number', stepTimer: 'number',
+  mobType: 'string', castCooldown: 'number', swordCooldown: 'number', arrowCooldown: 'number', spawnedBy: 'number', stepTimer: 'number',
   dustTimer: 'number', respawnTicks: 'number', minimapColor: 'number', safeZone: 'boolean', playerSlot: 'string',
   playerName: 'string',
 };

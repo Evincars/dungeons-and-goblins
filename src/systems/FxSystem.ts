@@ -13,7 +13,7 @@ function frameOf(fx: Effect['fx']): number {
 function showFrame(entity: Effect, frame: number): void {
   if (entity.visual.col === frame) return;
   entity.visual.col = frame;
-  if (entity.sprite) setVisualFrame(entity.sprite, entity.visual.sheet, frame);
+  if (entity.sprite) setVisualFrame(entity.sprite, entity.visual.sheet, frame, entity.visual.row ?? 0);
 }
 
 export function updateFx(): void {

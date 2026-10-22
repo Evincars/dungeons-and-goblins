@@ -1,0 +1,55 @@
+import { isGearKind, isItemType, isStatName } from '../world';
+import type { InventoryItem, ItemStats } from '../world';
+import { isRecord } from '../core/guards';
+import weapons from '../data/weapons.json';
+import shields from '../data/shields.json';
+import armors from '../data/armors.json';
+
+/**
+ * Every weapon, shield and suit of armour the game knows, read from the JSON files in src/data (tune names,
+ * values and stats there). Entries that don't hold together are left out rather than half-used.
+ */
+
+function readStats(raw: unknown): ItemStats | undefined {
+  if (!isRecord(raw)) return undefined;
+  const stats: ItemStats = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (isStatName(key) && typeof value === 'number') stats[key] = value;
+  }
+  return stats;
+}
+
+/** One catalogue entry as an item, or null when it is missing a part. */
+function readItem(raw: unknown): InventoryItem | null {
+  if (!isRecord(raw) || !isItemType(raw.type) || typeof raw.name !== 'string' || typeof raw.value !== 'number') return null;
+  if (typeof raw.id !== 'string' || typeof raw.icon !== 'string' || (raw.gear !== undefined && !isGearKind(raw.gear))) return null;
+  const item: InventoryItem = { id: raw.id, type: raw.type, name: raw.name, value: raw.value, icon: raw.icon, stats: readStats(raw.stats) };
+  if (isGearKind(raw.gear)) item.gear = raw.gear;
+  if (typeof raw.kind === 'string') item.kind = raw.kind;
+  if (typeof raw.count === 'number') item.count = raw.count;
+  return item;
+}
+
+function readAll(file: { items: readonly unknown[] }): InventoryItem[] {
+  return file.items.flatMap((raw) => readItem(raw) ?? []);
+}
+
+export const WEAPONS: readonly InventoryItem[] = readAll(weapons);
+export const SHIELDS: readonly InventoryItem[] = readAll(shields);
+export const ARMORS: readonly InventoryItem[] = readAll(armors);
+
+/** Weapons to fight with (not shields or arrows). */
+export const HAND_WEAPONS: readonly InventoryItem[] = WEAPONS.filter((item) => item.gear === 'weapon');
+export const ARROWS: readonly InventoryItem[] = WEAPONS.filter((item) => item.gear === 'ammo');
+
+/** Where each catalogue icon's art lives (every entry names its own file). */
+export function catalogIconSources(): Array<{ key: string; src: string }> {
+  return [...weapons.items, ...shields.items, ...armors.items].flatMap((raw: unknown) =>
+    (isRecord(raw) && typeof raw.src === 'string' && typeof raw.icon === 'string' ? [{ key: raw.icon, src: raw.src }] : []));
+}
+
+/** A fresh copy of a random entry, for loot and starting gear. */
+export function randomItem(from: readonly InventoryItem[]): InventoryItem {
+  const item = from[Math.floor(Math.random() * from.length)];
+  return structuredClone(item);
+}

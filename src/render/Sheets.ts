@@ -27,6 +27,7 @@ const SHEETS: Record<string, SheetInfo> = {
   dark:               { frameWidth: 32,  frameHeight: 32  },
   icon_boots:         { frameWidth: 12,  frameHeight: 12  },
   icon_ring:          { frameWidth: 10,  frameHeight: 10  },
+  arrow_projectile:   { frameWidth: 14,  frameHeight: 5   },
 };
 
 const DEFAULT_SHEET: SheetInfo = { frameWidth: 32, frameHeight: 32 };

@@ -24,7 +24,26 @@ export type SpriteSheetOptions = {
   regions?: Readonly<Record<string, SheetRegion>>;
   /** Painted art much larger than it is drawn (menu backgrounds, panels): scaled smoothly, through mipmaps. */
   smooth?: boolean;
+  /** A solid background colour in the image (0xRRGGBB), made transparent as it loads. */
+  keyColor?: number;
 };
+
+/** A copy of an image with every pixel of exactly one colour made transparent. */
+function keyedOut(texture: Texture, color: number): Texture {
+  const image = imageOf(texture);
+  if (!image) throw new LoadError('Image cannot be read to key out its background', { context: { color } });
+  const canvas = createCanvas(texture.width, texture.height);
+  const ctx = context2d(canvas, { willReadFrequently: true });
+  ctx.drawImage(image, 0, 0);
+  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = pixels.data;
+  const r = (color >> 16) & 0xff, g = (color >> 8) & 0xff, b = color & 0xff;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i] === r && d[i + 1] === g && d[i + 2] === b) d[i + 3] = 0;
+  }
+  ctx.putImageData(pixels, 0, 0);
+  return Texture.from(canvas);
+}
 
 /** `count` frames of one size, `dx`/`dy` apart: an animation laid out in a row or a column. */
 export function frameRun(x: number, y: number, w: number, h: number, count: number, dx: number, dy = 0): Rect[] {
@@ -50,8 +69,9 @@ export class SpriteSheet {
 
   /** Stores the loaded image and its regions as pixel-crisp textures and tells the sheet cache how to slice them. */
   register(): void {
-    const texture = Assets.get<Texture | undefined>(this.key);
-    if (!texture) throw new LoadError(`Image "${this.key}" did not load`, { context: { key: this.key, src: this.src } });
+    const loaded = Assets.get<Texture | undefined>(this.key);
+    if (!loaded) throw new LoadError(`Image "${this.key}" did not load`, { context: { key: this.key, src: this.src } });
+    const texture = this.options.keyColor === undefined ? loaded : keyedOut(loaded, this.options.keyColor);
     this.filter(texture);
     setTexture(this.key, texture);
     if (this.options.grid) registerSheet(this.key, this.options.grid);

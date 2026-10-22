@@ -1,6 +1,6 @@
 import { world, Team } from '../world';
 import type { Entity } from '../world';
-import { SPELL_STATS } from './WeaponStats';
+import { ARROW_STATS, SPELL_STATS } from './WeaponStats';
 
 /** Height above the feet that the player aims from (also where spell bolts fly). */
 export const AIM_HEIGHT = 22;
@@ -17,3 +17,15 @@ export function createSpellBolt(x: number, y: number, dx: number, dy: number): E
     glow: { radius: SPELL_STATS.boltGlow },
   });
 }
+
+/** An arrow loosed from (x, y) along the unit direction (dx, dy), pointing the way it flies. */
+export function createArrow(x: number, y: number, dx: number, dy: number, damage: number): Entity {
+  return world.add({
+    position: { x: x + dx * ARROW_STATS.spawnOffset, y: y + dy * ARROW_STATS.spawnOffset },
+    velocity: { x: dx * ARROW_STATS.speed, y: dy * ARROW_STATS.speed },
+    projectile: { damage, life: ARROW_STATS.life, team: Team.Player, arrow: true },
+    visual: { sheet: 'arrow_projectile', rotation: Math.atan2(dy, dx) },
+    yOffset: AIM_HEIGHT,
+  });
+}
+

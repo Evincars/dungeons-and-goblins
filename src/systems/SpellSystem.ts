@@ -1,24 +1,34 @@
-import { world, q, isMob } from '../world';
+import { world, q, isTarget } from '../world';
 import type { Entity, Player } from '../world';
 import type { Level } from '../level/Level';
 import { hitMob } from './SwordSystem';
 import { spawnBurstPuff } from '../entities/FxFactory';
-import { createSpellBolt } from '../entities/ProjectileFactory';
+import { AIM_HEIGHT, createSpellBolt } from '../entities/ProjectileFactory';
+import { playEffect } from '../assets/Effects';
 import { SPELL_STATS } from '../entities/WeaponStats';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 import { sound } from '../audio/SoundPlayer';
 import { nearby, Sense } from '../ai/perception/spatial';
 
 const bolts = world.with('projectile', 'position', 'velocity');
+/** The glint an arrow leaves where it strikes (from the effects library), and its size. */
+const ARROW_HIT_EFFECT = 'x_glint';
+const ARROW_HIT_COLOUR = 'white';
+const ARROW_HIT_SCALE = 0.5;
 type Bolt = (typeof bolts)['entities'][number];
 
 /** Bolts reach this far at most beyond their own position to touch a body. */
 const BOLT_QUERY_RADIUS = MAX_MOB_RADIUS + SPELL_STATS.reachY;
 const victims: Entity[] = [];
 
-function burst(bolt: Entity): void {
+/** Where a projectile ends: a spell bolt bursts in dirt; an arrow glints if it struck something, else just drops. */
+function burst(bolt: Bolt, struck: boolean): void {
   const p = bolt.position;
-  for (let i = 0; p && i < SPELL_STATS.burstPuffs; i++) spawnBurstPuff(p.x, p.y);
+  if (bolt.projectile.arrow) {
+    if (struck) playEffect(ARROW_HIT_EFFECT, ARROW_HIT_COLOUR, p.x, p.y, AIM_HEIGHT, ARROW_HIT_SCALE);
+  } else {
+    for (let i = 0; i < SPELL_STATS.burstPuffs; i++) spawnBurstPuff(p.x, p.y);
+  }
   world.addComponent(bolt, 'removed', true);
 }
 
@@ -51,7 +61,7 @@ function updateCaster(caster: Player): void {
 function boltVictim(bolt: Bolt): Entity | null {
   const pos = bolt.position;
   for (const mob of nearby(pos.x, pos.y, BOLT_QUERY_RADIUS, Sense.mob, victims)) {
-    if (!isMob(mob) || mob.health.current <= 0 || mob.team === bolt.projectile.team) continue;
+    if (!isTarget(mob) || mob.health.current <= 0 || mob.team === bolt.projectile.team) continue;
     const near = Math.abs(mob.position.x - pos.x) <= mob.radius.x + SPELL_STATS.reachX
       && Math.abs(mob.position.y - pos.y) <= mob.radius.y + SPELL_STATS.reachY;
     if (near) return mob;
@@ -64,16 +74,16 @@ function flyBolt(level: Level, bolt: Bolt): void {
   pos.x += bolt.velocity.x;
   pos.y += bolt.velocity.y;
   if (--bolt.projectile.life <= 0 || !level.canPass(pos.x, pos.y)) {
-    burst(bolt);
+    burst(bolt, false);
     return;
   }
   const victim = boltVictim(bolt);
   if (!victim) return;
   hitMob(victim, bolt, bolt.projectile.damage);
-  burst(bolt);
+  burst(bolt, true);
 }
 
-/** Casting (right mouse / Q) toward the crosshair, and flying spell bolts. */
+/** Casting (right mouse / Q) toward the crosshair, and flying spell bolts and arrows. */
 export function updateSpells(level: Level): void {
   for (const caster of q.players) updateCaster(caster);
   for (const bolt of bolts) {

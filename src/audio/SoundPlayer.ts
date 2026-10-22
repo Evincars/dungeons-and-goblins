@@ -41,7 +41,7 @@ const CLIPS = {
 } as const;
 
 type ClipName = keyof typeof CLIPS;
-type SynthName = 'sword_swing' | 'sword_miss' | 'boss_death' | 'chest_open' | 'door_open' | 'spell';
+type SynthName = 'sword_swing' | 'sword_miss' | 'boss_death' | 'chest_open' | 'door_open' | 'spell' | 'bow_shot';
 export type SfxName = ClipName | SynthName;
 
 function isClip(name: SfxName): name is ClipName {
@@ -63,6 +63,7 @@ const SYNTHS = {
   spell: [osc(520, 'triangle', 0.25, 0.25), osc(780, 'sine', 0.2, 0.15), noise(0.12, 0.08)],
   chest_open: [osc(220, 'sine', 0.2, 0.2), osc(330, 'sine', 0.15, 0.25), osc(440, 'sine', 0.1, 0.3)],
   door_open: [noise(0.2, 0.3), osc(100, 'sawtooth', 0.3, 0.2)],
+  bow_shot: [noise(0.06, 0.25), osc(880, 'triangle', 0.05, 0.15), osc(220, 'sine', 0.08, 0.12)],
 } as const satisfies Record<SynthName, readonly Voice[]>;
 
 /** Whether a name (e.g. from a network message) is a sound this game can play. */

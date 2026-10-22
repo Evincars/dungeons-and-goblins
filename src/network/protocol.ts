@@ -82,6 +82,15 @@ export function validStart(seed: unknown, depth: unknown): boolean {
     && Number.isInteger(depth) && Number(depth) >= 1 && Number(depth) <= MAX_DEPTH;
 }
 
+/** Most items one square can stack (a quiver of arrows). */
+const MAX_STACK = 999;
+const SHORT_KEY = /^[a-z0-9_]{1,40}$/;
+
+/** A texture key or catalogue id: lower-case letters, digits and underscores. */
+function isShortKey(value: unknown): boolean {
+  return typeof value === 'string' && SHORT_KEY.test(value);
+}
+
 function validStats(stats: unknown): boolean {
   if (stats === undefined) return true;
   if (!isRecord(stats)) return false;
@@ -93,8 +102,10 @@ export function isInventoryItem(value: unknown): value is InventoryItem {
   if (!isRecord(value) || !isItemType(value.type) || typeof value.name !== 'string' || value.name.length > MAX_ITEM_NAME) return false;
   if (!isFiniteNumber(value.value) || value.value < 0 || value.value > MAX_ITEM_VALUE) return false;
   const gearOk = value.gear === undefined || isGearKind(value.gear);
-  const iconOk = value.icon === undefined || Number.isInteger(value.icon);
-  return gearOk && iconOk && validStats(value.stats);
+  const iconOk = value.icon === undefined || isShortKey(value.icon);
+  const idOk = (value.id === undefined || isShortKey(value.id)) && (value.kind === undefined || isShortKey(value.kind));
+  const countOk = value.count === undefined || (Number.isInteger(value.count) && Number(value.count) >= 0 && Number(value.count) <= MAX_STACK);
+  return gearOk && iconOk && idOk && countOk && validStats(value.stats);
 }
 
 function validEquipped(value: unknown): value is Partial<Record<EquipSlot, InventoryItem>> {

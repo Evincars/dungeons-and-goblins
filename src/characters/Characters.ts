@@ -6,10 +6,13 @@ import type { CharacterDef, CharacterState, ClipDef } from './CharacterDef';
 import { FIGHTER } from './Fighter';
 import { ORC } from './Orc';
 import { GOBLIN_GRUNT, GOBLIN_ROGUE, GOBLIN_WARRIOR } from './Goblins';
+import { EVIL_WIZARD, FIRE_WIZARD, GHOST_WIZARD, LIGHT_WIZARD, WANDERER_WIZARD } from './Wizards';
+import { HERO_KNIGHT, HOODED_KNIGHT } from './Knights';
 
-const REGISTRY = new Map<string, CharacterDef>(
-  [FIGHTER, ORC, GOBLIN_GRUNT, GOBLIN_ROGUE, GOBLIN_WARRIOR].map((def) => [def.id, def]),
-);
+const REGISTRY = new Map<string, CharacterDef>([
+  FIGHTER, ORC, GOBLIN_GRUNT, GOBLIN_ROGUE, GOBLIN_WARRIOR,
+  WANDERER_WIZARD, LIGHT_WIZARD, FIRE_WIZARD, EVIL_WIZARD, GHOST_WIZARD, HERO_KNIGHT, HOODED_KNIGHT,
+].map((def) => [def.id, def]));
 
 export function characterDef(id: string): CharacterDef {
   const def = REGISTRY.get(id);
@@ -33,10 +36,23 @@ export function clipSheetKey(def: CharacterDef, clip: string): string {
 
 /** One sheet per clip of every registered character, sliced into the character's frames. */
 export function characterSheets(): SpriteSheet[] {
-  return allCharacters().flatMap((def) => Object.entries(def.clips).map(([clip, { src }]) =>
-    new SpriteSheet(clipSheetKey(def, clip), src, {
-      grid: { frameWidth: def.frameWidth, frameHeight: def.frameHeight, trim: def.trim },
+  return allCharacters().flatMap((def) => Object.entries(def.clips).map(([clip, c]) =>
+    new SpriteSheet(clipSheetKey(def, clip), c.src, {
+      grid: { frameWidth: c.frameWidth ?? def.frameWidth, frameHeight: c.frameHeight ?? def.frameHeight, trim: def.trim },
+      keyColor: def.keyColor,
     })));
+}
+
+/** Where across its frame a character's sprite is anchored: at the middle of its body (or of the frame). */
+export function anchorX(def: CharacterDef): number {
+  const width = def.trim?.w ?? def.frameWidth;
+  return ((def.bodyX ?? (def.trim?.x ?? 0) + width / 2) - (def.trim?.x ?? 0)) / width;
+}
+
+/** Whether a character looking the given way is drawn mirrored. */
+export function drawnMirrored(def: CharacterDef, flipX: boolean): boolean {
+  if (def.facingRows) return false;
+  return def.facesLeft ? !flipX : flipX;
 }
 
 /** The sheet row a character is drawn from: its own side row, or the single row (mirrored for the left). */

@@ -357,3 +357,22 @@ export function genRingIcon(): HTMLCanvasElement {
   px(ctx, 4, 1, 0xc8f4ff);
   return c;
 }
+
+// ── ARROW IN FLIGHT ──────────────────────────────────────────────────────────
+
+const SHAFT = 0x8a6038;
+const ARROWHEAD = 0xd8dce4;
+const FLETCHING = 0xc03030;
+
+/** An arrow pointing right, 14×5: red fletching, a wooden shaft and a steel head (turned to fly). */
+export function genArrowSprite(): HTMLCanvasElement {
+  const [c, ctx] = mkCanvas(14, 5);
+  rect(ctx, 0, 1, 3, 1, FLETCHING);
+  rect(ctx, 0, 3, 3, 1, FLETCHING);
+  rect(ctx, 1, 2, 10, 1, SHAFT);
+  rect(ctx, 10, 1, 2, 3, ARROWHEAD);
+  px(ctx, 12, 2, ARROWHEAD);
+  px(ctx, 13, 2, ARROWHEAD);
+  return c;
+}
+

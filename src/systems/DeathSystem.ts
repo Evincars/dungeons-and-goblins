@@ -18,6 +18,8 @@ const DEATH_SOUNDS = {
   goblin_grunt: 'enemy_death',
   goblin_rogue: 'enemy_death',
   goblin_warrior: 'enemy_death',
+  ghost_wizard: 'enemy_death',
+  evil_wizard: 'enemy_death',
 } as const satisfies Record<MobType, SfxName>;
 
 /** Ticks a dead mob stays on its last death frame before it is cleared away. */

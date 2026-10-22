@@ -9,7 +9,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 9
+        "dexterity": 9
       },
       "weight": 7.6,
       "cost": 179
@@ -22,8 +22,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 4,
-        "stamina": 5
+        "dexterity": 4,
+        "constitution": 5
       },
       "weight": 6.2,
       "cost": 41
@@ -36,7 +36,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 4
+        "dexterity": 4
       },
       "weight": 7.7,
       "cost": 199
@@ -49,10 +49,10 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 1,
+        "dexterity": 1,
         "intelligence": 2
       },
-      "weight": 5.0,
+      "weight": 5,
       "cost": 252
     },
     {
@@ -63,7 +63,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
       "weight": 4.3,
       "cost": 360
@@ -76,7 +76,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 8
+        "dexterity": 8
       },
       "weight": 7.9,
       "cost": 221
@@ -89,7 +89,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3
+        "dexterity": 3
       },
       "weight": 8.9,
       "cost": 241
@@ -102,8 +102,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 6,
-        "mana": 2
+        "dexterity": 6,
+        "wisdom": 2
       },
       "weight": 8.1,
       "cost": 241
@@ -116,7 +116,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 8
+        "dexterity": 8
       },
       "weight": 7.8,
       "cost": 311
@@ -129,7 +129,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 10
+        "dexterity": 10
       },
       "weight": 7.9,
       "cost": 303
@@ -142,7 +142,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
       "weight": 7.4,
       "cost": 309
@@ -155,7 +155,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 5,
+        "dexterity": 5,
         "strength": 2
       },
       "weight": 4.4,
@@ -169,7 +169,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 9,
+        "dexterity": 9,
         "strength": 1
       },
       "weight": 6.1,
@@ -183,8 +183,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3,
-        "luck": 3
+        "dexterity": 3,
+        "charisma": 3
       },
       "weight": 5.1,
       "cost": 275
@@ -197,8 +197,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7,
-        "mana": 1
+        "dexterity": 7,
+        "wisdom": 1
       },
       "weight": 3.2,
       "cost": 288
@@ -211,7 +211,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 2
+        "dexterity": 2
       },
       "weight": 3.2,
       "cost": 286
@@ -224,7 +224,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 5
+        "dexterity": 5
       },
       "weight": 4.7,
       "cost": 353
@@ -237,7 +237,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 8,
+        "dexterity": 8,
         "intelligence": 5
       },
       "weight": 4.6,
@@ -251,7 +251,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3
+        "dexterity": 3
       },
       "weight": 7.2,
       "cost": 259
@@ -264,7 +264,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 6,
+        "dexterity": 6,
         "intelligence": 2
       },
       "weight": 8.7,
@@ -278,7 +278,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 8
+        "dexterity": 8
       },
       "weight": 5.7,
       "cost": 313
@@ -291,7 +291,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
       "weight": 8.6,
       "cost": 340
@@ -304,7 +304,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 6,
+        "dexterity": 6,
         "intelligence": 3
       },
       "weight": 8.9,
@@ -318,7 +318,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 10
+        "dexterity": 10
       },
       "weight": 8.7,
       "cost": 197
@@ -331,8 +331,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 4,
-        "mana": 2
+        "dexterity": 4,
+        "wisdom": 2
       },
       "weight": 5.2,
       "cost": 117
@@ -345,7 +345,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 10
+        "dexterity": 10
       },
       "weight": 4.3,
       "cost": 212
@@ -358,7 +358,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 5
+        "dexterity": 5
       },
       "weight": 4.4,
       "cost": 201
@@ -371,7 +371,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 10,
+        "dexterity": 10,
         "intelligence": 4
       },
       "weight": 4.2,
@@ -385,7 +385,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 6,
+        "dexterity": 6,
         "strength": 5
       },
       "weight": 4.2,
@@ -399,8 +399,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 4,
-        "mana": 4
+        "dexterity": 4,
+        "wisdom": 4
       },
       "weight": 6.7,
       "cost": 43
@@ -413,7 +413,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 10,
+        "dexterity": 10,
         "strength": 5
       },
       "weight": 8.4,
@@ -427,9 +427,9 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 5
+        "dexterity": 5
       },
-      "weight": 8.0,
+      "weight": 8,
       "cost": 240
     },
     {
@@ -440,8 +440,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 10,
-        "stamina": 3
+        "dexterity": 10,
+        "constitution": 3
       },
       "weight": 5.9,
       "cost": 171
@@ -454,8 +454,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 4,
-        "stamina": 4
+        "dexterity": 4,
+        "constitution": 4
       },
       "weight": 6.9,
       "cost": 355
@@ -468,7 +468,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 6
+        "dexterity": 6
       },
       "weight": 7.8,
       "cost": 51
@@ -481,7 +481,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 5,
+        "dexterity": 5,
         "intelligence": 1
       },
       "weight": 3.5,
@@ -495,9 +495,9 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
-      "weight": 7.0,
+      "weight": 7,
       "cost": 44
     },
     {
@@ -508,7 +508,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 1
+        "dexterity": 1
       },
       "weight": 8.5,
       "cost": 41
@@ -521,7 +521,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 10
+        "dexterity": 10
       },
       "weight": 7.7,
       "cost": 148
@@ -534,8 +534,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7,
-        "mana": 2
+        "dexterity": 7,
+        "wisdom": 2
       },
       "weight": 7.5,
       "cost": 280
@@ -548,7 +548,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 5
+        "dexterity": 5
       },
       "weight": 5.9,
       "cost": 228
@@ -561,7 +561,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 5,
+        "dexterity": 5,
         "strength": 2
       },
       "weight": 4.1,
@@ -575,7 +575,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 4,
+        "dexterity": 4,
         "strength": 4
       },
       "weight": 7.7,
@@ -589,9 +589,9 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 9
+        "dexterity": 9
       },
-      "weight": 5.0,
+      "weight": 5,
       "cost": 67
     },
     {
@@ -602,7 +602,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7,
+        "dexterity": 7,
         "strength": 4
       },
       "weight": 7.8,
@@ -616,8 +616,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 10,
-        "luck": 2
+        "dexterity": 10,
+        "charisma": 2
       },
       "weight": 8.8,
       "cost": 115
@@ -630,7 +630,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 5
+        "dexterity": 5
       },
       "weight": 5.4,
       "cost": 339
@@ -643,8 +643,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 2,
-        "mana": 1
+        "dexterity": 2,
+        "wisdom": 1
       },
       "weight": 5.4,
       "cost": 243
@@ -657,8 +657,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3,
-        "luck": 4
+        "dexterity": 3,
+        "charisma": 4
       },
       "weight": 8.7,
       "cost": 232
@@ -671,7 +671,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 9,
+        "dexterity": 9,
         "intelligence": 2
       },
       "weight": 7.3,
@@ -685,10 +685,10 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3,
-        "mana": 4
+        "dexterity": 3,
+        "wisdom": 4
       },
-      "weight": 4.0,
+      "weight": 4,
       "cost": 131
     },
     {
@@ -699,8 +699,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7,
-        "luck": 4
+        "dexterity": 7,
+        "charisma": 4
       },
       "weight": 3.8,
       "cost": 400
@@ -713,8 +713,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 4,
-        "mana": 3
+        "dexterity": 4,
+        "wisdom": 3
       },
       "weight": 3.9,
       "cost": 108
@@ -727,8 +727,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 9,
-        "mana": 4
+        "dexterity": 9,
+        "wisdom": 4
       },
       "weight": 8.4,
       "cost": 326
@@ -741,8 +741,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3,
-        "luck": 2
+        "dexterity": 3,
+        "charisma": 2
       },
       "weight": 7.8,
       "cost": 309
@@ -755,7 +755,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 9
+        "dexterity": 9
       },
       "weight": 3.9,
       "cost": 89
@@ -768,10 +768,10 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7,
+        "dexterity": 7,
         "strength": 2
       },
-      "weight": 8.0,
+      "weight": 8,
       "cost": 70
     },
     {
@@ -782,7 +782,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 6,
+        "dexterity": 6,
         "intelligence": 3
       },
       "weight": 8.9,
@@ -796,7 +796,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 6,
+        "dexterity": 6,
         "strength": 3
       },
       "weight": 6.9,
@@ -810,8 +810,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3,
-        "luck": 5
+        "dexterity": 3,
+        "charisma": 5
       },
       "weight": 5.1,
       "cost": 117
@@ -824,8 +824,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 8,
-        "mana": 3
+        "dexterity": 8,
+        "wisdom": 3
       },
       "weight": 6.3,
       "cost": 307
@@ -838,7 +838,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3
+        "dexterity": 3
       },
       "weight": 3.8,
       "cost": 297
@@ -851,7 +851,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3
+        "dexterity": 3
       },
       "weight": 3.1,
       "cost": 217
@@ -864,8 +864,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 5,
-        "mana": 4
+        "dexterity": 5,
+        "wisdom": 4
       },
       "weight": 8.8,
       "cost": 184
@@ -878,7 +878,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3,
+        "dexterity": 3,
         "intelligence": 1
       },
       "weight": 6.9,
@@ -892,8 +892,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 5,
-        "luck": 1
+        "dexterity": 5,
+        "charisma": 1
       },
       "weight": 6.2,
       "cost": 174
@@ -906,7 +906,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 10,
+        "dexterity": 10,
         "strength": 5
       },
       "weight": 8.6,
@@ -920,8 +920,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 9,
-        "luck": 5
+        "dexterity": 9,
+        "charisma": 5
       },
       "weight": 5.6,
       "cost": 242
@@ -934,8 +934,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 6,
-        "mana": 2
+        "dexterity": 6,
+        "wisdom": 2
       },
       "weight": 8.2,
       "cost": 306
@@ -948,10 +948,10 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 1,
-        "luck": 5
+        "dexterity": 1,
+        "charisma": 5
       },
-      "weight": 8.0,
+      "weight": 8,
       "cost": 101
     },
     {
@@ -962,8 +962,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 9,
-        "luck": 5
+        "dexterity": 9,
+        "charisma": 5
       },
       "weight": 4.3,
       "cost": 214
@@ -976,7 +976,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 2
+        "dexterity": 2
       },
       "weight": 4.5,
       "cost": 385
@@ -989,7 +989,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 1
+        "dexterity": 1
       },
       "weight": 4.8,
       "cost": 225
@@ -1002,7 +1002,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7,
+        "dexterity": 7,
         "intelligence": 3
       },
       "weight": 4.4,
@@ -1016,7 +1016,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 8
+        "dexterity": 8
       },
       "weight": 6.5,
       "cost": 374
@@ -1029,7 +1029,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 6
+        "dexterity": 6
       },
       "weight": 4.6,
       "cost": 100
@@ -1042,7 +1042,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 4
+        "dexterity": 4
       },
       "weight": 5.5,
       "cost": 207
@@ -1055,8 +1055,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 2,
-        "stamina": 1
+        "dexterity": 2,
+        "constitution": 1
       },
       "weight": 3.8,
       "cost": 188
@@ -1069,7 +1069,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 4,
+        "dexterity": 4,
         "strength": 2
       },
       "weight": 8.5,
@@ -1083,7 +1083,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 2
+        "dexterity": 2
       },
       "weight": 5.1,
       "cost": 213
@@ -1096,8 +1096,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 8,
-        "mana": 3
+        "dexterity": 8,
+        "wisdom": 3
       },
       "weight": 5.7,
       "cost": 367
@@ -1110,7 +1110,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 8
+        "dexterity": 8
       },
       "weight": 6.5,
       "cost": 213
@@ -1123,7 +1123,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
       "weight": 8.4,
       "cost": 187
@@ -1136,7 +1136,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3
+        "dexterity": 3
       },
       "weight": 5.5,
       "cost": 394
@@ -1149,7 +1149,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 5
+        "dexterity": 5
       },
       "weight": 8.5,
       "cost": 107
@@ -1162,9 +1162,9 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
-      "weight": 6.0,
+      "weight": 6,
       "cost": 100
     },
     {
@@ -1175,8 +1175,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 8,
-        "luck": 1
+        "dexterity": 8,
+        "charisma": 1
       },
       "weight": 6.2,
       "cost": 56
@@ -1189,8 +1189,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7,
-        "luck": 5
+        "dexterity": 7,
+        "charisma": 5
       },
       "weight": 6.1,
       "cost": 304
@@ -1203,7 +1203,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 10
+        "dexterity": 10
       },
       "weight": 3.1,
       "cost": 73
@@ -1216,8 +1216,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 9,
-        "luck": 5
+        "dexterity": 9,
+        "charisma": 5
       },
       "weight": 5.6,
       "cost": 369
@@ -1230,7 +1230,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 5
+        "dexterity": 5
       },
       "weight": 4.1,
       "cost": 215
@@ -1243,9 +1243,9 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 9
+        "dexterity": 9
       },
-      "weight": 3.0,
+      "weight": 3,
       "cost": 63
     },
     {
@@ -1256,8 +1256,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 6,
-        "stamina": 1
+        "dexterity": 6,
+        "constitution": 1
       },
       "weight": 7.8,
       "cost": 265
@@ -1270,9 +1270,9 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 6
+        "dexterity": 6
       },
-      "weight": 4.0,
+      "weight": 4,
       "cost": 254
     },
     {
@@ -1283,7 +1283,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3
+        "dexterity": 3
       },
       "weight": 5.8,
       "cost": 239
@@ -1296,8 +1296,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 6,
-        "luck": 1
+        "dexterity": 6,
+        "charisma": 1
       },
       "weight": 7.4,
       "cost": 135
@@ -1310,8 +1310,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 2,
-        "stamina": 2
+        "dexterity": 2,
+        "constitution": 2
       },
       "weight": 6.3,
       "cost": 195
@@ -1324,10 +1324,10 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 4,
-        "mana": 4
+        "dexterity": 4,
+        "wisdom": 4
       },
-      "weight": 5.0,
+      "weight": 5,
       "cost": 343
     },
     {
@@ -1338,7 +1338,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 1
+        "dexterity": 1
       },
       "weight": 6.1,
       "cost": 237
@@ -1351,7 +1351,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 10
+        "dexterity": 10
       },
       "weight": 6.3,
       "cost": 242
@@ -1364,7 +1364,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
       "weight": 7.7,
       "cost": 100
@@ -1377,8 +1377,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 6,
-        "stamina": 2
+        "dexterity": 6,
+        "constitution": 2
       },
       "weight": 3.6,
       "cost": 235
@@ -1391,8 +1391,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 1,
-        "stamina": 4
+        "dexterity": 1,
+        "constitution": 4
       },
       "weight": 6.4,
       "cost": 227
@@ -1405,7 +1405,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 5,
+        "dexterity": 5,
         "intelligence": 3
       },
       "weight": 4.5,
@@ -1419,7 +1419,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 5
+        "dexterity": 5
       },
       "weight": 4.7,
       "cost": 398
@@ -1432,8 +1432,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 6,
-        "luck": 5
+        "dexterity": 6,
+        "charisma": 5
       },
       "weight": 7.6,
       "cost": 113
@@ -1446,10 +1446,10 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 2,
-        "luck": 2
+        "dexterity": 2,
+        "charisma": 2
       },
-      "weight": 6.0,
+      "weight": 6,
       "cost": 169
     },
     {
@@ -1460,7 +1460,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 5
+        "dexterity": 5
       },
       "weight": 6.4,
       "cost": 176
@@ -1473,8 +1473,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 1,
-        "mana": 3
+        "dexterity": 1,
+        "wisdom": 3
       },
       "weight": 7.6,
       "cost": 276
@@ -1487,7 +1487,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3
+        "dexterity": 3
       },
       "weight": 8.5,
       "cost": 133
@@ -1500,8 +1500,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 5,
-        "luck": 5
+        "dexterity": 5,
+        "charisma": 5
       },
       "weight": 5.7,
       "cost": 336
@@ -1514,7 +1514,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 2
+        "dexterity": 2
       },
       "weight": 6.7,
       "cost": 173
@@ -1527,9 +1527,9 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 5
+        "dexterity": 5
       },
-      "weight": 6.0,
+      "weight": 6,
       "cost": 207
     },
     {
@@ -1540,7 +1540,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 9
+        "dexterity": 9
       },
       "weight": 6.1,
       "cost": 220
@@ -1553,7 +1553,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 2,
+        "dexterity": 2,
         "intelligence": 1
       },
       "weight": 7.2,
@@ -1567,7 +1567,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3
+        "dexterity": 3
       },
       "weight": 5.7,
       "cost": 262
@@ -1580,7 +1580,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3,
+        "dexterity": 3,
         "intelligence": 2
       },
       "weight": 6.2,
@@ -1594,8 +1594,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 4,
-        "luck": 3
+        "dexterity": 4,
+        "charisma": 3
       },
       "weight": 5.9,
       "cost": 60
@@ -1608,7 +1608,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3
+        "dexterity": 3
       },
       "weight": 8.6,
       "cost": 255
@@ -1621,8 +1621,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7,
-        "stamina": 3
+        "dexterity": 7,
+        "constitution": 3
       },
       "weight": 7.2,
       "cost": 120
@@ -1635,7 +1635,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 6
+        "dexterity": 6
       },
       "weight": 8.3,
       "cost": 265
@@ -1648,8 +1648,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 8,
-        "mana": 5
+        "dexterity": 8,
+        "wisdom": 5
       },
       "weight": 8.7,
       "cost": 127
@@ -1662,8 +1662,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 6,
-        "luck": 5
+        "dexterity": 6,
+        "charisma": 5
       },
       "weight": 4.6,
       "cost": 301
@@ -1676,7 +1676,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 10
+        "dexterity": 10
       },
       "weight": 6.4,
       "cost": 276
@@ -1689,7 +1689,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 4,
+        "dexterity": 4,
         "strength": 3
       },
       "weight": 8.7,
@@ -1703,10 +1703,10 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3,
+        "dexterity": 3,
         "strength": 4
       },
-      "weight": 8.0,
+      "weight": 8,
       "cost": 245
     },
     {
@@ -1717,7 +1717,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 9
+        "dexterity": 9
       },
       "weight": 3.8,
       "cost": 86
@@ -1730,8 +1730,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 9,
-        "stamina": 2
+        "dexterity": 9,
+        "constitution": 2
       },
       "weight": 3.7,
       "cost": 169
@@ -1744,7 +1744,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 8,
+        "dexterity": 8,
         "intelligence": 5
       },
       "weight": 5.7,
@@ -1758,8 +1758,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7,
-        "mana": 5
+        "dexterity": 7,
+        "wisdom": 5
       },
       "weight": 3.4,
       "cost": 334
@@ -1772,8 +1772,8 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7,
-        "mana": 2
+        "dexterity": 7,
+        "wisdom": 2
       },
       "weight": 4.4,
       "cost": 332
@@ -1786,7 +1786,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
       "weight": 3.4,
       "cost": 50
@@ -1799,9 +1799,9 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 4
+        "dexterity": 4
       },
-      "weight": 7.0,
+      "weight": 7,
       "cost": 345
     },
     {
@@ -1812,7 +1812,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 9
+        "dexterity": 9
       },
       "weight": 7.7,
       "cost": 303
@@ -1825,7 +1825,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 3
+        "dexterity": 3
       },
       "weight": 8.4,
       "cost": 271
@@ -1838,7 +1838,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 10
+        "dexterity": 10
       },
       "weight": 3.9,
       "cost": 301
@@ -1851,7 +1851,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
       "weight": 7.3,
       "cost": 329
@@ -1864,10 +1864,10 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 2,
-        "stamina": 2
+        "dexterity": 2,
+        "constitution": 2
       },
-      "weight": 7.0,
+      "weight": 7,
       "cost": 195
     },
     {
@@ -1878,7 +1878,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 9,
+        "dexterity": 9,
         "strength": 1
       },
       "weight": 3.9,
@@ -1892,7 +1892,7 @@
       "type": "shield",
       "gear": "offhand",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
       "weight": 8.3,
       "cost": 40

@@ -9,7 +9,7 @@ export const enum Team { Neutral = 0, Player = 1 }
 export const enum Facing { North = 0, East = 1, South = 2, West = 3 }
 
 /** Where a player wears or holds gear, in the order the inventory screen lists them. */
-export const EQUIP_SLOTS = ['head', 'armor', 'primary', 'secondary', 'legs', 'medal', 'other', 'ammo'] as const;
+export const EQUIP_SLOTS = ['head', 'armor', 'primary', 'secondary', 'legs', 'medal', 'other'] as const;
 export type EquipSlot = (typeof EQUIP_SLOTS)[number];
 
 export function isEquipSlot(value: string): value is EquipSlot {
@@ -17,7 +17,7 @@ export function isEquipSlot(value: string): value is EquipSlot {
 }
 
 /** What kind of gear an item is, which decides the slots it fits (see entities/Items.ts). */
-export const GEAR_KINDS = ['head', 'armor', 'weapon', 'offhand', 'legs', 'trinket', 'ammo', 'medal'] as const;
+export const GEAR_KINDS = ['head', 'armor', 'weapon', 'offhand', 'legs', 'trinket', 'medal'] as const;
 export type GearKind = (typeof GEAR_KINDS)[number];
 
 export function isGearKind(value: unknown): value is GearKind {
@@ -25,7 +25,7 @@ export function isGearKind(value: unknown): value is GearKind {
 }
 
 /** A character's attributes, shown on the inventory screen; gear adds to them. */
-export const STAT_NAMES = ['strength', 'intelligence', 'stamina', 'defence', 'luck', 'mana'] as const;
+export const STAT_NAMES = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const;
 export type StatName = (typeof STAT_NAMES)[number];
 export type ItemStats = Partial<Record<StatName, number>>;
 
@@ -33,7 +33,7 @@ export function isStatName(value: unknown): value is StatName {
   return STAT_NAMES.some((stat) => stat === value);
 }
 
-export const ITEM_TYPES = ['weapon', 'shield', 'helmet', 'armor', 'boots', 'ring', 'ammo', 'medal'] as const;
+export const ITEM_TYPES = ['weapon', 'shield', 'helmet', 'armor', 'boots', 'ring', 'medal'] as const;
 export type ItemType = (typeof ITEM_TYPES)[number];
 
 export function isItemType(value: unknown): value is ItemType {
@@ -46,16 +46,14 @@ export type InventoryItem = {
   value: number;
   /** The catalogue entry it came from (src/data/*.json), if any. */
   id?: string;
-  /** What sort of weapon or thing it is ('bow', 'axe', 'arrows'…), for game rules and tooltips. */
+  /** What sort of weapon or thing it is ('bow', 'axe'…), for game rules and tooltips. */
   kind?: string;
   /** Equipment fits the slots of its kind; anything without one only goes in the bag. */
   gear?: GearKind;
   /** Texture key of its picture. */
   icon?: string;
   stats?: ItemStats;
-  /** How many there are in this one square (arrows); a single thing has none. */
-  count?: number;
-  /** Kilograms it weighs (a whole stack, for arrows); what a player carries is limited. */
+  /** Kilograms it weighs; what a player carries is limited. */
   weight?: number;
 };
 
@@ -288,10 +286,7 @@ export type Entity = {
     kills: number;
     /** All gold picked up this level, whatever was spent since. */
     goldEarned: number;
-    /** Mana for spells, and how much it holds (raised by the Mana stat of worn gear). */
-    mana: number;
-    maxMana: number;
-    /** Extra spell damage (from Intelligence) and the share more coins enemies drop (from Luck). */
+    /** Extra spell damage (from Intelligence) and the share more coins enemies drop (from Charisma). */
     spellBonus: number;
     lootBonus: number;
   };

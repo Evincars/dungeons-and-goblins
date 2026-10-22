@@ -3,10 +3,11 @@ import { localPlayer } from '../world';
 import type { Player } from '../world';
 import { GAME_HEIGHT, GAME_WIDTH } from '../render/Camera';
 import { quickSlotPressed } from '../systems/InputSystem';
+import { text } from '../core/texts';
 import { THEME } from './Theme';
 import { PixelLabel } from './PixelText';
 
-/** The three bars, bottom left: how long, how thick, the gap between them and their distance from the edges. */
+/** The two bars, bottom left: how long, how thick, the gap between them and their distance from the edges. */
 const BAR_W = 80;
 const BAR_H = 6;
 const BAR_GAP = 4;
@@ -24,13 +25,12 @@ const TIP_RAISE = 1;
 type Bar = { label: string; color: number; fill: Graphics; value: (p: Player) => number; max: (p: Player) => number };
 
 const BARS: ReadonlyArray<Omit<Bar, 'fill'>> = [
-  { label: 'Health', color: 0xd23c3c, value: (p) => p.health.current, max: (p) => p.health.max },
-  { label: 'Stamina', color: 0x9acd32, value: (p) => p.playerStats.maxSprint - p.playerStats.sprint, max: (p) => p.playerStats.maxSprint },
-  { label: 'Mana', color: 0x3c78dc, value: (p) => p.playerStats.mana, max: (p) => p.playerStats.maxMana },
+  { label: text('hud.bar.health'), color: 0xd23c3c, value: (p) => p.health.current, max: (p) => p.health.max },
+  { label: text('hud.bar.stamina'), color: 0x9acd32, value: (p) => p.playerStats.maxSprint - p.playerStats.sprint, max: (p) => p.playerStats.maxSprint },
 ];
 
 /**
- * What stays on screen during play: health, stamina and mana bars (hover one to see what it is and how full),
+ * What stays on screen during play: health and stamina bars (hover one to see what it is and how full),
  * and a quick bar of five squares — numbered 1–5, picked with those keys — for spells, weapons and abilities
  * to be dragged into later.
  */
@@ -118,7 +118,7 @@ export class HudPanel {
     const bar = this.hovered;
     this.tip.visible = !!bar;
     if (!bar) return;
-    this.tip.text = `${bar.label} ${Math.round(bar.value(player))}/${Math.round(bar.max(player))}`;
+    this.tip.text = text('hud.bar.reading', { bar: bar.label, current: Math.round(bar.value(player)), max: Math.round(bar.max(player)) });
     this.tip.position.set(MARGIN + BAR_W + 6, bar.fill.y - TIP_RAISE);
   }
 

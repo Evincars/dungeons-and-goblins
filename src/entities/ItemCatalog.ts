@@ -29,7 +29,6 @@ function readItem(raw: unknown): InventoryItem | null {
   if (typeof raw.weight === 'number') item.weight = raw.weight;
   if (isGearKind(raw.gear)) item.gear = raw.gear;
   if (typeof raw.kind === 'string') item.kind = raw.kind;
-  if (typeof raw.count === 'number') item.count = raw.count;
   return item;
 }
 
@@ -42,9 +41,8 @@ export const SHIELDS: readonly InventoryItem[] = readAll(shields);
 export const ARMORS: readonly InventoryItem[] = readAll(armors);
 export const MEDALS: readonly InventoryItem[] = readAll(medals);
 
-/** Weapons to fight with (not shields or arrows). */
+/** Weapons to fight with (not shields). */
 export const HAND_WEAPONS: readonly InventoryItem[] = WEAPONS.filter((item) => item.gear === 'weapon');
-export const ARROWS: readonly InventoryItem[] = WEAPONS.filter((item) => item.gear === 'ammo');
 
 /** Where each catalogue icon's art lives (every entry names its own file). */
 export function catalogIconSources(): Array<{ key: string; src: string }> {

@@ -1,10 +1,11 @@
+import { text } from '../core/texts';
 import { Container } from 'pixi.js';
 import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
 import type { Scene, SceneManager } from '../game/SceneManager';
 import { PixelButton } from '../ui/PixelButton';
 import { makeText, makeTitle } from '../ui/PixelText';
 import { menuBackdrop } from '../ui/MenuBackdrop';
-import { ACTIONS, ACTION_LABELS, bind, codeLabel, resetBindings, settings } from '../game/Settings';
+import { ACTIONS, actionLabel, bind, codeLabel, resetBindings, settings } from '../game/Settings';
 import type { ActionName } from '../game/Settings';
 
 const ROW_H = 26;
@@ -26,17 +27,17 @@ export class KeyBindingsScene implements Scene {
   constructor(manager: SceneManager) {
     this.container.addChild(menuBackdrop());
     this.container.eventMode = 'static';
-    const title = makeTitle('Key Bindings');
+    const title = makeTitle(text('keys.title'));
     title.x = GAME_WIDTH / 2;
     title.y = TITLE_Y;
-    const hint = makeText('Click a binding, then press a key', 0xaaaaaa, 9, 'center');
+    const hint = makeText(text('keys.hint'), 0xaaaaaa, 9, 'center');
     hint.x = GAME_WIDTH / 2;
     hint.y = HINT_Y;
     this.container.addChild(title, hint);
 
     ACTIONS.forEach((action, i) => this.addRow(action, TOP + i * ROW_H));
 
-    const reset = new PixelButton('Reset', 100, BTN_H);
+    const reset = new PixelButton(text('keys.reset'), 100, BTN_H);
     reset.x = GAME_WIDTH / 2 - 110;
     reset.y = GAME_HEIGHT - 34;
     reset.onPress = () => {
@@ -44,7 +45,7 @@ export class KeyBindingsScene implements Scene {
       this.capturing = null;
       this.refresh();
     };
-    const back = new PixelButton('Back', 100, BTN_H);
+    const back = new PixelButton(text('keys.back'), 100, BTN_H);
     back.x = GAME_WIDTH / 2 + 10;
     back.y = GAME_HEIGHT - 34;
     back.onPress = () => manager.back('settings');
@@ -67,7 +68,7 @@ export class KeyBindingsScene implements Scene {
   }
 
   private addRow(action: ActionName, y: number): void {
-    const label = makeText(`${ACTION_LABELS[action]}:`, 0xffffff, 8, 'right');
+    const label = makeText(text('keys.action_label', { action: actionLabel(action) }), 0xffffff, 8, 'right');
     label.x = LABEL_RIGHT;
     label.y = y + 7;
     const button = new PixelButton('', BTN_W, BTN_H);

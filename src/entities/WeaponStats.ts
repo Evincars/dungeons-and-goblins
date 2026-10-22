@@ -44,9 +44,6 @@ export type SpellStats = {
   reachY: number;
   /** Dust puffs left where a bolt bursts. */
   burstPuffs: number;
-  /** Mana a cast costs, and ticks per point of mana regained. */
-  manaCost: number;
-  manaRegenTicks: number;
 };
 
 export const SPELL_STATS = {
@@ -61,8 +58,6 @@ export const SPELL_STATS = {
   reachX: 6,
   reachY: 14,
   burstPuffs: 3,
-  manaCost: 10,
-  manaRegenTicks: 20,
 } as const satisfies SpellStats;
 
 /** Reach of a swing with a sword of the given tier. */

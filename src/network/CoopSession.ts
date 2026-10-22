@@ -5,6 +5,7 @@ import type { PlayerSlot } from '../world';
 import { isSfxName, sound } from '../audio/SoundPlayer';
 import type { SfxName } from '../audio/SoundPlayer';
 import { cleanName, settings } from '../game/Settings';
+import { text } from '../core/texts';
 import { NetworkError, StateError, ValidationError, attempt, errorMessage, reportRejection } from '../core/errors';
 import { isRecord } from '../core/guards';
 import { createLog } from '../core/log';
@@ -137,7 +138,7 @@ export class CoopSession {
     if (typeof window !== 'undefined') window.addEventListener('beforeunload', () => this.close());
   }
 
-  get hostName(): string { return cleanName(settings.playerName) || 'Host'; }
+  get hostName(): string { return cleanName(settings.playerName) || text('coop.default_host_name'); }
 
   /** Guests that have finished joining, in slot order. */
   guestSlots(): PlayerSlot[] {
@@ -162,13 +163,13 @@ export class CoopSession {
     this.close();
     this.role = role;
     this.slot = role === 'host' ? 'host' : null;
-    this.setStatus('Connecting to PeerJS...');
+    this.setStatus(text('coop.status.connecting'));
     const peer = new Peer();
     this.peer = peer;
     peer.on('error', (error) => this.fail(error.message));
-    peer.on('disconnected', () => this.fail('Signaling disconnected. Return to the menu and reconnect.'));
+    peer.on('disconnected', () => this.fail(text('coop.status.signaling_lost')));
     peer.on('connection', (connection) => this.incoming(connection));
-    this.timeout = setTimeout(() => this.fail('Connection timed out. Check the invite and network.'), SIGNAL_TIMEOUT_MS);
+    this.timeout = setTimeout(() => this.fail(text('coop.status.timed_out')), SIGNAL_TIMEOUT_MS);
     peer.on('open', (id) => this.signalled(peer, id, destination));
   }
 
@@ -176,7 +177,7 @@ export class CoopSession {
   private signalled(peer: Peer, id: string, destination: string | undefined): void {
     if (this.peer !== peer) return;
     if (this.role === 'guest') {
-      if (!destination) return this.fail('Enter a host invite link or peer ID.');
+      if (!destination) return this.fail(text('coop.status.enter_destination'));
       this.attach(new Link(peer.connect(destination, { reliable: true, serialization: 'binary' }), null));
       return;
     }
@@ -196,22 +197,22 @@ export class CoopSession {
       return;
     }
     connection.on('open', () => {
-      connection.send({ type: 'refused', reason: refusal ?? 'The room is full.' } satisfies Message);
+      connection.send({ type: 'refused', reason: refusal ?? text('coop.status.room_full') } satisfies Message);
       setTimeout(() => connection.close(), REFUSAL_LINGER_MS);
     });
   }
 
   /** Why the host cannot take another guest right now, if it cannot. */
   private refusal(): string | null {
-    if (this.locked) return 'The game has already started.';
-    if (this.links.size >= MAX_GUESTS) return 'The room is full.';
+    if (this.locked) return text('coop.status.already_started');
+    if (this.links.size >= MAX_GUESTS) return text('coop.status.room_full');
     return null;
   }
 
   private waitingText(): string {
     const guests = this.guestSlots().length;
-    return guests === 0 ? 'Invite ready. Waiting for the other players.'
-      : `${guests + 1} of ${MAX_GUESTS + 1} players in the room.`;
+    return guests === 0 ? text('coop.status.invite_ready')
+      : text('coop.status.players_in_room', { count: guests + 1, max: MAX_GUESTS + 1 });
   }
 
   private attach(link: Link): void {
@@ -221,7 +222,7 @@ export class CoopSession {
     if (this.role === 'guest') this.uplink = link;
     else this.links.set(slotOf(link), link);
     this.resetStream();
-    link.timeout = setTimeout(() => this.dropLink(link, 'Handshake timed out.'), HANDSHAKE_TIMEOUT_MS);
+    link.timeout = setTimeout(() => this.dropLink(link, text('coop.status.handshake_timed_out')), HANDSHAKE_TIMEOUT_MS);
     connection.on('open', () => {
       this.openFastChannel(link);
       // The host waits to be greeted; a guest introduces itself.
@@ -235,7 +236,7 @@ export class CoopSession {
     connection.on('close', () => {
       if (!this.owns(link)) return;
       this.dropLink(link, this.role === 'guest'
-        ? 'The host disconnected. Return to the menu to reconnect.' : `${link.name || 'A player'} disconnected.`);
+        ? text('coop.status.host_disconnected') : text('coop.status.player_disconnected', { name: link.name || text('coop.status.unknown_player') }));
     });
     connection.on('error', (error) => this.dropLink(link, error.message));
   }
@@ -315,7 +316,7 @@ export class CoopSession {
     clearTimeout(link.timeout);
     this.connected = true;
     this.startHeartbeat();
-    this.setStatus('Connected. Waiting for the host to start.');
+    this.setStatus(text('coop.status.connected'));
   }
 
   private rename(link: Link, name: unknown): void {
@@ -342,7 +343,7 @@ export class CoopSession {
 
   /** Names must be unique in the room so nobody is mistaken for somebody else. */
   private uniqueName(wanted: string, slot: PlayerSlot): string {
-    const base = wanted || `Player ${PLAYER_SLOTS.indexOf(slot) + 1}`;
+    const base = wanted || text('coop.default_player_name', { number: PLAYER_SLOTS.indexOf(slot) + 1 });
     const others = [...this.links.values()].filter((l) => l.slot !== slot && l.ready).map((l) => l.name);
     const taken = new Set([this.hostName, ...others].map((n) => n.toLowerCase()));
     let name = base;
@@ -389,7 +390,7 @@ export class CoopSession {
   private beat(): void {
     for (const link of this.activeLinks()) {
       if (performance.now() - link.lastMessageAt <= SILENCE_MS) this.send(link, { type: 'ping' });
-      else this.dropLink(link, this.role === 'guest' ? 'The host stopped answering.' : `${link.name} stopped answering.`);
+      else this.dropLink(link, this.role === 'guest' ? text('coop.status.host_silent') : text('coop.status.player_silent', { name: link.name }));
     }
   }
 

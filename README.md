@@ -44,10 +44,9 @@ Game data you can tune without touching code. Edit a file, save, and the dev ser
 Speed, size and art of each enemy live next to it in `MOB_CONFIGS` in
 [`src/entities/MobFactory.ts`](src/entities/MobFactory.ts).
 
-### [`src/data/weapons.json`](src/data/weapons.json) — weapons and arrows
+### [`src/data/weapons.json`](src/data/weapons.json) — weapons
 
-165 entries: the weapons in `public/weapons/`, the loose blades cut from `public/weapons-1.png`, and the
-arrow bundles. Each item:
+160 entries: the weapons in `public/weapons/` and the loose blades cut from `public/weapons-1.png`. Each item:
 
 | Field | Meaning |
 |---|---|
@@ -55,13 +54,12 @@ arrow bundles. Each item:
 | `name` | Name shown in the inventory and tooltips (random placeholder names for now) |
 | `icon` | Texture key of its picture |
 | `src` | The image file under `public/` (blades from `weapons-1.png` have none: they are cut from that sheet) |
-| `kind` | What it is: `axe`, `bow`, `sword`, `wand`, `arrows`, … |
-| `type` | `weapon`, `shield` or `ammo` |
-| `gear` | Which slot it fits: `weapon` (primary or secondary hand), `offhand` (secondary hand), `ammo` (Arrows slot) |
+| `kind` | What it is: `axe`, `bow`, `sword`, `wand`, … |
+| `type` | `weapon` or `shield` |
+| `gear` | Which slot it fits: `weapon` (primary or secondary hand), `offhand` (secondary hand) |
 | `cost` | Price in gold |
-| `weight` | Kilograms it weighs (a whole stack, for arrows) |
-| `stats` | What it adds while worn: any of `strength`, `intelligence`, `stamina`, `defence`, `luck`, `mana` (random placeholder values for now) |
-| `count` | Arrows only: how many are in the stack |
+| `weight` | Kilograms it weighs |
+| `stats` | What it adds while worn: any of `strength`, `dexterity`, `constitution`, `intelligence`, `wisdom`, `charisma` (random placeholder values for now) |
 
 ### [`src/data/shields.json`](src/data/shields.json) — shields
 
@@ -90,17 +88,25 @@ Stats of everything worn add up (shown on the inventory's Gear tab) and take eff
 | Stat | Effect |
 |---|---|
 | Strength | +1 sword tier per point (more damage and reach), and +1 arrow damage |
-| Defence | Each point takes 5% off every hit taken (at most 75%) |
-| Stamina | +10 ticks of sprint per point |
+| Dexterity | Each point takes 5% off every hit taken (at most 75%) |
+| Constitution | +10 ticks of sprint per point |
 | Intelligence | +2 spell damage per point |
-| Mana | +5 maximum mana per point |
-| Luck | +5% coins dropped by enemies per point |
+| Wisdom | Nothing yet |
+| Charisma | +5% coins dropped by enemies per point |
+
+The inventory shows each stat by its short name (STR, DEX, CON, INT, WIS, CHA); hovering it shows the full name and this description, read from `src/data/texts.json`.
+
+Arrows have no item or count: with a bow or crossbow in either hand, attacking looses an arrow.
+
+### [`src/data/texts.json`](src/data/texts.json) — every string the player reads
+
+Each text has a short, self-describing id (`stat.strength.name`, `menu.title.start`); code asks for it with `text(id, vars)` from [`src/core/texts.ts`](src/core/texts.ts), and `{name}` marks a value filled in at runtime. To translate, supply a file with the same ids. Key-cap names (ESC, L SHIFT) and developer logs are not in it.
 
 ## Other tuning (TypeScript)
 
 Not JSON, but kept in one place each:
 
-- [`src/entities/WeaponStats.ts`](src/entities/WeaponStats.ts) — sword swing, spell bolt (damage, mana cost) and arrow numbers.
+- [`src/entities/WeaponStats.ts`](src/entities/WeaponStats.ts) — sword swing, spell bolt (damage) and arrow numbers.
 - [`src/entities/Drops.ts`](src/entities/Drops.ts) — drop tables (what chests throw out).
 - [`src/entities/LootFactory.ts`](src/entities/LootFactory.ts) — the coins and gems enemies drop, and how few.
 - [`src/level/generators/DungeonConfig.ts`](src/level/generators/DungeonConfig.ts) — map size, room sizes, halls, pits, enemy density.

@@ -54,7 +54,7 @@ const { updateLoot } = await load('systems/LootSystem');
 const { updateArrows } = await load('systems/ArrowSystem');
 const { updateDummies } = await load('systems/DummySystem');
 const { createTrainingDummy } = await load('entities/DungeonFactory');
-const { WEAPONS, SHIELDS, ARMORS, ARROWS, HAND_WEAPONS } = await load('entities/ItemCatalog');
+const { WEAPONS, SHIELDS, ARMORS, HAND_WEAPONS } = await load('entities/ItemCatalog');
 const { EFFECT_SHAPES, EFFECT_COLOURS } = await load('assets/Effects');
 const { giveStartingKit } = await load('game/Run');
 const PlayerActions = await load('game/PlayerActions');
@@ -645,7 +645,7 @@ test('dragging items: they stay on the square they are dropped on, gear is worn 
   assert.equal(off.inventory[5], axe, 'taken off onto the square it was dropped on');
   assert.equal(moveItem(off, { bag: 1 }, { slot: 'medal' }), null, 'only medals go in the medal slot');
   assert.equal(start.inventory.length, 3, 'the old arrangement is left alone');
-  assert.deepEqual(statTotals({ primary: axe, head: helm }), { strength: 3, intelligence: 0, stamina: 0, defence: 1, luck: 0, mana: 0 });
+  assert.deepEqual(statTotals({ primary: axe, head: helm }), { strength: 3, dexterity: 1, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 });
 });
 
 test('an opened chest throws out a weapon or armour and some coins; walking over the gear picks it up', () => {
@@ -710,24 +710,23 @@ test('coins flung at a wall stop at its edge instead of landing on top of it', (
 });
 
 test('the item catalogues load every weapon, shield and armour, each with a name and stats to tune', () => {
-  assert.equal(WEAPONS.length, 165);
+  assert.equal(WEAPONS.length, 160);
   assert.equal(SHIELDS.length, 140);
   assert.equal(ARMORS.length, 220);
   for (const item of [...WEAPONS, ...SHIELDS, ...ARMORS]) {
     assert.ok(item.name && item.icon && item.gear && item.stats, item.id);
     assert.ok(validCommand({ kind: 'loadout', inventory: [item], equipped: {} }), `${item.id} passes the network checks`);
   }
-  assert.ok(ARROWS.every((a) => a.gear === 'ammo' && a.count > 0));
+  assert.ok(WEAPONS.every((w) => w.gear !== 'ammo' && w.kind !== 'arrows'), 'arrows are not items');
   assert.equal(Object.keys(EFFECT_SHAPES).length, 252, 'every effect sheet has a shape name');
   assert.equal(EFFECT_COLOURS.length, 9);
 });
 
-test('a new run starts with random weapons, twenty arrows, a shield and armour in the bag', () => {
+test('a new run starts with random weapons, a shield and armour in the bag', () => {
   const player = playerAt(2, 2);
   giveStartingKit(player);
   const bag = player.inventory;
   assert.equal(bag.filter((i) => HAND_WEAPONS.some((w) => w.id === i.id)).length, 4);
-  assert.equal(bag.find((i) => i.gear === 'ammo').count, 20);
   assert.equal(bag.filter((i) => i.gear === 'armor').length, 4);
   assert.equal(bag.filter((i) => i.gear === 'offhand').length, 1);
   assert.equal(bag.filter((i) => i.gear === 'medal').length, 2, 'and two medals for the medal slot');
@@ -736,17 +735,15 @@ test('a new run starts with random weapons, twenty arrows, a shield and armour i
 test('worn gear applies all its stats, and an item dropped on the gear panel finds its slot', () => {
   const player = playerAt(2, 2);
   const gear = { primary: { type: 'weapon', name: 'w', value: 1, gear: 'weapon', stats: { strength: 3, intelligence: 2 } },
-    armor: { type: 'armor', name: 'a', value: 1, gear: 'armor', stats: { defence: 4, stamina: 2, mana: 3, luck: 2 } } };
+    armor: { type: 'armor', name: 'a', value: 1, gear: 'armor', stats: { dexterity: 4, constitution: 2, wisdom: 3, charisma: 2 } } };
   const { applyLoadout } = PlayerActions;
   applyLoadout(player, { inventory: [], equipped: gear });
   const ps = player.playerStats;
   assert.equal(ps.swordTier, 4);
   assert.equal(ps.armorTier, 4);
   assert.equal(ps.maxSprint, 140);
-  assert.equal(ps.maxMana, 65);
   assert.equal(ps.spellBonus, 4);
   assert.ok(Math.abs(ps.lootBonus - 0.1) < 1e-9);
-  assert.equal(slotFor({}, ARROWS[0]), 'ammo');
   assert.equal(slotFor({ primary: gear.primary }, HAND_WEAPONS[0]), 'secondary', 'a second weapon goes to the free hand');
 });
 
@@ -766,25 +763,26 @@ test('enemies cannot walk onto the player: bodies collide, and touching still hu
   assert.ok(player.health.current < before, 'a touch still hurts');
 });
 
-test('with arrows in the Arrows slot an attack looses one at the crosshair (no swing), until the quiver is empty', () => {
+test('with a bow in hand an attack looses an arrow at the crosshair (no swing), and arrows never run out', () => {
   const player = playerAt(3, 3);
   player.aimVector = { x: 1, y: 0 };
-  player.equipped = { ammo: { ...ARROWS[0], count: 2 } };
-  player.playerInput.intents.attack = true;
-  updateArrows();
-  updateSword();
-  const arrow = world.entities.find((e) => e.projectile?.arrow);
-  assert.ok(arrow && arrow.velocity.x > 0, 'an arrow flies right');
-  assert.equal(player.swordSwing, undefined, 'no swing');
-  assert.equal(player.equipped.ammo.count, 1);
+  player.equipped = { primary: { ...HAND_WEAPONS.find((w) => w.kind === 'bow') } };
+  for (let shot = 0; shot < 3; shot++) {
+    player.arrowCooldown = 0;
+    player.playerInput.intents.attack = true;
+    updateArrows();
+    updateSword();
+    assert.equal(player.swordSwing, undefined, 'no swing');
+  }
+  const arrows = world.entities.filter((e) => e.projectile?.arrow);
+  assert.equal(arrows.length, 3, 'three arrows in flight');
+  assert.ok(arrows.every((arrow) => arrow.velocity.x > 0), 'flying right');
+  player.equipped = {};
   player.arrowCooldown = 0;
   player.playerInput.intents.attack = true;
   updateArrows();
-  assert.equal(player.equipped.ammo, undefined, 'the empty quiver comes off');
-  player.playerInput.intents.attack = true;
-  updateArrows();
   updateSword();
-  assert.ok(player.swordSwing, 'and the sword is back');
+  assert.ok(player.swordSwing, 'without a bow the sword is back');
 });
 
 test('the training dummy takes sword hits but never falls', () => {
@@ -970,4 +968,16 @@ test('every machine builds the same level from a seed; only the authority adds w
     const x = i % hostSide.level.width, y = Math.floor(i / hostSide.level.width);
     assert.equal(hostSide.level.getTile(x, y).type, guestSide.level.getTile(x, y).type);
   }
+});
+
+test('the six stats are Strength to Charisma, each with a short name, a full name and a description in the texts file', async () => {
+  const { STAT_NAMES } = await load('world');
+  const { text } = await load('core/texts');
+  assert.deepEqual([...STAT_NAMES], ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma']);
+  for (const stat of STAT_NAMES) {
+    assert.equal(text(`stat.${stat}.short`).length, 3, `${stat} has a three-letter short name`);
+    assert.ok(text(`stat.${stat}.name`).toLowerCase() === stat);
+    assert.ok(text(`stat.${stat}.description`).length > 10);
+  }
+  assert.equal(text('inventory.gold', { amount: 7 }), 'Gold: 7', 'placeholders are filled in');
 });

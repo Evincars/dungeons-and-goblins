@@ -1,4 +1,5 @@
 import { NAME_MAX, cleanName, saveSettings, settings } from '../game/Settings';
+import { text } from '../core/texts';
 import { coop } from '../network/CoopSession';
 import { TextBox } from './TextBox';
 
@@ -12,7 +13,7 @@ export class NameField {
   /** `x`, `y`, `width` and `height` are in game pixels. */
   constructor(canvas: HTMLCanvasElement, x: number, y: number, width: number, height: number) {
     this.box = new TextBox(canvas, { x, y, w: width, h: height }, {
-      ariaLabel: 'Your player name', placeholder: 'Your name', maxLength: NAME_MAX, align: 'center',
+      ariaLabel: text('settings.player_name_aria'), placeholder: text('settings.player_name'), maxLength: NAME_MAX, align: 'center',
     });
     this.box.value = settings.playerName;
     this.box.element.addEventListener('change', () => this.commit());

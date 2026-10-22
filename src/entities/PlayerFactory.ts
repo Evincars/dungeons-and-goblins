@@ -12,9 +12,8 @@ const PLAYER_SPEED = 1.2;
 const PLAYER_FRICTION = 0.4;
 /** Half-width of the player's collision box in pixels (two thirds of the original 10). */
 const PLAYER_RADIUS = 7;
-/** What a player has with no gear on: ticks of sprinting a full stamina bar allows, and mana. */
+/** What a player has with no gear on: ticks of sprinting a full stamina bar allows. */
 export const BASE_SPRINT = 120;
-export const BASE_MANA = 50;
 
 export function createPlayer(x: number, y: number): Entity {
   return world.add({
@@ -58,8 +57,6 @@ export function createPlayer(x: number, y: number): Entity {
       sprintLocked: false,
       kills: 0,
       goldEarned: 0,
-      mana: BASE_MANA,
-      maxMana: BASE_MANA,
       spellBonus: 0,
       lootBonus: 0,
     },

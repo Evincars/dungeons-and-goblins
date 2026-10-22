@@ -5,6 +5,7 @@ import { PixelButton } from '../ui/PixelButton';
 import { menuBackdrop } from '../ui/MenuBackdrop';
 import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
 import type { Scene, SceneManager } from '../game/SceneManager';
+import { text } from '../core/texts';
 import { coop } from '../network/CoopSession';
 import { startRun } from '../game/Run';
 import { world } from '../world';
@@ -42,11 +43,11 @@ export class TitleScene implements Scene {
     this.container.addChild(logo);
 
     const entries: Array<{ label: string; action: () => void }> = [
-      { label: 'Start', action: () => manager.goto('in_game') },
-      { label: 'Host game', action: () => manager.goto('coop_host') },
-      { label: 'Join game', action: () => manager.goto('coop_join') },
-      { label: 'Settings', action: () => manager.goto('settings') },
-      { label: 'Exit', action: () => this.exit() },
+      { label: text('menu.title.start'), action: () => manager.goto('in_game') },
+      { label: text('menu.title.host'), action: () => manager.goto('coop_host') },
+      { label: text('menu.title.join'), action: () => manager.goto('coop_join') },
+      { label: text('menu.title.settings'), action: () => manager.goto('settings') },
+      { label: text('menu.title.exit'), action: () => this.exit() },
     ];
     entries.forEach(({ label, action }, i) => {
       const button = new PixelButton(label, BUTTON_W, BUTTON_H);
@@ -56,10 +57,10 @@ export class TitleScene implements Scene {
       this.container.addChild(button);
     });
 
-    const hint = makeText('WASD move   Mouse aim   Click sword   RMB/Q spell\nE use   TAB inventory   SHIFT sprint   ESC pause', 0x776655, 8, 'center');
+    const hint = makeText(text('menu.title.controls_hint'), 0x776655, 8, 'center');
     hint.x = Math.floor(GAME_WIDTH / 2);
     hint.y = HINT_Y;
-    this.farewell = makeText('Close this browser tab to leave the dungeon.', 0xffcc44, 8, 'center');
+    this.farewell = makeText(text('menu.title.farewell'), 0xffcc44, 8, 'center');
     this.farewell.x = Math.floor(GAME_WIDTH / 2);
     this.farewell.y = MENU_TOP - 18;
     this.farewell.visible = false;

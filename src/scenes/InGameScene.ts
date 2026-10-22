@@ -3,6 +3,7 @@ import type { Application } from 'pixi.js';
 import { world, q, localPlayer } from '../world';
 import type { Player } from '../world';
 import type { Scene, SceneManager } from '../game/SceneManager';
+import { text } from '../core/texts';
 import { buildDungeon, prepareLevel, randomSeed } from '../level/DungeonGenerator';
 import { buildLevelView } from '../level/TileRenderer';
 import type { LevelView } from '../level/TileRenderer';
@@ -138,7 +139,7 @@ export class InGameScene implements Scene {
     this.status = makeText('', 0xff8888, 8, 'center');
     this.status.x = GAME_WIDTH / 2;
     this.status.y = STATUS_Y;
-    const levelLabel = makeText(`Depth ${depth}`, 0x998877, 8, 'right');
+    const levelLabel = makeText(text('game.depth', { depth }), 0x998877, 8, 'right');
     levelLabel.x = GAME_WIDTH - 6;
     levelLabel.y = STATUS_Y;
     this.uiLayer.addChild(this.status, levelLabel);
@@ -149,8 +150,8 @@ export class InGameScene implements Scene {
       mainMenu: () => manager.goto('title'),
       exitGame: () => this.exitGame(),
     }, this.mode === 'guest'
-      ? 'You will leave the co-op game.'
-      : this.mode === 'host' ? 'The co-op game ends for everyone.' : 'This dungeon run will be lost.');
+      ? text('menu.pause.warning_guest')
+      : this.mode === 'host' ? text('menu.pause.warning_host') : text('menu.pause.warning_solo'));
     // The crosshair replaces the OS pointer and is the player's focus in the world.
     this.uiLayer.addChild(this.crosshair.graphics, this.pause.container, this.result.container);
     manager.canvas.style.cursor = 'none';
@@ -311,11 +312,11 @@ export class InGameScene implements Scene {
 
   /** A line at the top of the screen when co-op is not running normally. */
   private updateStatus(player: Player | undefined): void {
-    let text = '';
-    if (this.mode !== 'solo' && !coop.connected) text = coop.status;
-    else if (this.guest?.hostPaused) text = 'The host paused the game';
-    else if (this.mode === 'guest' && !player) text = 'Joining the host...';
-    this.status.text = text;
+    let line = '';
+    if (this.mode !== 'solo' && !coop.connected) line = coop.status;
+    else if (this.guest?.hostPaused) line = text('game.host_paused');
+    else if (this.mode === 'guest' && !player) line = text('game.joining');
+    this.status.text = line;
   }
 
   /** The exit was pulled: the summary of the level comes up. Alone or hosting, Enter goes deeper; a guest waits for the host. */
@@ -327,13 +328,17 @@ export class InGameScene implements Scene {
     if (this.mode !== 'guest') this.prepareNextLevel();
     const gained = this.levelTotals();
     this.result.show({
-      title: 'LEVEL COMPLETE',
+      title: text('game.level_complete.title'),
       titleColor: 0xffcc44,
-      lines: [`Kills: ${gained.kills}`, `XP gained: ${gained.xp}`, `Gold gained: ${gained.gold}`],
-      waiting: this.mode === 'guest' ? 'Waiting for the host...' : undefined,
+      lines: [
+        text('game.level_complete.kills', { count: gained.kills }),
+        text('game.level_complete.xp', { count: gained.xp }),
+        text('game.level_complete.gold', { count: gained.gold }),
+      ],
+      waiting: this.mode === 'guest' ? text('game.level_complete.waiting') : undefined,
       buttons: [
-        { label: 'Next Level', action: () => this.nextLevel() },
-        { label: 'End Run', action: () => this.manager.goto('title') },
+        { label: text('game.level_complete.next'), action: () => this.nextLevel() },
+        { label: text('game.level_complete.end_run'), action: () => this.manager.goto('title') },
       ],
     });
     this.showPointer(true);
@@ -366,12 +371,17 @@ export class InGameScene implements Scene {
     const stats = localPlayer()?.playerStats;
     const total = stats ? totalsOf(stats) : { kills: 0, xp: 0, gold: 0 };
     this.result.show({
-      title: 'GAME OVER',
+      title: text('game.game_over.title'),
       titleColor: 0xff5544,
-      lines: [`Depth reached: ${run.depth}`, `Total kills: ${total.kills}`, `Total XP earned: ${total.xp}`, `Total gold earned: ${total.gold}`],
+      lines: [
+        text('game.game_over.depth', { depth: run.depth }),
+        text('game.game_over.kills', { count: total.kills }),
+        text('game.game_over.xp', { count: total.xp }),
+        text('game.game_over.gold', { count: total.gold }),
+      ],
       buttons: [
-        { label: 'New Game', action: () => this.newGame() },
-        { label: 'Main Menu', action: () => this.manager.goto('title') },
+        { label: text('game.game_over.new_game'), action: () => this.newGame() },
+        { label: text('game.game_over.main_menu'), action: () => this.manager.goto('title') },
       ],
     });
     this.showPointer(true);

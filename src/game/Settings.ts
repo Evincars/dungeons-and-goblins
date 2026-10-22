@@ -3,23 +3,17 @@ import { MathUtils } from 'yuka';
 import { attempt } from '../core/errors';
 import { hasKey, isFiniteNumber, isRecord } from '../core/guards';
 import { createLog } from '../core/log';
+import { text } from '../core/texts';
 
 const log = createLog('settings');
 
 export const ACTIONS = ['up', 'down', 'left', 'right', 'sprint', 'attack', 'cast', 'use', 'inventory'] as const;
 export type ActionName = (typeof ACTIONS)[number];
 
-export const ACTION_LABELS = {
-  up: 'UP',
-  down: 'DOWN',
-  left: 'LEFT',
-  right: 'RIGHT',
-  sprint: 'SPRINT',
-  attack: 'SWORD',
-  cast: 'SPELL',
-  use: 'USE',
-  inventory: 'INVENTORY',
-} as const satisfies Record<ActionName, string>;
+/** How the key bindings screen names an action. */
+export function actionLabel(action: ActionName): string {
+  return text(`keys.action.${action}` as const);
+}
 
 const DEFAULT_BINDINGS = {
   up: 'KeyW',

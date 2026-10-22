@@ -1,3 +1,4 @@
+import { text } from '../core/texts';
 import { Container, Graphics } from 'pixi.js';
 import { makeText } from './PixelText';
 import { THEME } from './Theme';
@@ -71,6 +72,6 @@ export class PixelSlider extends Container {
     this.bar.rect(knobX, 1, KNOB, HEIGHT - 2).fill(THEME.knob);
     this.bar.rect(0, 0, this.barWidth, HEIGHT).stroke({ color: THEME.control, width: 1 });
 
-    this.text.text = `${this.caption}: ${Math.round(this._value * 100)}%`;
+    this.text.text = text('settings.volume_reading', { caption: this.caption, percent: Math.round(this._value * 100) });
   }
 }

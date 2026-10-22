@@ -2,7 +2,8 @@ import { Container, Graphics, Sprite } from 'pixi.js';
 import { STAT_NAMES } from '../world';
 import type { InventoryItem } from '../world';
 import { lazyTexture } from '../assets/LazyArt';
-import { itemIcon, STAT_LABELS } from '../entities/Items';
+import { itemIcon, statShort } from '../entities/Items';
+import { text } from '../core/texts';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
 
@@ -22,10 +23,9 @@ const BG_ALPHA = 0.94;
 /** The lines under the header: each stat the item adds, how many there are, and what kind of thing it is. */
 function detailLines(item: InventoryItem): Array<{ text: string; color: number }> {
   const s = item.stats;
-  const lines = s ? STAT_NAMES.flatMap((stat) => (s[stat] ? [{ text: `+${s[stat]} ${STAT_LABELS[stat]}`, color: 0x8fd18f }] : [])) : [];
-  if (item.count !== undefined) lines.push({ text: `Count: ${item.count}`, color: THEME.text });
-  if (item.weight !== undefined) lines.push({ text: `Weight: ${item.weight} kg`, color: THEME.text });
-  lines.push({ text: `Value: ${item.value} gold`, color: 0xffcc00 });
+  const lines = s ? STAT_NAMES.flatMap((stat) => (s[stat] ? [{ text: text('item.tooltip.stat_bonus', { amount: s[stat] ?? 0, stat: statShort(stat) }), color: 0x8fd18f }] : [])) : [];
+  if (item.weight !== undefined) lines.push({ text: text('item.tooltip.weight', { kg: item.weight }), color: THEME.text });
+  lines.push({ text: text('item.tooltip.value', { gold: item.value }), color: 0xffcc00 });
   lines.push({ text: item.kind ?? item.type, color: THEME.muted });
   return lines;
 }

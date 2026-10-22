@@ -37,7 +37,7 @@
       "cost": 186,
       "weight": 0.3,
       "stats": {
-        "luck": 3
+        "charisma": 3
       }
     },
     {
@@ -50,7 +50,7 @@
       "cost": 418,
       "weight": 0.1,
       "stats": {
-        "luck": 1
+        "charisma": 1
       }
     },
     {
@@ -89,7 +89,7 @@
       "cost": 370,
       "weight": 0.2,
       "stats": {
-        "mana": 2
+        "wisdom": 2
       }
     },
     {
@@ -102,7 +102,7 @@
       "cost": 355,
       "weight": 0.2,
       "stats": {
-        "defence": 1
+        "dexterity": 1
       }
     },
     {
@@ -115,7 +115,7 @@
       "cost": 360,
       "weight": 0.2,
       "stats": {
-        "mana": 2
+        "wisdom": 2
       }
     },
     {
@@ -154,7 +154,7 @@
       "cost": 119,
       "weight": 0.2,
       "stats": {
-        "luck": 2
+        "charisma": 2
       }
     },
     {
@@ -167,7 +167,7 @@
       "cost": 274,
       "weight": 0.3,
       "stats": {
-        "stamina": 1
+        "constitution": 1
       }
     },
     {
@@ -180,7 +180,7 @@
       "cost": 180,
       "weight": 0.1,
       "stats": {
-        "stamina": 2
+        "constitution": 2
       }
     },
     {
@@ -193,7 +193,7 @@
       "cost": 137,
       "weight": 0.3,
       "stats": {
-        "mana": 2
+        "wisdom": 2
       }
     },
     {
@@ -219,7 +219,7 @@
       "cost": 398,
       "weight": 0.3,
       "stats": {
-        "mana": 1
+        "wisdom": 1
       }
     },
     {
@@ -232,7 +232,7 @@
       "cost": 385,
       "weight": 0.2,
       "stats": {
-        "defence": 3
+        "dexterity": 3
       }
     },
     {
@@ -245,7 +245,7 @@
       "cost": 297,
       "weight": 0.2,
       "stats": {
-        "luck": 1
+        "charisma": 1
       }
     },
     {
@@ -258,7 +258,7 @@
       "cost": 205,
       "weight": 0.2,
       "stats": {
-        "mana": 2
+        "wisdom": 2
       }
     },
     {
@@ -284,7 +284,7 @@
       "cost": 195,
       "weight": 0.3,
       "stats": {
-        "luck": 1
+        "charisma": 1
       }
     },
     {
@@ -297,7 +297,7 @@
       "cost": 236,
       "weight": 0.3,
       "stats": {
-        "mana": 1
+        "wisdom": 1
       }
     },
     {
@@ -310,7 +310,7 @@
       "cost": 535,
       "weight": 0.1,
       "stats": {
-        "mana": 1
+        "wisdom": 1
       }
     },
     {
@@ -336,7 +336,7 @@
       "cost": 218,
       "weight": 0.3,
       "stats": {
-        "luck": 2
+        "charisma": 2
       }
     },
     {
@@ -349,7 +349,7 @@
       "cost": 505,
       "weight": 0.2,
       "stats": {
-        "stamina": 2
+        "constitution": 2
       }
     },
     {
@@ -362,7 +362,7 @@
       "cost": 107,
       "weight": 0.3,
       "stats": {
-        "stamina": 2
+        "constitution": 2
       }
     },
     {
@@ -414,7 +414,7 @@
       "cost": 526,
       "weight": 0.2,
       "stats": {
-        "defence": 2
+        "dexterity": 2
       }
     },
     {
@@ -427,7 +427,7 @@
       "cost": 359,
       "weight": 0.1,
       "stats": {
-        "mana": 1
+        "wisdom": 1
       }
     },
     {
@@ -453,7 +453,7 @@
       "cost": 181,
       "weight": 0.1,
       "stats": {
-        "luck": 3
+        "charisma": 3
       }
     },
     {
@@ -479,7 +479,7 @@
       "cost": 315,
       "weight": 0.1,
       "stats": {
-        "luck": 3
+        "charisma": 3
       }
     },
     {
@@ -505,7 +505,7 @@
       "cost": 443,
       "weight": 0.2,
       "stats": {
-        "luck": 2
+        "charisma": 2
       }
     },
     {
@@ -531,7 +531,7 @@
       "cost": 548,
       "weight": 0.2,
       "stats": {
-        "defence": 1
+        "dexterity": 1
       }
     },
     {
@@ -544,7 +544,7 @@
       "cost": 307,
       "weight": 0.2,
       "stats": {
-        "luck": 1
+        "charisma": 1
       }
     },
     {
@@ -570,7 +570,7 @@
       "cost": 250,
       "weight": 0.3,
       "stats": {
-        "mana": 2
+        "wisdom": 2
       }
     },
     {
@@ -583,7 +583,7 @@
       "cost": 278,
       "weight": 0.1,
       "stats": {
-        "defence": 1
+        "dexterity": 1
       }
     },
     {
@@ -596,7 +596,7 @@
       "cost": 550,
       "weight": 0.2,
       "stats": {
-        "defence": 3
+        "dexterity": 3
       }
     },
     {
@@ -609,7 +609,7 @@
       "cost": 165,
       "weight": 0.3,
       "stats": {
-        "stamina": 2
+        "constitution": 2
       }
     },
     {
@@ -622,7 +622,7 @@
       "cost": 177,
       "weight": 0.2,
       "stats": {
-        "defence": 1
+        "dexterity": 1
       }
     },
     {
@@ -635,7 +635,7 @@
       "cost": 139,
       "weight": 0.2,
       "stats": {
-        "stamina": 1
+        "constitution": 1
       }
     },
     {
@@ -648,7 +648,7 @@
       "cost": 560,
       "weight": 0.2,
       "stats": {
-        "defence": 2
+        "dexterity": 2
       }
     },
     {
@@ -674,7 +674,7 @@
       "cost": 486,
       "weight": 0.2,
       "stats": {
-        "mana": 3
+        "wisdom": 3
       }
     },
     {
@@ -687,7 +687,7 @@
       "cost": 130,
       "weight": 0.2,
       "stats": {
-        "stamina": 2
+        "constitution": 2
       }
     },
     {
@@ -713,7 +713,7 @@
       "cost": 419,
       "weight": 0.1,
       "stats": {
-        "stamina": 3
+        "constitution": 3
       }
     },
     {
@@ -765,7 +765,7 @@
       "cost": 562,
       "weight": 0.3,
       "stats": {
-        "stamina": 3
+        "constitution": 3
       }
     },
     {
@@ -791,7 +791,7 @@
       "cost": 158,
       "weight": 0.2,
       "stats": {
-        "stamina": 3
+        "constitution": 3
       }
     },
     {
@@ -817,7 +817,7 @@
       "cost": 350,
       "weight": 0.2,
       "stats": {
-        "mana": 1
+        "wisdom": 1
       }
     },
     {
@@ -830,7 +830,7 @@
       "cost": 146,
       "weight": 0.2,
       "stats": {
-        "defence": 3
+        "dexterity": 3
       }
     },
     {
@@ -843,7 +843,7 @@
       "cost": 433,
       "weight": 0.2,
       "stats": {
-        "stamina": 1
+        "constitution": 1
       }
     },
     {
@@ -895,7 +895,7 @@
       "cost": 503,
       "weight": 0.2,
       "stats": {
-        "defence": 2
+        "dexterity": 2
       }
     },
     {
@@ -934,7 +934,7 @@
       "cost": 347,
       "weight": 0.2,
       "stats": {
-        "defence": 1
+        "dexterity": 1
       }
     },
     {
@@ -947,7 +947,7 @@
       "cost": 468,
       "weight": 0.2,
       "stats": {
-        "mana": 2
+        "wisdom": 2
       }
     },
     {
@@ -960,7 +960,7 @@
       "cost": 157,
       "weight": 0.2,
       "stats": {
-        "luck": 3
+        "charisma": 3
       }
     },
     {
@@ -973,7 +973,7 @@
       "cost": 144,
       "weight": 0.1,
       "stats": {
-        "luck": 3
+        "charisma": 3
       }
     },
     {
@@ -986,7 +986,7 @@
       "cost": 204,
       "weight": 0.2,
       "stats": {
-        "mana": 2
+        "wisdom": 2
       }
     },
     {
@@ -999,7 +999,7 @@
       "cost": 365,
       "weight": 0.3,
       "stats": {
-        "stamina": 2
+        "constitution": 2
       }
     },
     {
@@ -1012,7 +1012,7 @@
       "cost": 393,
       "weight": 0.2,
       "stats": {
-        "luck": 2
+        "charisma": 2
       }
     },
     {
@@ -1025,7 +1025,7 @@
       "cost": 285,
       "weight": 0.2,
       "stats": {
-        "mana": 2
+        "wisdom": 2
       }
     },
     {

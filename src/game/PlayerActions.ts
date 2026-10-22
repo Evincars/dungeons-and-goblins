@@ -7,7 +7,7 @@ import { nearby, Sense } from '../ai/perception/spatial';
 import { REACH } from '../systems/TargetSystem';
 import { fitsSlot, statTotals } from '../entities/Items';
 import { isEquipSlot } from '../world';
-import { BASE_MANA, BASE_SPRINT } from '../entities/PlayerFactory';
+import { BASE_SPRINT } from '../entities/PlayerFactory';
 
 /**
  * What players do from the shop and inventory panels. In a lone game or on the host it happens at once;
@@ -21,11 +21,10 @@ export const INVENTORY_ROWS = 7;
 export const MAX_INVENTORY = INVENTORY_COLS * INVENTORY_ROWS;
 /** Sword tier with nothing equipped; each point of strength on gear adds one. */
 const BASE_SWORD_TIER = 1;
-/** What each point of a stat on worn gear gives: ticks of sprint (Stamina), mana (Mana), spell damage (Intelligence), and a share more coins (Luck). */
-const SPRINT_PER_STAMINA = 10;
-const MANA_PER_POINT = 5;
+/** What each point of a stat on worn gear gives: ticks of sprint (Constitution), spell damage (Intelligence), and a share more coins (Charisma). */
+const SPRINT_PER_CONSTITUTION = 10;
 const SPELL_DAMAGE_PER_INTELLIGENCE = 2;
-const LOOT_PER_LUCK = 0.05;
+const LOOT_PER_CHARISMA = 0.05;
 
 export type Loadout = { inventory: BagSquare[]; equipped: Partial<Record<EquipSlot, InventoryItem>> };
 
@@ -152,8 +151,8 @@ export function requestBuy(player: Player, items: readonly InventoryItem[], inde
 
 /**
  * Puts the bag and equipment in the given arrangement and works out what the worn gear gives: Strength
- * sharpens the sword (and arrows), Defence turns blows, Stamina lengthens sprints, Mana deepens the mana
- * pool, Intelligence strengthens spells and Luck makes enemies drop more coins.
+ * sharpens the sword (and arrows), Dexterity turns blows, Constitution lengthens sprints, Intelligence
+ * strengthens spells and Charisma makes enemies drop more coins. Wisdom does nothing yet.
  */
 export function applyLoadout(player: Player, loadout: Loadout): void {
   player.inventory = loadout.inventory;
@@ -161,12 +160,10 @@ export function applyLoadout(player: Player, loadout: Loadout): void {
   const stats = statTotals(loadout.equipped);
   const ps = player.playerStats;
   ps.swordTier = BASE_SWORD_TIER + stats.strength;
-  ps.armorTier = stats.defence;
-  ps.maxSprint = BASE_SPRINT + stats.stamina * SPRINT_PER_STAMINA;
-  ps.maxMana = BASE_MANA + stats.mana * MANA_PER_POINT;
-  ps.mana = Math.min(ps.mana, ps.maxMana);
+  ps.armorTier = stats.dexterity;
+  ps.maxSprint = BASE_SPRINT + stats.constitution * SPRINT_PER_CONSTITUTION;
   ps.spellBonus = stats.intelligence * SPELL_DAMAGE_PER_INTELLIGENCE;
-  ps.lootBonus = stats.luck * LOOT_PER_LUCK;
+  ps.lootBonus = stats.charisma * LOOT_PER_CHARISMA;
 }
 
 /** Rearranging the inventory panel: shown at once, and for a guest also sent to the host to make it real. */

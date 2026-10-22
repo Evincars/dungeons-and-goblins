@@ -1,3 +1,4 @@
+import { text } from '../core/texts';
 import { Container } from 'pixi.js';
 import type { Scene, SceneManager } from '../game/SceneManager';
 import { coop } from '../network/CoopSession';
@@ -40,7 +41,7 @@ export class CoopScene implements Scene {
 
   constructor(private readonly manager: SceneManager, private readonly role: CoopRole, destination?: string) {
     this.container.addChild(menuBackdrop());
-    const title = makeTitle(role === 'host' ? 'Host game' : 'Join game');
+    const title = makeTitle(text(role === 'host' ? 'coop.host_title' : 'coop.join_title'));
     title.x = CENTER;
     title.y = 30;
     this.status = makeText('', 0xffdd88, 8, 'center');
@@ -52,27 +53,27 @@ export class CoopScene implements Scene {
     this.container.addChild(title, this.status, this.roster);
 
     this.invite = new TextBox(manager.canvas, INVITE_BOX, {
-      ariaLabel: role === 'host' ? 'Invite link' : 'Host invite link or peer ID',
-      placeholder: 'Paste the invite link',
+      ariaLabel: text(role === 'host' ? 'coop.invite_aria_host' : 'coop.invite_aria_guest'),
+      placeholder: text('coop.invite_placeholder'),
       readOnly: role === 'host',
     });
     this.container.addChild(this.invite.view);
-    this.action = this.button(role === 'host' ? 'Copy invite' : 'Connect', 136, () => this.runAction());
+    this.action = this.button(text(role === 'host' ? 'coop.action_host' : 'coop.action_guest'), 136, () => this.runAction());
 
     // Everyone sets the name the others will see above their character.
-    const nameLabel = makeText('Your name', 0xffdd88, 8, 'center');
+    const nameLabel = makeText(text('coop.name_label'), 0xffdd88, 8, 'center');
     nameLabel.x = CENTER;
     nameLabel.y = 172;
     this.container.addChild(nameLabel);
     this.nameField = new NameField(manager.canvas, NAME_BOX.x, NAME_BOX.y, NAME_BOX.w, NAME_BOX.h);
     this.container.addChild(this.nameField.view);
-    this.button('Settings', 212, () => manager.pushOverlay('settings'));
+    this.button(text('coop.settings'), 212, () => manager.pushOverlay('settings'));
 
     if (role === 'host') {
-      this.start = this.button('Start game', GAME_HEIGHT - 86, () => this.startGame());
+      this.start = this.button(text('coop.start'), GAME_HEIGHT - 86, () => this.startGame());
       this.start.setEnabled(false);
     }
-    this.button('Cancel', GAME_HEIGHT - 52, () => manager.goto('title'));
+    this.button(text('coop.cancel'), GAME_HEIGHT - 52, () => manager.goto('title'));
     this.connect(destination);
     this.watchOverlays();
   }
@@ -95,7 +96,7 @@ export class CoopScene implements Scene {
       return;
     }
     if (!destination) {
-      this.status.text = 'Paste the link your host sent you.';
+      this.status.text = text('coop.paste_prompt');
       return;
     }
     this.invite.value = destination;
@@ -108,7 +109,7 @@ export class CoopScene implements Scene {
   private async copyInvite(): Promise<void> {
     if (!coop.invite) throw new StateError('The invite is not ready yet');
     await navigator.clipboard.writeText(coop.invite);
-    this.status.text = 'Invite copied. Send it to the other players.';
+    this.status.text = text('coop.invite_copied');
   }
 
   private async dial(): Promise<void> {
@@ -144,12 +145,12 @@ export class CoopScene implements Scene {
     if (this.role === 'host') this.invite.value = coop.invite;
     this.start?.setEnabled(coop.connected);
     this.action.setEnabled(this.role !== 'host' || !!coop.invite);
-    const lines = coop.roster.map((p, i) => `${i + 1}. ${p.name}${p.slot === 'host' ? ' (host)' : ''}`);
-    this.roster.text = lines.length ? `Players in the room\n${lines.join('\n')}` : '';
+    const lines = coop.roster.map((p, i) => `${i + 1}. ${p.name}${p.slot === 'host' ? text('coop.roster_host_tag') : ''}`);
+    this.roster.text = lines.length ? text('coop.roster', { players: lines.join('\n') }) : '';
   }
 
   private showError(error: unknown): void {
-    this.status.text = report(error, 'Co-op lobby', 'network').message;
+    this.status.text = report(error, text('coop.lobby_error_scope'), 'network').message;
   }
 
   /** The settings screen lies over this one; the text boxes would show through it. */

@@ -9,9 +9,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
+        "dexterity": 2,
         "strength": 5,
-        "mana": 5
+        "wisdom": 5
       },
       "weight": 21.4,
       "cost": 62
@@ -24,9 +24,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
+        "dexterity": 2,
         "strength": 3,
-        "luck": 4
+        "charisma": 4
       },
       "weight": 7.2,
       "cost": 68
@@ -39,9 +39,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10,
-        "luck": 1,
-        "mana": 5
+        "dexterity": 10,
+        "charisma": 1,
+        "wisdom": 5
       },
       "weight": 21.1,
       "cost": 79
@@ -54,9 +54,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10,
+        "dexterity": 10,
         "strength": 4,
-        "stamina": 4
+        "constitution": 4
       },
       "weight": 10.6,
       "cost": 292
@@ -69,7 +69,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1,
+        "dexterity": 1,
         "strength": 2
       },
       "weight": 12.3,
@@ -83,9 +83,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8,
+        "dexterity": 8,
         "strength": 4,
-        "stamina": 1
+        "constitution": 1
       },
       "weight": 21.8,
       "cost": 273
@@ -98,9 +98,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8,
-        "luck": 1,
-        "stamina": 2
+        "dexterity": 8,
+        "charisma": 1,
+        "constitution": 2
       },
       "weight": 18.8,
       "cost": 116
@@ -113,8 +113,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4,
-        "mana": 5
+        "dexterity": 4,
+        "wisdom": 5
       },
       "weight": 6.1,
       "cost": 184
@@ -127,8 +127,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
-        "mana": 5
+        "dexterity": 6,
+        "wisdom": 5
       },
       "weight": 11.2,
       "cost": 482
@@ -141,7 +141,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2
+        "dexterity": 2
       },
       "weight": 12.8,
       "cost": 485
@@ -154,8 +154,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5,
-        "luck": 2
+        "dexterity": 5,
+        "charisma": 2
       },
       "weight": 9.4,
       "cost": 169
@@ -168,9 +168,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
-        "mana": 5,
-        "luck": 5
+        "dexterity": 2,
+        "wisdom": 5,
+        "charisma": 5
       },
       "weight": 6.7,
       "cost": 105
@@ -183,9 +183,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4,
-        "mana": 5,
-        "luck": 1
+        "dexterity": 4,
+        "wisdom": 5,
+        "charisma": 1
       },
       "weight": 9.1,
       "cost": 285
@@ -198,7 +198,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3
+        "dexterity": 3
       },
       "weight": 16.7,
       "cost": 469
@@ -211,9 +211,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8,
-        "luck": 2,
-        "mana": 2
+        "dexterity": 8,
+        "charisma": 2,
+        "wisdom": 2
       },
       "weight": 3.4,
       "cost": 304
@@ -226,7 +226,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6
+        "dexterity": 6
       },
       "weight": 13.5,
       "cost": 209
@@ -239,7 +239,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3
+        "dexterity": 3
       },
       "weight": 11.4,
       "cost": 318
@@ -252,7 +252,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6
+        "dexterity": 6
       },
       "weight": 3.3,
       "cost": 393
@@ -265,7 +265,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4
+        "dexterity": 4
       },
       "weight": 9.3,
       "cost": 141
@@ -278,7 +278,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8
+        "dexterity": 8
       },
       "weight": 14.9,
       "cost": 281
@@ -291,7 +291,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5
+        "dexterity": 5
       },
       "weight": 12.7,
       "cost": 397
@@ -304,7 +304,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8
+        "dexterity": 8
       },
       "weight": 4.2,
       "cost": 113
@@ -317,7 +317,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4
+        "dexterity": 4
       },
       "weight": 21.7,
       "cost": 441
@@ -330,10 +330,10 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10,
-        "mana": 1
+        "dexterity": 10,
+        "wisdom": 1
       },
-      "weight": 18.0,
+      "weight": 18,
       "cost": 358
     },
     {
@@ -344,7 +344,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2
+        "dexterity": 2
       },
       "weight": 21.5,
       "cost": 106
@@ -357,9 +357,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1
+        "dexterity": 1
       },
-      "weight": 5.0,
+      "weight": 5,
       "cost": 388
     },
     {
@@ -370,11 +370,11 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10,
-        "luck": 2,
+        "dexterity": 10,
+        "charisma": 2,
         "strength": 4
       },
-      "weight": 8.0,
+      "weight": 8,
       "cost": 55
     },
     {
@@ -385,7 +385,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2
+        "dexterity": 2
       },
       "weight": 3.8,
       "cost": 86
@@ -398,9 +398,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8,
-        "stamina": 5,
-        "mana": 3
+        "dexterity": 8,
+        "constitution": 5,
+        "wisdom": 3
       },
       "weight": 17.8,
       "cost": 225
@@ -413,7 +413,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3,
+        "dexterity": 3,
         "strength": 1
       },
       "weight": 8.1,
@@ -427,7 +427,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3,
+        "dexterity": 3,
         "intelligence": 4
       },
       "weight": 5.5,
@@ -441,11 +441,11 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8,
+        "dexterity": 8,
         "strength": 2,
-        "luck": 4
+        "charisma": 4
       },
-      "weight": 11.0,
+      "weight": 11,
       "cost": 409
     },
     {
@@ -456,8 +456,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
-        "stamina": 2
+        "dexterity": 9,
+        "constitution": 2
       },
       "weight": 20.3,
       "cost": 251
@@ -470,7 +470,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6
+        "dexterity": 6
       },
       "weight": 18.6,
       "cost": 494
@@ -483,7 +483,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9
+        "dexterity": 9
       },
       "weight": 7.9,
       "cost": 378
@@ -496,9 +496,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
+        "dexterity": 6,
         "intelligence": 5,
-        "mana": 1
+        "wisdom": 1
       },
       "weight": 5.8,
       "cost": 336
@@ -511,7 +511,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4
+        "dexterity": 4
       },
       "weight": 20.5,
       "cost": 101
@@ -524,8 +524,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4,
-        "luck": 2
+        "dexterity": 4,
+        "charisma": 2
       },
       "weight": 13.8,
       "cost": 230
@@ -538,8 +538,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5,
-        "mana": 1
+        "dexterity": 5,
+        "wisdom": 1
       },
       "weight": 16.3,
       "cost": 251
@@ -552,7 +552,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4
+        "dexterity": 4
       },
       "weight": 4.7,
       "cost": 255
@@ -565,8 +565,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
-        "luck": 1
+        "dexterity": 2,
+        "charisma": 1
       },
       "weight": 4.1,
       "cost": 228
@@ -579,9 +579,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
+        "dexterity": 9,
         "strength": 2,
-        "luck": 2
+        "charisma": 2
       },
       "weight": 16.1,
       "cost": 222
@@ -594,9 +594,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10,
-        "mana": 1,
-        "stamina": 4
+        "dexterity": 10,
+        "wisdom": 1,
+        "constitution": 4
       },
       "weight": 11.1,
       "cost": 371
@@ -609,8 +609,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10,
-        "stamina": 1
+        "dexterity": 10,
+        "constitution": 1
       },
       "weight": 4.4,
       "cost": 475
@@ -623,7 +623,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3,
+        "dexterity": 3,
         "intelligence": 4
       },
       "weight": 20.8,
@@ -637,8 +637,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
-        "stamina": 1
+        "dexterity": 6,
+        "constitution": 1
       },
       "weight": 15.1,
       "cost": 334
@@ -651,8 +651,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10,
-        "mana": 4
+        "dexterity": 10,
+        "wisdom": 4
       },
       "weight": 18.2,
       "cost": 75
@@ -665,7 +665,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4
+        "dexterity": 4
       },
       "weight": 4.6,
       "cost": 438
@@ -678,8 +678,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
-        "stamina": 3
+        "dexterity": 6,
+        "constitution": 3
       },
       "weight": 19.3,
       "cost": 471
@@ -692,7 +692,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1
+        "dexterity": 1
       },
       "weight": 4.3,
       "cost": 481
@@ -705,7 +705,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
+        "dexterity": 6,
         "strength": 3,
         "intelligence": 4
       },
@@ -720,9 +720,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4,
+        "dexterity": 4,
         "strength": 3,
-        "luck": 5
+        "charisma": 5
       },
       "weight": 11.6,
       "cost": 231
@@ -735,7 +735,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8,
+        "dexterity": 8,
         "strength": 5
       },
       "weight": 9.4,
@@ -749,8 +749,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8,
-        "luck": 3
+        "dexterity": 8,
+        "charisma": 3
       },
       "weight": 13.5,
       "cost": 148
@@ -763,7 +763,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9
+        "dexterity": 9
       },
       "weight": 20.6,
       "cost": 313
@@ -776,8 +776,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4,
-        "luck": 3
+        "dexterity": 4,
+        "charisma": 3
       },
       "weight": 8.1,
       "cost": 73
@@ -790,8 +790,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5,
-        "stamina": 3
+        "dexterity": 5,
+        "constitution": 3
       },
       "weight": 5.5,
       "cost": 273
@@ -804,10 +804,10 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1,
+        "dexterity": 1,
         "strength": 4
       },
-      "weight": 13.0,
+      "weight": 13,
       "cost": 448
     },
     {
@@ -818,7 +818,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1,
+        "dexterity": 1,
         "strength": 3,
         "intelligence": 2
       },
@@ -833,9 +833,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7,
-        "luck": 2,
-        "mana": 5
+        "dexterity": 7,
+        "charisma": 2,
+        "wisdom": 5
       },
       "weight": 5.1,
       "cost": 203
@@ -848,7 +848,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4,
+        "dexterity": 4,
         "intelligence": 3,
         "strength": 5
       },
@@ -863,11 +863,11 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4,
-        "stamina": 2,
-        "luck": 1
+        "dexterity": 4,
+        "constitution": 2,
+        "charisma": 1
       },
-      "weight": 4.0,
+      "weight": 4,
       "cost": 144
     },
     {
@@ -878,7 +878,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10,
+        "dexterity": 10,
         "strength": 1
       },
       "weight": 6.8,
@@ -892,9 +892,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
+        "dexterity": 2,
         "strength": 1,
-        "luck": 3
+        "charisma": 3
       },
       "weight": 8.9,
       "cost": 483
@@ -907,8 +907,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7,
-        "stamina": 2
+        "dexterity": 7,
+        "constitution": 2
       },
       "weight": 8.8,
       "cost": 477
@@ -921,7 +921,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4,
+        "dexterity": 4,
         "strength": 1
       },
       "weight": 17.4,
@@ -935,9 +935,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
-        "mana": 5,
-        "luck": 1
+        "dexterity": 6,
+        "wisdom": 5,
+        "charisma": 1
       },
       "weight": 8.5,
       "cost": 452
@@ -950,7 +950,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10,
+        "dexterity": 10,
         "strength": 1
       },
       "weight": 12.5,
@@ -964,7 +964,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9
+        "dexterity": 9
       },
       "weight": 6.4,
       "cost": 478
@@ -977,9 +977,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7,
-        "luck": 3,
-        "mana": 5
+        "dexterity": 7,
+        "charisma": 3,
+        "wisdom": 5
       },
       "weight": 9.6,
       "cost": 239
@@ -992,8 +992,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
-        "mana": 1
+        "dexterity": 2,
+        "wisdom": 1
       },
       "weight": 3.3,
       "cost": 220
@@ -1006,7 +1006,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1
+        "dexterity": 1
       },
       "weight": 7.8,
       "cost": 457
@@ -1019,7 +1019,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
+        "dexterity": 6,
         "strength": 3
       },
       "weight": 3.3,
@@ -1033,7 +1033,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1,
+        "dexterity": 1,
         "strength": 5,
         "intelligence": 5
       },
@@ -1048,7 +1048,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
+        "dexterity": 9,
         "strength": 1
       },
       "weight": 13.5,
@@ -1062,7 +1062,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
       "weight": 6.6,
       "cost": 149
@@ -1075,11 +1075,11 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
-        "mana": 3,
+        "dexterity": 6,
+        "wisdom": 3,
         "intelligence": 3
       },
-      "weight": 12.0,
+      "weight": 12,
       "cost": 334
     },
     {
@@ -1090,7 +1090,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8
+        "dexterity": 8
       },
       "weight": 20.8,
       "cost": 268
@@ -1103,11 +1103,11 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8,
+        "dexterity": 8,
         "strength": 1,
-        "luck": 2
+        "charisma": 2
       },
-      "weight": 5.0,
+      "weight": 5,
       "cost": 198
     },
     {
@@ -1118,8 +1118,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8,
-        "luck": 1,
+        "dexterity": 8,
+        "charisma": 1,
         "intelligence": 1
       },
       "weight": 18.6,
@@ -1133,9 +1133,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
+        "dexterity": 6,
         "intelligence": 2,
-        "stamina": 1
+        "constitution": 1
       },
       "weight": 11.2,
       "cost": 249
@@ -1148,7 +1148,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4
+        "dexterity": 4
       },
       "weight": 12.4,
       "cost": 446
@@ -1161,7 +1161,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2
+        "dexterity": 2
       },
       "weight": 18.9,
       "cost": 76
@@ -1174,7 +1174,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9
+        "dexterity": 9
       },
       "weight": 10.5,
       "cost": 299
@@ -1187,8 +1187,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
-        "luck": 2
+        "dexterity": 9,
+        "charisma": 2
       },
       "weight": 12.6,
       "cost": 326
@@ -1201,7 +1201,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5,
+        "dexterity": 5,
         "strength": 4
       },
       "weight": 16.1,
@@ -1215,7 +1215,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
       "weight": 21.7,
       "cost": 196
@@ -1228,7 +1228,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10,
+        "dexterity": 10,
         "strength": 4
       },
       "weight": 9.5,
@@ -1242,9 +1242,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
+        "dexterity": 2,
         "strength": 1,
-        "mana": 5
+        "wisdom": 5
       },
       "weight": 18.8,
       "cost": 128
@@ -1257,9 +1257,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
+        "dexterity": 9,
         "intelligence": 4,
-        "mana": 2
+        "wisdom": 2
       },
       "weight": 16.4,
       "cost": 223
@@ -1272,8 +1272,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
-        "stamina": 5,
+        "dexterity": 6,
+        "constitution": 5,
         "strength": 1
       },
       "weight": 15.1,
@@ -1287,7 +1287,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1,
+        "dexterity": 1,
         "strength": 1,
         "intelligence": 5
       },
@@ -1302,8 +1302,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3,
-        "luck": 3,
+        "dexterity": 3,
+        "charisma": 3,
         "strength": 3
       },
       "weight": 9.6,
@@ -1317,9 +1317,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5
+        "dexterity": 5
       },
-      "weight": 4.0,
+      "weight": 4,
       "cost": 265
     },
     {
@@ -1330,7 +1330,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
+        "dexterity": 2,
         "strength": 4
       },
       "weight": 5.5,
@@ -1344,8 +1344,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5,
-        "mana": 5,
+        "dexterity": 5,
+        "wisdom": 5,
         "intelligence": 1
       },
       "weight": 4.3,
@@ -1359,7 +1359,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7,
+        "dexterity": 7,
         "strength": 2
       },
       "weight": 17.1,
@@ -1373,8 +1373,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1,
-        "luck": 4,
+        "dexterity": 1,
+        "charisma": 4,
         "strength": 4
       },
       "weight": 7.9,
@@ -1388,8 +1388,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
-        "luck": 3
+        "dexterity": 9,
+        "charisma": 3
       },
       "weight": 6.1,
       "cost": 174
@@ -1402,7 +1402,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
+        "dexterity": 9,
         "intelligence": 5
       },
       "weight": 4.6,
@@ -1416,11 +1416,11 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7,
-        "mana": 5,
+        "dexterity": 7,
+        "wisdom": 5,
         "intelligence": 5
       },
-      "weight": 19.0,
+      "weight": 19,
       "cost": 390
     },
     {
@@ -1431,8 +1431,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3,
-        "luck": 3,
+        "dexterity": 3,
+        "charisma": 3,
         "strength": 2
       },
       "weight": 19.5,
@@ -1446,7 +1446,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4
+        "dexterity": 4
       },
       "weight": 15.7,
       "cost": 322
@@ -1459,7 +1459,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3
+        "dexterity": 3
       },
       "weight": 8.4,
       "cost": 86
@@ -1472,7 +1472,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1
+        "dexterity": 1
       },
       "weight": 7.6,
       "cost": 483
@@ -1485,7 +1485,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
       "weight": 8.6,
       "cost": 291
@@ -1498,9 +1498,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5,
-        "luck": 3,
-        "stamina": 1
+        "dexterity": 5,
+        "charisma": 3,
+        "constitution": 1
       },
       "weight": 11.7,
       "cost": 361
@@ -1513,9 +1513,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10
+        "dexterity": 10
       },
-      "weight": 6.0,
+      "weight": 6,
       "cost": 109
     },
     {
@@ -1526,8 +1526,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8,
-        "stamina": 5
+        "dexterity": 8,
+        "constitution": 5
       },
       "weight": 11.5,
       "cost": 324
@@ -1540,11 +1540,11 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3,
-        "stamina": 5,
+        "dexterity": 3,
+        "constitution": 5,
         "intelligence": 3
       },
-      "weight": 8.0,
+      "weight": 8,
       "cost": 158
     },
     {
@@ -1555,7 +1555,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9
+        "dexterity": 9
       },
       "weight": 21.3,
       "cost": 230
@@ -1568,7 +1568,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
       "weight": 21.5,
       "cost": 154
@@ -1581,7 +1581,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2
+        "dexterity": 2
       },
       "weight": 13.4,
       "cost": 330
@@ -1594,7 +1594,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5
+        "dexterity": 5
       },
       "weight": 7.6,
       "cost": 234
@@ -1607,8 +1607,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
-        "luck": 5
+        "dexterity": 2,
+        "charisma": 5
       },
       "weight": 21.3,
       "cost": 463
@@ -1621,9 +1621,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
-        "mana": 5,
-        "luck": 5
+        "dexterity": 6,
+        "wisdom": 5,
+        "charisma": 5
       },
       "weight": 8.9,
       "cost": 288
@@ -1636,8 +1636,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
-        "stamina": 3,
+        "dexterity": 6,
+        "constitution": 3,
         "strength": 2
       },
       "weight": 9.8,
@@ -1651,11 +1651,11 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
-        "stamina": 4,
+        "dexterity": 9,
+        "constitution": 4,
         "strength": 1
       },
-      "weight": 3.0,
+      "weight": 3,
       "cost": 81
     },
     {
@@ -1666,7 +1666,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8,
+        "dexterity": 8,
         "strength": 5,
         "intelligence": 1
       },
@@ -1681,11 +1681,11 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3,
-        "mana": 5,
+        "dexterity": 3,
+        "wisdom": 5,
         "strength": 3
       },
-      "weight": 12.0,
+      "weight": 12,
       "cost": 284
     },
     {
@@ -1696,8 +1696,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5,
-        "luck": 1,
+        "dexterity": 5,
+        "charisma": 1,
         "intelligence": 3
       },
       "weight": 12.6,
@@ -1711,7 +1711,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8
+        "dexterity": 8
       },
       "weight": 6.8,
       "cost": 348
@@ -1724,7 +1724,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6
+        "dexterity": 6
       },
       "weight": 12.6,
       "cost": 202
@@ -1737,7 +1737,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10
+        "dexterity": 10
       },
       "weight": 3.1,
       "cost": 231
@@ -1750,10 +1750,10 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
+        "dexterity": 9,
         "intelligence": 2
       },
-      "weight": 8.0,
+      "weight": 8,
       "cost": 284
     },
     {
@@ -1764,7 +1764,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5
+        "dexterity": 5
       },
       "weight": 4.7,
       "cost": 86
@@ -1777,8 +1777,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5,
-        "luck": 3,
+        "dexterity": 5,
+        "charisma": 3,
         "strength": 3
       },
       "weight": 10.6,
@@ -1792,8 +1792,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4,
-        "mana": 3,
+        "dexterity": 4,
+        "wisdom": 3,
         "strength": 2
       },
       "weight": 3.8,
@@ -1807,8 +1807,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
-        "stamina": 3
+        "dexterity": 6,
+        "constitution": 3
       },
       "weight": 3.4,
       "cost": 185
@@ -1821,9 +1821,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3,
+        "dexterity": 3,
         "intelligence": 3,
-        "mana": 2
+        "wisdom": 2
       },
       "weight": 8.8,
       "cost": 374
@@ -1836,8 +1836,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5,
-        "stamina": 5
+        "dexterity": 5,
+        "constitution": 5
       },
       "weight": 7.4,
       "cost": 398
@@ -1850,7 +1850,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
+        "dexterity": 6,
         "intelligence": 4
       },
       "weight": 14.1,
@@ -1864,8 +1864,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
-        "stamina": 5,
+        "dexterity": 9,
+        "constitution": 5,
         "intelligence": 5
       },
       "weight": 13.1,
@@ -1879,9 +1879,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7,
+        "dexterity": 7,
         "strength": 3,
-        "luck": 1
+        "charisma": 1
       },
       "weight": 17.3,
       "cost": 266
@@ -1894,8 +1894,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5,
-        "stamina": 3
+        "dexterity": 5,
+        "constitution": 3
       },
       "weight": 15.5,
       "cost": 384
@@ -1908,8 +1908,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7,
-        "luck": 2
+        "dexterity": 7,
+        "charisma": 2
       },
       "weight": 16.6,
       "cost": 193
@@ -1922,9 +1922,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8,
-        "mana": 4,
-        "stamina": 4
+        "dexterity": 8,
+        "wisdom": 4,
+        "constitution": 4
       },
       "weight": 19.7,
       "cost": 218
@@ -1937,9 +1937,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
-        "stamina": 4,
-        "luck": 4
+        "dexterity": 2,
+        "constitution": 4,
+        "charisma": 4
       },
       "weight": 10.4,
       "cost": 278
@@ -1952,9 +1952,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
+        "dexterity": 9,
         "strength": 3,
-        "luck": 3
+        "charisma": 3
       },
       "weight": 9.2,
       "cost": 169
@@ -1967,9 +1967,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5,
-        "stamina": 1,
-        "luck": 5
+        "dexterity": 5,
+        "constitution": 1,
+        "charisma": 5
       },
       "weight": 21.7,
       "cost": 222
@@ -1982,9 +1982,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5,
+        "dexterity": 5,
         "intelligence": 3,
-        "luck": 4
+        "charisma": 4
       },
       "weight": 5.8,
       "cost": 76
@@ -1997,9 +1997,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1,
+        "dexterity": 1,
         "intelligence": 5,
-        "stamina": 3
+        "constitution": 3
       },
       "weight": 16.8,
       "cost": 483
@@ -2012,8 +2012,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
-        "stamina": 1
+        "dexterity": 2,
+        "constitution": 1
       },
       "weight": 15.2,
       "cost": 315
@@ -2026,7 +2026,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
+        "dexterity": 6,
         "strength": 5
       },
       "weight": 3.8,
@@ -2040,8 +2040,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5,
-        "mana": 5,
+        "dexterity": 5,
+        "wisdom": 5,
         "intelligence": 5
       },
       "weight": 18.9,
@@ -2055,7 +2055,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4
+        "dexterity": 4
       },
       "weight": 19.9,
       "cost": 358
@@ -2068,8 +2068,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
-        "luck": 1
+        "dexterity": 9,
+        "charisma": 1
       },
       "weight": 14.9,
       "cost": 396
@@ -2082,9 +2082,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1,
+        "dexterity": 1,
         "intelligence": 2,
-        "stamina": 4
+        "constitution": 4
       },
       "weight": 16.9,
       "cost": 113
@@ -2097,7 +2097,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
+        "dexterity": 2,
         "intelligence": 4
       },
       "weight": 18.4,
@@ -2111,7 +2111,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
       "weight": 5.6,
       "cost": 445
@@ -2124,10 +2124,10 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10,
-        "mana": 1
+        "dexterity": 10,
+        "wisdom": 1
       },
-      "weight": 13.0,
+      "weight": 13,
       "cost": 127
     },
     {
@@ -2138,7 +2138,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6
+        "dexterity": 6
       },
       "weight": 12.6,
       "cost": 187
@@ -2151,7 +2151,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
+        "dexterity": 9,
         "strength": 1
       },
       "weight": 18.9,
@@ -2165,7 +2165,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10
+        "dexterity": 10
       },
       "weight": 18.3,
       "cost": 383
@@ -2178,7 +2178,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
       "weight": 18.7,
       "cost": 471
@@ -2191,7 +2191,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8
+        "dexterity": 8
       },
       "weight": 14.1,
       "cost": 352
@@ -2204,11 +2204,11 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3,
-        "mana": 3,
-        "stamina": 3
+        "dexterity": 3,
+        "wisdom": 3,
+        "constitution": 3
       },
-      "weight": 20.0,
+      "weight": 20,
       "cost": 375
     },
     {
@@ -2219,11 +2219,11 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5,
-        "stamina": 5,
-        "mana": 5
+        "dexterity": 5,
+        "constitution": 5,
+        "wisdom": 5
       },
-      "weight": 16.0,
+      "weight": 16,
       "cost": 291
     },
     {
@@ -2234,9 +2234,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
+        "dexterity": 9,
         "strength": 3,
-        "stamina": 3
+        "constitution": 3
       },
       "weight": 16.2,
       "cost": 214
@@ -2249,9 +2249,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3,
+        "dexterity": 3,
         "strength": 3,
-        "mana": 4
+        "wisdom": 4
       },
       "weight": 7.4,
       "cost": 425
@@ -2264,7 +2264,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10
+        "dexterity": 10
       },
       "weight": 3.6,
       "cost": 229
@@ -2277,7 +2277,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
       "weight": 5.5,
       "cost": 308
@@ -2290,8 +2290,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
-        "stamina": 3
+        "dexterity": 6,
+        "constitution": 3
       },
       "weight": 9.9,
       "cost": 115
@@ -2304,9 +2304,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
-      "weight": 5.0,
+      "weight": 5,
       "cost": 145
     },
     {
@@ -2317,7 +2317,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5,
+        "dexterity": 5,
         "intelligence": 5
       },
       "weight": 18.9,
@@ -2331,8 +2331,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3,
-        "stamina": 4
+        "dexterity": 3,
+        "constitution": 4
       },
       "weight": 13.6,
       "cost": 182
@@ -2345,7 +2345,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3
+        "dexterity": 3
       },
       "weight": 14.9,
       "cost": 484
@@ -2358,7 +2358,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1,
+        "dexterity": 1,
         "intelligence": 3,
         "strength": 5
       },
@@ -2373,8 +2373,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
-        "mana": 1
+        "dexterity": 2,
+        "wisdom": 1
       },
       "weight": 15.9,
       "cost": 68
@@ -2387,8 +2387,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3,
-        "stamina": 4,
+        "dexterity": 3,
+        "constitution": 4,
         "intelligence": 3
       },
       "weight": 12.3,
@@ -2402,8 +2402,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7,
-        "stamina": 4
+        "dexterity": 7,
+        "constitution": 4
       },
       "weight": 3.1,
       "cost": 249
@@ -2416,9 +2416,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4,
-        "luck": 1,
-        "mana": 1
+        "dexterity": 4,
+        "charisma": 1,
+        "wisdom": 1
       },
       "weight": 18.2,
       "cost": 154
@@ -2431,7 +2431,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5
+        "dexterity": 5
       },
       "weight": 17.2,
       "cost": 127
@@ -2444,7 +2444,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6
+        "dexterity": 6
       },
       "weight": 12.6,
       "cost": 279
@@ -2457,8 +2457,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
-        "mana": 2
+        "dexterity": 6,
+        "wisdom": 2
       },
       "weight": 13.2,
       "cost": 143
@@ -2471,7 +2471,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3
+        "dexterity": 3
       },
       "weight": 15.5,
       "cost": 154
@@ -2484,7 +2484,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
+        "dexterity": 2,
         "intelligence": 5,
         "strength": 2
       },
@@ -2499,11 +2499,11 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5,
-        "luck": 2,
-        "mana": 4
+        "dexterity": 5,
+        "charisma": 2,
+        "wisdom": 4
       },
-      "weight": 17.0,
+      "weight": 17,
       "cost": 89
     },
     {
@@ -2514,8 +2514,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7,
-        "mana": 1
+        "dexterity": 7,
+        "wisdom": 1
       },
       "weight": 7.8,
       "cost": 468
@@ -2528,7 +2528,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
       "weight": 4.4,
       "cost": 167
@@ -2541,9 +2541,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6
+        "dexterity": 6
       },
-      "weight": 8.0,
+      "weight": 8,
       "cost": 347
     },
     {
@@ -2554,9 +2554,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8,
-        "mana": 5,
-        "luck": 4
+        "dexterity": 8,
+        "wisdom": 5,
+        "charisma": 4
       },
       "weight": 16.9,
       "cost": 234
@@ -2569,7 +2569,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
+        "dexterity": 2,
         "strength": 4
       },
       "weight": 6.9,
@@ -2583,9 +2583,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3,
-        "mana": 1,
-        "luck": 2
+        "dexterity": 3,
+        "wisdom": 1,
+        "charisma": 2
       },
       "weight": 17.1,
       "cost": 248
@@ -2598,7 +2598,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8
+        "dexterity": 8
       },
       "weight": 21.5,
       "cost": 323
@@ -2611,8 +2611,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
-        "luck": 5,
+        "dexterity": 2,
+        "charisma": 5,
         "intelligence": 1
       },
       "weight": 12.4,
@@ -2626,7 +2626,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
+        "dexterity": 2,
         "strength": 2
       },
       "weight": 10.3,
@@ -2640,8 +2640,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
-        "stamina": 4,
+        "dexterity": 6,
+        "constitution": 4,
         "intelligence": 1
       },
       "weight": 12.1,
@@ -2655,9 +2655,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
-      "weight": 16.0,
+      "weight": 16,
       "cost": 307
     },
     {
@@ -2668,9 +2668,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
+        "dexterity": 6,
         "strength": 1,
-        "mana": 5
+        "wisdom": 5
       },
       "weight": 17.6,
       "cost": 417
@@ -2683,9 +2683,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10,
-        "luck": 1,
-        "stamina": 4
+        "dexterity": 10,
+        "charisma": 1,
+        "constitution": 4
       },
       "weight": 14.7,
       "cost": 147
@@ -2698,8 +2698,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
-        "mana": 5,
+        "dexterity": 9,
+        "wisdom": 5,
         "intelligence": 2
       },
       "weight": 15.2,
@@ -2713,7 +2713,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3
+        "dexterity": 3
       },
       "weight": 4.5,
       "cost": 500
@@ -2726,8 +2726,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 2,
-        "luck": 2
+        "dexterity": 2,
+        "charisma": 2
       },
       "weight": 5.8,
       "cost": 365
@@ -2740,8 +2740,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1,
-        "stamina": 4
+        "dexterity": 1,
+        "constitution": 4
       },
       "weight": 7.8,
       "cost": 108
@@ -2754,7 +2754,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1,
+        "dexterity": 1,
         "intelligence": 1
       },
       "weight": 17.1,
@@ -2768,7 +2768,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8,
+        "dexterity": 8,
         "intelligence": 3
       },
       "weight": 8.8,
@@ -2782,8 +2782,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7,
-        "luck": 3,
+        "dexterity": 7,
+        "charisma": 3,
         "intelligence": 4
       },
       "weight": 13.8,
@@ -2797,7 +2797,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 5
+        "dexterity": 5
       },
       "weight": 3.2,
       "cost": 355
@@ -2810,8 +2810,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3,
-        "luck": 1
+        "dexterity": 3,
+        "charisma": 1
       },
       "weight": 4.2,
       "cost": 334
@@ -2824,7 +2824,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1
+        "dexterity": 1
       },
       "weight": 8.1,
       "cost": 282
@@ -2837,7 +2837,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 8,
+        "dexterity": 8,
         "intelligence": 5
       },
       "weight": 15.8,
@@ -2851,7 +2851,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10,
+        "dexterity": 10,
         "intelligence": 3
       },
       "weight": 16.2,
@@ -2865,7 +2865,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7,
+        "dexterity": 7,
         "intelligence": 2
       },
       "weight": 15.8,
@@ -2879,7 +2879,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 10
+        "dexterity": 10
       },
       "weight": 8.5,
       "cost": 78
@@ -2892,7 +2892,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1
+        "dexterity": 1
       },
       "weight": 12.8,
       "cost": 481
@@ -2905,7 +2905,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1,
+        "dexterity": 1,
         "strength": 3,
         "intelligence": 3
       },
@@ -2920,8 +2920,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4,
-        "luck": 1
+        "dexterity": 4,
+        "charisma": 1
       },
       "weight": 11.9,
       "cost": 379
@@ -2934,7 +2934,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9
+        "dexterity": 9
       },
       "weight": 5.3,
       "cost": 199
@@ -2947,9 +2947,9 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3
+        "dexterity": 3
       },
-      "weight": 20.0,
+      "weight": 20,
       "cost": 363
     },
     {
@@ -2960,7 +2960,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 6,
+        "dexterity": 6,
         "intelligence": 1
       },
       "weight": 6.8,
@@ -2974,7 +2974,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 7
+        "dexterity": 7
       },
       "weight": 21.6,
       "cost": 138
@@ -2987,8 +2987,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
-        "mana": 4
+        "dexterity": 9,
+        "wisdom": 4
       },
       "weight": 20.8,
       "cost": 61
@@ -3001,8 +3001,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1,
-        "stamina": 5
+        "dexterity": 1,
+        "constitution": 5
       },
       "weight": 3.3,
       "cost": 246
@@ -3015,7 +3015,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3,
+        "dexterity": 3,
         "strength": 2
       },
       "weight": 11.7,
@@ -3029,8 +3029,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 3,
-        "mana": 4
+        "dexterity": 3,
+        "wisdom": 4
       },
       "weight": 18.6,
       "cost": 104
@@ -3043,7 +3043,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 1
+        "dexterity": 1
       },
       "weight": 21.4,
       "cost": 432
@@ -3056,8 +3056,8 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
-        "stamina": 5
+        "dexterity": 9,
+        "constitution": 5
       },
       "weight": 11.5,
       "cost": 198
@@ -3070,7 +3070,7 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 9,
+        "dexterity": 9,
         "intelligence": 1
       },
       "weight": 8.1,
@@ -3084,10 +3084,10 @@
       "type": "armor",
       "gear": "armor",
       "stats": {
-        "defence": 4,
-        "stamina": 1
+        "dexterity": 4,
+        "constitution": 1
       },
-      "weight": 7.0,
+      "weight": 7,
       "cost": 490
     }
   ]

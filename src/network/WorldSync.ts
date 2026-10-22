@@ -80,7 +80,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   glow: { radius: 'number' },
   playerStats: { level: 'number', exp: 'number', gold: 'number', swordTier: 'number', armorTier: 'number',
     sprinting: 'boolean', sprint: 'number', maxSprint: 'number', sprintLocked: 'boolean', kills: 'number', goldEarned: 'number',
-    mana: 'number', maxMana: 'number', spellBonus: 'number', lootBonus: 'number' },
+    spellBonus: 'number', lootBonus: 'number' },
   swordSwing: { ticks: 'number', dirX: 'number', dirY: 'number', damage: 'number', range: 'number', hitIds: 'object' },
   loot: { value: 'number', kind: 'number', velX: 'number', velY: 'number', suckRadius: 'number', glide: 'number', age: 'number', life: 'number' },
   item: { type: 'string', name: 'string', value: 'number' },

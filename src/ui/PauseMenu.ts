@@ -1,3 +1,4 @@
+import { text } from '../core/texts';
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { GAME_WIDTH, GAME_HEIGHT, LAYOUT_LEFT, LAYOUT_WIDTH } from '../render/Camera';
 import { getTexture } from '../assets/Textures';
@@ -55,10 +56,10 @@ export class PauseMenu {
       this.container.addChild(note);
     }
     const entries: Array<{ label: string; action: () => void }> = [
-      { label: 'Resume', action: this.actions.resume },
-      { label: 'Settings', action: this.actions.settings },
-      { label: 'Main Menu', action: () => this.confirmMainMenu() },
-      { label: 'Exit Game', action: this.actions.exitGame },
+      { label: text('menu.pause.resume'), action: this.actions.resume },
+      { label: text('menu.pause.settings'), action: this.actions.settings },
+      { label: text('menu.pause.main_menu'), action: () => this.confirmMainMenu() },
+      { label: text('menu.pause.exit'), action: this.actions.exitGame },
     ];
     entries.forEach(({ label, action }, i) => {
       const button = new PixelButton(label, BTN_W, BTN_H);
@@ -93,17 +94,17 @@ export class PauseMenu {
     const dim = new Graphics().rect(0, 0, GAME_WIDTH, GAME_HEIGHT).fill({ color: 0x000000, alpha: DIALOG_ALPHA });
     dim.eventMode = 'static';
     const panel = new Graphics().rect(DIALOG.x, DIALOG.y, DIALOG.w, DIALOG.h).fill(THEME.panel).stroke({ color: THEME.panelBorder, width: 2 });
-    const title = makeText('RETURN TO MAIN MENU?', 0xffdd88, 16, 'center');
+    const title = makeText(text('menu.pause.confirm_title'), 0xffdd88, 16, 'center');
     title.x = GAME_WIDTH / 2;
     title.y = DIALOG.y + 18;
     const warning = makeText(this.warning, 0xffffff, 10, 'center');
     warning.x = GAME_WIDTH / 2;
     warning.y = DIALOG.y + 51;
-    const cancel = new PixelButton('Cancel', 126, BTN_H);
+    const cancel = new PixelButton(text('menu.pause.confirm_cancel'), 126, BTN_H);
     cancel.x = GAME_WIDTH / 2 - 136;
     cancel.y = DIALOG.y + 103;
     cancel.onPress = () => this.closeDialog();
-    const leave = new PixelButton('Main Menu', 126, BTN_H);
+    const leave = new PixelButton(text('menu.pause.confirm_leave'), 126, BTN_H);
     leave.x = GAME_WIDTH / 2 + 10;
     leave.y = DIALOG.y + 103;
     leave.onPress = this.actions.mainMenu;

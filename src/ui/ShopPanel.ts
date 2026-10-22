@@ -1,6 +1,8 @@
 import { Container, Graphics, Rectangle } from 'pixi.js';
 import { localPlayer, STAT_NAMES } from '../world';
-import type { InventoryItem, Player, StatName } from '../world';
+import type { InventoryItem, Player } from '../world';
+import { text } from '../core/texts';
+import { statShort } from '../entities/Items';
 import { THEME } from './Theme';
 import { PixelLabel } from './PixelText';
 import { GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
@@ -14,15 +16,10 @@ const BG = THEME.panel;
 const ROW_BG = THEME.row;
 const ROW_HOVER = THEME.rowHover;
 
-/** Three-letter names for the stats a shop row lists. */
-const STAT_SHORT = {
-  strength: 'STR', intelligence: 'INT', stamina: 'STA', defence: 'DEF', luck: 'LCK', mana: 'MNA',
-} as const satisfies Record<StatName, string>;
-
 function statText(item: InventoryItem): string {
   const s = item.stats;
   if (!s) return '';
-  return STAT_NAMES.flatMap((stat) => (s[stat] ? [`+${s[stat]} ${STAT_SHORT[stat]}`] : [])).join('  ');
+  return STAT_NAMES.flatMap((stat) => (s[stat] ? [text('shop.stat_bonus', { amount: s[stat] ?? 0, stat: statShort(stat) })] : [])).join('  ');
 }
 
 export class ShopPanel {
@@ -37,17 +34,17 @@ export class ShopPanel {
   }
 
   private build(): void {
-    const title = new PixelLabel('SHOP', { color: 0xffcc44, scale: 1, shadow: true });
+    const title = new PixelLabel(text('shop.title'), { color: 0xffcc44, scale: 1, shadow: true });
     title.x = PAD;
     title.y = PAD;
     this.container.addChild(title);
 
-    const hint = new PixelLabel('E to close', { color: 0x887766, shadow: true });
+    const hint = new PixelLabel(text('shop.close_hint'), { color: 0x887766, shadow: true });
     hint.x = PW - PAD - 64;
     hint.y = PAD + 1;
     this.container.addChild(hint);
 
-    this.goldLabel = new PixelLabel('Gold: 0', { color: 0xffcc00, shadow: true });
+    this.goldLabel = new PixelLabel(text('shop.gold', { amount: 0 }), { color: 0xffcc00, shadow: true });
     this.goldLabel.x = PAD;
     this.goldLabel.y = PAD + 14;
     this.container.addChild(this.goldLabel);
@@ -93,7 +90,7 @@ export class ShopPanel {
         row.addChild(st);
       }
 
-      const price = new PixelLabel(`${item.value}g`, { color: 0xffcc00, align: 'right', shadow: true });
+      const price = new PixelLabel(text('shop.price', { price: item.value }), { color: 0xffcc00, align: 'right', shadow: true });
       price.x = PW - PAD - 6;
       price.y = 9;
       row.addChild(price);
@@ -126,7 +123,7 @@ export class ShopPanel {
   update(): void {
     if (!this.container.visible) return;
     const player = this.player();
-    if (player) this.goldLabel.text = `Gold: ${player.playerStats.gold}`;
+    if (player) this.goldLabel.text = text('shop.gold', { amount: player.playerStats.gold });
   }
 
   destroy(): void {

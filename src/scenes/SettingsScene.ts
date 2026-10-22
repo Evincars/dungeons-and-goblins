@@ -1,3 +1,4 @@
+import { text } from '../core/texts';
 import { Container } from 'pixi.js';
 import { GAME_WIDTH, GAME_HEIGHT, LAYOUT_LEFT } from '../render/Camera';
 import type { Scene, SceneManager } from '../game/SceneManager';
@@ -27,20 +28,20 @@ export class SettingsScene implements Scene {
     // Over the pause menu the game must not take clicks meant for these controls.
     this.container.eventMode = 'static';
 
-    const title = makeTitle('Settings');
+    const title = makeTitle(text('settings.title'));
     title.x = GAME_WIDTH / 2;
     title.y = TITLE_Y;
     this.container.addChild(title);
 
     let y = FIRST_ROW;
-    const bindings = new PixelButton('Key Bindings', COL_W, 26);
+    const bindings = new PixelButton(text('settings.key_bindings'), COL_W, 26);
     bindings.x = COL_X;
     bindings.y = y;
     bindings.onPress = () => manager.open('key_bindings');
     this.container.addChild(bindings);
     y += ROW_H;
 
-    const fullscreen = new PixelCheckbox('Fullscreen', !!document.fullscreenElement);
+    const fullscreen = new PixelCheckbox(text('settings.fullscreen'), !!document.fullscreenElement);
     fullscreen.x = COL_X;
     fullscreen.y = y;
     fullscreen.onToggle = (on) => {
@@ -53,7 +54,7 @@ export class SettingsScene implements Scene {
     this.container.addChild(fullscreen);
     y += ROW_H;
 
-    const volume = new PixelSlider('Sound', settings.sfxVolume, COL_W);
+    const volume = new PixelSlider(text('settings.sound'), settings.sfxVolume, COL_W);
     volume.x = COL_X;
     volume.y = y;
     volume.onChange = (v) => {
@@ -65,14 +66,14 @@ export class SettingsScene implements Scene {
     y += ROW_H;
 
     // The name the other players see above this character in a co-op game.
-    const nameLabel = makeText('Your name', 0xffdd88, 8, 'center');
+    const nameLabel = makeText(text('settings.player_name'), 0xffdd88, 8, 'center');
     nameLabel.x = GAME_WIDTH / 2;
     nameLabel.y = y;
     this.container.addChild(nameLabel);
     this.nameField = new NameField(manager.canvas, COL_X, y + 12, COL_W, 22);
     this.container.addChild(this.nameField.view);
 
-    const back = new PixelButton('Back', COL_W, 26);
+    const back = new PixelButton(text('settings.back'), COL_W, 26);
     back.x = COL_X;
     back.y = GAME_HEIGHT - 60;
     back.onPress = () => manager.back('title');

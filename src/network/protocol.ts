@@ -89,8 +89,6 @@ export function isBagSquare(value: unknown): boolean {
   return value === null || isInventoryItem(value);
 }
 
-/** Most items one square can stack (a quiver of arrows). */
-const MAX_STACK = 999;
 const SHORT_KEY = /^[a-z0-9_]{1,40}$/;
 
 /** A texture key or catalogue id: lower-case letters, digits and underscores. */
@@ -111,9 +109,8 @@ export function isInventoryItem(value: unknown): value is InventoryItem {
   const gearOk = value.gear === undefined || isGearKind(value.gear);
   const iconOk = value.icon === undefined || isShortKey(value.icon);
   const idOk = (value.id === undefined || isShortKey(value.id)) && (value.kind === undefined || isShortKey(value.kind));
-  const countOk = value.count === undefined || (Number.isInteger(value.count) && Number(value.count) >= 0 && Number(value.count) <= MAX_STACK);
   const weightOk = value.weight === undefined || (isFiniteNumber(value.weight) && Number(value.weight) >= 0 && Number(value.weight) <= MAX_ITEM_WEIGHT);
-  return gearOk && iconOk && idOk && countOk && weightOk && validStats(value.stats);
+  return gearOk && iconOk && idOk && weightOk && validStats(value.stats);
 }
 
 function validEquipped(value: unknown): value is Partial<Record<EquipSlot, InventoryItem>> {

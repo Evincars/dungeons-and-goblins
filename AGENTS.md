@@ -160,7 +160,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - `src/core/` — cross-cutting: `errors/`, `log/`, `geometry.ts`, `guards.ts`, `debugHooks.ts`, `compression.ts` (gzip with a size limit).
 - `src/game/` — game loop, `SceneManager`, persisted settings, player actions. `src/scenes/` — title, settings,
   key bindings, character select, co-op lobby and the level itself. `src/ui/` — buttons, HUD (health bar, round
-  buttons, `HudDialog`, `MinimapView`), combat log, panels, pause menu. On-screen controls call `claimPointer` (systems/InputSystem.ts) while
+  buttons, `HudDialog`, `MinimapView`), combat log, the inventory's character sheet (`AbilityGrid`, `SheetField`,
+  `SheetInfoPanel`, `ProficiencyPanel`, tooltips in `SheetTopics`), panels, pause menu. On-screen controls call `claimPointer` (systems/InputSystem.ts) while
   under the pointer, so their clicks are not attacks.
 - `src/network/` — co-op: `protocol.ts` (messages and their validators), `CoopSession.ts` (PeerJS room),
   `WorldSync.ts` (the host's world snapshot, its validation and the guest's replica), `CoopGame.ts` (host and

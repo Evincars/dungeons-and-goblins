@@ -79,6 +79,7 @@
   "sheet.dmg.two_handed": "Both hands: {dice}",
   "sheet.dmg.ability": "{ability} {modifier}",
   "sheet.dmg.magic": "Magic {bonus}",
+  "sheet.dmg.sneak": "Sneak Attack +{dice}",
   "sheet.dmg.total": "= {dice}",
   "sheet.dmg.to_hit": "To hit: d20 {bonus} (proficiency {proficiency})",
   "sheet.dmg.disadvantage": "Disadvantage: untrained armour",
@@ -114,6 +115,7 @@
   "proficiency.armor": "Armour",
 
   "proficiency.weapons": "Weapons",
+  "proficiency.weapons_also": "Also: {list}",
 
   "proficiency.warning_armor": "Untrained armour: disadvantage!",
 
@@ -142,17 +144,38 @@
   "training.simple": "simple",
   "training.martial": "martial",
 
-  "class.barbarian.name": "Barbarian",
-  "class.barbarian.blurb": "A fierce warrior of primal rage, toughest of all heroes. Fights best in light gear, or none.",
-
-  "class.warrior.name": "Warrior",
-  "class.warrior.blurb": "A trained soldier, at home in any armour and with any weapon.",
+  "hero.kaelen.name": "Kaelen",
+  "hero.kaelen.blurb": "A veteran of a hundred sieges in plate and steel: the wall the party stands behind.",
+  "hero.malkorath.name": "Malkorath",
+  "hero.malkorath.blurb": "A shadow with a blade and a few arcane tricks, striking where it hurts most.",
+  "hero.malthus.name": "Malthus",
+  "hero.malthus.blurb": "A holy knight sworn to burn the undead from the land, armoured in faith and steel.",
+  "hero.vesper.name": "Vesper",
+  "hero.vesper.blurb": "A scholar of the arcane who learned fire from old books and older ruins.",
+  "hero.xanthia.name": "Xanthia",
+  "hero.xanthia.blurb": "Born with light in her blood, she wields it raw and bright against the dark.",
+  "hero.barbarian.name": "Barbarian",
+  "hero.barbarian.blurb": "A fierce warrior of primal rage, toughest of all heroes. Fights best in light gear, or none.",
+  "hero.warrior.name": "Hooded Knight",
+  "hero.warrior.blurb": "A crowned knight in a tattered cloak, at home in any armour and with any weapon.",
+  "dnd_class.barbarian": "Barbarian",
+  "dnd_class.fighter": "Warrior",
+  "dnd_class.paladin": "Paladin",
+  "dnd_class.rogue": "Rogue",
+  "dnd_class.wizard": "Wizard",
+  "dnd_class.sorcerer": "Sorcerer",
 
   "feature.unarmored_defense.name": "Unarmored Defense",
   "feature.unarmored_defense.description": "With no armour on, AC is 10 + DEX + CON (a shield still adds).",
 
   "feature.fighting_style_defense.name": "Fighting Style: Defense",
   "feature.fighting_style_defense.description": "+1 AC while wearing armour.",
+  "feature.sneak_attack.name": "Sneak Attack",
+  "feature.sneak_attack.description": "+1d6 damage with finesse or ranged weapons.",
+
+  "intro.part1": "Beneath the jagged peaks of the Carpathians lies a land suffocated by an endless nightmare.\n\nEvery full moon, as the church bells toll midnight, a suffocating dread settles over the valleys. From the ancient, brooding castle atop the cliffside, tides of risen dead pour out into the surrounding realms, leaving butchered villages and silent graveyards in their wake.\n\nNo army can breach the fortress walls. High ladders rot before they touch the stone, and siege engines shatter against a towering, ethereal barrier of dark magic that seals the castle grounds from the outside world.\n\nThere is only one way in.",
+  "intro.part2": "A league away, a gaping chasm cuts into the frozen earth—the mouth of a labyrinthine dungeon stretching deep beneath the mountains. It is through these sunken corridors that the undead emerge, and it is the only physical passage into the fortress above.\n\nThe local magistrate, desperate and running out of time, has put out a final plea for aid. The last party of sellswords sent into the abyss never returned.\n\nNow, the contract falls to you. Descend into the subterranean darkness, fight through the teeming horrors in the depths, reach the high spires of the castle, and destroy the dark necromancer before the next moon rises.",
+  "intro.skip": "E, Enter or click to skip",
 
   "select.title": "CHOOSE YOUR HERO",
   "select.back": "Back",
@@ -163,6 +186,10 @@
   "select.armor": "Armour: {list}",
   "select.weapons": "Weapons: {list}",
   "select.saves": "Saving throws: {list}",
+  "select.spellcasting": "Spells use {stat}",
+  "select.class": "{class}",
+  "select.prev": "<",
+  "select.next": ">",
 
   "rules.weapon.unarmed": "Unarmed strike",
   "rules.weapon.club": "Club",
@@ -337,6 +364,7 @@
   "coop.status.player_disconnected": "{name} disconnected.",
   "coop.status.unknown_player": "A player",
   "coop.status.connected": "Connected. Waiting for the host to start.",
+  "coop.status.loading": "Loading the dungeon...",
   "coop.status.host_silent": "The host stopped answering.",
   "coop.status.player_silent": "{name} stopped answering.",
 
@@ -345,6 +373,8 @@
   "coop.default_player_name": "Player {number}",
 
   "game.depth": "Depth {depth}",
+  "game.loading": "Loading...",
+  "lever.waiting": "Waiting for {count} more...",
 
   "game.host_paused": "The host paused the game",
 

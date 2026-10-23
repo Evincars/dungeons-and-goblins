@@ -1,23 +1,45 @@
 {
-  "$comment": "The hero classes a new game offers (D&D 5e SRD). character: the sprite set (src/characters/). hitDie: rolled per level in the tabletop game. hitPoints: what the hero has here (for now the same for everyone). abilities: the standard array (15, 14, 13, 12, 10, 8) placed as the class's quick build suggests. armor: light, medium, heavy, shield; weapons: simple, martial (wearing armour without proficiency gives disadvantage on attacks; a weapon without it loses the proficiency bonus). features: unarmored_defense (no armour: AC 10 + DEX + CON), fighting_style_defense (+1 AC in armour).",
-  "barbarian": {
-    "character": "fighter",
-    "hitDie": 12,
-    "hitPoints": 100,
+  "$comment": "The heroes a new game offers, each with their D&D 5e (SRD) class. character: the sprite set (src/characters/). class: barbarian, fighter (shown as Warrior), paladin, rogue, wizard or sorcerer. hitDie: the class's hit die; hitPoints: 10 x hit die + 5 x CON modifier. abilities: the standard array (15, 14, 13, 12, 10, 8) placed as the class's quick build suggests. armor: light, medium, heavy, shield; weapons: simple, martial; weaponBases: single weapons trained beyond those (names from src/rules/WeaponTable.ts). Armour without training gives disadvantage on attacks; a weapon without it loses the proficiency bonus. spellcasting: the ability spells use to hit (null: Intelligence, untrained). features: unarmored_defense (no armour: AC 10 + DEX + CON), fighting_style_defense (+1 AC in armour), sneak_attack (+1d6 damage with finesse or ranged weapons).",
+  "kaelen": {
+    "character": "kaelen", "class": "fighter", "hitDie": 10, "hitPoints": 110,
     "abilities": { "strength": 15, "dexterity": 13, "constitution": 14, "intelligence": 8, "wisdom": 12, "charisma": 10 },
-    "armor": ["light", "medium", "shield"],
-    "weapons": ["simple", "martial"],
-    "savingThrows": ["strength", "constitution"],
-    "features": ["unarmored_defense"]
+    "armor": ["light", "medium", "heavy", "shield"], "weapons": ["simple", "martial"], "weaponBases": [],
+    "savingThrows": ["strength", "constitution"], "spellcasting": null, "features": ["fighting_style_defense"]
+  },
+  "malkorath": {
+    "character": "malkorath", "class": "rogue", "hitDie": 8, "hitPoints": 90,
+    "abilities": { "strength": 8, "dexterity": 15, "constitution": 14, "intelligence": 13, "wisdom": 12, "charisma": 10 },
+    "armor": ["light"], "weapons": ["simple"], "weaponBases": ["longsword", "shortsword"],
+    "savingThrows": ["dexterity", "intelligence"], "spellcasting": "intelligence", "features": ["sneak_attack"]
+  },
+  "malthus": {
+    "character": "malthus", "class": "paladin", "hitDie": 10, "hitPoints": 105,
+    "abilities": { "strength": 15, "dexterity": 10, "constitution": 13, "intelligence": 8, "wisdom": 12, "charisma": 14 },
+    "armor": ["light", "medium", "heavy", "shield"], "weapons": ["simple", "martial"], "weaponBases": [],
+    "savingThrows": ["wisdom", "charisma"], "spellcasting": "charisma", "features": []
+  },
+  "vesper": {
+    "character": "vesper", "class": "wizard", "hitDie": 6, "hitPoints": 70,
+    "abilities": { "strength": 8, "dexterity": 13, "constitution": 14, "intelligence": 15, "wisdom": 12, "charisma": 10 },
+    "armor": [], "weapons": [], "weaponBases": ["dagger", "dart", "quarterstaff", "light_crossbow"],
+    "savingThrows": ["intelligence", "wisdom"], "spellcasting": "intelligence", "features": []
+  },
+  "xanthia": {
+    "character": "xanthia", "class": "sorcerer", "hitDie": 6, "hitPoints": 70,
+    "abilities": { "strength": 8, "dexterity": 13, "constitution": 14, "intelligence": 10, "wisdom": 12, "charisma": 15 },
+    "armor": [], "weapons": [], "weaponBases": ["dagger", "dart", "quarterstaff", "light_crossbow"],
+    "savingThrows": ["constitution", "charisma"], "spellcasting": "charisma", "features": []
+  },
+  "barbarian": {
+    "character": "fighter", "class": "barbarian", "hitDie": 12, "hitPoints": 130,
+    "abilities": { "strength": 15, "dexterity": 13, "constitution": 14, "intelligence": 8, "wisdom": 12, "charisma": 10 },
+    "armor": ["light", "medium", "shield"], "weapons": ["simple", "martial"], "weaponBases": [],
+    "savingThrows": ["strength", "constitution"], "spellcasting": null, "features": ["unarmored_defense"]
   },
   "warrior": {
-    "character": "hooded_knight",
-    "hitDie": 10,
-    "hitPoints": 100,
+    "character": "hooded_knight", "class": "fighter", "hitDie": 10, "hitPoints": 110,
     "abilities": { "strength": 15, "dexterity": 13, "constitution": 14, "intelligence": 10, "wisdom": 12, "charisma": 8 },
-    "armor": ["light", "medium", "heavy", "shield"],
-    "weapons": ["simple", "martial"],
-    "savingThrows": ["strength", "constitution"],
-    "features": ["fighting_style_defense"]
+    "armor": ["light", "medium", "heavy", "shield"], "weapons": ["simple", "martial"], "weaponBases": [],
+    "savingThrows": ["strength", "constitution"], "spellcasting": null, "features": ["fighting_style_defense"]
   }
 }

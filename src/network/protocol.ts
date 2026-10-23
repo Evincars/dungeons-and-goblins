@@ -30,8 +30,11 @@ export type Message =
   | { type: 'refused'; reason: string }
   | { type: 'roster'; players: RosterEntry[] }
   | { type: 'name'; name: string }
-  /** The host started a level: every guest builds the same dungeon from this seed. */
+  /** The host started a level; the dungeon itself follows in a `map` message (level/LevelMap.ts, gzipped). */
   | { type: 'start'; seed: number; depth: number }
+  | { type: 'map'; seed: number; data: ArrayBuffer | Uint8Array }
+  /** A guest has built the level it was sent and stands in the safe room. */
+  | { type: 'loaded'; seed: number }
   | { type: 'state'; seq: number; compressed: ArrayBuffer | Uint8Array }
   | { type: 'input'; frame: InputFrame }
   | { type: 'command'; command: GuestCommand }

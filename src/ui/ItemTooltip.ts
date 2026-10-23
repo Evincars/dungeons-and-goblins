@@ -70,7 +70,7 @@ function armorLines(item: InventoryItem): Line[] {
 function trainingLine(item: InventoryItem, cls: HeroClass | undefined): Line | null {
   if (!cls) return null;
   const weapon = weaponRule(item);
-  if (weapon && !weaponProficient(cls, weapon.rule.category)) return { text: text('item.tooltip.untrained_weapon'), color: UNTRAINED_COLOR };
+  if (weapon && !weaponProficient(cls, weapon.base)) return { text: text('item.tooltip.untrained_weapon'), color: UNTRAINED_COLOR };
   const armor = armorRule(item);
   if (armor && !armorProficient(cls, armor.rule.category)) return { text: text('item.tooltip.untrained_armor'), color: UNTRAINED_COLOR };
   return null;

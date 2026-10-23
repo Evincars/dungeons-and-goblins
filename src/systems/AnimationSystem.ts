@@ -17,6 +17,6 @@ export function updateAnimation(): void {
   for (const entity of q.animated) {
     const anim = entity.animation;
     advance(anim);
-    setVisualFrame(entity.sprite, anim.sheet, anim.frameX % sheetCols(anim.sheet), anim.frameY);
+    setVisualFrame(entity.sprite, anim.sheet, ((anim.firstFrame ?? 0) + anim.frameX) % sheetCols(anim.sheet), anim.frameY);
   }
 }

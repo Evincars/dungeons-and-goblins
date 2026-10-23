@@ -1,9 +1,9 @@
 import { Container, Graphics, Rectangle } from 'pixi.js';
 import { text } from '../core/texts';
-import { ARMOR_TRAININGS, WEAPON_TRAININGS, armorProficient, weaponProficient } from '../rules/Classes';
+import { ARMOR_TRAININGS, WEAPON_TRAININGS, armorProficient } from '../rules/Classes';
 import type { ArmorTraining, WeaponTraining } from '../rules/Classes';
 import type { CharacterSheet } from '../rules/CharacterSheet';
-import { className, trainingName } from '../rules/Names';
+import { heroName, trainingName, weaponName } from '../rules/Names';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
 
@@ -35,6 +35,8 @@ export class ProficiencyPanel {
   readonly weaponHit: Rectangle;
   private readonly header: PixelLabel;
   private readonly warning: PixelLabel;
+  /** Single weapons trained beyond the kinds ticked (a wizard's dagger and quarterstaff). */
+  private readonly extraWeapons: PixelLabel;
   private readonly checks: Check[] = [];
 
   constructor(x: number, y: number, w: number) {
@@ -42,10 +44,12 @@ export class ProficiencyPanel {
     this.header = new PixelLabel('', { color: THEME.title, shadow: true });
     this.view.addChild(this.header);
     this.armorHit = this.addRow(text('proficiency.armor'), ARMOR_TRAININGS, (t: ArmorTraining) => (s) => armorProficient(s.heroClass, t), LINE_H, x, y, w);
-    this.weaponHit = this.addRow(text('proficiency.weapons'), WEAPON_TRAININGS, (t: WeaponTraining) => (s) => weaponProficient(s.heroClass, t), 3 * LINE_H, x, y, w);
+    this.weaponHit = this.addRow(text('proficiency.weapons'), WEAPON_TRAININGS, (t: WeaponTraining) => (s) => s.heroClass.weapons.includes(t), 3 * LINE_H, x, y, w);
+    this.extraWeapons = new PixelLabel('', { color: THEME.text, shadow: true });
+    this.extraWeapons.y = 5 * LINE_H;
     this.warning = new PixelLabel('', { color: WARNING_COLOR, shadow: true });
-    this.warning.y = 5 * LINE_H;
-    this.view.addChild(this.warning);
+    this.warning.y = 6 * LINE_H;
+    this.view.addChild(this.extraWeapons, this.warning);
   }
 
   /** A caption, then a checkbox and word for each kind of training; returns the row's area (in the parent's space). */
@@ -70,7 +74,9 @@ export class ProficiencyPanel {
 
   /** Ticks what the hero's class is trained in, and warns about untrained armour (disadvantage) or weapon (no bonus). */
   set(sheet: CharacterSheet): void {
-    this.header.text = text('proficiency.title', { class: className(sheet.heroClass.id) });
+    this.header.text = text('proficiency.title', { class: heroName(sheet.heroClass.id) });
+    const extra = sheet.heroClass.weaponBases;
+    this.extraWeapons.text = extra.length ? text('proficiency.weapons_also', { list: extra.map(weaponName).join(', ') }) : '';
     for (const check of this.checks) {
       const trained = check.trained(sheet);
       drawBox(check.box, trained);

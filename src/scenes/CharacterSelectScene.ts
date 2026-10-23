@@ -7,64 +7,60 @@ import { CLASSES, HERO_CLASSES } from '../rules/Classes';
 import type { HeroClass, HeroClassId } from '../rules/Classes';
 import { abilityModifier } from '../rules/Abilities';
 import { formatModifier } from '../rules/Dice';
-import { classBlurb, className, featureDescription, featureName, trainingName } from '../rules/Names';
-import { statShort } from '../entities/Items';
-import { characterDef, clipAnchorX, clipAnchorY, clipSheetKey } from '../characters/Characters';
+import { dndClassName, featureDescription, featureName, heroBlurb, heroName, trainingName, weaponName } from '../rules/Names';
+import { statName, statShort } from '../entities/Items';
+import { characterDef, clipAnchorX, clipAnchorY, clipFrameTexture, clipFrames, clipSheetKey } from '../characters/Characters';
 import type { CharacterDef } from '../characters/CharacterDef';
-import { frameTexture, sheetCols } from '../render/Sheets';
-import { GAME_HEIGHT, LAYOUT_LEFT, LAYOUT_WIDTH } from '../render/Camera';
+import { LAYOUT_LEFT, LAYOUT_WIDTH } from '../render/Camera';
 import { menuBackdrop } from '../ui/MenuBackdrop';
 import { PixelButton } from '../ui/PixelButton';
 import { PixelLabel, makeTitle } from '../ui/PixelText';
 import { wrapLines } from '../ui/InfoTooltip';
 import { NameField } from '../ui/NameField';
 import { THEME } from '../ui/Theme';
+import { playIntroThen } from './IntroScene';
 
-/** The title, the hero's name under it, two cards side by side, the buttons under them. */
+/** Top down: the title, the hero's name, the card of the hero picked (arrows either side), the row of portraits, the buttons. */
 const TITLE_Y = 12;
 const NAME = { y: 34, w: 160, h: 18, labelGap: 8 };
-const CARD_TOP = 60;
-const CARD_GAP = 12;
-const CARD_H = 262;
-const CARD_PAD = 8;
+const CARD = { x: 40, y: 58, w: 432, h: 226, pad: 8 };
+/** The hero stands in the card's left part, this wide, drawn this tall (head to feet) with its feet this far down. */
+const PORTRAIT_W = 140;
+const PREVIEW_H = 110;
+const PREVIEW_FEET = 190;
+const LINE_H = 10;
+const ARROW = 22;
+/** The portraits: this big, this far apart, under the card. */
+const THUMB = 34;
+const THUMB_GAP = 6;
+const THUMB_Y = 292;
+const THUMB_H_SHOWN = 26;
 const BUTTON_W = 120;
 const BUTTON_H = 24;
 const BUTTON_GAP = 12;
-/** The hero is drawn this tall (top of the head to the feet), standing this far below the card's top. */
-const PREVIEW_H = 74;
-const PREVIEW_FEET = 92;
-const LINE_H = 10;
-/** The card picked is framed in gold; the one under the pointer brightens. */
-const PICKED_BORDER = 2;
-const HOVER_ALPHA = 0.08;
+const BUTTONS_Y = 340;
 const CARD_ALPHA = 0.9;
+const HOVER_ALPHA = 0.1;
 
-/** Where the hero goes once a class is picked: a lone game, or the co-op lobby to host or join. */
-let destination: SceneName = 'in_game';
+type Line = { text: string; color: number };
 
-/** Opens the character select; Continue then goes on to `next`. */
-export function chooseHeroThen(manager: SceneManager, next: SceneName): void {
-  destination = next;
-  manager.goto('character_select');
-}
-
-type Card = { id: HeroClassId; frame: Graphics; hover: Graphics; preview: Sprite; def: CharacterDef; w: number };
-
-/** The lines under a class's name: hit die and hit points, abilities, training, saving throws and features. */
-function cardLines(cls: HeroClass, width: number): Array<{ text: string; color: number }> {
-  type Line = { text: string; color: number };
+/** What the card says about a hero: class, hit die and hit points, abilities, training, saves, spells and features. */
+function cardLines(cls: HeroClass, width: number): Line[] {
   const scores = STAT_NAMES.map((stat) => text('select.ability', {
     stat: statShort(stat), score: cls.abilities[stat], modifier: formatModifier(abilityModifier(cls.abilities[stat])),
   }));
+  const weapons = [...cls.weapons.map(trainingName), ...cls.weaponBases.map(weaponName)];
   const lines: Line[] = [
-    ...wrapLines(classBlurb(cls.id), width).map((line) => ({ text: line, color: THEME.muted })),
+    { text: text('select.class', { class: dndClassName(cls.dndClass) }), color: THEME.buttonText },
+    ...wrapLines(heroBlurb(cls.id), width).map((line) => ({ text: line, color: THEME.muted })),
     { text: text('select.hit_points', { die: cls.hitDie, hp: cls.hitPoints }), color: THEME.hitPoints },
     { text: scores.slice(0, 3).join('  '), color: THEME.text },
     { text: scores.slice(3).join('  '), color: THEME.text },
-    { text: text('select.armor', { list: cls.armor.map(trainingName).join(', ') }), color: THEME.armorClass },
-    { text: text('select.weapons', { list: cls.weapons.map(trainingName).join(', ') }), color: THEME.damage },
+    { text: text('select.armor', { list: cls.armor.map(trainingName).join(', ') || '-' }), color: THEME.armorClass },
+    ...wrapLines(text('select.weapons', { list: weapons.join(', ') }), width).map((line) => ({ text: line, color: THEME.damage })),
     { text: text('select.saves', { list: cls.savingThrows.map(statShort).join(', ') }), color: THEME.text },
   ];
+  if (cls.spellcasting) lines.push({ text: text('select.spellcasting', { stat: statName(cls.spellcasting) }), color: THEME.text });
   for (const feature of cls.features) {
     lines.push({ text: featureName(feature), color: THEME.title });
     lines.push(...wrapLines(featureDescription(feature), width).map((line) => ({ text: line, color: THEME.text })));
@@ -72,27 +68,63 @@ function cardLines(cls: HeroClass, width: number): Array<{ text: string; color: 
   return lines;
 }
 
+/** Where the hero goes once picked (after the intro): a lone game, or the co-op lobby to host or join. */
+let destination: SceneName = 'in_game';
+
+/** Opens the character select; Continue plays the intro, then goes on to `next`. */
+export function chooseHeroThen(manager: SceneManager, next: SceneName): void {
+  destination = next;
+  manager.goto('character_select');
+}
+
+/** A sprite showing a character's idle, stood with its feet at (x, feetY) and `height` tall. */
+type Preview = { sprite: Sprite; def: CharacterDef };
+
+function makePreview(def: CharacterDef, x: number, feetY: number, height: number): Preview {
+  const sprite = new Sprite();
+  sprite.scale.set(height / Math.max(1, def.feetY - def.headY));
+  sprite.position.set(Math.round(x), Math.round(feetY - (def.feetY - (def.trim?.h ?? def.frameHeight) / 2) * sprite.scale.y));
+  return { sprite, def };
+}
+
+/** Shows the idle frame for `tick`. */
+function animate(preview: Preview, tick: number): void {
+  const name = preview.def.states.idle;
+  const clip = preview.def.clips[name];
+  const sheet = clipSheetKey(preview.def, name);
+  const frame = Math.floor(tick / clip.frameTime) % clipFrames(clip, sheet);
+  preview.sprite.texture = clipFrameTexture(clip, sheet, frame, 0);
+  preview.sprite.anchor.set(clipAnchorX(preview.def, clip), clipAnchorY(preview.def, clip));
+}
+
 /**
- * Before a game: pick the hero's class (Barbarian or Warrior), each shown as a card with the hero idling and
- * what the class brings under the tabletop rules. The choice is remembered for next time.
+ * Before a game: type the hero's name and pick who they are — Kaelen, Malkorath, Malthus, Vesper, Xanthia (or
+ * the two heroes the game began with). One hero's card shows at a time, the hero idling beside what their
+ * class brings under the tabletop rules; the arrows (or ← →) and the portraits under it change the pick. The
+ * choice is remembered for next time.
  */
 export class CharacterSelectScene implements Scene {
   readonly container = new Container();
-  private readonly cards: Card[] = [];
+  private readonly card = new Container();
+  private readonly thumbs: Array<{ id: HeroClassId; frame: Graphics; preview: Preview }> = [];
   private picked: HeroClassId = settings.heroClass;
+  private preview: Preview | null = null;
   private tick = 0;
   private readonly nameField: NameField;
+  private readonly onKeyDown = (e: KeyboardEvent) => this.handleKey(e);
 
   constructor(private readonly manager: SceneManager) {
     this.container.addChild(menuBackdrop());
     const title = makeTitle(text('select.title'));
     title.position.set(LAYOUT_LEFT + LAYOUT_WIDTH / 2, TITLE_Y);
-    this.container.addChild(title);
+    this.card.position.set(LAYOUT_LEFT + CARD.x, CARD.y);
+    this.container.addChild(title, this.card);
     this.nameField = this.addNameField();
-    const cardW = Math.floor((LAYOUT_WIDTH - CARD_GAP * 3) / 2);
-    HERO_CLASSES.forEach((id, i) => this.addCard(CLASSES[id], LAYOUT_LEFT + CARD_GAP + i * (cardW + CARD_GAP), cardW));
+    this.addArrows();
+    this.addThumbs();
     this.addButtons();
-    this.drawCards();
+    this.showCard();
+    window.addEventListener('keydown', this.onKeyDown);
   }
 
   /** "Your name" and a box to type it: the name the combat log (and, in co-op, the others) call the hero. */
@@ -105,82 +137,115 @@ export class CharacterSelectScene implements Scene {
     return field;
   }
 
-  private addCard(cls: HeroClass, x: number, w: number): void {
-    const card = new Container();
-    card.position.set(x, CARD_TOP);
-    const frame = new Graphics();
-    const hover = new Graphics().rect(0, 0, w, CARD_H).fill({ color: 0xffffff, alpha: HOVER_ALPHA });
-    hover.visible = false;
-    const def = characterDef(cls.character);
-    const preview = new Sprite();
-    preview.scale.set(PREVIEW_H / Math.max(1, def.feetY - def.headY));
-    preview.position.set(Math.round(w / 2), PREVIEW_FEET - (def.feetY - (def.trim?.h ?? def.frameHeight) / 2) * preview.scale.y);
-    const name = new PixelLabel(className(cls.id), { color: THEME.title, scale: 2, align: 'center', shadow: true });
-    name.position.set(Math.round(w / 2), PREVIEW_FEET + 6);
-    card.addChild(frame, hover, preview, name);
-    cardLines(cls, w - 2 * CARD_PAD).forEach((line, i) => {
+  /** The card of the hero picked: a dark panel framed in gold, the hero on the left, the rules on the right. */
+  private showCard(): void {
+    for (const child of this.card.removeChildren()) child.destroy({ children: true });
+    const cls = CLASSES[this.picked];
+    const frame = new Graphics()
+      .rect(0, 0, CARD.w, CARD.h).fill({ color: THEME.panel, alpha: CARD_ALPHA })
+      .stroke({ color: THEME.title, width: 2, alignment: 1 });
+    this.preview = makePreview(characterDef(cls.character), PORTRAIT_W / 2, PREVIEW_FEET, PREVIEW_H);
+    animate(this.preview, this.tick);
+    const name = new PixelLabel(heroName(cls.id), { color: THEME.title, scale: 2, shadow: true });
+    name.position.set(PORTRAIT_W, CARD.pad);
+    this.card.addChild(frame, this.preview.sprite, name);
+    const width = CARD.w - PORTRAIT_W - CARD.pad;
+    cardLines(cls, width).forEach((line, i) => {
       const label = new PixelLabel(line.text, { color: line.color, shadow: true });
-      label.position.set(CARD_PAD, PREVIEW_FEET + 28 + i * LINE_H);
-      card.addChild(label);
+      label.position.set(PORTRAIT_W, CARD.pad + 22 + i * LINE_H);
+      this.card.addChild(label);
     });
-    card.eventMode = 'static';
-    card.cursor = 'pointer';
-    card.hitArea = new Rectangle(0, 0, w, CARD_H);
-    card.on('pointerover', () => { hover.visible = true; });
-    card.on('pointerout', () => { hover.visible = false; });
-    card.on('pointertap', () => this.pick(cls.id));
-    this.container.addChild(card);
-    this.cards.push({ id: cls.id, frame, hover, preview, def, w });
+    for (const thumb of this.thumbs) this.drawThumb(thumb);
+  }
+
+  private addArrows(): void {
+    const y = CARD.y + Math.round((CARD.h - ARROW) / 2);
+    const back = new PixelButton(text('select.prev'), ARROW, ARROW);
+    back.position.set(LAYOUT_LEFT + CARD.x - ARROW - 8, y);
+    back.onPress = () => this.step(-1);
+    const next = new PixelButton(text('select.next'), ARROW, ARROW);
+    next.position.set(LAYOUT_LEFT + CARD.x + CARD.w + 8, y);
+    next.onPress = () => this.step(1);
+    this.container.addChild(back, next);
+  }
+
+  /** A small portrait of every hero; the one picked is framed in gold. */
+  private addThumbs(): void {
+    const total = HERO_CLASSES.length * THUMB + (HERO_CLASSES.length - 1) * THUMB_GAP;
+    const left = LAYOUT_LEFT + Math.round((LAYOUT_WIDTH - total) / 2);
+    HERO_CLASSES.forEach((id, i) => {
+      const box = new Container();
+      box.position.set(left + i * (THUMB + THUMB_GAP), THUMB_Y);
+      const frame = new Graphics();
+      const preview = makePreview(characterDef(CLASSES[id].character), THUMB / 2, THUMB - 3, THUMB_H_SHOWN);
+      const hover = new Graphics().rect(0, 0, THUMB, THUMB).fill({ color: 0xffffff, alpha: HOVER_ALPHA });
+      hover.visible = false;
+      box.addChild(frame, preview.sprite, hover);
+      box.eventMode = 'static';
+      box.cursor = 'pointer';
+      box.hitArea = new Rectangle(0, 0, THUMB, THUMB);
+      box.on('pointerover', () => { hover.visible = true; });
+      box.on('pointerout', () => { hover.visible = false; });
+      box.on('pointertap', () => this.pick(id));
+      this.container.addChild(box);
+      const thumb = { id, frame, preview };
+      this.thumbs.push(thumb);
+      this.drawThumb(thumb);
+    });
+  }
+
+  private drawThumb(thumb: { id: HeroClassId; frame: Graphics }): void {
+    const picked = thumb.id === this.picked;
+    thumb.frame.clear().rect(0, 0, THUMB, THUMB).fill({ color: THEME.panel, alpha: CARD_ALPHA })
+      .stroke({ color: picked ? THEME.title : THEME.panelBorder, width: picked ? 2 : 1, alignment: 1 });
   }
 
   private addButtons(): void {
-    const y = Math.min(GAME_HEIGHT - BUTTON_H - 8, CARD_TOP + CARD_H + 10);
     const centre = LAYOUT_LEFT + LAYOUT_WIDTH / 2;
     const back = new PixelButton(text('select.back'), BUTTON_W, BUTTON_H);
-    back.position.set(Math.round(centre - BUTTON_W - BUTTON_GAP / 2), y);
+    back.position.set(Math.round(centre - BUTTON_W - BUTTON_GAP / 2), BUTTONS_Y);
     back.onPress = () => this.manager.goto('title');
     const go = new PixelButton(text('select.continue'), BUTTON_W, BUTTON_H);
-    go.position.set(Math.round(centre + BUTTON_GAP / 2), y);
+    go.position.set(Math.round(centre + BUTTON_GAP / 2), BUTTONS_Y);
     go.onPress = () => this.confirm();
     this.container.addChild(back, go);
   }
 
+  private handleKey(e: KeyboardEvent): void {
+    if (e.target instanceof HTMLInputElement) return;
+    if (e.code === 'ArrowLeft') this.step(-1);
+    else if (e.code === 'ArrowRight') this.step(1);
+    else if (e.code === 'Enter') this.confirm();
+  }
+
+  /** The previous or next hero (wrapping round). */
+  private step(by: number): void {
+    const i = HERO_CLASSES.indexOf(this.picked);
+    this.pick(HERO_CLASSES[(i + by + HERO_CLASSES.length) % HERO_CLASSES.length]);
+  }
+
   private pick(id: HeroClassId): void {
+    if (id === this.picked) return;
     this.picked = id;
-    this.drawCards();
+    this.showCard();
   }
 
   private confirm(): void {
     this.nameField.commit();
     settings.heroClass = this.picked;
     saveSettings();
-    this.manager.goto(destination);
+    playIntroThen(this.manager, destination);
   }
 
-  /** The picked card is framed in gold, the other in steel. */
-  private drawCards(): void {
-    for (const card of this.cards) {
-      const picked = card.id === this.picked;
-      card.frame.clear()
-        .rect(0, 0, card.w, CARD_H).fill({ color: THEME.panel, alpha: CARD_ALPHA })
-        .stroke({ color: picked ? THEME.title : THEME.panelBorder, width: picked ? PICKED_BORDER : 1, alignment: 1 });
-    }
-  }
-
-  /** Each hero idles on its card. */
+  /** The heroes idle, on the card and in their portraits. */
   update(): void {
     this.tick++;
-    for (const card of this.cards) {
-      const clipName = card.def.states.idle;
-      const clip = card.def.clips[clipName];
-      const sheet = clipSheetKey(card.def, clipName);
-      const frames = Math.max(1, sheetCols(sheet));
-      card.preview.texture = frameTexture(sheet, Math.floor(this.tick / clip.frameTime) % frames, 0);
-      card.preview.anchor.set(clipAnchorX(card.def, clip), clipAnchorY(card.def, clip));
-    }
+    if (this.preview) animate(this.preview, this.tick);
+    for (const thumb of this.thumbs) animate(thumb.preview, this.tick);
   }
 
   destroy(): void {
+    window.removeEventListener('keydown', this.onKeyDown);
     this.nameField.destroy();
     this.container.destroy({ children: true });
   }

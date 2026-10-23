@@ -1,17 +1,19 @@
 import type { Entity } from '../world';
 import { StateError } from '../core/errors';
-import { sheetCols } from '../render/Sheets';
+import { frameTexture, sheetCols, sheetRows } from '../render/Sheets';
+import type { Texture } from 'pixi.js';
 import { SpriteSheet } from '../assets/SpriteSheet';
 import type { CharacterDef, CharacterState, ClipDef } from './CharacterDef';
 import { FIGHTER } from './Fighter';
 import { ORC } from './Orc';
 import { GOBLIN_GRUNT, GOBLIN_ROGUE, GOBLIN_WARRIOR } from './Goblins';
-import { EVIL_WIZARD, FIRE_WIZARD, GHOST_WIZARD, LIGHT_WIZARD, WANDERER_WIZARD } from './Wizards';
-import { HERO_KNIGHT, HOODED_KNIGHT } from './Knights';
+import { EVIL_WIZARD, GHOST_WIZARD } from './Wizards';
+import { HOODED_KNIGHT } from './Knights';
+import { HEROES } from './Heroes';
 
 const REGISTRY = new Map<string, CharacterDef>([
   FIGHTER, ORC, GOBLIN_GRUNT, GOBLIN_ROGUE, GOBLIN_WARRIOR,
-  WANDERER_WIZARD, LIGHT_WIZARD, FIRE_WIZARD, EVIL_WIZARD, GHOST_WIZARD, HERO_KNIGHT, HOODED_KNIGHT,
+  EVIL_WIZARD, GHOST_WIZARD, HOODED_KNIGHT, ...HEROES,
 ].map((def) => [def.id, def]));
 
 export function characterDef(id: string): CharacterDef {
@@ -103,18 +105,32 @@ export function stateClip(def: CharacterDef, state: CharacterState): StateClip |
   return found ?? undefined;
 }
 
+/** How many frames a clip plays: its sheet's (row by row for a grid), or the part of it the clip names. */
+export function clipFrames(clip: ClipDef, sheet: string): number {
+  const all = clip.grid ? sheetCols(sheet) * sheetRows(sheet) : sheetCols(sheet);
+  return Math.max(1, clip.frameCount ?? all - (clip.firstFrame ?? 0));
+}
+
+/** The texture of a clip's frame `i` (counted from the clip's first frame), from `row` of a single-row sheet. */
+export function clipFrameTexture(clip: ClipDef, sheet: string, i: number, row: number): Texture {
+  const n = (clip.firstFrame ?? 0) + i;
+  if (!clip.grid) return frameTexture(sheet, n, row);
+  const cols = sheetCols(sheet);
+  return frameTexture(sheet, n % cols, Math.floor(n / cols));
+}
+
 /** Ticks a state's clip takes to play once through (0 if the character has no clip for it). */
 export function stateDuration(characterId: string, state: CharacterState): number {
   const def = characterDef(characterId);
   const found = stateClip(def, state);
-  return found ? sheetCols(found.sheet) * found.clip.frameTime : 0;
+  return found ? clipFrames(found.clip, found.sheet) * found.clip.frameTime : 0;
 }
 
 /** Ticks into a state's clip at which its strike lands (0 if the clip has no impact frame). */
 export function stateImpact(characterId: string, state: CharacterState): number {
   const found = stateClip(characterDef(characterId), state);
   if (!found?.clip.impactFrame) return 0;
-  return Math.min(found.clip.impactFrame, sheetCols(found.sheet) - 1) * found.clip.frameTime;
+  return Math.min(found.clip.impactFrame, clipFrames(found.clip, found.sheet) - 1) * found.clip.frameTime;
 }
 
 /** Ticks into a state's clip at which its strike lands, from the clip's own definition (0 without an impact frame). */

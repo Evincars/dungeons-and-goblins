@@ -2,7 +2,7 @@ import type { StatName } from '../world';
 import { text } from '../core/texts';
 import { statDescription, statName, statShort } from '../entities/Items';
 import type { CharacterSheet } from '../rules/CharacterSheet';
-import { formatDice, formatModifier } from '../rules/Dice';
+import { formatDamage, formatDice, formatModifier } from '../rules/Dice';
 import { armorName, damageTypeName, featureName, trainingName, weaponName } from '../rules/Names';
 import type { TipTopic } from './InfoTooltip';
 
@@ -45,7 +45,8 @@ export function damageTopic(sheet: CharacterSheet): TipTopic {
   if (attack.twoHanded && attack.rule.versatile) detail.push(text('sheet.dmg.two_handed', { dice: formatDice(attack.rule.versatile) }));
   detail.push(text('sheet.dmg.ability', { ability: statShort(attack.ability), modifier: formatModifier(attack.abilityModifier) }));
   if (attack.magic) detail.push(text('sheet.dmg.magic', { bonus: formatModifier(attack.magic) }));
-  detail.push(text('sheet.dmg.total', { dice: formatDice(attack.damage) }));
+  if (attack.extra) detail.push(text('sheet.dmg.sneak', { dice: formatDice(attack.extra) }));
+  detail.push(text('sheet.dmg.total', { dice: formatDamage(attack.damage, attack.extra) }));
   detail.push(text('sheet.dmg.to_hit', { bonus: formatModifier(attack.attackBonus), proficiency: formatModifier(attack.proficiency) }));
   if (attack.mode === 'disadvantage') detail.push(text('sheet.dmg.disadvantage'));
   return { title: text('sheet.dmg.name'), body: text('sheet.dmg.description'), detail };

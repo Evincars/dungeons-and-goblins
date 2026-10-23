@@ -19,7 +19,7 @@ import type { ItemPlace } from '../game/PlayerActions';
 import { itemIcon, slotFor, slotLabel, statShort } from '../entities/Items';
 import { characterSheet } from '../rules/CharacterSheet';
 import type { CharacterSheet } from '../rules/CharacterSheet';
-import { formatDice, formatModifier } from '../rules/Dice';
+import { formatDamage, formatModifier } from '../rules/Dice';
 
 /** inventory.png, measured in its own pixels: the leather bag panel, the cloth gear panel, and its two tabs. */
 const ART = { w: 2752, h: 1536 };
@@ -96,7 +96,7 @@ type Field = { field: SheetField; def: FieldDef };
 const FIELDS: readonly FieldDef[] = [
   { caption: text('sheet.ac.short'), accent: THEME.armorClass, value: (s) => String(s.armorClass.total), topic: armorClassTopic },
   { caption: text('sheet.hp.short'), accent: THEME.hitPoints, value: (s) => text('sheet.hp.value', { current: s.hitPoints.current, max: s.hitPoints.max }), topic: hitPointsTopic },
-  { caption: text('sheet.dmg.short'), accent: THEME.damage, value: (s) => formatDice(s.attack.damage, true), topic: damageTopic },
+  { caption: text('sheet.dmg.short'), accent: THEME.damage, value: (s) => formatDamage(s.attack.damage, s.attack.extra, true), topic: damageTopic },
 ];
 type Tab = { glow: Graphics; label: PixelLabel; page: Container; hovered: boolean; w: number; h: number };
 

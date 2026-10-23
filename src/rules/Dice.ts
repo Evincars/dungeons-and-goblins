@@ -55,6 +55,15 @@ export function formatDice(roll: Dice, compact = false): string {
 
 const NOTATION = /^\s*(\d{1,2})\s*d\s*(\d{1,3})\s*(?:([+-])\s*(\d{1,3}))?\s*$/i;
 
+/** A damage roll with extra dice of another size: `1d4+1d6+3` (`compact`) or `1d4 + 1d6 + 3`. */
+export function formatDamage(roll: Dice, extra: Dice | undefined, compact = false): string {
+  if (!extra) return formatDice(roll, compact);
+  const space = compact ? '' : ' ';
+  const head = `${roll.count}d${roll.sides}${space}+${space}${extra.count}d${extra.sides}`;
+  if (roll.bonus === 0) return head;
+  return `${head}${space}${roll.bonus < 0 ? '-' : '+'}${space}${Math.abs(roll.bonus)}`;
+}
+
 /** Reads `2d6+3` / `1d20 - 1` (as written in data files); null when it is not dice notation. */
 export function parseDice(notation: string): Dice | null {
   const match = NOTATION.exec(notation);

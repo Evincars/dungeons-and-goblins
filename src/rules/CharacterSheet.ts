@@ -93,8 +93,9 @@ export type WeaponAttack = {
   proficient: boolean;
   /** A versatile weapon held in both hands (the other hand empty) deals its larger dice. */
   twoHanded: boolean;
-  /** The damage roll, every bonus added. */
+  /** The damage roll, every bonus added, and extra dice of another size rolled with it (a rogue's Sneak Attack). */
   damage: Dice;
+  extra?: Dice;
   /** What is added to the d20 to hit, and how the d20 is rolled (disadvantage in untrained armour). */
   attackBonus: number;
   mode: D20Mode;
@@ -145,10 +146,18 @@ export function weaponAttack(equipped: Equipped, modifiers: Modifiers, level: nu
   const found = weaponRule(item ?? undefined);
   const base: WeaponBase = found?.base ?? 'unarmed';
   const rule: WeaponRule = WEAPON_TABLE[base];
-  const trained = !cls || weaponProficient(cls, rule.category);
+  const trained = !cls || weaponProficient(cls, base);
   const twoHanded = !!rule.versatile && !!item && otherHandFree(equipped, item);
   const mode: D20Mode = armorTrained ? 'normal' : 'disadvantage';
-  return attackWith({ item, base, twoHanded, proficiency: trained ? proficiencyBonus(level) : 0, mode }, modifiers);
+  const attack = attackWith({ item, base, twoHanded, proficiency: trained ? proficiencyBonus(level) : 0, mode }, modifiers);
+  if (cls && hasFeature(cls, 'sneak_attack') && sneaky(rule)) attack.extra = SNEAK_ATTACK;
+  return attack;
+}
+
+/** Sneak Attack's dice at level 1, and the weapons that allow it: finesse or ranged. */
+const SNEAK_ATTACK: Dice = { count: 1, sides: 6, bonus: 0 };
+function sneaky(rule: WeaponRule): boolean {
+  return rule.range === 'ranged' || rule.properties.includes('finesse');
 }
 
 /** An enemy's attack with the weapon it carries: its monster block's proficiency and abilities. */

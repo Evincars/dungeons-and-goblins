@@ -20,7 +20,7 @@ export function updateFx(): void {
   for (const entity of effects) {
     if (entity.removed) continue;
     const fx = entity.fx;
-    showFrame(entity, frameOf(fx));
+    showFrame(entity, (fx.first ?? 0) + frameOf(fx));
     if (fx.rise) entity.position.y -= fx.rise;
     if (++fx.age >= fx.duration) world.addComponent(entity, 'removed', true);
   }

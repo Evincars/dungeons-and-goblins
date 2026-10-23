@@ -76,6 +76,9 @@ export function isRollTone(value: unknown): value is RollTone {
   return ROLL_TONES.some((tone) => tone === value);
 }
 
+/** The strip a projectile bursts in when it strikes (a caster's own spell art): its sheet, frames and size. */
+export type ProjectileBurst = { sheet: string; first: number; count: number; frameTime: number; scale: number };
+
 /** One line over a fighter's head ("17 to hit", "7 dmg"), and the ticks it has been shown. */
 export type RollLine = { text: string; tone: RollTone; age: number };
 
@@ -234,6 +237,8 @@ export type Entity = {
   // --- animation ---
   animation?: {
     sheet: string;
+    /** Frames count from this one of the strip (a strip holding a projectile's flight and its burst). */
+    firstFrame?: number;
     frameX: number;
     frameY: number;
     frameCount: number;
@@ -262,6 +267,8 @@ export type Entity = {
     age: number;
     duration: number;
     frames: number;
+    /** The effect's frames start at this one of its strip (a projectile's burst after its flight). */
+    first?: number;
     cycle?: boolean;
     scale?: number;
     rise?: number;
@@ -308,7 +315,7 @@ export type Entity = {
    * `attack`: the shooter's roll to hit and damage (rolled against the AC of whatever it strikes); `owner`:
    * the shooter's entity id, whose head shows the roll.
    */
-  projectile?: { life: number; team: number; arrow?: boolean; attack: AttackProfile; owner?: number };
+  projectile?: { life: number; team: number; arrow?: boolean; attack: AttackProfile; owner?: number; burst?: ProjectileBurst };
 
   /** Point light this entity emits (spell bolts, …). */
   glow?: {
@@ -428,7 +435,15 @@ export type Entity = {
   shopNpc?: { items: InventoryItem[] };
 
   // --- door (seals the safe room once players leave) ---
-  door?: { tiles: Array<{ x: number; y: number }>; boundaryX: number; closed: boolean };
+  /**
+   * The safe room's door: `locked` until the lever is pulled (its doorway barred by a portcullis), then open,
+   * and `closed` (walled up) once everyone has gone through.
+   */
+  door?: { tiles: Array<{ x: number; y: number }>; boundaryX: number; closed: boolean; locked: boolean };
+  /** A portcullis over a doorway tile: how far it has risen (0 down, 1 gone). */
+  gate?: { lift: number };
+  /** The lever by the safe room's door: pulled opens the way into the dungeon. */
+  lever?: { pulled: boolean };
 
   // --- lifecycle ---
   removed?: true;

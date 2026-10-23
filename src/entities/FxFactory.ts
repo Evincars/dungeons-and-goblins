@@ -48,6 +48,8 @@ export type FxOptions = {
   orderBias?: number;
   /** Pixels the effect drifts up each tick. */
   rise?: number;
+  /** The first frame of the strip it plays from. */
+  first?: number;
 };
 
 /** A one-off effect playing `frames` frames of a sheet across `duration` ticks, then gone (as in Catacomb Snatch Redux). */
@@ -58,7 +60,7 @@ export function spawnFx(x: number, y: number, sheet: string, frames: number, dur
     visual: { sheet, col: 0, row: opts.row, scale: opts.scale },
     fx: {
       age: 0, duration, frames,
-      cycle: opts.cycle, scale: opts.scale, rise: opts.rise, orderId: opts.orderId, orderBias: opts.orderBias,
+      cycle: opts.cycle, scale: opts.scale, rise: opts.rise, orderId: opts.orderId, orderBias: opts.orderBias, first: opts.first,
     },
   });
 }

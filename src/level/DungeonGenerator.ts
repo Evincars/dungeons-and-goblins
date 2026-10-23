@@ -38,14 +38,24 @@ export function prepareLevel(seed: number): void {
  * game (`authority`: alone, or the co-op host) also spawns what changes during play — enemies, chests,
  * the door, the exit and the shop — which guests then receive from the host.
  */
-export function buildDungeon(seed: number, authority: boolean): { level: Level; spawns: DungeonSpawns } {
+export function buildDungeon(seed: number, authority: boolean): { level: Level; spawns: DungeonSpawns; layout: DungeonLayout } {
   const config = { ...DEFAULT_CONFIG, seed };
   const layout = prepared?.seed === seed ? prepared.layout : layoutFor(seed);
   prepared = null;
   spawnDecor(layout);
   if (authority) spawnLiveEntities(layout, config);
-  return {
-    level: layout.level,
-    spawns: { playerSpawn: layout.playerSpawn, torchPositions: layout.torchPositions },
-  };
+  return { level: layout.level, spawns: spawnsOf(layout), layout };
+}
+
+function spawnsOf(layout: DungeonLayout): DungeonSpawns {
+  return { playerSpawn: layout.playerSpawn, torchPositions: layout.torchPositions };
+}
+
+/**
+ * A co-op guest builds the dungeon the host sent (level/LevelMap.ts): its terrain is the host's own, and the
+ * decor is laid from it; the live pieces come with the host's world updates.
+ */
+export function buildSentDungeon(layout: DungeonLayout): { level: Level; spawns: DungeonSpawns } {
+  spawnDecor(layout);
+  return { level: layout.level, spawns: spawnsOf(layout) };
 }

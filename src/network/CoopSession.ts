@@ -1,3 +1,6 @@
+import { packLevelMap, unpackLevelMap } from '../level/LevelMap';
+import type { LevelMap } from '../level/LevelMap';
+import type { DungeonLayout } from '../level/generators/DungeonBuilder';
 import { gunzipJson, gzipText } from '../core/compression';
 import { DEFAULT_CLASS, isHeroClassId } from '../rules/Classes';
 import type { HeroClassId } from '../rules/Classes';
@@ -60,6 +63,8 @@ function validPacket(value: unknown): value is ArrayBuffer | Uint8Array {
 /** One peer on the other end of the line: the host for a guest, each guest for the host. */
 class Link {
   name = '';
+  /** The level (by seed) this guest has built from the map it was sent; null until it says so. */
+  loadedSeed: number | null = null;
   /** The hero class this guest picked (checked by the host; the default for anything else). */
   heroClass: HeroClassId = DEFAULT_CLASS;
   ready = false;
@@ -98,7 +103,10 @@ export class CoopSession {
   /** Set once a level is under way, so nobody else can join half-way. */
   locked = false;
   /** The level being played: the seed its dungeon is built from, and how deep it is. */
-  level: { seed: number; depth: number } | null = null;
+  /** The level being played: its seed and depth, and on a guest, once it has arrived, the dungeon the host sent. */
+  level: { seed: number; depth: number; layout?: DungeonLayout } | null = null;
+  /** A guest between the host starting a level and its map arriving: the screen shows "Loading…". */
+  loadingLevel = false;
   latest: { state: NetState; paused: boolean } | null = null;
   onChange: (() => void) | null = null;
   onStart: (() => void) | null = null;
@@ -256,6 +264,9 @@ export class CoopSession {
         if (!validCommand(message.command)) throw new NetworkError('Invalid guest command');
         this.onCommand?.(slotOf(link), message.command);
         return;
+      case 'loaded':
+        if (Number.isInteger(message.seed) && message.seed === this.level?.seed) link.loadedSeed = message.seed;
+        return;
       default: throw new NetworkError('Unexpected co-op message');
     }
   }
@@ -270,6 +281,7 @@ export class CoopSession {
       case 'ping': return;
       case 'roster': return this.takeRoster(message.players);
       case 'start': return this.started(message.seed, message.depth);
+      case 'map': return this.mapArrived(message.seed, message.data);
       case 'complete': this.onComplete?.(); return;
       case 'sound':
         if (!validSound(message.name, message.x, message.y, isSfxName)) throw new NetworkError('Invalid sound event');
@@ -325,12 +337,38 @@ export class CoopSession {
     this.setStatus(this.level ? this.status : `${this.roster.length} players in the room. Waiting for the host to start.`);
   }
 
+  /** The host started a level: wait (showing "Loading…") for its map before building it. */
   private started(seed: unknown, depth: unknown): void {
     if (!validStart(seed, depth)) throw new NetworkError('Invalid level start');
     this.level = { seed: Number(seed), depth: Number(depth) };
     this.latest = null;
     this.stateSeqIn = -1;
+    this.loadingLevel = true;
+    this.setStatus(text('coop.status.loading'));
+  }
+
+  /** The level's map: once it is read (and checked), the level is built from it. */
+  private async mapArrived(seed: unknown, data: unknown): Promise<void> {
+    if (!Number.isInteger(seed) || !validPacket(data)) throw new NetworkError('Invalid map packet');
+    const level = this.level;
+    if (!level || seed !== level.seed) return;
+    const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : Uint8Array.from(data);
+    level.layout = await unpackLevelMap(bytes);
+    if (this.level !== level) return;
+    this.loadingLevel = false;
+    this.setStatus(text('coop.status.connected'));
     this.onStart?.();
+  }
+
+  /** Guest: this level is built and the hero stands in its safe room; the host may open the dungeon. */
+  sendLoaded(seed: number): void {
+    if (this.role === 'guest' && this.uplink?.ready) this.send(this.uplink, { type: 'loaded', seed });
+  }
+
+  /** Host: how many guests have not yet built the current level (the lever waits for them). */
+  guestsStillLoading(): number {
+    const seed = this.level?.seed;
+    return this.activeLinks().filter((link) => link.loadedSeed !== seed).length;
   }
 
   /** Names must be unique in the room so nobody is mistaken for somebody else. */
@@ -366,12 +404,20 @@ export class CoopSession {
     this.onChange?.();
   }
 
-  /** Host: a level begins. The room closes to newcomers and every guest builds the same dungeon. */
-  startLevel(seed: number, depth: number): void {
+  /**
+   * Host: a level begins. The room closes to newcomers, and every guest is told, then sent the dungeon the
+   * host built (gzipped) to build the same one from.
+   */
+  startLevel(seed: number, depth: number, map: LevelMap): void {
     if (this.role !== 'host') return;
     this.locked = true;
     this.level = { seed, depth };
+    for (const link of this.links.values()) link.loadedSeed = null;
     this.broadcast({ type: 'start', seed, depth });
+    const sent = packLevelMap(map).then((data) => {
+      if (this.level?.seed === seed) this.broadcast({ type: 'map', seed, data });
+    });
+    reportRejection(sent, 'The level map could not be sent', 'network');
   }
 
   private startHeartbeat(): void {

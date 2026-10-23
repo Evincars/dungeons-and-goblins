@@ -1,70 +1,9 @@
 import type { CharacterDef } from './CharacterDef';
 
 /**
- * The wizards: three heroes' worth (wanderer, light, fire) for later, and two enemies — the evil wizard and
- * the ghost wizard. Feet, head and body columns are measured from their idle frames; scales bring them to
- * the size of the other characters.
+ * The wizards fought as enemies. (The three wizards that were here — wanderer, light and fire — became the
+ * heroes Malkorath, Xanthia and Vesper: their art moved to /main-characters, see Heroes.ts.)
  */
-
-export const WANDERER_WIZARD: CharacterDef = {
-  id: 'wanderer_wizard',
-  frameWidth: 128,
-  frameHeight: 128,
-  scale: 0.48,
-  feetY: 127,
-  headY: 62,
-  bodyX: 64,
-  clips: {
-    idle:   { src: '/wanderer-wizard/Idle.png', frameTime: 7, mode: 'loop' },
-    walk:   { src: '/wanderer-wizard/Walk.png', frameTime: 6, mode: 'loop' },
-    run:    { src: '/wanderer-wizard/Run.png', frameTime: 5, mode: 'loop' },
-    attack: { src: '/wanderer-wizard/Attack_1.png', frameTime: 4, mode: 'once', impactFrame: 4 },
-    cast:   { src: '/wanderer-wizard/Magic_arrow.png', frameTime: 4, mode: 'once' },
-    hurt:   { src: '/wanderer-wizard/Hurt.png', frameTime: 4, mode: 'once' },
-    death:  { src: '/wanderer-wizard/Dead.png', frameTime: 6, mode: 'hold' },
-  },
-  states: { idle: 'idle', walk: 'walk', run: 'run', attack: 'attack', cast: 'cast', hurt: 'hurt', death: 'death' },
-};
-
-export const LIGHT_WIZARD: CharacterDef = {
-  id: 'light_wizard',
-  frameWidth: 128,
-  frameHeight: 128,
-  scale: 0.48,
-  feetY: 127,
-  headY: 66,
-  bodyX: 56,
-  clips: {
-    idle:   { src: '/light-wizard/Idle.png', frameTime: 7, mode: 'loop' },
-    walk:   { src: '/light-wizard/Walk.png', frameTime: 6, mode: 'loop' },
-    run:    { src: '/light-wizard/Run.png', frameTime: 5, mode: 'loop' },
-    attack: { src: '/light-wizard/Attack_1.png', frameTime: 3, mode: 'once', impactFrame: 5 },
-    cast:   { src: '/light-wizard/Light_ball.png', frameTime: 4, mode: 'once' },
-    hurt:   { src: '/light-wizard/Hurt.png', frameTime: 4, mode: 'once' },
-    death:  { src: '/light-wizard/Dead.png', frameTime: 6, mode: 'hold' },
-  },
-  states: { idle: 'idle', walk: 'walk', run: 'run', attack: 'attack', cast: 'cast', hurt: 'hurt', death: 'death' },
-};
-
-export const FIRE_WIZARD: CharacterDef = {
-  id: 'fire_wizard',
-  frameWidth: 128,
-  frameHeight: 128,
-  scale: 0.48,
-  feetY: 127,
-  headY: 62,
-  bodyX: 50,
-  clips: {
-    idle:   { src: '/fire-wizard/Idle.png', frameTime: 7, mode: 'loop' },
-    walk:   { src: '/fire-wizard/Walk.png', frameTime: 6, mode: 'loop' },
-    run:    { src: '/fire-wizard/Run.png', frameTime: 5, mode: 'loop' },
-    attack: { src: '/fire-wizard/Attack_1.png', frameTime: 5, mode: 'once', impactFrame: 2 },
-    cast:   { src: '/fire-wizard/Fireball.png', frameTime: 4, mode: 'once' },
-    hurt:   { src: '/fire-wizard/Hurt.png', frameTime: 4, mode: 'once' },
-    death:  { src: '/fire-wizard/Dead.png', frameTime: 6, mode: 'hold' },
-  },
-  states: { idle: 'idle', walk: 'walk', run: 'run', attack: 'attack', cast: 'cast', hurt: 'hurt', death: 'death' },
-};
 
 /** An enemy: a crowned sorcerer that breathes fire at close range. */
 export const EVIL_WIZARD: CharacterDef = {

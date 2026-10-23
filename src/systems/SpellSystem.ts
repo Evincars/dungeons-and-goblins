@@ -5,7 +5,7 @@ import { hitMob } from './SwordSystem';
 import { strike } from './Strike';
 import { characterSheet } from '../rules/CharacterSheet';
 import type { AttackProfile } from '../rules/Combat';
-import { spawnBurstPuff } from '../entities/FxFactory';
+import { spawnBurstPuff, spawnFx } from '../entities/FxFactory';
 import { AIM_HEIGHT, createSpellBolt } from '../entities/ProjectileFactory';
 import { playEffect } from '../assets/Effects';
 import { SPELL_STATS } from '../entities/WeaponStats';
@@ -29,16 +29,24 @@ function burst(bolt: Bolt, struck: boolean): void {
   const p = bolt.position;
   if (bolt.projectile.arrow) {
     if (struck) playEffect(ARROW_HIT_EFFECT, ARROW_HIT_COLOUR, p.x, p.y, AIM_HEIGHT, ARROW_HIT_SCALE);
+  } else if (bolt.projectile.burst) {
+    const b = bolt.projectile.burst;
+    spawnFx(p.x, p.y, b.sheet, b.count, b.count * b.frameTime, { first: b.first, scale: b.scale, yOffset: AIM_HEIGHT });
   } else {
     for (let i = 0; i < SPELL_STATS.burstPuffs; i++) spawnBurstPuff(p.x, p.y);
   }
   world.addComponent(bolt, 'removed', true);
 }
 
-/** Fire Bolt, a spell attack: d20 + proficiency + INT to hit (with disadvantage in untrained armour), 1d10 fire. */
-function fireBolt(caster: Player): AttackProfile {
+/**
+ * The spell bolt, a spell attack: d20 + proficiency + the class's spellcasting ability (Intelligence for a
+ * wizard, Charisma for a sorcerer or paladin; Intelligence for anyone untrained) to hit, with disadvantage in
+ * untrained armour; 1d10 damage.
+ */
+function spellBolt(caster: Player): AttackProfile {
   const sheet = characterSheet(caster);
-  return { attackBonus: sheet.attack.proficiency + sheet.modifiers.intelligence, damage: SPELL_STATS.boltDice, mode: sheet.attack.mode };
+  const ability = sheet.heroClass.spellcasting ?? 'intelligence';
+  return { attackBonus: sheet.attack.proficiency + sheet.modifiers[ability], damage: SPELL_STATS.boltDice, mode: sheet.attack.mode };
 }
 
 function canCast(caster: Player): boolean {
@@ -59,7 +67,7 @@ function updateCaster(caster: Player): void {
   cast.ticks++;
   if (!cast.released && cast.ticks >= SPELL_STATS.releaseTick) {
     cast.released = true;
-    createSpellBolt(caster.position.x, caster.position.y, cast.dirX, cast.dirY, fireBolt(caster), world.id(caster));
+    createSpellBolt(caster.position.x, caster.position.y, cast.dirX, cast.dirY, spellBolt(caster), world.id(caster), caster.character?.def);
     sound.playSound('spell', caster.position.x, caster.position.y);
   }
   if (cast.ticks >= SPELL_STATS.castTicks) world.removeComponent(caster, 'casting');

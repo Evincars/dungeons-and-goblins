@@ -1,3 +1,4 @@
+import type { LevelMap } from '../level/LevelMap';
 import { world, localPlayer, noIntents, releaseControls } from '../world';
 import type { Entity, PlayerSlot } from '../world';
 import type { Level } from '../level/Level';
@@ -44,14 +45,15 @@ export class HostGame {
   private readonly onLeave = (slot: PlayerSlot) => { this.departed.push(slot); };
   private readonly onEffect = (name: SfxName, x?: number, y?: number) => coop.sendSound(name, x, y);
 
-  constructor(host: Entity, spawn: { x: number; y: number }, seed: number, depth: number) {
+  /** `map`: the dungeon just built, sent to every guest so they build the very same one. */
+  constructor(host: Entity, spawn: { x: number; y: number }, seed: number, depth: number, map: LevelMap) {
     setName(host, coop.nameOf('host') ?? coop.hostName);
     coop.guestSlots().forEach((slot, i) => this.addGuest(slot, spawn, i));
     coop.onLeave = this.onLeave;
     coop.onCommand = handleGuestCommand;
     sound.onEffect = this.onEffect;
     this.seed = seed;
-    coop.startLevel(seed, depth);
+    coop.startLevel(seed, depth, map);
   }
 
   private addGuest(slot: PlayerSlot, spawn: { x: number; y: number }, index: number): void {

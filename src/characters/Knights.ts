@@ -1,26 +1,5 @@
 import type { CharacterDef } from './CharacterDef';
 
-/** Two knights for later: the hero knight, and the tall crowned knight from /hooded-knight. */
-
-export const HERO_KNIGHT: CharacterDef = {
-  id: 'hero_knight',
-  frameWidth: 180,
-  frameHeight: 180,
-  scale: 0.6,
-  feetY: 113,
-  headY: 63,
-  bodyX: 96,
-  clips: {
-    idle:   { src: '/hero-knight/Idle.png', frameTime: 6, mode: 'loop' },
-    run:    { src: '/hero-knight/Run.png', frameTime: 5, mode: 'loop' },
-    attack: { src: '/hero-knight/Attack1.png', frameTime: 3, mode: 'once', impactFrame: 3 },
-    cast:   { src: '/hero-knight/Attack2.png', frameTime: 3, mode: 'once' },
-    hurt:   { src: '/hero-knight/Take Hit.png', frameTime: 4, mode: 'once' },
-    death:  { src: '/hero-knight/Death.png', frameTime: 5, mode: 'hold' },
-  },
-  states: { idle: 'idle', walk: 'run', run: 'run', attack: 'attack', cast: 'cast', hurt: 'hurt', death: 'death' },
-};
-
 /**
  * The crowned knight from /hooded-knight, played as the Warrior. Its attack strip is 180 px wide (the sword
  * reaches out, and the knight spins on frames 8–13) and its power-up (played for casting) 180 px tall, each

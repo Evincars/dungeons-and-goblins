@@ -7,7 +7,7 @@ import { registerSheet } from '../render/Sheets';
 import { allSheets, registerLazyArt } from './SheetCatalog';
 import {
   genSpellBoltSheet,
-  genSpawnerSheet, genExitButtonSheet,
+  genSpawnerSheet, genExitButtonSheet, genLeverSheet, genPortcullis,
   genSwordSwingSheet, genDeathFxSheet,
   genDarkSheet,
   genPanelBg, genPortrait, genMinimapIcons,
@@ -33,6 +33,8 @@ const PROCEDURAL: Record<string, () => HTMLCanvasElement> = {
   spell_bolt:         genSpellBoltSheet,
   spawner:            genSpawnerSheet,
   exit_button:        genExitButtonSheet,
+  portcullis:         genPortcullis,
+  lever:              genLeverSheet,
   fx_sword_swing:     genSwordSwingSheet,
   fx_death:           genDeathFxSheet,
   dark:               genDarkSheet,

@@ -1,8 +1,7 @@
 import { q } from '../world';
-import { characterDef, clipAnchorX, clipAnchorY, drawnMirrored, facingRow, stateClip } from '../characters/Characters';
+import { characterDef, clipAnchorX, clipAnchorY, clipFrameTexture, clipFrames, drawnMirrored, facingRow, stateClip } from '../characters/Characters';
 import type { CharacterComponent } from '../characters/Characters';
 import type { ClipDef } from '../characters/CharacterDef';
-import { frameTexture, sheetCols } from '../render/Sheets';
 
 /** Steps a character's clip on by one frame when its time is up, then loops, holds or finishes it. */
 function advance(c: CharacterComponent, clip: ClipDef, frames: number): void {
@@ -28,9 +27,9 @@ export function updateCharacterAnimation(): void {
     const def = characterDef(c.def);
     const found = stateClip(def, c.state);
     if (!found) continue;
-    advance(c, found.clip, sheetCols(found.sheet));
+    advance(c, found.clip, clipFrames(found.clip, found.sheet));
     const sprite = entity.sprite;
-    sprite.texture = frameTexture(found.sheet, c.frame, facingRow(def, c.flipX));
+    sprite.texture = clipFrameTexture(found.clip, found.sheet, c.frame, facingRow(def, c.flipX));
     sprite.anchor.set(clipAnchorX(def, found.clip), clipAnchorY(def, found.clip));
     sprite.scale.x = (drawnMirrored(def, c.flipX) ? -1 : 1) * Math.abs(sprite.scale.x);
   }

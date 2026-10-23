@@ -93,8 +93,9 @@ function mobAt(level, type, tx, ty, heading = { x: 1, y: 0 }) {
   return mob;
 }
 
-function playerAt(tx, ty) {
-  return createPlayer(centre(tx), centre(ty));
+/** A hero standing on a tile: the Barbarian unless told (its swing lands at once, with no wind-up). */
+function playerAt(tx, ty, heroClass = 'barbarian') {
+  return createPlayer(centre(tx), centre(ty), heroClass);
 }
 
 /** Puts a mob straight into a fight with the player, as if it had just seen them. */
@@ -962,7 +963,7 @@ test('the host carries out guest purchases near the shop, and only rearrangement
   assert.ok(sameItems({ inventory: [sword], equipped: {} }, { inventory: [], equipped: { primary: sword } }));
 });
 
-test('every machine builds the same level from a seed; only the authority adds what changes in play', () => {
+test('every machine builds the same level from a seed; only the authority adds what changes in play (and bars the safe room)', () => {
   const guestSide = buildDungeon(4242, false);
   const decor = world.entities.filter((e) => e.localOnly).length;
   assert.ok(decor > 0);
@@ -972,9 +973,11 @@ test('every machine builds the same level from a seed; only the authority adds w
   assert.equal(world.entities.filter((e) => e.localOnly).length, decor);
   assert.ok(world.entities.some((e) => e.ai) && world.entities.some((e) => e.door));
   assert.deepEqual(hostSide.spawns, guestSide.spawns);
+  const doorway = new Set(hostSide.layout.safeDoor.tiles.map((t) => t.x + t.y * hostSide.level.width));
   for (let i = 0; i < hostSide.level.width * hostSide.level.height; i++) {
     const x = i % hostSide.level.width, y = Math.floor(i / hostSide.level.width);
-    assert.equal(hostSide.level.getTile(x, y).type, guestSide.level.getTile(x, y).type);
+    const expected = doorway.has(i) ? TileType.Obstacle : guestSide.level.getTile(x, y).type;
+    assert.equal(hostSide.level.getTile(x, y).type, expected, doorway.has(i) ? 'the host bars the doorway until the lever is pulled' : undefined);
   }
 });
 
@@ -1069,7 +1072,7 @@ test('weapon damage: the dice, plus STR in melee, DEX at range, the better for f
   assert.equal(sheet.heroClass.id, 'barbarian');
   assert.equal(sheet.armorClass.total, 14, 'chain shirt 13, the barbarian\'s DEX 13 +1');
   assert.equal(formatDice(sheet.attack.damage), '1d4 + 3', 'the +1 dagger with STR 15 (+2), better than DEX +1');
-  assert.deepEqual(sheet.hitPoints, { current: 100, max: 100 }, 'every hero has 100 hit points for now');
+  assert.deepEqual(sheet.hitPoints, { current: 130, max: 130 }, 'a barbarian: 10 x d12 + 5 x CON +2');
 });
 
 test('every catalogue weapon, armour and shield plays as a D&D base, and a guest cannot forge a better one', async () => {
@@ -1105,7 +1108,7 @@ test('the two hero classes: the Barbarian fights best unarmoured, the Warrior is
   assert.equal(sheet.armorClass.total, 19, 'plate 18 + the Defense style 1');
   assert.equal(sheet.attack.mode, 'normal');
   assert.equal(sheet.attack.proficient, true);
-  assert.equal(warrior.health.max, 100);
+  assert.equal(warrior.health.max, 110, '10 x d10 + 5 x CON +2');
 });
 
 test('enemies follow their SRD monster blocks and carry a random low-end weapon', async () => {
@@ -1343,8 +1346,8 @@ test('where kinds of ground meet, the softer spills over the edge of the harder'
 
 test('a generated level saves to JSON and gzip, and comes back the same; a damaged map is refused', async () => {
   const { encodeLevelMap, decodeLevelMap, packLevelMap, unpackLevelMap } = await load('level/LevelMap');
-  const { level, spawns } = buildDungeon(1234, true);
-  const map = encodeLevelMap(level, spawns);
+  const { level, spawns, layout } = buildDungeon(1234, true);
+  const map = encodeLevelMap(layout);
   const json = JSON.stringify(map);
   const back = decodeLevelMap(JSON.parse(json));
   for (let y = 0; y < level.height; y++) {
@@ -1358,7 +1361,11 @@ test('a generated level saves to JSON and gzip, and comes back the same; a damag
   assert.deepEqual([...back.level.wallDecor], [...level.wallDecor]);
   assert.deepEqual([...back.level.blockBoxes], [...level.blockBoxes]);
   assert.deepEqual(back.level.pits, level.pits);
-  assert.deepEqual(back.spawns, spawns);
+  assert.deepEqual(back.playerSpawn, spawns.playerSpawn);
+  assert.deepEqual(back.torchPositions, spawns.torchPositions);
+  assert.deepEqual(back.rooms, layout.rooms, 'the rooms');
+  assert.deepEqual(back.props, layout.props, 'the props: the assets every screen draws');
+  assert.deepEqual([back.leverPos, back.safeDoor, back.shopPos], [layout.leverPos, layout.safeDoor, layout.shopPos]);
   const packed = await packLevelMap(map);
   assert.ok(packed.byteLength < json.length / 2, `gzip shrinks it (${json.length} → ${packed.byteLength} bytes)`);
   const unpacked = await unpackLevelMap(packed);
@@ -1368,4 +1375,82 @@ test('a generated level saves to JSON and gzip, and comes back the same; a damag
   assert.equal(broken((m) => ({ ...m, safe: [[0, 1e9]] })), false, 'a run off the map');
   assert.equal(broken((m) => ({ ...m, wallDecor: [[1, 'fresco']] })), false);
   assert.equal(broken((m) => ({ ...m, tiles: btoa('xyz') })), false, 'tiles that do not fill the map');
+  assert.equal(broken((m) => ({ ...m, props: [['dragon_statue', 1, 1]] })), false, 'an unknown prop');
+});
+
+test('the five main characters: each with their D&D class, sprite and training', async () => {
+  const { CLASSES } = await load('rules/Classes');
+  const { characterSheet, weaponAttack } = await load('rules/CharacterSheet');
+  const { formatDamage } = await load('rules/Dice');
+  const expect = { kaelen: 'fighter', malkorath: 'rogue', malthus: 'paladin', vesper: 'wizard', xanthia: 'sorcerer' };
+  for (const [id, cls] of Object.entries(expect)) {
+    assert.equal(CLASSES[id].dndClass, cls, id);
+    const hero = createPlayer(centre(2), centre(2), id);
+    assert.equal(hero.character.def, id, `${id} is drawn with its own sprites`);
+    const def = characterDef(id);
+    for (const state of ['idle', 'walk', 'run', 'attack', 'cast', 'hurt', 'death']) assert.ok(def.states[state], `${id} ${state}`);
+  }
+  assert.equal(CLASSES.vesper.spellcasting, 'intelligence');
+  assert.equal(CLASSES.xanthia.spellcasting, 'charisma');
+  assert.deepEqual([...CLASSES.vesper.armor], [], 'a wizard wears no armour');
+  const vesper = createPlayer(centre(2), centre(2), 'vesper');
+  vesper.equipped = { primary: { type: 'weapon', name: 'g', value: 1, gear: 'weapon', base: 'greatsword' } };
+  assert.equal(characterSheet(vesper).attack.proficient, false, 'nor knows the greatsword');
+  vesper.equipped = { primary: { type: 'weapon', name: 'q', value: 1, gear: 'weapon', base: 'quarterstaff' } };
+  assert.equal(characterSheet(vesper).attack.proficient, true, 'but the quarterstaff, by name');
+  const rogue = createPlayer(centre(2), centre(2), 'malkorath');
+  rogue.equipped = { primary: { type: 'weapon', name: 'd', value: 1, gear: 'weapon', base: 'dagger' } };
+  assert.equal(formatDamage(characterSheet(rogue).attack.damage, characterSheet(rogue).attack.extra), '1d4 + 1d6 + 2', 'Sneak Attack with a finesse dagger, DEX 15');
+  const mods = { strength: 2, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 };
+  assert.equal(weaponAttack({ primary: { type: 'weapon', name: 'm', value: 1, gear: 'weapon', base: 'mace' } }, mods, 1, CLASSES.malkorath).extra, undefined, 'not with a mace');
+  const kaelen = createPlayer(centre(2), centre(2), 'kaelen');
+  assert.equal(kaelen.health.max, 110);
+});
+
+test('the safe room opens with its lever: barred until pulled, then the portcullis rises and the way is clear', async () => {
+  const { updateLevers } = await load('systems/LeverSystem');
+  const { updateDoors } = await load('systems/DoorSystem');
+  const { level, layout } = buildDungeon(777, true);
+  const door = world.entities.find((e) => e.door);
+  const lever = world.entities.find((e) => e.lever);
+  assert.ok(door.door.locked && lever);
+  for (const t of layout.safeDoor.tiles) assert.equal(level.getTile(t.x, t.y).type, TileType.Obstacle, 'barred');
+  const gates = world.entities.filter((e) => e.gate);
+  assert.equal(gates.length, layout.safeDoor.tiles.length, 'a portcullis on every doorway tile');
+  const hero = createPlayer(lever.position.x + 6, lever.position.y);
+  beginPerception();
+  for (let t = 0; t < 120; t++) updateDoors(level);
+  assert.ok(door.door.locked && !door.door.closed, 'nobody can leave, so nothing seals');
+  hero.playerInput.intents.use = true;
+  beginPerception();
+  updateLevers(level);
+  assert.equal(lever.lever.pulled, true);
+  assert.equal(door.door.locked, false);
+  for (const t of layout.safeDoor.tiles) assert.equal(level.getTile(t.x, t.y).type, TileType.Floor, 'the way is open');
+  for (let t = 0; t < 60; t++) updateDoors(level);
+  assert.ok(gates.every((g) => g.removed), 'the portcullis has risen out of sight');
+});
+
+test('a co-op guest builds the dungeon the host sent: the same terrain (gate and all) and the same decor', async () => {
+  const { encodeLevelMap, packLevelMap, unpackLevelMap } = await load('level/LevelMap');
+  const { buildSentDungeon } = await load('level/DungeonGenerator');
+  const host = buildDungeon(31337, true);
+  const hostDecor = world.entities.filter((e) => e.localOnly).length;
+  const packed = await packLevelMap(encodeLevelMap(host.layout));
+  world.clear();
+  const guest = buildSentDungeon(await unpackLevelMap(packed));
+  assert.equal(world.entities.filter((e) => e.localOnly).length, hostDecor, 'every torch, prop and room');
+  assert.equal(world.entities.filter((e) => e.ai || e.door || e.lever).length, 0, 'the live pieces come with the world updates');
+  for (let i = 0; i < host.level.width * host.level.height; i++) {
+    const x = i % host.level.width, y = Math.floor(i / host.level.width);
+    assert.equal(guest.level.getTile(x, y).type, host.level.getTile(x, y).type);
+  }
+  assert.deepEqual(guest.spawns, host.spawns);
+});
+
+test('every character strip the game loads is a file in public/ (a moved folder fails here, not at start-up)', async () => {
+  const { existsSync } = await import('node:fs');
+  const { allCharacters } = await load('characters/Characters');
+  const missing = allCharacters().flatMap((def) => Object.values(def.clips).map((c) => c.src)).filter((src) => !existsSync(`public${src}`));
+  assert.deepEqual(missing, []);
 });

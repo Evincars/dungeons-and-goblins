@@ -33,6 +33,7 @@ import { updateEphemerals } from './EphemeralSystem';
 import { updateInventory } from './InventorySystem';
 import { updateChests } from './ChestSystem';
 import { updateWeaponSwap } from './WeaponSwapSystem';
+import { updateLevers } from './LeverSystem';
 import { updateRollLogs } from './RollLogSystem';
 import { updateRollTexts } from './RollTextSystem';
 
@@ -77,6 +78,7 @@ export const SIMULATION: readonly System[] = [
   ({ level }) => updateHoles(level),
   ({ level }) => updateFalling(level),
   () => updateChests(),
+  ({ level }) => updateLevers(level),
   ({ level }) => updateDoors(level),
   () => updateExit(),
   () => updateShop(),

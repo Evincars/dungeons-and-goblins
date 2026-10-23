@@ -137,6 +137,8 @@ export type DungeonLayout = {
   /** Where the training dummy stands in the safe room. */
   dummyPos: { x: number; y: number };
   safeDoor: DoorData;
+  /** Where the lever stands that opens the safe room's door. */
+  leverPos: { x: number; y: number };
 };
 
 function mulberry32(seed: number): () => number {
@@ -222,6 +224,8 @@ export class DungeonBuilder {
 
     const doorTiles: Array<{ x: number; y: number }> = [];
     for (let i = 0; i < cw; i++) doorTiles.push({ x: doorX, y: doorY + i });
+    // The lever that opens the door stands just inside the safe room, beside the doorway (above it when there is room).
+    const leverTile = { x: doorX - 1, y: doorY - 1 >= safe.y ? doorY - 1 : doorY + cw };
 
     this.removeSlivers();
 
@@ -260,7 +264,7 @@ export class DungeonBuilder {
     const dummyTile = { x: safe.x + 2, y: safe.y + safe.h - 3 };
     this.usedTiles.add(dummyTile.x + dummyTile.y * W);
     // The exit, the spawn and the shop keeper's spot (and the wall behind and floor in front of it) stay clear.
-    for (const t of [exitTile, playerTile, shopTile, { x: shopTile.x, y: safe.y }, { x: shopTile.x, y: shopTile.y + 1 }]) {
+    for (const t of [exitTile, playerTile, shopTile, leverTile, { x: shopTile.x, y: safe.y }, { x: shopTile.x, y: shopTile.y + 1 }]) {
       this.usedTiles.add(t.x + t.y * W);
     }
     const safeFire = { x: shopTile.x, y: safe.y + Math.floor(safe.h / 2) + 1 };
@@ -283,6 +287,7 @@ export class DungeonBuilder {
       shopPos: tileCenter(shopTile.x, shopTile.y),
       dummyPos: tileCenter(dummyTile.x, dummyTile.y),
       safeDoor: { tiles: doorTiles, boundaryX: (doorX + 1) * TILE_WIDTH + TILE_WIDTH / 2 },
+      leverPos: tileCenter(leverTile.x, leverTile.y),
     };
   }
 

@@ -110,6 +110,52 @@ export function genExitButtonSheet(): HTMLCanvasElement {
   return c;
 }
 
+// ── SAFE-ROOM GATE AND LEVER ─────────────────────────────────────────────────
+
+/** A portcullis over one doorway tile, 32×40: iron bars and crossbars, spiked at the foot, rising above the tile. */
+export function genPortcullis(): HTMLCanvasElement {
+  const [c, ctx] = mkCanvas(32, 40);
+  const IRON = 0x2b2f36;
+  const LIGHT = 0x5a626e;
+  const DARK = 0x15171b;
+  for (let x = 2; x < 32; x += 6) {
+    rect(ctx, x, 0, 3, 36, IRON);
+    rect(ctx, x, 0, 1, 36, LIGHT);
+    rect(ctx, x + 2, 0, 1, 36, DARK);
+    rect(ctx, x, 36, 3, 2, IRON);
+    px(ctx, x + 1, 38, LIGHT);
+    px(ctx, x + 1, 39, IRON);
+  }
+  for (const y of [4, 16, 28]) {
+    rect(ctx, 0, y, 32, 3, IRON);
+    rect(ctx, 0, y, 32, 1, LIGHT);
+    rect(ctx, 0, y + 2, 32, 1, DARK);
+  }
+  return c;
+}
+
+/** A floor lever, two 32×32 frames: the handle up and back (col 0), then pulled down and forward (col 1). */
+export function genLeverSheet(): HTMLCanvasElement {
+  const [c, ctx] = mkCanvas(64, 32);
+  for (let state = 0; state < 2; state++) {
+    const ox = state * 32;
+    // Stone block it is set in, with a slot along the top.
+    rect(ctx, ox + 8, 22, 16, 9, 0x4a4440);
+    rect(ctx, ox + 9, 23, 14, 7, 0x6a625a);
+    rect(ctx, ox + 10, 22, 12, 2, 0x1c1a18);
+    // The handle: an iron shaft from the pivot to a worn wooden grip.
+    const tipX = state === 0 ? ox + 9 : ox + 23;
+    const steps = 10;
+    for (let i = 0; i <= steps; i++) {
+      const x = Math.round(ox + 16 + ((tipX - (ox + 16)) * i) / steps);
+      const y = Math.round(23 - (13 * i) / steps);
+      rect(ctx, x, y, 2, 2, i > steps - 3 ? 0x8a5a2a : 0x5a626e);
+    }
+    rect(ctx, ox + 15, 21, 4, 3, 0x2b2f36);
+  }
+  return c;
+}
+
 // ── SWORD SWING FX ───────────────────────────────────────────────────────────
 
 export function genSwordSwingSheet(): HTMLCanvasElement {

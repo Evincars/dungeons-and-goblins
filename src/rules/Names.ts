@@ -1,7 +1,7 @@
 import { text } from '../core/texts';
 import type { ArmorBase, ArmorRule } from './ArmorTable';
 import type { DamageType, WeaponBase, WeaponProperty, WeaponRule } from './WeaponTable';
-import type { ArmorTraining, ClassFeature, HeroClassId, WeaponTraining } from './Classes';
+import type { ArmorTraining, ClassFeature, DndClass, HeroClassId, WeaponTraining } from './Classes';
 
 /** How the rules' terms read on screen (from src/data/texts.json). */
 
@@ -33,12 +33,17 @@ export function propertyName(property: WeaponProperty): string {
   return text(`rules.property.${property}` as const);
 }
 
-export function className(id: HeroClassId): string {
-  return text(`class.${id}.name` as const);
+export function heroName(id: HeroClassId): string {
+  return text(`hero.${id}.name` as const);
 }
 
-export function classBlurb(id: HeroClassId): string {
-  return text(`class.${id}.blurb` as const);
+export function heroBlurb(id: HeroClassId): string {
+  return text(`hero.${id}.blurb` as const);
+}
+
+/** A D&D class as the game calls it (a fighter is a Warrior). */
+export function dndClassName(cls: DndClass): string {
+  return text(`dnd_class.${cls}` as const);
 }
 
 export function featureName(feature: ClassFeature): string {

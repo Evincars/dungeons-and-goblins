@@ -33,7 +33,7 @@ function kindOf(e: Entity): number {
   if (e.spawner) return Sense.nest;
   if (e.loot) return Sense.loot;
   if (e.item) return Sense.item;
-  if (e.shopNpc || e.exitButton || e.chest) return Sense.usable;
+  if (e.shopNpc || e.exitButton || e.chest || e.lever) return Sense.usable;
   return 0;
 }
 

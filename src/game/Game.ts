@@ -1,3 +1,4 @@
+import { IntroScene } from '../scenes/IntroScene';
 import { CharacterSelectScene } from '../scenes/CharacterSelectScene';
 import { Application } from 'pixi.js';
 import { loadAllAssets } from '../assets/AssetLoader';
@@ -52,6 +53,7 @@ export class Game {
       .register('settings', (m) => new SettingsScene(m))
       .register('key_bindings', (m) => new KeyBindingsScene(m))
       .register('character_select', (m) => new CharacterSelectScene(m))
+      .register('intro', (m) => new IntroScene(m))
       .register('coop_host', (m) => new CoopScene(m, 'host'))
       .register('coop_join', (m) => new CoopScene(m, 'guest', joinParam()))
       .register('in_game', (m) => new InGameScene(m));

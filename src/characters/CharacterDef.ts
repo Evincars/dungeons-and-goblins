@@ -38,7 +38,18 @@ export type ClipDef = {
    */
   bodyX?: number;
   feetY?: number;
+  /** The sheet is a grid of frames read row by row (instead of a single row). */
+  grid?: boolean;
+  /** The clip plays only part of its sheet: from this frame, this many (a sheet holding several attacks). */
+  firstFrame?: number;
+  frameCount?: number;
 };
+
+/** A run of frames within a strip. */
+export type FrameRun = { first: number; count: number };
+
+/** A caster's spell projectile: the clip its frames come from, the frames it flies and bursts on, and its size. */
+export type BoltDef = { clip: string; fly: FrameRun; burst?: FrameRun; scale: number };
 
 export type CharacterDef = {
   id: string;
@@ -67,6 +78,8 @@ export type CharacterDef = {
   clips: Record<string, ClipDef>;
   /** Its art swings its own blade, so the generic sword-swing effect is not drawn over it (default: drawn). */
   swingFx?: boolean;
+  /** What its spell flies as (default: the generic spell bolt). */
+  bolt?: BoltDef;
   /** Which clip plays for each state; states left out are skipped. Every character idles. */
   states: Partial<Record<CharacterState, string>> & { idle: string };
 };

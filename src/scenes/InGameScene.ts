@@ -1,10 +1,11 @@
-import { Container } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import type { Application } from 'pixi.js';
 import { world, q, localPlayer } from '../world';
 import type { Player } from '../world';
 import type { Scene, SceneManager } from '../game/SceneManager';
 import { text } from '../core/texts';
-import { buildDungeon, prepareLevel, randomSeed } from '../level/DungeonGenerator';
+import { buildDungeon, buildSentDungeon, prepareLevel, randomSeed } from '../level/DungeonGenerator';
+import { encodeLevelMap } from '../level/LevelMap';
 import { buildLevelView } from '../level/TileRenderer';
 import type { LevelView } from '../level/TileRenderer';
 import { FogRenderer } from '../level/FogRenderer';
@@ -12,7 +13,7 @@ import { LightRenderer } from '../level/LightRenderer';
 import type { LightSource } from '../level/LightRenderer';
 import { createPlayer } from '../entities/PlayerFactory';
 import { cleanName, settings } from '../game/Settings';
-import { camera, GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
+import { camera, GAME_HEIGHT, GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
 import { TILE_WIDTH, TILE_HEIGHT, FOG_REVEAL_TILES } from '../level/TileType';
 import { initInput, resetInput } from '../systems/InputSystem';
 import { SIMULATION, PRESENTATION, runSystems } from '../systems/Simulation';
@@ -50,6 +51,10 @@ const LANTERN_RADIUS = 110;
 /** The fog of war must cover entities in unexplored areas, not just the terrain. */
 const FOG_Z = 1e7;
 const STATUS_Y = 6;
+/** Each level opens out of black over this many ticks. */
+const FADE_IN_TICKS = 70;
+/** The loading screen hides the level behind it almost entirely. */
+const LOADING_ALPHA = 0.92;
 
 type Mode = 'solo' | 'host' | 'guest';
 type RunTotals = { kills: number; xp: number; gold: number };
@@ -74,6 +79,11 @@ export class InGameScene implements Scene {
   private readonly darkness = new FogRenderer();
   private readonly lights = new LightRenderer();
   private readonly hud = new HudPanel();
+  /** Black over everything as the level starts, lifting over FADE_IN_TICKS. */
+  private readonly fadeIn = new Graphics().rect(0, 0, GAME_WIDTH, GAME_HEIGHT).fill({ color: 0x000000 });
+  private fadeTicks = 0;
+  /** A guest between levels: the host has started the next one and its map is on the way. */
+  private readonly loading = new Container();
   private readonly combatLog = new CombatLogPanel();
   private readonly inv = new InventoryOverlay();
   private readonly shop = new ShopPanel();
@@ -117,7 +127,10 @@ export class InGameScene implements Scene {
     const seed = this.mode === 'guest' ? coop.level?.seed ?? 0 : run.nextSeed ?? randomSeed();
     run.nextSeed = null;
     const depth = this.mode === 'guest' ? coop.level?.depth ?? 1 : run.depth;
-    const { level, spawns } = buildDungeon(seed, this.mode !== 'guest');
+    // A guest builds the very dungeon the host sent (its map came before this scene); the host sends its own.
+    const sent = this.mode === 'guest' ? coop.level?.layout : undefined;
+    const built = sent ? { ...buildSentDungeon(sent), layout: sent } : buildDungeon(seed, this.mode !== 'guest');
+    const { level, spawns } = built;
     this.level = level;
     this.ctx = { level, dt: 1, tick: 0, gameLayer: this.gameLayer, rebuildTerrain: () => this.rebuildTerrain() };
     this.mountTerrain();
@@ -128,13 +141,14 @@ export class InGameScene implements Scene {
 
     if (this.mode === 'guest') {
       this.guest = new GuestGame(() => this.levelComplete(), () => manager.goto('in_game'));
+      coop.sendLoaded(seed);
     } else {
       const me = createPlayer(spawns.playerSpawn.x, spawns.playerSpawn.y, settings.heroClass);
       world.addComponent(me, 'playerSlot', 'host');
       // The name typed on the character select; the combat log calls the hero by it (co-op renames it below).
       world.addComponent(me, 'playerName', cleanName(settings.playerName) || text('combat_log.default_hero'));
       restorePlayer(me);
-      if (this.mode === 'host') this.host = new HostGame(me, spawns.playerSpawn, seed, depth);
+      if (this.mode === 'host') this.host = new HostGame(me, spawns.playerSpawn, seed, depth, encodeLevelMap(built.layout));
     }
 
     this.darkness.container.zIndex = FOG_Z;
@@ -160,7 +174,8 @@ export class InGameScene implements Scene {
       ? text('menu.pause.warning_guest')
       : this.mode === 'host' ? text('menu.pause.warning_host') : text('menu.pause.warning_solo'));
     // The crosshair replaces the OS pointer and is the player's focus in the world.
-    this.uiLayer.addChild(this.crosshair.graphics, this.pause.container, this.result.container);
+    this.uiLayer.addChild(this.crosshair.graphics, this.pause.container, this.result.container, this.loading, this.fadeIn);
+    this.buildLoadingOverlay();
     manager.canvas.style.cursor = 'none';
     initInput(manager.canvas);
 
@@ -227,6 +242,7 @@ export class InGameScene implements Scene {
   update(): void {
     const frozen = this.frozen;
     if (!frozen) this.tick++;
+    if (this.fadeTicks < FADE_IN_TICKS) this.fadeIn.alpha = 1 - ++this.fadeTicks / FADE_IN_TICKS;
     this.ctx.tick = this.tick;
     if (this.guest) this.guest.tick(this.level, this.pause.open || this.guest.hostPaused || !coop.connected);
     else this.simulate(frozen);
@@ -306,6 +322,7 @@ export class InGameScene implements Scene {
   }
 
   private updatePanels(): void {
+    this.loading.visible = this.mode === 'guest' && coop.loadingLevel;
     this.hud.update(this.level);
     this.combatLog.update();
     this.inv.setVisible(isInventoryOpen());
@@ -316,6 +333,14 @@ export class InGameScene implements Scene {
     this.shopWasOpen = shopOpen;
     this.shop.setVisible(shopOpen);
     this.shop.update();
+  }
+
+  /** Black with "Loading…" in the middle, shown while a guest waits for the next level's map. */
+  private buildLoadingOverlay(): void {
+    const label = makeText(text('game.loading'), 0xe8dcc0, 12, 'center');
+    label.position.set(Math.round(GAME_WIDTH / 2), Math.round(GAME_HEIGHT / 2 - 8));
+    this.loading.addChild(new Graphics().rect(0, 0, GAME_WIDTH, GAME_HEIGHT).fill({ color: 0x000000, alpha: LOADING_ALPHA }), label);
+    this.loading.visible = false;
   }
 
   /** A line at the top of the screen when co-op is not running normally. */

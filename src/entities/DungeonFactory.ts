@@ -1,6 +1,7 @@
 import { world, Team } from '../world';
 import type { Entity, InventoryItem } from '../world';
-import { TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
+import { createTile, TileType, TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
+import type { Level } from '../level/Level';
 import { PROPS, PROP_GROUND } from '../level/Props';
 import type { PropDef, PropPlacement } from '../level/Props';
 import type { DoorData, RoomData } from '../level/generators/DungeonBuilder';
@@ -52,12 +53,44 @@ export function createRoom(room: RoomData): Entity {
 }
 
 /** The door that seals the safe room once every player has left it. */
-export function createSafeDoor(door: DoorData): Entity {
+/**
+ * The safe room's door, locked: its doorway is barred (solid, drawn as floor) under a portcullis on every
+ * tile, until the lever beside it is pulled.
+ */
+export function createSafeDoor(door: DoorData, level: Level): Entity {
   const first = door.tiles[0];
   const middle = door.tiles[Math.floor(door.tiles.length / 2)] ?? first;
+  for (const t of door.tiles) {
+    level.setTile(t.x, t.y, createTile(TileType.Obstacle, 0));
+    createGate(t.x, t.y);
+  }
   return world.add({
     position: { x: first.x * TILE_WIDTH + TILE_WIDTH / 2, y: middle.y * TILE_HEIGHT + TILE_HEIGHT / 2 },
-    door: { tiles: door.tiles, boundaryX: door.boundaryX, closed: false },
+    door: { tiles: door.tiles, boundaryX: door.boundaryX, closed: false, locked: true },
+  });
+}
+
+/** The portcullis is drawn this far up from the foot of its tile: it reaches a little above the doorway. */
+export const GATE_LIFT = 20;
+
+/** A portcullis over one doorway tile, standing on the tile's foot so whoever is in front of it draws over it. */
+function createGate(tx: number, ty: number): Entity {
+  return world.add({
+    position: { x: tx * TILE_WIDTH + TILE_WIDTH / 2, y: (ty + 1) * TILE_HEIGHT - 1 },
+    visual: { sheet: 'portcullis' },
+    yOffset: GATE_LIFT,
+    gate: { lift: 0 },
+  });
+}
+
+/** The lever beside the safe room's door; pulling it (E) raises the portcullis. */
+export function createLever(x: number, y: number): Entity {
+  return world.add({
+    position: { x, y },
+    lever: { pulled: false },
+    visual: { sheet: 'lever', col: 0, row: 0 },
+    radius: { x: 8, y: 6 },
+    yOffset: 8,
   });
 }
 

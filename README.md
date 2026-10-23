@@ -31,9 +31,10 @@ pause, 1–5 for the quick bar. Keys can be rebound in Settings → Key bindings
 Every game starts with picking a hero — the **Barbarian** or the **Warrior** (see `classes.json` below) — and
 typing the name the combat log (and, in co-op, the other players) will call them.
 
-On screen: health and stamina bottom left, with diamond buttons beside them (character, level, map — for now
-each opens a placeholder dialog; Esc or ✕ closes it); the quick bar bottom middle; the combat log bottom right
-(the `–` in its corner folds it away, `+` brings it back).
+On screen: the health bar bottom left, with three round buttons in a triangle over it — character and level
+(placeholder dialogs for now) and the map, which shows the explored dungeon with holes and treasure marked
+(Esc or ✕ closes a dialog); the quick bar bottom middle; the combat log bottom right (scroll it with the mouse
+wheel or its scrollbar; the `–` in its corner folds it away, `+` brings it back).
 
 ## Configuration files (JSON)
 

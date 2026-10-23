@@ -21,6 +21,8 @@ export type MonsterStats = {
   abilities: Readonly<Record<StatName, number>>;
   modifiers: Readonly<Record<StatName, number>>;
   weapons: readonly WeaponBase[];
+  /** Experience for the kill (SRD, by challenge rating). */
+  xp: number;
   deathPoints: number;
 };
 
@@ -34,7 +36,7 @@ function readMonster(type: MobType, raw: RawMonster): MonsterStats {
   for (const stat of STAT_NAMES) modifiers[stat] = abilityModifier(abilities[stat]);
   return {
     source: raw.source, health: raw.health, ac: raw.ac, proficiency: raw.proficiency,
-    abilities, modifiers, weapons: raw.weapons.filter(isWeaponBase), deathPoints: raw.deathPoints,
+    abilities, modifiers, weapons: raw.weapons.filter(isWeaponBase), xp: raw.xp, deathPoints: raw.deathPoints,
   };
 }
 

@@ -1,5 +1,6 @@
 import { world, isPlayer } from '../world';
-import type { CombatLogEntry, Entity } from '../world';
+import type { BlowResult, CombatLogEntry, Entity } from '../world';
+import type { SpellId } from '../rules/Spells';
 import { text } from '../core/texts';
 import type { AttackOutcome } from '../rules/Combat';
 import { blowResult } from './RollLogSystem';
@@ -26,12 +27,22 @@ function actorOf(attacker: Entity): Pick<CombatLogEntry, 'actor' | 'name'> {
   return { actor: 'player', name: (isPlayer(attacker) && attacker.playerName) || text('combat_log.default_hero') };
 }
 
-/** Writes one blow into the log. */
-export function recordBlow(attacker: Entity, outcome: AttackOutcome): void {
+/** Writes one entry into the log. */
+function record(attacker: Entity, total: number, result: BlowResult, damage: number, spell: SpellId | undefined): void {
   const log = theLog();
   log.seq++;
-  log.entries.push({ seq: log.seq, ...actorOf(attacker), total: outcome.total, result: blowResult(outcome), damage: outcome.damage });
+  log.entries.push({ seq: log.seq, ...actorOf(attacker), total, result, damage, ...(spell ? { spell } : {}) });
   if (log.entries.length > MAX_LOG_ENTRIES) log.entries.shift();
+}
+
+/** Writes one rolled blow into the log (`spell`: the spell it was, for a spell attack). */
+export function recordBlow(attacker: Entity, outcome: AttackOutcome, spell?: SpellId): void {
+  record(attacker, outcome.total, blowResult(outcome), outcome.damage, spell);
+}
+
+/** Writes a spell's effect that took no attack roll: a dart that always hits, a saving throw (made or failed), a healing. */
+export function recordSpell(caster: Entity, spell: SpellId, result: Extract<BlowResult, 'auto' | 'saved' | 'heal'>, amount: number, save = 0): void {
+  record(caster, save, result, amount, spell);
 }
 
 /** The level's log as a screen sees it (its own, or the copy a guest was sent), if anything has struck yet. */

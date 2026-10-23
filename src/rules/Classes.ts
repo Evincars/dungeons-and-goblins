@@ -1,3 +1,5 @@
+import { isSpellId } from './Spells';
+import type { SpellId } from './Spells';
 import { STAT_NAMES, isStatName } from '../world';
 import type { StatName } from '../world';
 import { ensure } from '../core/errors';
@@ -59,6 +61,8 @@ export type HeroClass = {
   savingThrows: readonly StatName[];
   /** The ability spells add to hit (null: none, so Intelligence, as anyone untrained). */
   spellcasting: StatName | null;
+  /** What the hero can cast, in quick-bar order (each from its spell's minLevel). */
+  spells: readonly SpellId[];
   features: readonly ClassFeature[];
 };
 
@@ -94,6 +98,7 @@ function readClass(id: HeroClassId, raw: RawClass): HeroClass {
     weaponBases: listOf(id, 'weapon', raw.weaponBases, isWeaponBase),
     savingThrows: listOf(id, 'saving throw', raw.savingThrows, isStatName),
     spellcasting: isStatName(spellcasting) ? spellcasting : null,
+    spells: listOf(id, 'spell', raw.spells, isSpellId),
     features: listOf(id, 'feature', raw.features, isClassFeature),
   };
 }

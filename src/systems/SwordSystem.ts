@@ -18,11 +18,12 @@ type Swing = NonNullable<Entity['swordSwing']>;
 
 const struck: Entity[] = [];
 
-/** Applies melee hit to a target and shoves them back. */
-export function hitMob(mob: Entity, attacker: Entity, damage: number): void {
+/** Applies a hit to a target and shoves them back (`evenIfFlinching`: land even while it flinches from the last one). */
+export function hitMob(mob: Entity, attacker: Entity, damage: number, evenIfFlinching = false): void {
   const h = mob.health;
   if (!h || h.current <= 0) return;
-  if ((mob.freezeTime ?? 0) > 0) return;
+  // A flinching target shrugs off a second blow in the same instant — but not a spell's darts or blast.
+  if ((mob.freezeTime ?? 0) > 0 && !evenIfFlinching) return;
 
   mob.hurtTime = MOB_HURT_TICKS;
   mob.attackTime = 0;

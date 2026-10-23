@@ -6,6 +6,7 @@ import { GAME_HEIGHT, GAME_WIDTH } from '../render/Camera';
 import { claimPointer } from '../systems/InputSystem';
 import { currentLog } from '../systems/CombatLogSystem';
 import { text } from '../core/texts';
+import { spellName } from '../rules/Names';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
 
@@ -37,8 +38,9 @@ type Line = { text: string; color: number };
 function describe(entry: CombatLogEntry): Line {
   const kind = entry.actor === 'mob' ? entry.name : '';
   const name = isMobType(kind) ? text(`mob.${kind}` as const) : entry.name;
-  const vars = { name, total: entry.total, damage: entry.damage };
-  return { text: text(`combat_log.${entry.result}` as const, vars), color: entry.actor === 'mob' ? MOB_COLOR : PLAYER_COLOR };
+  const vars = { name, total: entry.total, damage: entry.damage, spell: entry.spell ? spellName(entry.spell) : '' };
+  const line = entry.spell ? text(`combat_log.spell.${entry.result}` as const, vars) : text(`combat_log.${entry.result}` as const, vars);
+  return { text: line, color: entry.actor === 'mob' ? MOB_COLOR : PLAYER_COLOR };
 }
 
 /**

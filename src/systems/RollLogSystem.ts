@@ -26,15 +26,18 @@ export function logLine(entity: Entity, line: string, tone: RollTone): void {
   if (log.length > MAX_ROLL_LINES) log.shift();
 }
 
+/** What an attack roll can come to. */
+export type AttackResult = Extract<BlowResult, 'hit' | 'miss' | 'crit' | 'fumble'>;
+
 /** How a blow went: a hit, a miss, a natural 20 (critical) or a natural 1 (critical miss). */
-export function blowResult(outcome: AttackOutcome): BlowResult {
+export function blowResult(outcome: AttackOutcome): AttackResult {
   if (outcome.critical) return 'crit';
   if (outcome.fumble) return 'fumble';
   return outcome.hit ? 'hit' : 'miss';
 }
 
 /** The second line: "MISS", "CRIT MISS", "7 dmg" or "CRIT! 14 dmg". */
-function resultLine(result: BlowResult, damage: number): string {
+function resultLine(result: AttackResult, damage: number): string {
   if (result === 'crit') return text('roll.crit_damage', { amount: damage });
   if (result === 'fumble') return text('roll.crit_miss');
   return result === 'hit' ? text('roll.damage', { amount: damage }) : text('roll.miss');
@@ -45,6 +48,21 @@ export function logAttack(attacker: Entity, outcome: AttackOutcome): void {
   const result = blowResult(outcome);
   logLine(attacker, text('roll.to_hit', { total: outcome.total }), result);
   logLine(attacker, resultLine(result, outcome.damage), result === 'hit' || result === 'crit' ? 'damage' : result);
+}
+
+/** A spell's damage that needed no attack roll (a magic missile's dart): "4 dmg" over the caster. */
+export function logSpellDamage(caster: Entity, damage: number): void {
+  logLine(caster, text('roll.damage', { amount: damage }), 'damage');
+}
+
+/** A saving throw against a spell, over the one who rolled it: "save 14 - half", "save 6 - FAIL". */
+export function logSave(target: Entity, total: number, saved: boolean): void {
+  logLine(target, text(saved ? 'roll.save_half' : 'roll.save_fail', { total }), saved ? 'miss' : 'damage');
+}
+
+/** Hit points given back, over the one healed: "+24 HP". */
+export function logHeal(target: Entity, amount: number): void {
+  logLine(target, text('roll.heal', { amount }), 'heal');
 }
 
 /** Ages every log; the top line goes once it has been up long enough, and the one under it lingers a little. */

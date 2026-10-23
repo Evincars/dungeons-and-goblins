@@ -7,6 +7,7 @@ import { MONSTERS } from '../rules/Monsters';
 import { UNARMORED_AC } from '../rules/ArmorTable';
 import { logAttack } from './RollLogSystem';
 import { recordBlow } from './CombatLogSystem';
+import type { SpellId } from '../rules/Spells';
 
 /**
  * Every blow in the game goes through here: the attack is rolled against the target's Armor Class, and the
@@ -21,13 +22,24 @@ export function armorClassOf(target: Entity): number {
 }
 
 /**
+ * The attack as rolled: whoever won the first strike (systems/InitiativeSystem.ts) uses it up on this one,
+ * with advantage (which cancels a disadvantage instead).
+ */
+function withFirstStrike(attack: AttackProfile, attacker: Entity | undefined): AttackProfile {
+  const initiative = attacker?.initiative;
+  if (!initiative?.firstStrike) return attack;
+  initiative.firstStrike = false;
+  return { ...attack, mode: attack.mode === 'disadvantage' ? 'normal' : 'advantage' };
+}
+
+/**
  * Rolls `attack` against `target`, showing the result over `logOn` (the attacker, or a projectile's shooter)
  * and writing it into the combat log.
  */
-export function strike(target: Entity, attack: AttackProfile, logOn: Entity | undefined): AttackOutcome {
-  const outcome = resolveAttack(attack, armorClassOf(target));
+export function strike(target: Entity, attack: AttackProfile, logOn: Entity | undefined, spell?: SpellId): AttackOutcome {
+  const outcome = resolveAttack(withFirstStrike(attack, logOn), armorClassOf(target));
   if (!logOn) return outcome;
   logAttack(logOn, outcome);
-  recordBlow(logOn, outcome);
+  recordBlow(logOn, outcome, spell);
   return outcome;
 }

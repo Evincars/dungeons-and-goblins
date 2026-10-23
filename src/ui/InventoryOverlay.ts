@@ -22,6 +22,8 @@ import { itemIcon, slotFor, slotLabel } from '../entities/Items';
 import { characterSheet } from '../rules/CharacterSheet';
 import type { CharacterSheet } from '../rules/CharacterSheet';
 import { formatDamage } from '../rules/Dice';
+import { heroName } from '../rules/Names';
+import { requestHitDie } from '../game/Rest';
 
 /** inventory.png, measured in its own pixels: the leather bag panel, the cloth gear panel, and its two tabs. */
 const ART = { w: 2752, h: 1536 };
@@ -36,7 +38,7 @@ const TAB_HOVER_ALPHA = 0.06;
 const TAB_ACTIVE_ALPHA = 0.12;
 const TAB_IDLE_DIM = 0.35;
 const TAB_UNDERLINE = 2;
-/** Where the title sits, above the bag panel. */
+/** Where the title (the hero's name) sits, above the bag panel. */
 const TITLE = { x: 80, y: 6 };
 /** The weight carried shows under the gold; it turns orange past this share of what can be carried. */
 const WEIGHT_ROW = 11;
@@ -143,7 +145,9 @@ export class InventoryOverlay {
   private dragging: ItemPlace | null = null;
   private readonly stopListening: () => void;
   /** What the screen shows, so it is redrawn only when the player's things change. */
-  private shown: { inventory: unknown; equipped: unknown; contents: number; gold: number; hp: number; maxHp: number } | null = null;
+  private shown: { inventory: unknown; equipped: unknown; contents: number; gold: number; hp: number; maxHp: number; progress: string } | null = null;
+  /** The title: the hero's name. */
+  private readonly title = new PixelLabel('', { color: THEME.title, scale: 2, shadow: true });
   private readonly weight = new PixelLabel('', { color: THEME.buttonText, align: 'right', shadow: true });
 
   constructor() {
@@ -176,10 +180,13 @@ export class InventoryOverlay {
     const equipped = player.equipped ?? {};
     const contents = contentsMark(inventory, equipped);
     const s = this.shown;
-    const { gold } = player.playerStats;
+    const { gold, level, exp, hitDice } = player.playerStats;
     const { current: hp, max: maxHp } = player.health;
-    if (s && s.inventory === inventory && s.equipped === equipped && s.contents === contents && s.gold === gold && s.hp === hp && s.maxHp === maxHp) return;
-    this.shown = { inventory, equipped, contents, gold, hp, maxHp };
+    // Level, experience and hit dice change rarely; one key covers all three.
+    const progress = `${level}/${exp}/${hitDice}/${player.playerName ?? ''}`;
+    const same = s && s.inventory === inventory && s.equipped === equipped && s.contents === contents && s.gold === gold;
+    if (same && s.hp === hp && s.maxHp === maxHp && s.progress === progress) return;
+    this.shown = { inventory, equipped, contents, gold, hp, maxHp, progress };
     this.refresh(player);
   }
 
@@ -194,7 +201,7 @@ export class InventoryOverlay {
     const art = new Sprite(getTexture('inventory_art'));
     art.scale.set(K);
     this.root.addChild(art);
-    const title = new PixelLabel(text('inventory.title'), { color: THEME.title, scale: 2, shadow: true });
+    const title = this.title;
     title.position.set(TITLE.x * K, TITLE.y);
     this.gold.position.set((BAG_AREA.x + BAG_AREA.w) * K, TITLE.y);
     this.weight.position.set((BAG_AREA.x + BAG_AREA.w) * K, TITLE.y + WEIGHT_ROW);
@@ -389,6 +396,7 @@ export class InventoryOverlay {
     }
     const sheet = characterSheet(player);
     this.sheet = sheet;
+    this.title.text = player.playerName || heroName(sheet.heroClass.id);
     this.abilities?.set(sheet);
     for (const { field, def } of this.fields) field.set(def.value(sheet));
     this.info?.set(sheet);
@@ -414,6 +422,12 @@ export class InventoryOverlay {
   private squareAt(e: FederatedPointerEvent, forDrop = false): Square | undefined {
     const p = this.root.toLocal(e.global);
     return this.squares.find((s) => (!s.page || s.page.visible) && (forDrop ? s.zone : s.box).contains(p.x, p.y));
+  }
+
+  /** Whether the pointer is on the sheet's hit dice (a click spends one). */
+  private onHitDice(e: FederatedPointerEvent): boolean {
+    const p = this.root.toLocal(e.global);
+    return this.activeTab === 0 && !!this.info?.hitDiceAt(p.x, p.y);
   }
 
   /** Whether the pointer is over the Gear page (anywhere on it). */
@@ -449,6 +463,12 @@ export class InventoryOverlay {
 
   private startDrag(e: FederatedPointerEvent): void {
     const player = localPlayer();
+    if (player && this.onHitDice(e)) {
+      requestHitDie(player);
+      // Its tooltip counted the die just spent; it comes back up to date at the next move.
+      this.infoTip.hide();
+      return;
+    }
     const square = this.squareAt(e);
     if (!player || !square || !this.itemIn(player, square.place)) return;
     if (this.doubleClicked(square.place, e)) {

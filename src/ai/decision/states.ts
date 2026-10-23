@@ -76,7 +76,7 @@ function noteSighting(mob: Mob, player: Player, tick: number): void {
 }
 
 /** The player the enemy is after, while it is still a valid target. */
-function huntedPlayer(mob: Mob): Player | undefined {
+export function huntedPlayer(mob: Mob): Player | undefined {
   const target = mob.ai.targetId === undefined ? undefined : world.entity(mob.ai.targetId);
   return isPlayer(target) && isActivePlayer(target) ? target : undefined;
 }

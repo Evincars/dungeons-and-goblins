@@ -1,5 +1,5 @@
-import { isEquipSlot, isGearKind, isItemType, isPlayerSlot, isStatName, PLAYER_SLOTS, STAT_NAMES } from '../world';
-import type { BagSquare, EquipSlot, InventoryItem, PlayerInput, PlayerSlot } from '../world';
+import { isEquipSlot, isGearKind, isItemType, isPlayerSlot, isRestKind, isStatName, PLAYER_SLOTS, QUICK_SLOTS, STAT_NAMES } from '../world';
+import type { BagSquare, EquipSlot, InventoryItem, PlayerInput, PlayerSlot, RestKind } from '../world';
 import type { SfxName } from '../audio/SoundPlayer';
 import { cleanName } from '../game/Settings';
 import { ValidationError } from '../core/errors';
@@ -21,7 +21,12 @@ export type RosterEntry = { slot: PlayerSlot; name: string };
 /** Things a guest asks the host to do for its character, which the host checks and carries out. */
 export type GuestCommand =
   | { kind: 'buy'; index: number }
-  | { kind: 'loadout'; inventory: BagSquare[]; equipped: Partial<Record<EquipSlot, InventoryItem>> };
+  | { kind: 'loadout'; inventory: BagSquare[]; equipped: Partial<Record<EquipSlot, InventoryItem>> }
+  /** Spend one hit die on healing. */
+  | { kind: 'hit_die' }
+  /** Ask the party for a rest, or answer the rest someone else asked for. */
+  | { kind: 'rest'; rest: RestKind }
+  | { kind: 'rest_answer'; agree: boolean };
 
 export type Message =
   /** `heroClass`: the class the guest picked (the host checks it). */
@@ -73,7 +78,8 @@ export function validInput(value: unknown): value is InputFrame {
   if (!validPoint(value.aim, MAX_AIM)) return false;
   const i = value.input;
   if (!isRecord(i) || !BUTTONS.every((k) => typeof i[k] === 'boolean') || !validIntents(i.intents)) return false;
-  return isFiniteNumber(i.mouseX) && isFiniteNumber(i.mouseY) && (i.keyAim === null || validPoint(i.keyAim, 1));
+  const slotOk = Number.isInteger(i.spellSlot) && Number(i.spellSlot) >= 0 && Number(i.spellSlot) < QUICK_SLOTS;
+  return slotOk && isFiniteNumber(i.mouseX) && isFiniteNumber(i.mouseY) && (i.keyAim === null || validPoint(i.keyAim, 1));
 }
 
 export function validRoster(value: unknown): value is RosterEntry[] {
@@ -127,6 +133,9 @@ function validEquipped(value: unknown): value is Partial<Record<EquipSlot, Inven
 export function validCommand(value: unknown): value is GuestCommand {
   if (!isRecord(value)) return false;
   if (value.kind === 'buy') return Number.isInteger(value.index) && Number(value.index) >= 0 && Number(value.index) < MAX_ITEMS;
+  if (value.kind === 'hit_die') return true;
+  if (value.kind === 'rest') return isRestKind(value.rest);
+  if (value.kind === 'rest_answer') return typeof value.agree === 'boolean';
   if (value.kind !== 'loadout' || !Array.isArray(value.inventory) || value.inventory.length > MAX_ITEMS) return false;
   return value.inventory.every(isBagSquare) && validEquipped(value.equipped);
 }

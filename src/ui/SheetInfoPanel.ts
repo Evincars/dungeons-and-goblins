@@ -6,7 +6,7 @@ import { formatModifier } from '../rules/Dice';
 import { statShort } from '../entities/Items';
 import { dndClassName, heroName } from '../rules/Names';
 import type { TipTopic } from './InfoTooltip';
-import { hitDiceTopic, initiativeTopic, perceptionTopic, proficiencyBonusTopic, savesTopic, speedTopic, spellTopic } from './SheetTopics';
+import { experienceTopic, hitDiceTopic, initiativeTopic, perceptionTopic, proficiencyBonusTopic, savesTopic, speedTopic, spellTopic } from './SheetTopics';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
 
@@ -15,25 +15,32 @@ const LINE_H = 10;
 const SAVE_SCALE = 0.75;
 const HIT_PAD = 1;
 
-/** One fact on the sheet: what it reads for this hero, and its tooltip. */
-type InfoDef = { line: (s: CharacterSheet) => string; topic: (s: CharacterSheet) => TipTopic };
+function experienceLine(s: CharacterSheet): string {
+  const { xp, next } = s.experience;
+  return next === null ? text('sheet.info.xp_max', { xp }) : text('sheet.info.xp', { xp, next });
+}
+
+/** One fact on the sheet: what it reads for this hero, its tooltip, and whether a click spends a hit die. */
+type InfoDef = { line: (s: CharacterSheet) => string; topic: (s: CharacterSheet) => TipTopic; spendsHitDie?: true };
 type Info = { label: PixelLabel; def: InfoDef; hit: Rectangle };
 
-/** Two facts a row: proficiency and initiative, speed and passive Perception, hit dice and spellcasting. */
+/** Two facts a row: proficiency and initiative, speed and passive Perception, hit dice and spellcasting, then experience. */
 const INFO: readonly InfoDef[] = [
   { line: (s) => text('sheet.info.proficiency', { value: formatModifier(s.proficiency) }), topic: proficiencyBonusTopic },
   { line: (s) => text('sheet.info.initiative', { value: formatModifier(s.initiative) }), topic: initiativeTopic },
   { line: (s) => text('sheet.info.speed', { value: s.speed }), topic: speedTopic },
   { line: (s) => text('sheet.info.passive', { value: s.passivePerception }), topic: perceptionTopic },
-  { line: (s) => text('sheet.info.hit_dice', { count: s.level, die: s.heroClass.hitDie }), topic: hitDiceTopic },
+  { line: (s) => text('sheet.info.hit_dice', { ...s.hitDice, die: s.heroClass.hitDie }), topic: hitDiceTopic, spendsHitDie: true },
   { line: (s) => text('sheet.info.spell', { attack: formatModifier(s.spell.attack), dc: s.spell.dc }), topic: spellTopic },
+  { line: (s) => experienceLine(s), topic: experienceTopic },
 ];
 
 /**
  * The rest of the character sheet a player needs, under the Armor Class, hit points and damage: who the hero
- * is (name, class, level), the proficiency bonus, initiative, speed, passive Perception, hit dice and spell
- * attack and save DC, then the six saving throws (the class's two trained ones in gold) lined up under the
- * abilities. Each shows what it means under the pointer.
+ * is (name, class, level), the proficiency bonus, initiative, speed, passive Perception, hit dice (gold while
+ * there are some to spend: a click spends one), spell attack and save DC and experience, then the six saving
+ * throws (the class's two trained ones in gold) lined up under the abilities. Each shows what it means under
+ * the pointer.
  */
 export class SheetInfoPanel {
   readonly view = new Container();
@@ -73,12 +80,20 @@ export class SheetInfoPanel {
 
   set(sheet: CharacterSheet): void {
     this.header.text = text('sheet.info.header', { hero: heroName(sheet.heroClass.id), class: dndClassName(sheet.heroClass.dndClass), level: sheet.level });
-    for (const info of this.infos) info.label.text = info.def.line(sheet);
+    for (const info of this.infos) {
+      info.label.text = info.def.line(sheet);
+      info.label.fill = info.def.spendsHitDie && sheet.hitDice.left > 0 ? THEME.title : THEME.text;
+    }
     STAT_NAMES.forEach((stat, i) => {
       const save = sheet.saves[stat];
       this.saves[i].text = text('sheet.info.save', { stat: statShort(stat), bonus: formatModifier(save.bonus) });
       this.saves[i].fill = save.proficient ? THEME.title : THEME.muted;
     });
+  }
+
+  /** Whether the point is on the hit dice, which a click spends. */
+  hitDiceAt(x: number, y: number): boolean {
+    return this.infos.some((info) => info.def.spendsHitDie && info.hit.contains(x, y));
   }
 
   /** The tooltip of the fact under the point, if any. */

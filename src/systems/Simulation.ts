@@ -36,6 +36,8 @@ import { updateWeaponSwap } from './WeaponSwapSystem';
 import { updateLevers } from './LeverSystem';
 import { updateRollLogs } from './RollLogSystem';
 import { updateRollTexts } from './RollTextSystem';
+import { updateInitiative } from './InitiativeSystem';
+import { updateRest } from '../game/Rest';
 
 export type FrameContext = {
   level: Level;
@@ -59,6 +61,7 @@ export const SIMULATION: readonly System[] = [
   () => updateInventory(),
   () => updateWeaponSwap(),
   ({ level, tick }) => updateAI(level, tick),
+  () => updateInitiative(),
   () => updateArrows(),
   () => updateSword(),
   ({ level }) => updateSpells(level),
@@ -82,6 +85,7 @@ export const SIMULATION: readonly System[] = [
   ({ level }) => updateDoors(level),
   () => updateExit(),
   () => updateShop(),
+  ({ level }) => updateRest(level),
   (ctx) => { if (ctx.level.tilesDirty) ctx.rebuildTerrain(); },
 ];
 

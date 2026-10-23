@@ -7,6 +7,8 @@ import type { ItemBase } from './rules/Equipment';
 import type { HeroClassId } from './rules/Classes';
 import type { WeaponBase } from './rules/WeaponTable';
 import type { AttackProfile } from './rules/Combat';
+import type { SpellId } from './rules/Spells';
+import type { EffectColour, EffectShape } from './assets/Effects';
 
 export const enum Team { Neutral = 0, Player = 1 }
 
@@ -69,12 +71,15 @@ export type InventoryItem = {
 export type BagSquare = InventoryItem | null;
 
 /** How a line of the roll log reads: a hit, a miss, a natural 20 or 1, or the damage dealt. */
-export const ROLL_TONES = ['hit', 'miss', 'crit', 'fumble', 'damage'] as const;
+export const ROLL_TONES = ['hit', 'miss', 'crit', 'fumble', 'damage', 'heal'] as const;
 export type RollTone = (typeof ROLL_TONES)[number];
 
 export function isRollTone(value: unknown): value is RollTone {
   return ROLL_TONES.some((tone) => tone === value);
 }
+
+/** An effect from the library (assets/Effects.ts): its shape, colour and size. */
+export type SpellEffect = { shape: EffectShape; colour: EffectColour; scale: number };
 
 /** The strip a projectile bursts in when it strikes (a caster's own spell art): its sheet, frames and size. */
 export type ProjectileBurst = { sheet: string; first: number; count: number; frameTime: number; scale: number };
@@ -82,8 +87,11 @@ export type ProjectileBurst = { sheet: string; first: number; count: number; fra
 /** One line over a fighter's head ("17 to hit", "7 dmg"), and the ticks it has been shown. */
 export type RollLine = { text: string; tone: RollTone; age: number };
 
-/** How a blow went: a hit, a miss, a natural 20 or a natural 1. */
-export const BLOW_RESULTS = ['hit', 'miss', 'crit', 'fumble'] as const;
+/**
+ * How a blow went: a hit, a miss, a natural 20 or a natural 1; for spells also one that needs no roll (magic
+ * missile, a failed save: `auto`), a save that halved it (`saved`) and a healing (`heal`).
+ */
+export const BLOW_RESULTS = ['hit', 'miss', 'crit', 'fumble', 'auto', 'saved', 'heal'] as const;
 export type BlowResult = (typeof BLOW_RESULTS)[number];
 
 export function isBlowResult(value: unknown): value is BlowResult {
@@ -94,7 +102,31 @@ export function isBlowResult(value: unknown): value is BlowResult {
  * One blow in the combat log: who struck (a player by name, an enemy by kind), what they rolled to hit, how it
  * went and the damage. `seq` counts up, so a screen shows each entry once.
  */
-export type CombatLogEntry = { seq: number; actor: 'player' | 'mob'; name: string; total: number; result: BlowResult; damage: number };
+export type CombatLogEntry = { seq: number; actor: 'player' | 'mob'; name: string; total: number; result: BlowResult; damage: number; spell?: SpellId };
+
+/** The quick bar's squares (keys 1–5): the spells a hero casts with right click / R. */
+export const QUICK_SLOTS = 5;
+
+/** A short rest (spells recovered, out of the enemies' sight) or a long one (all healed, in the safe room). */
+export const REST_KINDS = ['short', 'long'] as const;
+export type RestKind = (typeof REST_KINDS)[number];
+
+export function isRestKind(value: unknown): value is RestKind {
+  return REST_KINDS.some((kind) => kind === value);
+}
+
+/** What the screen says about a rest: it was taken, asked for, turned down, or isn't possible now. */
+export const REST_NOTICES = ['short_done', 'long_done', 'asked', 'declined', 'timeout', 'hunted', 'unsafe', 'no_short_left', 'fallen'] as const;
+export type RestNotice = (typeof REST_NOTICES)[number];
+
+export function isRestNotice(value: unknown): value is RestNotice {
+  return REST_NOTICES.some((notice) => notice === value);
+}
+
+/** A rest asked for in co-op: by whom, who has agreed so far (the asker included), and ticks left to answer. */
+export type RestVote = { kind: RestKind; by: PlayerSlot; agreed: PlayerSlot[]; ticks: number };
+/** The notice over the screen: which, about whom and which rest, and the ticks it has shown. */
+export type RestNoticeShown = { notice: RestNotice; name: string; kind: RestKind; age: number };
 
 /** Who controls a player character: the host, or one of up to three guests in a co-op room. */
 export const PLAYER_SLOTS = ['host', 'p2', 'p3', 'p4'] as const;
@@ -297,25 +329,36 @@ export type Entity = {
     mouseY: number;
     mouseAiming: boolean;
     keyAim: { x: number; y: number } | null;
-    /** One-shot requests raised for a single tick by key presses. */
-    /** One-tick commands; `swap` trades the 1st and 2nd weapon. */
+    /** The quick-bar square picked (keys 1–5): the spell right click / R casts. */
+    spellSlot: number;
+    /** One-tick commands raised by key presses; `swap` trades the 1st and 2nd weapon. */
     intents: { use: boolean; attack: boolean; cast: boolean; inventoryOpen: boolean; swap: boolean };
   };
   /** Breadcrumbs of where this player walked, for enemies to follow. */
   trail?: Trail;
 
   // --- spellcasting ---
-  /** Active cast: ticks elapsed, aim locked at the start, whether the bolt has left the hand. */
-  casting?: { ticks: number; dirX: number; dirY: number; released: boolean };
+  /** A spell being cast: its progress, the way it was aimed and the point it was aimed at, and which spell. */
+  casting?: { ticks: number; dirX: number; dirY: number; released: boolean; spell?: SpellId; targetX?: number; targetY?: number };
+  /** Ticks until each of the hero's spells (in their class's order) can be cast again (0: ready). */
+  spellbook?: { recovery: number[] };
   castCooldown?: number;
+  /**
+   * The initiative this fighter rolled when a fight broke out (d20 + DEX), and whether they won it: the
+   * winner's next attack has advantage. A player's lasts `ticks` more (each new foe starts it again).
+   */
+  initiative?: { total: number; firstStrike: boolean; ticks: number };
 
   // --- projectiles ---
-  /** `arrow`: an arrow, which glints where it strikes, where a spell bolt bursts in dirt. */
   /**
-   * `attack`: the shooter's roll to hit and damage (rolled against the AC of whatever it strikes); `owner`:
+   * `arrow`: an arrow, which glints where it strikes. `attack`: the shooter's roll to hit and damage (rolled against the AC of whatever it strikes); `owner`:
    * the shooter's entity id, whose head shows the roll.
    */
-  projectile?: { life: number; team: number; arrow?: boolean; attack: AttackProfile; owner?: number; burst?: ProjectileBurst };
+  projectile?: {
+    life: number; team: number; arrow?: boolean; attack: AttackProfile; owner?: number; burst?: ProjectileBurst;
+    /** The spell it carries (for the combat log), whether it always hits (magic missile), and the effect it strikes with. */
+    spell?: SpellId; autoHit?: boolean; impact?: SpellEffect;
+  };
 
   /** Point light this entity emits (spell bolts, …). */
   glow?: {
@@ -330,6 +373,8 @@ export type Entity = {
     exp: number;
     gold: number;
     swordTier: number;
+    /** Hit dice left to spend on healing (a level's worth at most; a long rest gives half back). */
+    hitDice: number;
     sprinting: boolean;
     sprint: number;
     maxSprint: number;
@@ -444,6 +489,13 @@ export type Entity = {
   gate?: { lift: number };
   /** The lever by the safe room's door: pulled opens the way into the dungeon. */
   lever?: { pulled: boolean };
+
+  // --- resting (one entity a level, sent to guests) ---
+  /**
+   * The party's rests: short rests left before a long rest is needed, a rest one player asked for that the
+   * others must agree to, and the last word on it shown over the screen.
+   */
+  restState?: { shortRestsLeft: number; vote: RestVote | null; notice: RestNoticeShown | null };
 
   // --- lifecycle ---
   removed?: true;

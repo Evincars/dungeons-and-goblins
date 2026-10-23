@@ -1,5 +1,6 @@
 import { world, Team } from '../world';
-import type { Entity, ProjectileBurst } from '../world';
+import type { Entity, ProjectileBurst, SpellEffect } from '../world';
+import type { SpellId } from '../rules/Spells';
 import { characterDef, clipSheetKey } from '../characters/Characters';
 import type { BoltDef, CharacterDef } from '../characters/CharacterDef';
 import type { AttackProfile } from '../rules/Combat';
@@ -13,20 +14,25 @@ export const AIM_HEIGHT = 22;
  * id. A caster with spell art of their own (`character`'s bolt: Vesper's fireball, Xanthia's light orb) flies
  * it, turned the way it goes, and bursts in its frames; anyone else casts the plain bolt.
  */
-export function createSpellBolt(x: number, y: number, dx: number, dy: number, attack: AttackProfile, owner?: number, character?: string): Entity {
+export function createSpellBolt(
+  x: number, y: number, dx: number, dy: number, attack: AttackProfile, owner?: number, character?: string, carries: SpellCarry = {},
+): Entity {
   const bolt = character ? characterDef(character).bolt : undefined;
   const def = character ? characterDef(character) : undefined;
   const flight: Partial<Entity> = bolt && def ? boltArt(def, bolt, dx, dy) : { visual: { sheet: 'spell_bolt' } };
   return world.add({
     position: { x: x + dx * SPELL_STATS.boltSpawnOffset, y: y + dy * SPELL_STATS.boltSpawnOffset },
     velocity: { x: dx * SPELL_STATS.boltSpeed, y: dy * SPELL_STATS.boltSpeed },
-    projectile: { life: SPELL_STATS.boltLife, team: Team.Player, attack, owner, burst: bolt && def ? boltBurst(def, bolt) : undefined },
+    projectile: { life: SPELL_STATS.boltLife, team: Team.Player, attack, owner, burst: bolt && def ? boltBurst(def, bolt) : undefined, ...carries },
     ...flight,
     // Bolts travel at hand height above the ground they're tracked on.
     yOffset: AIM_HEIGHT,
     glow: { radius: SPELL_STATS.boltGlow },
   });
 }
+
+/** What a spell's projectile carries: the spell, whether it always hits, and the effect it strikes with. */
+export type SpellCarry = { spell?: SpellId; autoHit?: boolean; impact?: SpellEffect };
 
 /** A caster's own bolt: its flight frames looping, turned along (dx, dy). */
 function boltArt(def: CharacterDef, bolt: BoltDef, dx: number, dy: number): Partial<Entity> {

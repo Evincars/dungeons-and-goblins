@@ -8,7 +8,12 @@ import type { SfxName } from '../audio/SoundPlayer';
 import { destroyAttachments } from './BarSystem';
 import { stateDuration } from '../characters/Characters';
 import { startDying } from './RespawnSystem';
-import { xpForLevel } from '../game/Progress';
+import { levelForXp } from '../game/Progress';
+import { MONSTERS } from '../rules/Monsters';
+import { characterSheet } from '../rules/CharacterSheet';
+import { hitPointsPerLevel } from '../rules/HitPoints';
+import { logLine } from './RollLogSystem';
+import { text } from '../core/texts';
 
 const DEATH_SOUNDS = {
   goblin: 'enemy_death',
@@ -25,31 +30,39 @@ const DEATH_SOUNDS = {
 /** Ticks a dead mob stays on its last death frame before it is cleared away. */
 const CORPSE_LINGER = 60;
 
-/** A destroyed nest is worth this many times its own death points. */
+/** A destroyed nest is worth this many times its own death points in experience. */
 const NEST_XP_FACTOR = 3;
-/** Each level up raises max health by this much (and heals fully). */
-const HEALTH_PER_LEVEL = 5;
 
 const mortal = world.with('health', 'position');
 const earners = world.with('playerStats', 'health');
 type Earner = (typeof earners)['entities'][number];
 
+/**
+ * A level gained: hit points by the class's hit die (at its average) plus CON, one more hit die to spend,
+ * and a full heal; the proficiency bonus and spells follow from the new level.
+ */
 function levelUp(player: Earner): void {
   const stats = player.playerStats;
-  stats.exp -= xpForLevel(stats.level);
   stats.level++;
-  player.health.max += HEALTH_PER_LEVEL;
+  stats.hitDice++;
+  const sheet = characterSheet(player);
+  player.health.max += hitPointsPerLevel(sheet.heroClass, sheet.modifiers.constitution);
   player.health.current = player.health.max;
+  logLine(player, text('roll.level_up', { level: stats.level }), 'crit');
   sound.playSound('level_up');
 }
 
+/** The party shares a kill's experience, as at the table: each living hero gets an equal part. */
 function awardExperience(points: number): void {
-  if (points <= 0) return;
+  let living = 0;
+  for (const player of earners) if (player.health.current > 0) living++;
+  if (points <= 0 || living === 0) return;
+  const share = Math.floor(points / living);
   for (const player of earners) {
     if (player.health.current <= 0) continue;
-    player.playerStats.exp += points;
+    player.playerStats.exp += share;
     player.playerStats.kills++;
-    while (player.playerStats.exp >= xpForLevel(player.playerStats.level)) levelUp(player);
+    while (player.playerStats.level < levelForXp(player.playerStats.exp)) levelUp(player);
   }
 }
 
@@ -75,7 +88,7 @@ function die(entity: Entity, pos: { x: number; y: number }): void {
   } else if (entity.ai) {
     sound.playSound(entity.mobType ? DEATH_SOUNDS[entity.mobType] : 'enemy_death', pos.x, pos.y);
     createDeathFx(pos.x, pos.y);
-    awardExperience(deathPts);
+    awardExperience(entity.mobType ? MONSTERS[entity.mobType].xp : deathPts);
     dropLoot(pos.x, pos.y, Math.round(deathPts * (1 + bestLootBonus())));
   }
 }

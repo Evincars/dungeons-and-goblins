@@ -8,6 +8,7 @@ import { REACH } from '../systems/TargetSystem';
 import { fitsSlot, statTotals } from '../entities/Items';
 import { isEquipSlot } from '../world';
 import { BASE_SPRINT } from '../entities/PlayerFactory';
+import { queueRestCommand, spendHitDie } from './Rest';
 
 /**
  * What players do from the shop and inventory panels. In a lone game or on the host it happens at once;
@@ -216,6 +217,14 @@ export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): voi
   if (command.kind === 'buy') {
     const item = keeperNear(player)?.shopNpc?.items[command.index];
     if (item) buy(player, item);
+    return;
+  }
+  if (command.kind === 'hit_die') {
+    spendHitDie(player);
+    return;
+  }
+  if (command.kind === 'rest' || command.kind === 'rest_answer') {
+    queueRestCommand(slot, command);
     return;
   }
   const current: Loadout = { inventory: player.inventory ?? [], equipped: player.equipped ?? {} };

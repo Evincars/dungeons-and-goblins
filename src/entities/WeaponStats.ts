@@ -1,5 +1,3 @@
-import { dice } from '../rules/Dice';
-import type { Dice } from '../rules/Dice';
 
 /**
  * Player weapon tuning: the sword swing, the spell bolt and arrows. What a blow deals comes from the D&D
@@ -30,13 +28,14 @@ export const SWORD_STATS = {
 } as const satisfies SwordStats;
 
 export type SpellStats = {
-  /** The cast clip is 5 frames × 5 ticks; the bolt leaves the hand on its 4th frame. */
+  /**
+   * The cast clip is 5 frames × 5 ticks; the spell goes off on its 4th frame. `cooldown`: ticks before the
+   * next cast of any spell (each spell's own recovery is in src/data/spells.json).
+   */
   castTicks: number;
   releaseTick: number;
   cooldown: number;
   boltSpeed: number;
-  /** Fire Bolt's damage (a spell attack: d20 + proficiency + INT to hit). */
-  boltDice: Dice;
   /** Ticks a bolt flies before fizzling out. */
   boltLife: number;
   /** Bolts start this far out from the caster's feet. */
@@ -46,8 +45,6 @@ export type SpellStats = {
   /** How far beyond a target's body a bolt still hits it, across and up the screen. */
   reachX: number;
   reachY: number;
-  /** Dust puffs left where a bolt bursts. */
-  burstPuffs: number;
 };
 
 export const SPELL_STATS = {
@@ -55,13 +52,11 @@ export const SPELL_STATS = {
   releaseTick: 15,
   cooldown: 45,
   boltSpeed: 4.5,
-  boltDice: dice(1, 10),
   boltLife: 80,
   boltSpawnOffset: 9,
   boltGlow: 56,
   reachX: 6,
   reachY: 14,
-  burstPuffs: 3,
 } as const satisfies SpellStats;
 
 /** Reach of a swing with a sword of the given tier. */

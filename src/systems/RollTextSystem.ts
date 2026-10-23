@@ -22,13 +22,14 @@ const FADE_TICKS = 16;
 /** Above everything in the world but the fog. */
 const ROLL_Z = 9e6;
 
-/** Hits read white, misses grey, natural 20s gold, natural 1s dark red, damage red. */
+/** Hits read white, misses grey, natural 20s gold, natural 1s dark red, damage red, healing green. */
 const TONE_COLORS = {
   hit: 0xffffff,
   miss: 0x9aa2ac,
   crit: 0xffd040,
   fumble: 0xc04040,
   damage: 0xff6b6b,
+  heal: 0x7fe07f,
 } as const satisfies Record<RollTone, number>;
 
 type View = { container: Container; labels: PixelLabel[] };

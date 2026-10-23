@@ -837,7 +837,7 @@ function inputFrame(sequence = 1) {
     aim: { x: 100, y: 50 },
     input: {
       up: true, down: false, left: false, right: false, attack: false, use: false, sprint: false,
-      mouseX: 10, mouseY: 20, mouseAiming: true, keyAim: null, intents: noIntents(),
+      mouseX: 10, mouseY: 20, mouseAiming: true, keyAim: null, spellSlot: 0, intents: noIntents(),
     },
   };
 }
@@ -859,6 +859,15 @@ test('guest controls, commands, rosters and level starts are checked before they
   assert.equal(validInput(broken), false);
   assert.equal(validInput({ ...inputFrame(), aim: { x: Infinity, y: 0 } }), false);
 
+  const slotted = inputFrame();
+  slotted.input.spellSlot = 5;
+  assert.equal(validInput(slotted), false, 'the quick bar has five squares');
+  slotted.input.spellSlot = 4;
+  assert.equal(validInput(slotted), true);
+  assert.equal(validCommand({ kind: 'hit_die' }), true);
+  assert.equal(validCommand({ kind: 'rest', rest: 'long' }), true);
+  assert.equal(validCommand({ kind: 'rest', rest: 'nap' }), false);
+  assert.equal(validCommand({ kind: 'rest_answer', agree: 'yes' }), false);
   assert.equal(validCommand({ kind: 'buy', index: 2 }), true);
   assert.equal(validCommand({ kind: 'buy', index: 1.5 }), false);
   const helm = SHOP_ITEMS.find((item) => item.gear === 'head');
@@ -1482,4 +1491,259 @@ test('everyone is proficient with an unarmed strike, even a wizard', async () =>
   assert.equal(sheet.attack.base, 'unarmed');
   assert.equal(sheet.attack.proficient, true);
   assert.equal(sheet.attack.attackBonus, 2 - 1, 'proficiency +2, STR -1');
+});
+
+// ── Spells, initiative, hit dice, rests and experience ───────────────────────
+
+const { updateSpells } = await load('systems/SpellSystem');
+const { SPELLS } = await load('rules/Spells');
+const { SPELL_STATS } = await load('entities/WeaponStats');
+const { updateDeath } = await load('systems/DeathSystem');
+const { updateInitiative } = await load('systems/InitiativeSystem');
+const Strike = await load('systems/Strike');
+const Rest = await load('game/Rest');
+const { levelForXp, nextLevelXp } = await load('game/Progress');
+const { currentLog } = await load('systems/CombatLogSystem');
+
+/** A caster aiming east at a point, with the quick-bar square picked. */
+function casterAt(tx, ty, heroClass, slot) {
+  const caster = playerAt(tx, ty, heroClass);
+  caster.aimVector = { x: 1, y: 0 };
+  world.addComponent(caster, 'aimWorld', { x: caster.position.x + 48, y: caster.position.y });
+  caster.playerInput.spellSlot = slot;
+  return caster;
+}
+
+/** Presses cast for one tick, then lets the spell play out (and its bolts fly) for `ticks`. */
+function cast(level, caster, ticks = 90) {
+  caster.playerInput.intents.cast = true;
+  for (let i = 0; i < ticks; i++) {
+    beginPerception();
+    updateSpells(level);
+    caster.playerInput.intents.cast = false;
+  }
+}
+
+const rollLines = (entity) => (entity.rollLog ?? []).map((line) => line.text);
+
+test('a bolt spell is rolled to hit and strikes with its effect; the spell then recovers before it can be cast again', () => {
+  const level = arena(12, 6);
+  const vesper = casterAt(2, 2, 'vesper', 0);
+  const orc = mobAt(level, 'orc', 6, 2);
+  const before = orc.health.current;
+  cast(level, vesper, 1);
+  assert.equal(vesper.spellbook.recovery[0], SPELLS.fire_bolt.recoveryTicks, 'recovering from the moment it is cast');
+  cast(level, vesper, SPELLS.fire_bolt.recoveryTicks);
+  assert.ok(orc.health.current < before, 'Fire Bolt hit the orc');
+  const entry = currentLog().entries.at(-1);
+  assert.equal(entry.spell, 'fire_bolt');
+  assert.equal(entry.result, 'hit');
+  assert.equal(vesper.spellbook.recovery[0], 0, 'recovered in its own time');
+});
+
+test('magic missile always hits with its three darts; cast again too soon, it says how long it still needs', () => {
+  const level = arena(12, 6);
+  const vesper = casterAt(2, 2, 'vesper', 2);
+  const orc = mobAt(level, 'orc', 5, 2);
+  useDieRoller((sides) => (sides === 20 ? 1 : sides));
+  cast(level, vesper);
+  const darts = currentLog().entries.filter((e) => e.spell === 'magic_missile');
+  assert.equal(darts.length, 3, 'three darts, though every d20 would have been a 1');
+  assert.ok(darts.every((e) => e.result === 'auto' && e.damage === 5), '1d4+1 each');
+  assert.ok(orc.health.current < orc.health.max);
+  cast(level, vesper, SPELL_STATS.cooldown + 2);
+  assert.equal(vesper.casting, undefined, 'nothing cast while it recovers');
+  assert.ok(rollLines(vesper).some((line) => line.startsWith('READY IN')), rollLines(vesper).join('|'));
+});
+
+test('a burst makes every foe in it save against the spell DC: half damage on a success, nothing beyond its reach', () => {
+  const level = arena(14, 6);
+  const xanthia = casterAt(3, 2, 'xanthia', 2);
+  const near = mobAt(level, 'orc', 4, 2);
+  const far = mobAt(level, 'orc', 10, 2);
+  cast(level, xanthia, SPELL_STATS.castTicks + 1);
+  // Loaded dice: the orc's save is 19 + CON against DC 12, made; 2d8 at most is 16, halved to 8.
+  const saved = currentLog().entries.filter((e) => e.spell === 'thunderwave');
+  assert.equal(saved.length, 1, 'only the orc within the wave');
+  assert.equal(saved[0].result, 'saved');
+  assert.equal(saved[0].damage, 8);
+  assert.equal(near.health.current, near.health.max - 8);
+  assert.equal(far.health.current, far.health.max);
+  useDieRoller((sides) => (sides === 20 ? 2 : sides));
+  for (let i = 0; i < SPELLS.thunderwave.recoveryTicks; i++) updateSpells(level);
+  cast(level, xanthia, SPELL_STATS.castTicks + 1);
+  const failed = currentLog().entries.at(-1);
+  assert.equal(failed.result, 'auto', 'a failed save takes it all');
+  assert.equal(failed.damage, 16);
+  assert.equal(near.health.current, 0);
+});
+
+test('a healing spell is learnt at its level and mends the caster by the dice + casting ability', () => {
+  const level = arena(10, 6);
+  const malthus = casterAt(2, 2, 'malthus', 1);
+  malthus.health.current = 10;
+  cast(level, malthus);
+  assert.equal(malthus.health.current, 10, 'Cure Wounds is a level 2 spell');
+  assert.ok(rollLines(malthus).includes('LEVEL 2'));
+  malthus.playerStats.level = 2;
+  malthus.castCooldown = 0;
+  cast(level, malthus);
+  // 1d8 (loaded: 8) + CHA +2, at five hit points a tabletop point.
+  assert.equal(malthus.health.current, 10 + 5 * (8 + 2));
+  assert.equal(currentLog().entries.at(-1).result, 'heal');
+  const empty = casterAt(2, 4, 'barbarian', 0);
+  cast(level, empty);
+  assert.equal(empty.casting, undefined, 'a hero without spells casts nothing');
+});
+
+test('initiative: an enemy that engages and its hero each roll d20 + DEX; the winner gets the first strike, with advantage', () => {
+  const level = arena(12, 6);
+  const hero = playerAt(2, 2);
+  const goblin = mobAt(level, 'goblin', 5, 2);
+  engage(goblin, hero, 0);
+  // Loaded dice: both roll 19; the goblin's DEX +2 beats the Barbarian's +1.
+  updateInitiative();
+  assert.equal(goblin.initiative.total, 21);
+  assert.equal(hero.initiative.total, 20);
+  assert.equal(goblin.initiative.firstStrike, true);
+  assert.equal(hero.initiative.firstStrike, false);
+  assert.ok(rollLines(goblin).includes('FIRST STRIKE') && rollLines(hero).includes('Initiative 20'));
+  let d20s = 0;
+  useDieRoller((sides) => { if (sides === 20) d20s++; return SURE_HIT(sides); });
+  Strike.strike(hero, { attackBonus: 4, damage: SPELLS.fire_bolt.damage, mode: 'normal' }, goblin);
+  assert.equal(d20s, 2, 'the first strike rolls with advantage');
+  Strike.strike(hero, { attackBonus: 4, damage: SPELLS.fire_bolt.damage, mode: 'normal' }, goblin);
+  assert.equal(d20s, 3, 'and only the first');
+
+  const rolls = [2];
+  useDieRoller((sides) => (sides === 20 ? rolls.shift() ?? 19 : sides));
+  const second = mobAt(level, 'goblin', 6, 3);
+  engage(second, hero, 0);
+  updateInitiative();
+  assert.equal(second.initiative.total, 4);
+  assert.equal(hero.initiative.firstStrike, false, 'a hero wins the first strike only when their roll is new');
+  agentOf(second).go('idle');
+  updateInitiative();
+  assert.equal(second.initiative, undefined, 'calmed down, it rolls again next time');
+});
+
+test('hit dice: a click spends one to heal (die + CON), never with none left, at full health or while hunted', () => {
+  const level = arena(12, 6);
+  const hero = playerAt(2, 2);
+  hero.health.current = 20;
+  assert.equal(Rest.spendHitDie(hero), true);
+  // The Barbarian's d12 (loaded: 12) + CON +2, at five hit points a tabletop point.
+  assert.equal(hero.health.current, 20 + 5 * 14);
+  assert.equal(hero.playerStats.hitDice, 0);
+  assert.equal(Rest.spendHitDie(hero), false);
+  assert.ok(rollLines(hero).includes('NO HIT DICE'));
+  hero.playerStats.hitDice = 1;
+  hero.health.current = hero.health.max;
+  assert.equal(Rest.spendHitDie(hero), false, 'nothing to heal');
+  hero.health.current = 20;
+  const goblin = mobAt(level, 'goblin', 6, 2);
+  engage(goblin, hero, 0);
+  assert.equal(Rest.spendHitDie(hero), false, 'not with an enemy on the hunt');
+  assert.equal(hero.playerStats.hitDice, 1);
+});
+
+test('rests: a short one recovers spells (two before a long one), a long one heals all and needs the safe room', () => {
+  const level = arena(12, 6);
+  const hero = playerAt(2, 2, 'vesper');
+  world.addComponent(hero, 'playerSlot', 'host');
+  hero.spellbook.recovery[0] = 40;
+  hero.health.current = 10;
+  hero.playerStats.level = 4;
+  hero.playerStats.hitDice = 0;
+  const rest = (kind) => { Rest.queueRestCommand('host', { kind: 'rest', rest: kind }); Rest.updateRest(level); };
+  rest('short');
+  assert.deepEqual(hero.spellbook.recovery, [0, 0, 0, 0]);
+  assert.equal(Rest.currentRest().shortRestsLeft, 1);
+  assert.equal(Rest.currentRest().notice.notice, 'short_done');
+  assert.equal(hero.health.current, 10, 'a short rest heals nothing by itself');
+  rest('short');
+  rest('short');
+  assert.equal(Rest.currentRest().notice.notice, 'no_short_left');
+  rest('long');
+  assert.equal(Rest.currentRest().notice.notice, 'unsafe');
+  level.markSafeZone(2, 2);
+  rest('long');
+  assert.equal(Rest.currentRest().notice.notice, 'long_done');
+  assert.equal(hero.health.current, hero.health.max);
+  assert.equal(hero.playerStats.hitDice, 2, 'half the level back');
+  assert.equal(Rest.currentRest().shortRestsLeft, Rest.SHORT_RESTS_PER_LONG_REST);
+  const goblin = mobAt(level, 'goblin', 8, 3);
+  engage(goblin, hero, 0);
+  rest('short');
+  assert.equal(Rest.currentRest().notice.notice, 'hunted');
+  for (let i = 0; i <= Rest.REST_NOTICE_TICKS; i++) Rest.updateRest(level);
+  assert.equal(Rest.currentRest().notice, null, 'the notice goes after a while');
+});
+
+test('in co-op a rest waits for every companion to agree; one refusal calls it off', () => {
+  const level = arena(12, 6);
+  const host = playerAt(2, 2, 'vesper');
+  world.addComponent(host, 'playerSlot', 'host');
+  world.addComponent(host, 'playerName', 'Ana');
+  const guest = playerAt(3, 2, 'xanthia');
+  world.addComponent(guest, 'playerSlot', 'p2');
+  world.addComponent(guest, 'playerName', 'Bo');
+  host.spellbook.recovery[1] = 30;
+  Rest.queueRestCommand('host', { kind: 'rest', rest: 'short' });
+  Rest.updateRest(level);
+  const state = Rest.currentRest();
+  assert.deepEqual(state.vote.agreed, ['host']);
+  assert.equal(state.notice.notice, 'asked');
+  assert.equal(state.notice.name, 'Ana');
+  assert.equal(host.spellbook.recovery[1] > 0, true, 'not yet');
+  handleGuestCommand('p2', { kind: 'rest_answer', agree: true });
+  Rest.updateRest(level);
+  assert.equal(state.vote, null);
+  assert.equal(state.notice.notice, 'short_done');
+  assert.equal(host.spellbook.recovery[1], 0);
+
+  handleGuestCommand('p2', { kind: 'rest', rest: 'short' });
+  Rest.updateRest(level);
+  Rest.queueRestCommand('host', { kind: 'rest_answer', agree: false });
+  Rest.updateRest(level);
+  assert.equal(state.vote, null);
+  assert.equal(state.notice.notice, 'declined');
+  assert.equal(state.notice.name, 'Ana');
+  assert.equal(state.shortRestsLeft, 1, 'the refused rest was not taken');
+
+  const sent = JSON.parse(JSON.stringify(captureWorld(false, 7)));
+  validateNetState(sent);
+  assert.ok(sent.entities.some((e) => e.data.restState), 'guests see the rest state');
+  const tamper = (edit) => {
+    const copy = JSON.parse(JSON.stringify(sent));
+    edit(copy.entities);
+    return attempt(() => validateNetState(copy)).ok;
+  };
+  assert.equal(tamper((es) => { es.find((e) => e.data.restState).data.restState.vote = { kind: 'nap', by: 'host', agreed: [], ticks: 1 }; }), false);
+  assert.equal(tamper((es) => { es.find((e) => e.data.restState).data.restState.notice.name = '<b>'; }), false);
+  assert.equal(tamper((es) => { es.find((e) => e.data.playerSlot === 'p2').data.spellbook.recovery = [-1]; }), false);
+  assert.equal(tamper((es) => { es.find((e) => e.data.playerSlot === 'p2').data.playerInput.spellSlot = 9; }), false);
+  assert.equal(tamper((es) => { es.find((e) => e.data.playerSlot === 'p2').data.casting = { ticks: 1, dirX: 1, dirY: 0, released: false, spell: 'wish' }; }), false);
+});
+
+test('experience by the SRD: kills give their challenge rating\'s XP, and 300 reaches level 2 with another hit die', () => {
+  assert.equal(levelForXp(299), 1);
+  assert.equal(levelForXp(300), 2);
+  assert.equal(levelForXp(355000), 20);
+  assert.equal(nextLevelXp(1), 300);
+  assert.equal(nextLevelXp(20), null);
+  const level = arena(14, 6);
+  const hero = playerAt(2, 2);
+  const maxBefore = hero.health.max;
+  for (let i = 0; i < 6; i++) {
+    const goblin = mobAt(level, 'goblin', 5 + i, 3);
+    goblin.health.current = 0;
+    updateDeath(level);
+  }
+  assert.equal(hero.playerStats.exp, 300, 'six goblins at 50 XP each');
+  assert.equal(hero.playerStats.level, 2);
+  assert.equal(hero.playerStats.hitDice, 2);
+  // The Barbarian's d12 at its average (7) + CON +2, at five hit points a tabletop point.
+  assert.equal(hero.health.max, maxBefore + 5 * 9);
+  assert.equal(hero.health.current, hero.health.max);
 });

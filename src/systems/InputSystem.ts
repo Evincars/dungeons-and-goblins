@@ -58,9 +58,26 @@ function isActionDown(action: ActionName): boolean {
 /** The quick bar's keys: 1 to 5 along the number row. */
 const QUICK_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'] as const;
 
+/**
+ * The quick-bar square this screen's player has picked. It is kept here, not only on the player: a guest's
+ * copy of its character is overwritten by every update from the host.
+ */
+let chosenSlot = 0;
+
 /** Which quick-bar square's key went down this tick (0 for "1"), or -1. */
-export function quickSlotPressed(): number {
-  return QUICK_KEYS.findIndex((code) => pressed.has(code));
+function quickSlotPressed(): number {
+  for (let i = 0; i < QUICK_KEYS.length; i++) if (pressed.has(QUICK_KEYS[i])) return i;
+  return -1;
+}
+
+/** The quick-bar square picked on this screen (shown at once, before a guest's host has heard of it). */
+export function chosenQuickSlot(): number {
+  return chosenSlot;
+}
+
+/** Picks a quick-bar square (a click on it); its key does the same. */
+export function chooseQuickSlot(slot: number): void {
+  if (Number.isInteger(slot) && slot >= 0 && slot < QUICK_KEYS.length) chosenSlot = slot;
 }
 
 function wasActionPressed(action: ActionName): boolean {
@@ -119,6 +136,7 @@ export function updateInput(): void {
   pending.clear();
   clicked = clickPending && !captured;
   clickPending = false;
+  if (!captured) chooseQuickSlot(quickSlotPressed());
 
   for (const entity of q.players) {
     // Remote players are driven by their own browser's input frames.
@@ -135,6 +153,7 @@ export function updateInput(): void {
     pi.mouseX = mouse.x;
     pi.mouseY = mouse.y;
     pi.mouseAiming = true;
+    pi.spellSlot = chosenSlot;
 
     const it = pi.intents;
     it.attack       = !captured && (wasActionPressed('attack') || (mouseDown && mouseFree));

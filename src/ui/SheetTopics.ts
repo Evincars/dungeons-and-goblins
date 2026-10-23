@@ -94,9 +94,22 @@ export function perceptionTopic(sheet: CharacterSheet): TipTopic {
   return { title: text('sheet.passive.name'), body: text('sheet.passive.description'), detail };
 }
 
+/** Hit dice: how many are left to spend (a click spends one), and what one heals. */
 export function hitDiceTopic(sheet: CharacterSheet): TipTopic {
-  const detail = [text('sheet.hit_dice.detail', { count: sheet.level, die: sheet.heroClass.hitDie, class: dndClassName(sheet.heroClass.dndClass) })];
+  const { left, total } = sheet.hitDice;
+  const vars = { left, total, die: sheet.heroClass.hitDie, modifier: formatModifier(sheet.modifiers.constitution) };
+  const detail = [text('sheet.hit_dice.detail', vars)];
+  if (!left) detail.push(text('sheet.hit_dice.none'));
   return { title: text('sheet.hit_dice.name'), body: text('sheet.hit_dice.description'), detail };
+}
+
+/** Experience: the total so far and what the next level needs. */
+export function experienceTopic(sheet: CharacterSheet): TipTopic {
+  const { xp, next } = sheet.experience;
+  const detail = [next === null
+    ? text('sheet.xp.max', { level: sheet.level, xp })
+    : text('sheet.xp.detail', { level: sheet.level, xp, next: sheet.level + 1, needed: next })];
+  return { title: text('sheet.xp.name'), body: text('sheet.xp.description'), detail };
 }
 
 /** Spellcasting: the ability spells use, the attack bonus and save DC it gives (and a note for non-casters). */

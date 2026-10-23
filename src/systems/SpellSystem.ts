@@ -1,17 +1,34 @@
 import { world, q, isTarget } from '../world';
-import type { Entity, Player } from '../world';
+import type { Entity, Player, SpellEffect } from '../world';
 import type { Level } from '../level/Level';
 import { hitMob } from './SwordSystem';
 import { strike } from './Strike';
+import { logHeal, logLine, logSave, logSpellDamage } from './RollLogSystem';
+import { recordSpell } from './CombatLogSystem';
 import { characterSheet } from '../rules/CharacterSheet';
-import type { AttackProfile } from '../rules/Combat';
-import { spawnBurstPuff, spawnFx } from '../entities/FxFactory';
+import { heroClass } from '../rules/Classes';
+import { SPELLS, TICKS_PER_SECOND } from '../rules/Spells';
+import type { SpellDef } from '../rules/Spells';
+import { MONSTERS } from '../rules/Monsters';
+import { MIN_HIT_DAMAGE } from '../rules/Combat';
+import { TABLETOP_HP_SCALE } from '../rules/HitPoints';
+import { rollCheck, rollDice } from '../rules/Dice';
+import { spawnFx } from '../entities/FxFactory';
 import { AIM_HEIGHT, createSpellBolt } from '../entities/ProjectileFactory';
 import { playEffect } from '../assets/Effects';
 import { SPELL_STATS } from '../entities/WeaponStats';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 import { sound } from '../audio/SoundPlayer';
 import { nearby, Sense } from '../ai/perception/spatial';
+import { screenToWorld } from '../render/Camera';
+import { text } from '../core/texts';
+
+/**
+ * Spells (src/data/spells.json): right click / R casts the one picked on the quick bar (keys 1–5). There are
+ * no spell slots — each spell recovers for a while after it is cast. A bolt flies and is rolled to hit; a
+ * magic missile's darts always hit; a burst makes everyone in it save against the caster's spell DC (half
+ * damage on a success); a heal mends the caster. Each strikes with its effect from the effects library.
+ */
 
 const bolts = world.with('projectile', 'position', 'velocity');
 /** The glint an arrow leaves where it strikes (from the effects library), and its size. */
@@ -22,52 +39,172 @@ type Bolt = (typeof bolts)['entities'][number];
 
 /** Bolts reach this far at most beyond their own position to touch a body. */
 const BOLT_QUERY_RADIUS = MAX_MOB_RADIUS + SPELL_STATS.reachY;
+/** A magic missile's darts fan out this far apart (radians). */
+const MISSILE_SPREAD = 0.22;
+/** "Recovering" and "not yet" are said at most this often while the cast key is held. */
+const FEEDBACK_TICKS = 30;
 const victims: Entity[] = [];
+const aimed = { x: 0, y: 0 };
 
-/** Where a projectile ends: a spell bolt bursts in dirt; an arrow glints if it struck something, else just drops. */
+/** Where a projectile ends: the spell's effect (and a caster's own burst art) where it struck; an arrow glints. */
 function burst(bolt: Bolt, struck: boolean): void {
   const p = bolt.position;
-  if (bolt.projectile.arrow) {
-    if (struck) playEffect(ARROW_HIT_EFFECT, ARROW_HIT_COLOUR, p.x, p.y, AIM_HEIGHT, ARROW_HIT_SCALE);
-  } else if (bolt.projectile.burst) {
-    const b = bolt.projectile.burst;
-    spawnFx(p.x, p.y, b.sheet, b.count, b.count * b.frameTime, { first: b.first, scale: b.scale, yOffset: AIM_HEIGHT });
-  } else {
-    for (let i = 0; i < SPELL_STATS.burstPuffs; i++) spawnBurstPuff(p.x, p.y);
-  }
+  const { arrow, burst: art, impact } = bolt.projectile;
+  if (arrow && struck) playEffect(ARROW_HIT_EFFECT, ARROW_HIT_COLOUR, p.x, p.y, AIM_HEIGHT, ARROW_HIT_SCALE);
+  if (art) spawnFx(p.x, p.y, art.sheet, art.count, art.count * art.frameTime, { first: art.first, scale: art.scale, yOffset: AIM_HEIGHT });
+  if (impact) playEffect(impact.shape, impact.colour, p.x, p.y, AIM_HEIGHT, impact.scale);
   world.addComponent(bolt, 'removed', true);
-}
-
-/**
- * The spell bolt, a spell attack: d20 + proficiency + the class's spellcasting ability (Intelligence for a
- * wizard, Charisma for a sorcerer or paladin; Intelligence for anyone untrained) to hit, with disadvantage in
- * untrained armour; 1d10 damage.
- */
-function spellBolt(caster: Player): AttackProfile {
-  const sheet = characterSheet(caster);
-  return { attackBonus: sheet.spell.attack, damage: SPELL_STATS.boltDice, mode: sheet.attack.mode };
 }
 
 function canCast(caster: Player): boolean {
   return caster.health.current > 0 && caster.respawnTicks === undefined && !caster.swordSwing && !caster.falling && !(caster.castCooldown ?? 0);
 }
 
-/** Starts a cast toward the crosshair, or plays the one under way and lets the bolt fly on its release frame. */
+/** The spell in the quick-bar square the caster picked (known or not yet), if the square holds one. */
+function chosenSpell(caster: Player): SpellDef | null {
+  const id = heroClass(caster.heroClass).spells[caster.playerInput.spellSlot];
+  return id ? SPELLS[id] : null;
+}
+
+/** Each spell's recovery runs down a tick. */
+function recover(caster: Player): void {
+  const recovery = caster.spellbook?.recovery;
+  if (!recovery) return;
+  for (let i = 0; i < recovery.length; i++) if (recovery[i] > 0) recovery[i]--;
+}
+
+/** The point aimed at: this screen's pointer for the local player, the crosshair their browser sent for a guest. */
+function aimPoint(caster: Player): { x: number; y: number } {
+  if (caster.aimWorld) return caster.aimWorld;
+  return screenToWorld(caster.playerInput.mouseX, caster.playerInput.mouseY, aimed);
+}
+
+/** Why nothing is cast, said over the caster's head (not every tick while the key is held). */
+function refuse(caster: Player, line: string): void {
+  logLine(caster, line, 'miss');
+  sound.playSound('fail', caster.position.x, caster.position.y);
+  caster.castCooldown = FEEDBACK_TICKS;
+}
+
+/** The cast key: the spell picked starts (its recovery runs from now), or the caster says why it can't. */
+function startCast(caster: Player): void {
+  if (!caster.playerInput.intents.cast || !canCast(caster)) return;
+  const known = heroClass(caster.heroClass).spells;
+  if (!known.length) return;
+  const def = chosenSpell(caster);
+  if (!def) {
+    refuse(caster, text('roll.no_spell'));
+    return;
+  }
+  if (caster.playerStats.level < def.minLevel) {
+    refuse(caster, text('roll.spell_locked', { level: def.minLevel }));
+    return;
+  }
+  const slot = caster.playerInput.spellSlot;
+  const book = caster.spellbook ?? (caster.spellbook = { recovery: known.map(() => 0) });
+  const left = book.recovery[slot] ?? 0;
+  if (left > 0) {
+    refuse(caster, text('roll.spell_recovering', { seconds: (left / TICKS_PER_SECOND).toFixed(1) }));
+    return;
+  }
+  const aim = caster.aimVector ?? { x: 0, y: 1 };
+  const target = aimPoint(caster);
+  world.addComponent(caster, 'casting', { ticks: 0, dirX: aim.x, dirY: aim.y, released: false, spell: def.id, targetX: target.x, targetY: target.y });
+  book.recovery[slot] = def.recoveryTicks;
+  caster.castCooldown = SPELL_STATS.cooldown;
+}
+
+const impactOf = (def: SpellDef): SpellEffect => ({ shape: def.effect.shape, colour: def.effect.colour, scale: def.effect.scale });
+
+/** A bolt: rolled to hit (d20 + spell attack against AC) when it strikes. */
+function castBolt(caster: Player, def: SpellDef, dirX: number, dirY: number): void {
+  const sheet = characterSheet(caster);
+  const attack = { attackBonus: sheet.spell.attack, damage: def.damage, mode: sheet.attack.mode };
+  createSpellBolt(caster.position.x, caster.position.y, dirX, dirY, attack, world.id(caster), caster.character?.def, { spell: def.id, impact: impactOf(def) });
+}
+
+/** Magic missile: its darts fan out round the aim, and each always hits. */
+function castMissiles(caster: Player, def: SpellDef, dirX: number, dirY: number): void {
+  const sheet = characterSheet(caster);
+  const attack = { attackBonus: sheet.spell.attack, damage: def.damage, mode: sheet.attack.mode };
+  const base = Math.atan2(dirY, dirX);
+  for (let i = 0; i < def.count; i++) {
+    const angle = base + (i - (def.count - 1) / 2) * MISSILE_SPREAD;
+    createSpellBolt(caster.position.x, caster.position.y, Math.cos(angle), Math.sin(angle), attack, world.id(caster), caster.character?.def,
+      { spell: def.id, autoHit: true, impact: impactOf(def) });
+  }
+}
+
+/** Where a burst goes off: on the caster, or at the point aimed at, no further than the spell reaches. */
+function burstCentre(caster: Player, def: SpellDef, targetX: number, targetY: number): { x: number; y: number } {
+  const { x, y } = caster.position;
+  const dx = targetX - x;
+  const dy = targetY - y;
+  const dist = Math.hypot(dx, dy);
+  if (def.range <= 0 || dist === 0) return { x, y };
+  const reach = Math.min(dist, def.range);
+  return { x: x + (dx / dist) * reach, y: y + (dy / dist) * reach };
+}
+
+/** One foe caught in a burst saves against the spell DC: a failure takes all the damage, a success half. */
+function burstHits(caster: Player, def: SpellDef, foe: Entity, dc: number): void {
+  const modifier = foe.mobType ? MONSTERS[foe.mobType].modifiers[def.save] : 0;
+  const save = rollCheck(modifier, dc);
+  const rolled = Math.max(MIN_HIT_DAMAGE, rollDice(def.damage));
+  const damage = save.success ? Math.floor(rolled / 2) : rolled;
+  logSave(foe, save.total, save.success);
+  recordSpell(caster, def.id, save.success ? 'saved' : 'auto', damage, save.total);
+  if (damage > 0) hitMob(foe, caster, damage, true);
+}
+
+/** A burst: the effect where it goes off, and a save for every foe within its radius. */
+function castBurst(caster: Player, def: SpellDef, targetX: number, targetY: number): void {
+  const centre = burstCentre(caster, def, targetX, targetY);
+  playEffect(def.effect.shape, def.effect.colour, centre.x, centre.y, 0, def.effect.scale);
+  const dc = characterSheet(caster).spell.dc;
+  for (const foe of nearby(centre.x, centre.y, def.radius + MAX_MOB_RADIUS, Sense.mob, victims)) {
+    if (!isTarget(foe) || foe.health.current <= 0) continue;
+    if (Math.hypot(foe.position.x - centre.x, foe.position.y - centre.y) > def.radius + Math.max(foe.radius.x, foe.radius.y)) continue;
+    burstHits(caster, def, foe, dc);
+  }
+}
+
+/** A heal: the dice + the casting ability, at the game's hit point scale, for the caster. */
+function castHeal(caster: Player, def: SpellDef): void {
+  const sheet = characterSheet(caster);
+  const amount = TABLETOP_HP_SCALE * Math.max(1, rollDice(def.damage) + sheet.modifiers[sheet.spell.ability]);
+  const h = caster.health;
+  const healed = Math.min(h.max - h.current, amount);
+  h.current += healed;
+  playEffect(def.effect.shape, def.effect.colour, caster.position.x, caster.position.y, AIM_HEIGHT, def.effect.scale);
+  logHeal(caster, healed);
+  recordSpell(caster, def.id, 'heal', healed);
+}
+
+/** The cast reaches its release frame: the spell goes off, by its kind. */
+function release(caster: Player, cast: NonNullable<Entity['casting']>): void {
+  const def = cast.spell ? SPELLS[cast.spell] : null;
+  if (!def) return;
+  if (def.kind === 'bolt') castBolt(caster, def, cast.dirX, cast.dirY);
+  else if (def.kind === 'missiles') castMissiles(caster, def, cast.dirX, cast.dirY);
+  else if (def.kind === 'burst') castBurst(caster, def, cast.targetX ?? caster.position.x, cast.targetY ?? caster.position.y);
+  else castHeal(caster, def);
+  sound.playSound('spell', caster.position.x, caster.position.y);
+}
+
+/** Starts a cast toward the crosshair, or plays the one under way and lets it go on its release frame. */
 function updateCaster(caster: Player): void {
   if ((caster.castCooldown ?? 0) > 0) caster.castCooldown = (caster.castCooldown ?? 0) - 1;
+  recover(caster);
   const cast = caster.casting;
   if (!cast) {
-    if (!caster.playerInput.intents.cast || !canCast(caster)) return;
-    const aim = caster.aimVector ?? { x: 0, y: 1 };
-    world.addComponent(caster, 'casting', { ticks: 0, dirX: aim.x, dirY: aim.y, released: false });
-    caster.castCooldown = SPELL_STATS.cooldown;
+    startCast(caster);
     return;
   }
   cast.ticks++;
   if (!cast.released && cast.ticks >= SPELL_STATS.releaseTick) {
     cast.released = true;
-    createSpellBolt(caster.position.x, caster.position.y, cast.dirX, cast.dirY, spellBolt(caster), world.id(caster), caster.character?.def);
-    sound.playSound('spell', caster.position.x, caster.position.y);
+    release(caster, cast);
   }
   if (cast.ticks >= SPELL_STATS.castTicks) world.removeComponent(caster, 'casting');
 }
@@ -84,6 +221,22 @@ function boltVictim(bolt: Bolt): Entity | null {
   return null;
 }
 
+/** A projectile meets a body: a magic missile's dart always hits; anything else is rolled against its AC. */
+function strikeWith(bolt: Bolt, victim: Entity): boolean {
+  const p = bolt.projectile;
+  const shooter = p.owner === undefined ? undefined : world.entity(p.owner);
+  if (p.autoHit) {
+    const damage = Math.max(MIN_HIT_DAMAGE, rollDice(p.attack.damage));
+    if (shooter) logSpellDamage(shooter, damage);
+    if (shooter && p.spell) recordSpell(shooter, p.spell, 'auto', damage);
+    hitMob(victim, bolt, damage, true);
+    return true;
+  }
+  const outcome = strike(victim, p.attack, shooter, p.spell);
+  if (outcome.hit) hitMob(victim, bolt, outcome.damage);
+  return outcome.hit;
+}
+
 function flyBolt(level: Level, bolt: Bolt): void {
   const pos = bolt.position;
   pos.x += bolt.velocity.x;
@@ -93,14 +246,10 @@ function flyBolt(level: Level, bolt: Bolt): void {
     return;
   }
   const victim = boltVictim(bolt);
-  if (!victim) return;
-  const shooter = bolt.projectile.owner === undefined ? undefined : world.entity(bolt.projectile.owner);
-  const outcome = strike(victim, bolt.projectile.attack, shooter);
-  if (outcome.hit) hitMob(victim, bolt, outcome.damage);
-  burst(bolt, outcome.hit);
+  if (victim) burst(bolt, strikeWith(bolt, victim));
 }
 
-/** Casting (right mouse / Q) toward the crosshair, and flying spell bolts and arrows. */
+/** Casting (right mouse / R) toward the crosshair, and flying spell bolts and arrows. */
 export function updateSpells(level: Level): void {
   for (const caster of q.players) {
     updateCaster(caster);

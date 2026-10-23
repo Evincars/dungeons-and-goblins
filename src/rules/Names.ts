@@ -2,6 +2,7 @@ import { text } from '../core/texts';
 import type { ArmorBase, ArmorRule } from './ArmorTable';
 import type { DamageType, WeaponBase, WeaponProperty, WeaponRule } from './WeaponTable';
 import type { ArmorTraining, ClassFeature, DndClass, HeroClassId, WeaponTraining } from './Classes';
+import type { SpellDamageType, SpellId } from './Spells';
 
 /** How the rules' terms read on screen (from src/data/texts.json). */
 
@@ -17,7 +18,7 @@ export function armorCategoryName(category: ArmorRule['category']): string {
   return text(`rules.armor_category.${category}` as const);
 }
 
-export function damageTypeName(type: DamageType): string {
+export function damageTypeName(type: DamageType | SpellDamageType): string {
   return text(`rules.damage.${type}` as const);
 }
 
@@ -57,4 +58,12 @@ export function featureDescription(feature: ClassFeature): string {
 /** Armour or weapon training as a word: "light", "shields", "martial"… */
 export function trainingName(training: ArmorTraining | WeaponTraining): string {
   return text(`training.${training}` as const);
+}
+
+export function spellName(id: SpellId): string {
+  return text(`spell.${id}.name` as const);
+}
+
+export function spellDescription(id: SpellId): string {
+  return text(`spell.${id}.description` as const);
 }

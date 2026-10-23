@@ -11,6 +11,7 @@ import { armorRule, isShield, magicBonus, weaponRule } from './Equipment';
 import { armorProficient, hasFeature, heroClass, weaponProficient } from './Classes';
 import type { ClassFeature, HeroClass } from './Classes';
 import { MONSTERS } from './Monsters';
+import { nextLevelXp } from '../game/Progress';
 
 /**
  * What the rules make of a character's class, gear and abilities: Armor Class, the damage and attack bonus
@@ -187,6 +188,10 @@ export type CharacterSheet = Abilities & {
   armorClass: ArmorClass;
   attack: WeaponAttack;
   hitPoints: { current: number; max: number };
+  /** Hit dice left to spend, of one a level. */
+  hitDice: { left: number; total: number };
+  /** Experience points so far, and those the next level needs (null at the highest). */
+  experience: { xp: number; next: number | null };
   /** Who acts first: d20 + this (the DEX modifier). */
   initiative: number;
   /** Feet a round in the tabletop game. */
@@ -237,6 +242,8 @@ export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' |
     armorClass: ac,
     attack: weaponAttack(equipped, scores.modifiers, level, cls, ac.proficient),
     hitPoints: { current: player.health.current, max: player.health.max },
+    hitDice: { left: player.playerStats.hitDice, total: level },
+    experience: { xp: player.playerStats.exp, next: nextLevelXp(level) },
     initiative: scores.modifiers.dexterity,
     speed: speedIn(ac, scores.scores),
     passivePerception: PASSIVE_BASE + scores.modifiers.wisdom,

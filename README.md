@@ -28,7 +28,12 @@ Controls: WASD to move, the mouse to aim, left click (or Space) to attack, Q to 
 right click / R for a spell, E to use (shop, chests, the exit), Shift to sprint, Tab for the inventory, Esc to
 pause, 1–5 for the quick bar. Keys can be rebound in Settings → Key bindings.
 
-Every game starts with picking a hero: the **Barbarian** or the **Warrior** (see `classes.json` below).
+Every game starts with picking a hero — the **Barbarian** or the **Warrior** (see `classes.json` below) — and
+typing the name the combat log (and, in co-op, the other players) will call them.
+
+On screen: health and stamina bottom left, with diamond buttons beside them (character, level, map — for now
+each opens a placeholder dialog; Esc or ✕ closes it); the quick bar bottom middle; the combat log bottom right
+(the `–` in its corner folds it away, `+` brings it back).
 
 ## Configuration files (JSON)
 
@@ -119,7 +124,15 @@ proficiencies). The modifier is what the rules use:
 Every blow — sword, arrow, spell or an enemy's — rolls a d20 + attack bonus (proficiency + STR or DEX + magic)
 against the target's Armor Class. A natural 20 always hits and doubles the damage dice; a natural 1 always
 misses. A hit rolls the weapon's dice + the same modifier. The rolls show over the attacker's head for a
-moment ("17+4=21 HIT", "1d8+2: 7").
+moment ("21 to hit", then "7 dmg" or "MISS"), and each blow goes into the combat log ("Evincars 21 to hit,
+7 dmg", "Orc 12 to hit, miss").
+
+### Maps as JSON
+
+A generated level can be written out as JSON ([`src/level/LevelMap.ts`](src/level/LevelMap.ts):
+`encodeLevelMap`, `decodeLevelMap`) — tiles one byte each in base64, safe rooms and cave halls as runs of
+tiles, wall niches, pits, prop footprints and spawn points — and gzipped (`packLevelMap`: about 7 KB of JSON becomes about 3 KB) to
+save it or send it to a client. Co-op still sends only the seed for now; reading a map checks all of it.
 
 The inventory shows each stat by its short name (STR, DEX, CON, INT, WIS, CHA); hovering it shows the full name and this description, read from `src/data/texts.json`.
 

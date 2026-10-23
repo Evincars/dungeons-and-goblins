@@ -143,8 +143,9 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - `src/ai/` — enemy AI: `perception/` (rbush index, sight, player trails) → `decision/` (Yuka
   `StateMachine` states, squad tactics by Yuka `Think`) → `execution/` (Yuka steering).
 - `src/level/` — `Level` tiles, `TileGraph`/`TileSearch` (Yuka graph search), procedural generation
-  (`generators/`), terrain autotiling and rendering, fog of war (`FogRenderer.ts`: blurred corner mask + drifting
-  mist) and lighting.
+  (`generators/`), terrain autotiling and rendering, soft edges between kinds of ground (`GroundBlend.ts`, baked
+  into one atlas by `render/BlendAtlas.ts`), fog of war (`FogRenderer.ts`: per-corner fading buffer, blurred, with
+  drifting mist), lighting, and `LevelMap.ts` (a generated level as validated JSON, gzipped to send or save).
 - `src/characters/` — side-view `CharacterDef`s and their animation-state triggers.
 - `src/rules/` — the tabletop rules: dice (`Dice.ts`: d4–d20 rolls, attacks, checks; tests load the dice with
   `useDieRoller`), ability modifiers and proficiency (`Abilities.ts`), the SRD weapon and armour tables, classes
@@ -152,11 +153,14 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   damage and to-hit, proficiency, for heroes and enemies) and `Combat.ts` (one blow: d20 vs AC, then damage).
   Items name their rules entry with `base` and their magic with `bonus` (+0…+3) in `src/data/*.json`. Every blow
   in play goes through `systems/Strike.ts`, which logs the roll over the attacker's head (`RollLogSystem.ts`,
-  drawn by `RollTextSystem.ts`).
+  drawn by `RollTextSystem.ts`) and into the level's combat log (`CombatLogSystem.ts`, one synced entity, shown by
+  `ui/CombatLogPanel.ts`).
 - `src/entities/` — factories and stat tables. `src/render/` — sheets, camera, terrain layers.
-- `src/core/` — cross-cutting: `errors/`, `log/`, `geometry.ts`, `guards.ts`, `debugHooks.ts`.
+- `src/core/` — cross-cutting: `errors/`, `log/`, `geometry.ts`, `guards.ts`, `debugHooks.ts`, `compression.ts` (gzip with a size limit).
 - `src/game/` — game loop, `SceneManager`, persisted settings, player actions. `src/scenes/` — title, settings,
-  key bindings, co-op lobby and the level itself. `src/ui/` — buttons, HUD, panels, pause menu.
+  key bindings, character select, co-op lobby and the level itself. `src/ui/` — buttons, HUD (bars, diamond buttons,
+  `HudDialog`), combat log, panels, pause menu. On-screen controls call `claimPointer` (systems/InputSystem.ts) while
+  under the pointer, so their clicks are not attacks.
 - `src/network/` — co-op: `protocol.ts` (messages and their validators), `CoopSession.ts` (PeerJS room),
   `WorldSync.ts` (the host's world snapshot, its validation and the guest's replica), `CoopGame.ts` (host and
   guest per-tick work). The host is the authority; guests build the level from its seed and send input.

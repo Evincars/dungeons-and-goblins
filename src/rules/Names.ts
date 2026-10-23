@@ -1,6 +1,8 @@
 import { text } from '../core/texts';
 import type { ArmorBase, ArmorRule } from './ArmorTable';
 import type { DamageType, WeaponBase, WeaponProperty, WeaponRule } from './WeaponTable';
+import type { FightingStyleId } from './FightingStyles';
+import type { FeatId } from './Feats';
 import type { ArmorTraining, ClassFeature, DndClass, HeroClassId, WeaponTraining } from './Classes';
 import type { SpellDamageType, SpellId } from './Spells';
 
@@ -45,6 +47,23 @@ export function heroBlurb(id: HeroClassId): string {
 /** A D&D class as the game calls it (a fighter is a Warrior). */
 export function dndClassName(cls: DndClass): string {
   return text(`dnd_class.${cls}` as const);
+}
+
+/** A fighting style as the game calls it. */
+export function fightingStyleName(style: FightingStyleId): string {
+  return text(`style.${style}.name` as const);
+}
+
+export function fightingStyleDescription(style: FightingStyleId): string {
+  return text(`style.${style}.description` as const);
+}
+
+export function featName(feat: FeatId): string {
+  return text(`feat.${feat}.name` as const);
+}
+
+export function featDescription(feat: FeatId): string {
+  return text(`feat.${feat}.description` as const);
 }
 
 export function featureName(feature: ClassFeature): string {

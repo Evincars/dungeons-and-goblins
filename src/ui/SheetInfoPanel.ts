@@ -4,7 +4,7 @@ import { text } from '../core/texts';
 import type { CharacterSheet } from '../rules/CharacterSheet';
 import { formatModifier } from '../rules/Dice';
 import { statShort } from '../entities/Items';
-import { dndClassName, heroName } from '../rules/Names';
+import { heroName } from '../rules/Names';
 import type { TipTopic } from './InfoTooltip';
 import { experienceTopic, hitDiceTopic, initiativeTopic, perceptionTopic, proficiencyBonusTopic, savesTopic, speedTopic, spellTopic } from './SheetTopics';
 import { PixelLabel } from './PixelText';
@@ -79,7 +79,7 @@ export class SheetInfoPanel {
   }
 
   set(sheet: CharacterSheet): void {
-    this.header.text = text('sheet.info.header', { hero: heroName(sheet.heroClass.id), class: dndClassName(sheet.heroClass.dndClass), level: sheet.level });
+    this.header.text = text('sheet.info.header', { hero: heroName(sheet.heroClass.id), level: sheet.level });
     for (const info of this.infos) {
       info.label.text = info.def.line(sheet);
       info.label.fill = info.def.spendsHitDie && sheet.hitDice.left > 0 ? THEME.title : THEME.text;

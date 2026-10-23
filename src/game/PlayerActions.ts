@@ -9,6 +9,7 @@ import { fitsSlot, statTotals } from '../entities/Items';
 import { isEquipSlot } from '../world';
 import { BASE_SPRINT } from '../entities/PlayerFactory';
 import { queueRestCommand, spendHitDie } from './Rest';
+import { applyCustomization } from './Customize';
 
 /**
  * What players do from the shop and inventory panels. In a lone game or on the host it happens at once;
@@ -221,6 +222,10 @@ export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): voi
   }
   if (command.kind === 'hit_die') {
     spendHitDie(player);
+    return;
+  }
+  if (command.kind === 'scores' || command.kind === 'fighting_style' || command.kind === 'improve' || command.kind === 'lock_build') {
+    applyCustomization(player, command);
     return;
   }
   if (command.kind === 'rest' || command.kind === 'rest_answer') {

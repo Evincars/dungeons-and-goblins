@@ -38,6 +38,8 @@ import { updateRollLogs } from './RollLogSystem';
 import { updateRollTexts } from './RollTextSystem';
 import { updateInitiative } from './InitiativeSystem';
 import { updateRest } from '../game/Rest';
+import { updateBuildLock } from '../game/Customize';
+import { updateProtection } from './ProtectionSystem';
 
 export type FrameContext = {
   level: Level;
@@ -86,6 +88,8 @@ export const SIMULATION: readonly System[] = [
   () => updateExit(),
   () => updateShop(),
   ({ level }) => updateRest(level),
+  ({ level }) => updateBuildLock(level),
+  () => updateProtection(),
   (ctx) => { if (ctx.level.tilesDirty) ctx.rebuildTerrain(); },
 ];
 

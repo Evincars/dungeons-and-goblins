@@ -33,9 +33,9 @@ export type WeaponRule = {
 export const WEAPON_BASES = [
   'unarmed', 'club', 'dagger', 'punch_dagger', 'greatclub', 'handaxe', 'javelin', 'light_hammer', 'mace', 'quarterstaff',
   'sickle', 'spear',
-  'light_crossbow', 'dart', 'shortbow',
+  'light_crossbow', 'dart', 'shortbow', 'sling',
   'battleaxe', 'glaive', 'greataxe', 'greatsword', 'halberd', 'longsword', 'maul', 'pike', 'scimitar',
-  'shortsword', 'whip', 'heavy_crossbow', 'longbow', 'pistol', 'musket',
+  'shortsword', 'whip', 'rapier', 'hand_crossbow', 'heavy_crossbow', 'longbow', 'pistol', 'musket',
 ] as const;
 export type WeaponBase = (typeof WEAPON_BASES)[number];
 
@@ -60,6 +60,7 @@ export const WEAPON_TABLE = {
   light_crossbow: { damage: dice(1, 8), type: 'piercing', category: 'simple', range: 'ranged', properties: ['ammunition', 'loading', 'two_handed'] },
   dart: { damage: dice(1, 4), type: 'piercing', category: 'simple', range: 'ranged', properties: ['finesse', 'thrown'] },
   shortbow: { damage: dice(1, 6), type: 'piercing', category: 'simple', range: 'ranged', properties: ['ammunition', 'two_handed'] },
+  sling: { damage: dice(1, 4), type: 'bludgeoning', category: 'simple', range: 'ranged', properties: ['ammunition'] },
   battleaxe: { damage: dice(1, 8), type: 'slashing', category: 'martial', range: 'melee', properties: [], versatile: dice(1, 10) },
   glaive: { damage: dice(1, 10), type: 'slashing', category: 'martial', range: 'melee', properties: ['heavy', 'reach', 'two_handed'] },
   greataxe: { damage: dice(1, 12), type: 'slashing', category: 'martial', range: 'melee', properties: ['heavy', 'two_handed'] },
@@ -71,6 +72,8 @@ export const WEAPON_TABLE = {
   scimitar: { damage: dice(1, 6), type: 'slashing', category: 'martial', range: 'melee', properties: ['finesse', 'light'] },
   shortsword: { damage: dice(1, 6), type: 'piercing', category: 'martial', range: 'melee', properties: ['finesse', 'light'] },
   whip: { damage: dice(1, 4), type: 'slashing', category: 'martial', range: 'melee', properties: ['finesse', 'reach'] },
+  rapier: { damage: dice(1, 8), type: 'piercing', category: 'martial', range: 'melee', properties: ['finesse'] },
+  hand_crossbow: { damage: dice(1, 6), type: 'piercing', category: 'martial', range: 'ranged', properties: ['ammunition', 'light', 'loading'] },
   heavy_crossbow: { damage: dice(1, 10), type: 'piercing', category: 'martial', range: 'ranged', properties: ['ammunition', 'heavy', 'loading', 'two_handed'] },
   longbow: { damage: dice(1, 8), type: 'piercing', category: 'martial', range: 'ranged', properties: ['ammunition', 'heavy', 'two_handed'] },
   pistol: { damage: dice(1, 10), type: 'piercing', category: 'martial', range: 'ranged', properties: ['ammunition', 'loading'] },

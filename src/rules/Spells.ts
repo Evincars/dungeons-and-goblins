@@ -14,8 +14,8 @@ import spells from '../data/spells.json';
  */
 
 export const SPELL_IDS = [
-  'fire_bolt', 'ray_of_frost', 'chill_touch', 'chromatic_orb', 'magic_missile', 'burning_hands', 'thunderwave',
-  'cure_wounds', 'searing_smite',
+  'fire_bolt', 'ray_of_frost', 'chill_touch', 'eldritch_blast', 'vicious_mockery', 'sacred_flame',
+  'chromatic_orb', 'magic_missile', 'burning_hands', 'thunderwave', 'arms_of_hadar', 'guiding_bolt', 'healing_word', 'cure_wounds',
 ] as const;
 export type SpellId = (typeof SPELL_IDS)[number];
 
@@ -27,7 +27,7 @@ export function isSpellId(value: unknown): value is SpellId {
 export const SPELL_KINDS = ['bolt', 'missiles', 'burst', 'heal'] as const;
 export type SpellKind = (typeof SPELL_KINDS)[number];
 
-export const SPELL_DAMAGE_TYPES = ['fire', 'cold', 'lightning', 'force', 'necrotic', 'radiant', 'thunder', 'acid'] as const;
+export const SPELL_DAMAGE_TYPES = ['fire', 'cold', 'lightning', 'force', 'necrotic', 'radiant', 'thunder', 'acid', 'psychic'] as const;
 export type SpellDamageType = (typeof SPELL_DAMAGE_TYPES)[number];
 
 /** Ticks a second of recovery lasts (the game runs 60 a second). */
@@ -36,7 +36,8 @@ export const TICKS_PER_SECOND = 60;
 export type SpellDef = {
   id: SpellId;
   kind: SpellKind;
-  minLevel: number;
+  /** The spell's own level: 0 for a cantrip. */
+  level: number;
   damage: Dice;
   damageType: SpellDamageType;
   /** Ticks before it can be cast again. */
@@ -67,7 +68,7 @@ function readSpell(id: SpellId, raw: unknown): SpellDef {
   return {
     id,
     kind: isKind(raw.kind) ? raw.kind : 'bolt',
-    minLevel: num(raw.minLevel, 1),
+    level: num(raw.level, 1),
     damage: damage ?? { count: 1, sides: 4, bonus: 0 },
     damageType: isDamageType(raw.damageType) ? raw.damageType : 'force',
     recoveryTicks: Math.round(num(raw.recovery, 1) * TICKS_PER_SECOND),
@@ -83,10 +84,15 @@ export const SPELLS = {
   fire_bolt: readSpell('fire_bolt', spells.fire_bolt),
   ray_of_frost: readSpell('ray_of_frost', spells.ray_of_frost),
   chill_touch: readSpell('chill_touch', spells.chill_touch),
+  eldritch_blast: readSpell('eldritch_blast', spells.eldritch_blast),
+  vicious_mockery: readSpell('vicious_mockery', spells.vicious_mockery),
+  sacred_flame: readSpell('sacred_flame', spells.sacred_flame),
   chromatic_orb: readSpell('chromatic_orb', spells.chromatic_orb),
   magic_missile: readSpell('magic_missile', spells.magic_missile),
   burning_hands: readSpell('burning_hands', spells.burning_hands),
   thunderwave: readSpell('thunderwave', spells.thunderwave),
+  arms_of_hadar: readSpell('arms_of_hadar', spells.arms_of_hadar),
+  guiding_bolt: readSpell('guiding_bolt', spells.guiding_bolt),
+  healing_word: readSpell('healing_word', spells.healing_word),
   cure_wounds: readSpell('cure_wounds', spells.cure_wounds),
-  searing_smite: readSpell('searing_smite', spells.searing_smite),
 } as const satisfies Record<SpellId, SpellDef>;

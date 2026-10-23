@@ -35,8 +35,8 @@ Controls: WASD to move, the mouse to aim, left click (or Space) to attack, Q to 
 right click / R to cast the spell picked on the quick bar (1–5, or click a square), E to use (shop, chests, the
 exit), Shift to sprint, Tab for the inventory, Esc to pause. Keys can be rebound in Settings → Key bindings.
 
-Every game starts with typing your name and picking a hero — **Kaelen** (warrior), **Malkorath** (rogue),
-**Malthus** (paladin), **Vesper** (wizard), **Xanthia** (sorcerer), or the Barbarian and the Hooded Knight
+Every game starts with typing your name and picking a hero — a **Fighter**, **Wizard**, **Rogue**, **Warlock**, **Bard**, **Fighter 2** or **Cleric**; heroes
+are named after their class, the player names the character
 (see `classes.json` below) — then the intro plays (`public/intro-video.mp4` under the story; E, Enter or a
 click skip it) and the first level fades in. The safe room starts closed: pull the lever by its door (E) to
 raise the portcullis. In co-op the lever waits until every player has loaded the level.
@@ -55,7 +55,7 @@ their hit dice ("Hit dice 1/2 d6": left of one a level) — click them to spend 
 
 - **Experience**: each kill gives its SRD monster's XP (`xp` in `stats.json`), shared among the living heroes.
   Levels come at the SRD totals (300 for level 2, 900 for 3, … 355,000 for 20), each with more hit points (the
-  hit die's average + CON), one more hit die and a full heal; spells come at their `minLevel`.
+  hit die's average + CON), one more hit die and a full heal, and whatever the class's `progression` hands out at that level.
 - **Initiative**: when an enemy engages, it and the hero it hunts each roll d20 + DEX ("Initiative 17" over their
   heads). The winner gets the **first strike** — its next attack rolls with advantage. A hero rolls once a fight.
 - **Hit dice** are spent (click on the sheet) while no enemy is hunting you.
@@ -70,19 +70,45 @@ Game data you can tune without touching code. Edit a file, save, and the dev ser
 
 ### [`src/data/classes.json`](src/data/classes.json) — heroes and their classes
 
-The heroes offered on the character select, each a D&D 5e (SRD) class: `kaelen` (fighter), `malkorath`
-(rogue), `malthus` (paladin), `vesper` (wizard), `xanthia` (sorcerer) — their sprites are in
-`public/main-characters/<name>` — plus `barbarian` and `warrior` (the Hooded Knight). Each has:
+Every hero is a human (+1 to all six abilities, already in their scores) playing a D&D 5e (SRD) class, and is named after it: `fighter`, `wizard`, `rogue`, `warlock`, `bard`,
+`cleric`, and `fighter2` for a second fighter (a second hero of a class gets a 2). Their sprites keep the old names
+in `public/main-characters/<name>` (`character` below). The file has two parts.
 
-- `character` — the sprite set, `class`, `hitDie` and `hitPoints` (10 × hit die + 5 × CON modifier),
-- `abilities` — the six scores (the standard array: 15, 14, 13, 12, 10, 8),
+`classes` — what a class gives every hero who plays it:
+
+- `hitDie` — hit points start at 5 × (2 × hit die + CON modifier) and each level adds the die's average + CON,
 - `armor` (`light`, `medium`, `heavy`, `shield`), `weapons` (`simple`, `martial`) and `weaponBases` (single
   weapons, e.g. a wizard's dagger) — what the class is trained in; untrained armour gives disadvantage on
   attacks, an untrained weapon loses the proficiency bonus,
-- `spellcasting` — the ability spells add to hit and to their save DC (casters fly their own spell art),
-- `spells` — the spells the hero casts, in quick-bar order (from `spells.json`),
-- `savingThrows`, and `features`: `unarmored_defense` (no armour: AC 10 + DEX + CON), `fighting_style_defense`
-  (+1 AC in armour) or `sneak_attack` (+1d6 with finesse or ranged weapons).
+- `savingThrows` — the two saves that add the proficiency bonus, and `spellcasting` — the ability spells add to
+  hit and to their save DC (`null`: not a caster),
+- `progression` — per level 1–20 a list of rewards: `{ "feature": id }` (`sneak_attack`,
+  `jack_of_all_trades`, `disciple_of_life`, `agonizing_blast`), `{ "spell": id }` (the quick bar lists spells in the
+  order learnt), `{ "asi": true }` (an Ability Score Improvement the player takes, see below), `{ "choice": "fighting_style" }`,
+  `{ "ability": stat, "amount": n }` or `{ "feat": id }` (`alert`, `tough`, from [`feats.json`](src/data/feats.json)). A new feature needs an id in `rules/Features.ts`, its texts and a hook where
+  the rule applies; the file's `$comment` lists the SRD features not in play yet.
+
+`heroes` — each hero's `character` (the sprite set), `class` and `abilities` (the standard array 15, 14, 13, 12,
+10, 8 placed by the class's quick build, then +1 each: what a player who changes nothing keeps).
+
+### Customising a hero (the level bubble)
+
+The round level button of the HUD opens the hero's level log (`ui/LevelPanel.ts`, the choices are kept in
+`rules/Build.ts`): a tab for every level reached, each showing what that level gave and what was chosen. A red `!`
+that breathes marks the button, and the tab, while a choice is waiting:
+
+- **Ability scores, level 1**: point buy as in the SRD (27 points, 8–15, `rules/PointBuy.ts`) plus the human's +1.
+- **Fighting style, Fighter level 1** (`rules/FightingStyles.ts`): Archery (+2 to hit with ranged weapons), Defense
+  (+1 AC in armour), Dueling (+2 damage with a one-handed melee weapon and no other weapon), Great Weapon Fighting
+  (damage dice showing 1 or 2 are rolled again with a two-handed or versatile melee weapon held in both hands) or
+  Protection (a passive: with a shield, an enemy's attack on the closest ally within 5 feet is rolled with
+  disadvantage, then 5 s to recover; shown top left).
+- Both can be changed until the hero presses **Save** (a fighter must have picked a style) or leaves the first safe
+  room; then they are final (a fighter who never chose gets Defense). The chosen style stays explained on the page.
+- **Ability Score Improvement** at the levels a class offers it (`{ "asi": true }`): +2 to one ability or +1 to two
+  (none above 20), or a feat from `feats.json` instead; final once taken.
+
+In co-op a guest's panel only asks; the host checks the request (`game/Customize.ts`).
 
 ### [`src/data/stats.json`](src/data/stats.json) — enemies
 
@@ -105,7 +131,7 @@ has a `recovery` (seconds) before it can be cast again, and a short rest recover
 `bolt` (a spell attack: d20 + proficiency + casting ability against AC), `missiles` (`count` darts that always
 hit), `burst` (everyone within `radius` px of the point aimed at, at most `range` px away — or of the caster
 when `range` is 0 — saves on `save` against the spell DC: full damage on a failure, half on a success) or `heal`
-(the caster regains the dice + casting ability) — plus `minLevel`, `damage` (dice), `damageType` and `effect`:
+(the caster regains the dice + casting ability) — plus `level` (0: cantrip; it sets the recovery), `damage` (dice), `damageType` and `effect`:
 `[shape, colour]` from the effects library in `public/effects/` ([`src/assets/Effects.ts`](src/assets/Effects.ts)),
 played where it strikes and shown on its quick-bar square, sized by `effectScale`.
 
@@ -159,10 +185,10 @@ proficiencies). The modifier is what the rules use:
 |---|---|
 | Strength | Melee weapons add its modifier to hit and to damage; points on gear also lengthen a swing's reach |
 | Dexterity | Ranged weapons add it to hit and damage (finesse weapons use the better of STR and DEX); it raises AC |
-| Constitution | A Barbarian with no armour adds it to AC; points on gear give +10 ticks of sprint each |
-| Intelligence | A wizard's (and rogue's) spells add it to hit and to their save DC |
-| Wisdom | Nothing yet |
-| Charisma | A paladin's and sorcerer's spells add it; points on gear: +5% coins dropped by enemies each |
+| Constitution | Adds to hit points each level and to every hit die spent; points on gear give +10 ticks of sprint each |
+| Intelligence | A wizard's spells add it to hit and to their save DC |
+| Wisdom | A cleric's spells add it; passive Perception |
+| Charisma | A warlock's and bard's spells add it; points on gear: +5% coins dropped by enemies each |
 
 ### Fighting (D&D rules)
 

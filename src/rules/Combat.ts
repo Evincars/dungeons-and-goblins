@@ -11,8 +11,11 @@ export const MIN_HIT_DAMAGE = 1;
 /** A natural 1 on the d20: the attack misses whatever the bonus (a "critical miss"). */
 const NATURAL_FUMBLE = 1;
 
-/** What an attack adds to its d20, how the d20 is rolled, the damage it deals and any extra dice of another size. */
-export type AttackProfile = { attackBonus: number; damage: Dice; mode: D20Mode; extra?: Dice };
+/**
+ * What an attack adds to its d20, how the d20 is rolled, the damage it deals, any extra dice of another size and
+ * the damage dice that are rolled again when they show this or less (Great Weapon Fighting).
+ */
+export type AttackProfile = { attackBonus: number; damage: Dice; mode: D20Mode; extra?: Dice; rerollBelow?: number };
 
 export type AttackOutcome = AttackRoll & {
   attackBonus: number;
@@ -27,6 +30,6 @@ export function resolveAttack(attack: AttackProfile, targetAC: number, die: DieR
   const roll = rollAttack(attack.attackBonus, targetAC, attack.mode, die);
   const damageDice = roll.critical ? { ...attack.damage, count: attack.damage.count * 2 } : attack.damage;
   const extra = attack.extra && roll.hit ? rollDice(attack.extra, roll.critical, die) : 0;
-  const damage = roll.hit ? Math.max(MIN_HIT_DAMAGE, rollDice(attack.damage, roll.critical, die) + extra) : 0;
+  const damage = roll.hit ? Math.max(MIN_HIT_DAMAGE, rollDice(attack.damage, roll.critical, die, attack.rerollBelow) + extra) : 0;
   return { ...roll, attackBonus: attack.attackBonus, fumble: roll.natural === NATURAL_FUMBLE, damageDice, damage };
 }

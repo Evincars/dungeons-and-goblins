@@ -6,7 +6,7 @@ import { frameTexture } from '../render/Sheets';
 import { requestArt } from '../assets/LazyArt';
 import { EFFECT_COLOURS, EFFECT_SHAPES, effectSheetKey } from '../assets/Effects';
 import { chooseQuickSlot, chosenQuickSlot, claimPointer } from '../systems/InputSystem';
-import { heroClass } from '../rules/Classes';
+import { heroClass, spellLevelFor } from '../rules/Classes';
 import { SPELLS, TICKS_PER_SECOND } from '../rules/Spells';
 import type { SpellDef, SpellId } from '../rules/Spells';
 import { formatDice } from '../rules/Dice';
@@ -60,11 +60,13 @@ function showIcon(view: SlotView, def: SpellDef): void {
 function spellTopic(def: SpellDef | null, level: number, castWith: Player['heroClass']): TipTopic {
   if (!def) return { title: text('hud.slot.empty'), body: text('hud.slot.empty_body') };
   const seconds = (def.recoveryTicks / TICKS_PER_SECOND).toFixed(1);
-  const ability = statShort(heroClass(castWith).spellcasting ?? 'intelligence');
+  const cls = heroClass(castWith);
+  const ability = statShort(cls.spellcasting ?? 'intelligence');
   const detail = [def.kind === 'heal'
     ? text('hud.slot.heal_detail', { dice: formatDice(def.damage), ability, seconds })
     : text('hud.slot.detail', { dice: formatDice(def.damage), type: damageTypeName(def.damageType), seconds })];
-  if (level < def.minLevel) detail.push(text('hud.slot.locked', { level: def.minLevel }));
+  const learntAt = spellLevelFor(cls, def.id);
+  if (level < learntAt) detail.push(text('hud.slot.locked', { level: learntAt }));
   return { title: spellName(def.id), body: spellDescription(def.id), detail };
 }
 
@@ -136,7 +138,7 @@ export class QuickBar {
       view.active = active;
       this.drawFrame(view);
     }
-    const locked = !!def && player.playerStats.level < def.minLevel;
+    const locked = !!id && player.playerStats.level < spellLevelFor(heroClass(player.heroClass), id);
     if (view.locked !== locked) {
       view.locked = locked;
       view.icon.alpha = locked ? LOCKED_ALPHA : 1;

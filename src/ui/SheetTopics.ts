@@ -3,7 +3,7 @@ import { text } from '../core/texts';
 import { statDescription, statName, statShort } from '../entities/Items';
 import type { CharacterSheet } from '../rules/CharacterSheet';
 import { formatDamage, formatDice, formatModifier } from '../rules/Dice';
-import { armorName, damageTypeName, dndClassName, featureName, trainingName, weaponName } from '../rules/Names';
+import { armorName, damageTypeName, dndClassName, featureName, fightingStyleName, trainingName, weaponName } from '../rules/Names';
 import { BASE_SPEED_FT } from '../rules/CharacterSheet';
 import type { TipTopic } from './InfoTooltip';
 
@@ -11,7 +11,7 @@ import type { TipTopic } from './InfoTooltip';
 
 export function statTopic(stat: StatName, sheet: CharacterSheet): TipTopic {
   const score = sheet.scores[stat];
-  const base = sheet.heroClass.abilities[stat];
+  const base = sheet.baseScores[stat];
   const detail = text('stat.score_detail', { score, base, gear: formatModifier(score - base), modifier: formatModifier(sheet.modifiers[stat]) });
   return { title: statName(stat), body: statDescription(stat), detail: detail.split('\n') };
 }
@@ -23,7 +23,7 @@ export function armorClassTopic(sheet: CharacterSheet): TipTopic {
   detail.push(heavy ? text('sheet.ac.dex_heavy') : text('sheet.ac.dex', { modifier: formatModifier(ac.dex) }));
   if (ac.magic) detail.push(text('sheet.ac.magic', { bonus: formatModifier(ac.magic) }));
   if (ac.shield) detail.push(text('sheet.ac.shield', { bonus: formatModifier(ac.shield) }));
-  if (ac.featureName) detail.push(text('sheet.ac.feature', { feature: featureName(ac.featureName), bonus: formatModifier(ac.feature) }));
+  if (ac.featureName) detail.push(text('sheet.ac.feature', { feature: fightingStyleName(ac.featureName), bonus: formatModifier(ac.feature) }));
   detail.push(text('sheet.ac.total', { total: ac.total }));
   return { title: text('sheet.ac.name'), body: text('sheet.ac.description'), detail };
 }
@@ -77,7 +77,9 @@ export function proficiencyBonusTopic(sheet: CharacterSheet): TipTopic {
 }
 
 export function initiativeTopic(sheet: CharacterSheet): TipTopic {
-  const detail = [text('sheet.initiative.detail', { modifier: formatModifier(sheet.initiative) })];
+  const dex = sheet.modifiers.dexterity;
+  const detail = [text('sheet.initiative.detail', { modifier: formatModifier(dex) })];
+  if (sheet.initiative !== dex) detail.push(text('sheet.initiative.bonus', { bonus: formatModifier(sheet.initiative - dex) }));
   return { title: text('sheet.initiative.name'), body: text('sheet.initiative.description'), detail };
 }
 

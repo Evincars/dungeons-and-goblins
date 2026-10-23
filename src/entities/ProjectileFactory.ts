@@ -11,7 +11,7 @@ export const AIM_HEIGHT = 22;
 
 /**
  * A spell bolt leaving the caster at (x, y) along the unit direction (dx, dy); `owner` is the caster's entity
- * id. A caster with spell art of their own (`character`'s bolt: Vesper's fireball, Xanthia's light orb) flies
+ * id. A caster with spell art of their own (`character`'s bolt: the warlock's fireball, the bard's light orb) flies
  * it, turned the way it goes, and bursts in its frames; anyone else casts the plain bolt.
  */
 export function createSpellBolt(

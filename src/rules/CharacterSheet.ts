@@ -9,7 +9,13 @@ import { plus } from './Dice';
 import type { D20Mode, Dice } from './Dice';
 import { armorRule, isShield, magicBonus, weaponRule } from './Equipment';
 import { armorProficient, hasFeature, heroClass, weaponProficient } from './Classes';
-import type { ClassFeature, HeroClass } from './Classes';
+import type { HeroClass } from './Classes';
+import { baseScores, featInitiative } from './Build';
+import type { Build } from './Build';
+import {
+  ARCHERY_ATTACK_BONUS, DEFENSE_ARMOR_CLASS, DUELING_DAMAGE_BONUS, GREAT_WEAPON_REROLL_BELOW,
+} from './FightingStyles';
+import type { FightingStyleId } from './FightingStyles';
 import { MONSTERS } from './Monsters';
 import { nextLevelXp } from '../game/Progress';
 
@@ -20,9 +26,6 @@ import { nextLevelXp } from '../game/Progress';
 
 type Equipped = Partial<Record<EquipSlot, InventoryItem>>;
 type Modifiers = Readonly<Record<StatName, number>>;
-
-/** The Fighter's Defense style: this much AC while wearing armour. */
-const DEFENSE_STYLE_AC = 1;
 
 export type ArmorClass = {
   total: number;
@@ -36,9 +39,9 @@ export type ArmorClass = {
   magic: number;
   /** What the shield adds, its magic included (0 with none). */
   shield: number;
-  /** A class feature's share (Unarmored Defense's CON, the Defense style's +1), and which feature. */
+  /** The Defense fighting style's share (+1 in armour), and the style it came from. */
   feature: number;
-  featureName: ClassFeature | null;
+  featureName: FightingStyleId | null;
   /** Trained in the armour and shield worn; untrained, every attack roll has disadvantage. */
   proficient: boolean;
 };
@@ -55,18 +58,17 @@ function shieldOf(equipped: Equipped): InventoryItem | undefined {
   return isShield(equipped.secondary) ? equipped.secondary : undefined;
 }
 
-/** What a class feature adds to AC: Unarmored Defense (CON with no armour) or the Defense style (+1 in armour). */
-function featureAC(cls: HeroClass | null, armored: boolean, modifiers: Modifiers): { feature: number; featureName: ClassFeature | null } {
-  if (cls && !armored && hasFeature(cls, 'unarmored_defense')) return { feature: modifiers.constitution, featureName: 'unarmored_defense' };
-  if (cls && armored && hasFeature(cls, 'fighting_style_defense')) return { feature: DEFENSE_STYLE_AC, featureName: 'fighting_style_defense' };
+/** What a fighting style adds to AC: Defense gives +1 in armour. */
+function featureAC(style: FightingStyleId | null, armored: boolean): { feature: number; featureName: FightingStyleId | null } {
+  if (style === 'defense' && armored) return { feature: DEFENSE_ARMOR_CLASS, featureName: 'defense' };
   return { feature: 0, featureName: null };
 }
 
 /**
  * Armor Class: 10 + DEX bare, or the armour's AC (+ the DEX it allows), plus magic, a shield and the class's
- * feature. `cls` null: a creature without a class (no features, trained in everything).
+ * fighting style. `cls` null: a creature without a class (no features, trained in everything).
  */
-export function armorClass(equipped: Equipped, modifiers: Modifiers, cls: HeroClass | null = null): ArmorClass {
+export function armorClass(equipped: Equipped, modifiers: Modifiers, cls: HeroClass | null = null, style: FightingStyleId | null = null): ArmorClass {
   const worn = armorRule(equipped.armor);
   const rule = worn && worn.rule.category !== 'shield' ? worn.rule : null;
   const armor = rule && worn && equipped.armor ? { item: equipped.armor, base: worn.base, category: rule.category } : null;
@@ -75,7 +77,7 @@ export function armorClass(equipped: Equipped, modifiers: Modifiers, cls: HeroCl
   const magic = magicBonus(armor?.item);
   const shieldItem = shieldOf(equipped);
   const shield = shieldItem ? (armorRule(shieldItem)?.rule.ac ?? 0) + magicBonus(shieldItem) : 0;
-  const { feature, featureName } = featureAC(cls, !!armor, modifiers);
+  const { feature, featureName } = featureAC(style, !!armor);
   const proficient = !cls || ((!armor || armorProficient(cls, armor.category)) && (!shieldItem || armorProficient(cls, 'shield')));
   return { total: base + dex + magic + shield + feature, armor, base, dex, magic, shield, feature, featureName, proficient };
 }
@@ -97,6 +99,8 @@ export type WeaponAttack = {
   /** The damage roll, every bonus added, and extra dice of another size rolled with it (a rogue's Sneak Attack). */
   damage: Dice;
   extra?: Dice;
+  /** Damage dice showing this or less are rolled again (Great Weapon Fighting). */
+  rerollBelow?: number;
   /** What is added to the d20 to hit, and how the d20 is rolled (disadvantage in untrained armour). */
   attackBonus: number;
   mode: D20Mode;
@@ -142,7 +146,7 @@ function attackWith(w: Wielding, modifiers: Modifiers): WeaponAttack {
  * The attack of the weapon in hand; bare-handed it is a punch (1 + STR). Untrained in the weapon, no
  * proficiency bonus; in untrained armour (`armorProficient` false), the d20 is rolled with disadvantage.
  */
-export function weaponAttack(equipped: Equipped, modifiers: Modifiers, level: number, cls: HeroClass | null = null, armorTrained = true): WeaponAttack {
+export function weaponAttack(equipped: Equipped, modifiers: Modifiers, level: number, cls: HeroClass | null = null, armorTrained = true, style: FightingStyleId | null = null): WeaponAttack {
   const item = weaponInHand(equipped);
   const found = weaponRule(item ?? undefined);
   const base: WeaponBase = found?.base ?? 'unarmed';
@@ -151,12 +155,34 @@ export function weaponAttack(equipped: Equipped, modifiers: Modifiers, level: nu
   const twoHanded = !!rule.versatile && !!item && otherHandFree(equipped, item);
   const mode: D20Mode = armorTrained ? 'normal' : 'disadvantage';
   const attack = attackWith({ item, base, twoHanded, proficiency: trained ? proficiencyBonus(level) : 0, mode }, modifiers);
-  if (cls && hasFeature(cls, 'sneak_attack') && sneaky(rule)) attack.extra = SNEAK_ATTACK;
+  if (cls && hasFeature(cls, 'sneak_attack', level) && sneaky(rule)) attack.extra = sneakAttackDice(level);
+  return withFightingStyle(attack, equipped, style);
+}
+
+/** The other hand holds no weapon (a shield or nothing). */
+function otherHandWeaponless(equipped: Equipped, item: InventoryItem | null): boolean {
+  const other = equipped.primary === item ? equipped.secondary : equipped.primary;
+  return !weaponRule(other);
+}
+
+/**
+ * What the fighting style does to this blow: Archery adds to ranged attack rolls, Dueling to the damage of a melee
+ * weapon held in one hand alone, Great Weapon Fighting rerolls low damage dice of a melee weapon in two hands.
+ */
+function withFightingStyle(attack: WeaponAttack, equipped: Equipped, style: FightingStyleId | null): WeaponAttack {
+  const melee = attack.rule.range === 'melee';
+  if (style === 'archery' && !melee) attack.attackBonus += ARCHERY_ATTACK_BONUS;
+  const oneHanded = melee && !attack.twoHanded && !attack.rule.properties.includes('two_handed') && attack.base !== 'unarmed';
+  if (style === 'dueling' && oneHanded && otherHandWeaponless(equipped, attack.item)) attack.damage = plus(attack.damage, DUELING_DAMAGE_BONUS);
+  const bothHands = melee && (attack.twoHanded || attack.rule.properties.includes('two_handed'));
+  if (style === 'great_weapon_fighting' && bothHands) attack.rerollBelow = GREAT_WEAPON_REROLL_BELOW;
   return attack;
 }
 
-/** Sneak Attack's dice at level 1, and the weapons that allow it: finesse or ranged. */
-const SNEAK_ATTACK: Dice = { count: 1, sides: 6, bonus: 0 };
+/** Sneak Attack's d6s: one at level 1 and another every two levels (a level-20 rogue rolls ten). */
+const SNEAK_ATTACK_SIDES = 6;
+const sneakAttackDice = (level: number): Dice => ({ count: Math.ceil(Math.max(1, level) / 2), sides: SNEAK_ATTACK_SIDES, bonus: 0 });
+/** The weapons that allow Sneak Attack: finesse or ranged. */
 function sneaky(rule: WeaponRule): boolean {
   return rule.range === 'ranged' || rule.properties.includes('finesse');
 }
@@ -185,6 +211,8 @@ export type CharacterSheet = Abilities & {
   level: number;
   /** The proficiency bonus at this level (+2 from 1 to 4). */
   proficiency: number;
+  /** The ability scores before gear: the class's, plus what the levels gained so far added. */
+  baseScores: Readonly<Record<StatName, number>>;
   armorClass: ArmorClass;
   attack: WeaponAttack;
   hitPoints: { current: number; max: number };
@@ -192,7 +220,7 @@ export type CharacterSheet = Abilities & {
   hitDice: { left: number; total: number };
   /** Experience points so far, and those the next level needs (null at the highest). */
   experience: { xp: number; next: number | null };
-  /** Who acts first: d20 + this (the DEX modifier). */
+  /** Who acts first: d20 + this (the DEX modifier, plus Jack of All Trades and the Alert feat). */
   initiative: number;
   /** Feet a round in the tabletop game. */
   speed: number;
@@ -226,25 +254,34 @@ function spellcasting(cls: HeroClass, modifiers: Modifiers, proficiency: number)
   return { ability, attack: proficiency + modifiers[ability], dc: SPELL_DC_BASE + proficiency + modifiers[ability], trained: cls.spellcasting !== null };
 }
 
+/** Initiative: DEX, plus half the proficiency bonus for a Jack of All Trades, plus what feats add. */
+function initiativeBonus(cls: HeroClass, level: number, build: Build | undefined, dex: number, proficiency: number): number {
+  const jack = hasFeature(cls, 'jack_of_all_trades', level) ? Math.floor(proficiency / 2) : 0;
+  return dex + jack + featInitiative(cls, level, build);
+}
+
 /** Everything the inventory's character sheet shows, from the player's class and what they wear. */
-export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' | 'health' | 'heroClass'>): CharacterSheet {
+export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' | 'health' | 'heroClass' | 'build'>): CharacterSheet {
   const equipped = player.equipped ?? {};
   const cls = heroClass(player.heroClass);
-  const scores = abilities(equipped, cls.abilities);
-  const ac = armorClass(equipped, scores.modifiers, cls);
   const level = player.playerStats.level;
+  const base = baseScores(cls, level, player.build);
+  const scores = abilities(equipped, base);
+  const style = player.build?.fightingStyle ?? null;
+  const ac = armorClass(equipped, scores.modifiers, cls, style);
   const proficiency = proficiencyBonus(level);
   return {
     ...scores,
     heroClass: cls,
     level,
     proficiency,
+    baseScores: base,
     armorClass: ac,
-    attack: weaponAttack(equipped, scores.modifiers, level, cls, ac.proficient),
+    attack: weaponAttack(equipped, scores.modifiers, level, cls, ac.proficient, style),
     hitPoints: { current: player.health.current, max: player.health.max },
     hitDice: { left: player.playerStats.hitDice, total: level },
     experience: { xp: player.playerStats.exp, next: nextLevelXp(level) },
-    initiative: scores.modifiers.dexterity,
+    initiative: initiativeBonus(cls, level, player.build, scores.modifiers.dexterity, proficiency),
     speed: speedIn(ac, scores.scores),
     passivePerception: PASSIVE_BASE + scores.modifiers.wisdom,
     saves: savingThrows(scores.modifiers, cls, proficiency),

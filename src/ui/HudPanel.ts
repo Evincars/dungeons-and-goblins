@@ -11,6 +11,11 @@ import { MinimapView } from './MinimapView';
 import { QuickBar } from './QuickBar';
 import { RestMenu } from './RestMenu';
 import { RestBanner } from './RestBanner';
+import { LEVEL_PANEL_H, LEVEL_PANEL_W, LevelPanel } from './LevelPanel';
+import { PassiveHud } from './PassiveHud';
+import { hasChoices } from '../rules/Build';
+import { heroClass } from '../rules/Classes';
+import { heroName } from '../rules/Names';
 import type { Level } from '../level/Level';
 
 /** The health bar, bottom left: how long, how thick, its corner rounding and the margin to the screen's edge. */
@@ -34,6 +39,11 @@ const BUTTON_R = 11;
 const BUTTON_GAP = 4;
 const BUTTON_LIFT = 4;
 const HOVER_ALPHA = 0.14;
+/** The mark on the level bubble: how big it is drawn, and how it breathes (updates for a full breath, how much it swells and how faint it gets). */
+const MARK_SCALE = 2;
+const BREATH_PERIOD = 100;
+const BREATH_SWELL = 0.3;
+const BREATH_FAINT = 0.45;
 /** The open map is redrawn this often (ticks). */
 const MAP_REFRESH_TICKS = 20;
 
@@ -110,6 +120,12 @@ export class HudPanel {
   private readonly restMenu: RestMenu;
   private readonly level = new PixelLabel('1', { color: THEME.title, align: 'center', outline: true });
   private readonly minimap = new MinimapView();
+  private readonly levelPanel = new LevelPanel();
+  private readonly passives = new PassiveHud();
+  /** A mark on the level bubble while the hero has a choice to make. */
+  private readonly choiceMark = new PixelLabel('!', { color: THEME.hitPoints, scale: MARK_SCALE, align: 'center', outline: true });
+  /** Updates so far, which the choice mark breathes by. */
+  private breath = 0;
   /** The level being played, as of the last update (the map draws it). */
   private levelShown: Level | null = null;
   /** Ticks until the open map is redrawn (the party keeps exploring while it is up). */
@@ -123,7 +139,7 @@ export class HudPanel {
     BUTTONS.forEach((def, i) => this.addButton(def, corners[i]));
     const rest = corners[3];
     this.restMenu = new RestMenu(Math.round(rest.x - BUTTON_R), Math.round(rest.y - BUTTON_R - 2));
-    this.container.addChild(this.quickBar.view, this.restBanner.view, this.restMenu.view, this.dialog.container);
+    this.container.addChild(this.quickBar.view, this.restBanner.view, this.passives.view, this.restMenu.view, this.dialog.container);
   }
 
   private addBar(spec: Pick<Bar, 'color' | 'current' | 'max'>, i: number): void {
@@ -159,7 +175,11 @@ export class HudPanel {
     button.addChild(art, icon, glow);
     if (def.id === 'level') {
       this.level.position.set(0, -4);
-      button.addChild(this.level);
+      this.choiceMark.pivot.set(0, this.choiceMark.textHeight / 2);
+      this.choiceMark.position.set(r - 1, -r + 3);
+      this.choiceMark.visible = false;
+      this.choiceMark.eventMode = 'none';
+      button.addChild(this.level, this.choiceMark);
     }
     button.eventMode = 'static';
     button.cursor = 'pointer';
@@ -176,6 +196,10 @@ export class HudPanel {
       this.restMenu.toggle();
       return;
     }
+    if (def.id === 'level') {
+      this.openLevel();
+      return;
+    }
     if (def.id !== 'map') {
       this.dialog.show(def.title, text('hud.dialog.placeholder'));
       return;
@@ -186,15 +210,36 @@ export class HudPanel {
     this.dialog.show(def.title, this.minimap.view, this.minimap.width, this.minimap.height);
   }
 
+  /** The level bubble: what the hero can decide at their level. */
+  private openLevel(): void {
+    const player = localPlayer();
+    if (!player) return;
+    this.levelPanel.open(player);
+    this.levelPanel.update(player);
+    const title = text('level.title', { hero: heroName(heroClass(player.heroClass).id), level: player.playerStats.level });
+    this.dialog.show(title, this.levelPanel.view, LEVEL_PANEL_W, LEVEL_PANEL_H);
+  }
+
   update(level: Level): void {
     this.levelShown = level;
     this.refreshMap(level);
     const player = localPlayer();
     this.restBanner.update();
     this.quickBar.update(player);
+    this.passives.update();
     if (!player) return;
+    if (this.dialog.showing(this.levelPanel.view)) this.levelPanel.update(player);
+    this.choiceMark.visible = hasChoices(heroClass(player.heroClass), player.playerStats.level, player.build);
+    if (this.choiceMark.visible) this.breathe();
     for (const bar of this.bars) this.drawBar(bar, player);
     this.level.text = String(player.playerStats.level);
+  }
+
+  /** The choice mark swells and fades back and forth, like breathing, so it catches the eye. */
+  private breathe(): void {
+    const phase = (Math.sin((this.breath++ / BREATH_PERIOD) * 2 * Math.PI) + 1) / 2;
+    this.choiceMark.scale.set(1 + BREATH_SWELL * phase);
+    this.choiceMark.alpha = 1 - BREATH_FAINT * (1 - phase);
   }
 
   /** While the map is open, it is drawn again now and then, so newly explored ground appears on it. */
@@ -222,6 +267,8 @@ export class HudPanel {
 
   destroy(): void {
     this.dialog.destroy();
+    this.levelPanel.destroy();
+    this.passives.destroy();
     this.quickBar.destroy();
     this.restMenu.destroy();
     this.restBanner.destroy();

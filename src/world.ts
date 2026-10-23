@@ -5,6 +5,7 @@ import type { CharacterState } from './characters/CharacterDef';
 import type { DropTableId } from './entities/Drops';
 import type { ItemBase } from './rules/Equipment';
 import type { HeroClassId } from './rules/Classes';
+import type { Build } from './rules/Build';
 import type { WeaponBase } from './rules/WeaponTable';
 import type { AttackProfile } from './rules/Combat';
 import type { SpellId } from './rules/Spells';
@@ -259,6 +260,10 @@ export type Entity = {
   mobWeapon?: WeaponBase;
   /** A player's hero class (src/data/classes.json): their abilities, hit points and training. */
   heroClass?: HeroClassId;
+  /** What the player decided for their hero: bought ability scores, fighting style, Improvements (src/rules/Build.ts). */
+  build?: Build;
+  /** Ticks until a Protection fighting style protects an ally again (systems/ProtectionSystem.ts). */
+  protectCooldown?: number;
   /** The dice rolls shown over the head, oldest first; each fades after a while (systems/RollLogSystem.ts). */
   rollLog?: RollLine[];
   /** The level's combat log (one entity holds it): the latest blows, newest last (systems/CombatLogSystem.ts). */

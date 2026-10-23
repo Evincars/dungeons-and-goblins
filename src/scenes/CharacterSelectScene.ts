@@ -7,7 +7,7 @@ import { CLASSES, HERO_CLASSES } from '../rules/Classes';
 import type { HeroClass, HeroClassId } from '../rules/Classes';
 import { abilityModifier } from '../rules/Abilities';
 import { formatModifier } from '../rules/Dice';
-import { dndClassName, featureDescription, featureName, heroBlurb, heroName, trainingName, weaponName } from '../rules/Names';
+import { featureDescription, featureName, heroBlurb, heroName, trainingName, weaponName } from '../rules/Names';
 import { statName, statShort } from '../entities/Items';
 import { characterDef, clipAnchorX, clipAnchorY, clipFrameTexture, clipFrames, clipSheetKey } from '../characters/Characters';
 import type { CharacterDef } from '../characters/CharacterDef';
@@ -51,7 +51,6 @@ function cardLines(cls: HeroClass, width: number): Line[] {
   }));
   const weapons = [...cls.weapons.map(trainingName), ...cls.weaponBases.map(weaponName)];
   const lines: Line[] = [
-    { text: text('select.class', { class: dndClassName(cls.dndClass) }), color: THEME.buttonText },
     ...wrapLines(heroBlurb(cls.id), width).map((line) => ({ text: line, color: THEME.muted })),
     { text: text('select.hit_points', { die: cls.hitDie, hp: cls.hitPoints }), color: THEME.hitPoints },
     { text: scores.slice(0, 3).join('  '), color: THEME.text },
@@ -98,8 +97,7 @@ function animate(preview: Preview, tick: number): void {
 }
 
 /**
- * Before a game: type the hero's name and pick who they are — Kaelen, Malkorath, Malthus, Vesper, Xanthia (or
- * the two heroes the game began with). One hero's card shows at a time, the hero idling beside what their
+ * Before a game: type the hero's name and pick who they are by class. One hero's card shows at a time, the hero idling beside what their
  * class brings under the tabletop rules; the arrows (or ← →) and the portraits under it change the pick. The
  * choice is remembered for next time.
  */

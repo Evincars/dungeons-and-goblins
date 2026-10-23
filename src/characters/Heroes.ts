@@ -8,7 +8,7 @@ import type { CharacterDef } from './CharacterDef';
  */
 
 const K = '/main-characters/kaelen';
-/** Kaelen, the warrior: 128×64 frames in 2×N grids; Attacks.png holds five 8-frame attacks, one per row. */
+/** Kaelen, the fighter: 128×64 frames in 2×N grids; Attacks.png holds five 8-frame attacks, one per row. */
 export const KAELEN: CharacterDef = {
   id: 'kaelen',
   frameWidth: 128,
@@ -43,7 +43,7 @@ export const KAELEN: CharacterDef = {
 };
 
 const MK = '/main-characters/malkorath';
-/** Malkorath, the rogue: 128×128 frames; his magic arrow (Charge_2) is his spell. */
+/** Malkorath, the wizard: 128×128 frames; his magic arrow (Charge_2) is his spell. */
 export const MALKORATH: CharacterDef = {
   id: 'malkorath',
   frameWidth: 128,
@@ -71,7 +71,7 @@ export const MALKORATH: CharacterDef = {
 };
 
 const ML = '/main-characters/malthus';
-/** Malthus, the paladin: 180×180 frames with the body drawn small in them. */
+/** Malthus, the rogue: 180×180 frames with the body drawn small in them. */
 export const MALTHUS: CharacterDef = {
   id: 'malthus',
   frameWidth: 180,
@@ -95,7 +95,7 @@ export const MALTHUS: CharacterDef = {
 };
 
 const V = '/main-characters/vesper';
-/** Vesper, the wizard: 128×128 frames; her fireball (Charge, 64×64) flies on frames 0–4 and bursts on 5–11. */
+/** Vesper, the warlock: 128×128 frames; her fireball (Charge, 64×64) flies on frames 0–4 and bursts on 5–11. */
 export const VESPER: CharacterDef = {
   id: 'vesper',
   frameWidth: 128,
@@ -122,7 +122,7 @@ export const VESPER: CharacterDef = {
 };
 
 const X = '/main-characters/xanthia';
-/** Xanthia, the sorcerer: 128×128 frames; her light orb (Charge, 64×64) crackles as it flies. */
+/** Xanthia, the bard: 128×128 frames; her light orb (Charge, 64×64) crackles as it flies. */
 export const XANTHIA: CharacterDef = {
   id: 'xanthia',
   frameWidth: 128,

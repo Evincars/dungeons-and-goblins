@@ -4,6 +4,7 @@ import { characterComponents } from '../characters/Characters';
 import { createTrail } from '../ai/perception/trail';
 import { DEFAULT_CLASS, heroClass } from '../rules/Classes';
 import type { HeroClassId } from '../rules/Classes';
+import { newBuild } from '../rules/Build';
 /** Players regain one hit point this often while unhurt. */
 const PLAYER_REGEN_TICKS = 180;
 const PLAYER_SPEED = 1.2;
@@ -25,6 +26,7 @@ export function createPlayer(x: number, y: number, classId: HeroClassId = DEFAUL
     team: Team.Player,
     health: { current: cls.hitPoints, max: cls.hitPoints },
     heroClass: cls.id,
+    build: newBuild(cls),
     spellbook: { recovery: cls.spells.map(() => 0) },
     hurtTime: 0,
     freezeTime: 0,

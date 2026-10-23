@@ -1,45 +1,95 @@
 {
-  "$comment": "The heroes a new game offers, each with their D&D 5e (SRD) class. character: the sprite set (src/characters/). class: barbarian, fighter (shown as Warrior), paladin, rogue, wizard or sorcerer. hitDie: the class's hit die; hitPoints: 10 x hit die + 5 x CON modifier. abilities: the standard array (15, 14, 13, 12, 10, 8) placed as the class's quick build suggests. armor: light, medium, heavy, shield; weapons: simple, martial; weaponBases: single weapons trained beyond those (names from src/rules/WeaponTable.ts). Armour without training gives disadvantage on attacks; a weapon without it loses the proficiency bonus. spellcasting: the ability spells use to hit (null: Intelligence, untrained). spells: what the hero can cast, in quick-bar order (src/data/spells.json; learnt at each spell's minLevel). features: unarmored_defense (no armour: AC 10 + DEX + CON), fighting_style_defense (+1 AC in armour), sneak_attack (+1d6 damage with finesse or ranged weapons).",
-  "kaelen": {
-    "character": "kaelen", "class": "fighter", "hitDie": 10, "hitPoints": 110,
-    "abilities": { "strength": 15, "dexterity": 13, "constitution": 14, "intelligence": 8, "wisdom": 12, "charisma": 10 },
-    "armor": ["light", "medium", "heavy", "shield"], "weapons": ["simple", "martial"], "weaponBases": [],
-    "savingThrows": ["strength", "constitution"], "spellcasting": null, "features": ["fighting_style_defense"], "spells": []
+  "$comment": "D&D 5e (SRD) classes and the heroes who play them. Every hero is a human: the +1 to all six abilities is already in their scores. Their scores are the starting point of the point buy the player does in the first safe room (27 points, 8 to 15, src/rules/PointBuy.ts); the standard array (15, 14, 13, 12, 10, 8) placed as the class's quick build suggests costs exactly 27, so it is also what a player who changes nothing keeps. classes: hitDie (hit points = 5 x (2 x hit die + CON modifier) at level 1, then the die's average + CON a level, see src/rules/HitPoints.ts); armor: light, medium, heavy, shield; weapons: simple, martial; weaponBases: single weapons trained beyond those (names from src/rules/WeaponTable.ts); savingThrows: the two trained saves (they add the proficiency bonus, spell saves included); spellcasting: the ability spells use (null: not a caster); progression: per level 1-20, a list of rewards: {feature: id} (CLASS_FEATURES in src/rules/Classes.ts), {spell: id} (src/data/spells.json; spells show in the quick bar in the order learnt), {asi: true} (an Ability Score Improvement: the player puts +2 in one ability or +1 in two, no score above 20, or takes a feat from src/data/feats.json instead), {choice: fighting_style} (the player picks one, src/rules/FightingStyles.ts), {ability: stat, amount: n} (a fixed bonus), {feat: id} (a feat the class itself grants). Hit points, proficiency bonus, spell DC and attack follow the level on their own. SRD features not in play yet (so not listed): Second Wind, Action Surge, Extra Attack, Expertise, Cunning Action, Arcane Recovery, Bardic Inspiration, Channel Divinity, Pact Magic slots, Eldritch Invocations other than Agonizing Blast, subclasses beyond Life and Fiend. heroes: named after their class (a second hero of a class gets a 2: fighter2); character is the sprite set (src/characters/), class one of classes.",
+  "classes": {
+    "fighter": {
+      "hitDie": 10,
+      "armor": ["light", "medium", "heavy", "shield"], "weapons": ["simple", "martial"], "weaponBases": [],
+      "savingThrows": ["strength", "constitution"], "spellcasting": null,
+      "progression": {
+        "1": [{ "choice": "fighting_style" }],
+        "4": [{ "asi": true }], "6": [{ "asi": true }], "8": [{ "asi": true }], "12": [{ "asi": true }],
+        "14": [{ "asi": true }], "16": [{ "asi": true }], "19": [{ "asi": true }]
+      }
+    },
+    "wizard": {
+      "hitDie": 6,
+      "armor": [], "weapons": [], "weaponBases": ["dagger", "dart", "sling", "quarterstaff", "light_crossbow"],
+      "savingThrows": ["intelligence", "wisdom"], "spellcasting": "intelligence",
+      "progression": {
+        "1": [{ "spell": "fire_bolt" }, { "spell": "ray_of_frost" }, { "spell": "magic_missile" }, { "spell": "burning_hands" }],
+        "2": [{ "spell": "chromatic_orb" }],
+        "3": [{ "spell": "thunderwave" }],
+        "4": [{ "asi": true }], "8": [{ "asi": true }], "12": [{ "asi": true }], "16": [{ "asi": true }], "19": [{ "asi": true }]
+      }
+    },
+    "rogue": {
+      "hitDie": 8,
+      "armor": ["light"], "weapons": ["simple"], "weaponBases": ["hand_crossbow", "longsword", "rapier", "shortsword"],
+      "savingThrows": ["dexterity", "intelligence"], "spellcasting": null,
+      "progression": {
+        "1": [{ "feature": "sneak_attack" }],
+        "4": [{ "asi": true }], "8": [{ "asi": true }], "10": [{ "asi": true }], "12": [{ "asi": true }],
+        "16": [{ "asi": true }], "19": [{ "asi": true }]
+      }
+    },
+    "warlock": {
+      "hitDie": 8,
+      "armor": ["light"], "weapons": ["simple"], "weaponBases": [],
+      "savingThrows": ["wisdom", "charisma"], "spellcasting": "charisma",
+      "progression": {
+        "1": [{ "spell": "eldritch_blast" }, { "spell": "chill_touch" }, { "spell": "arms_of_hadar" }],
+        "2": [{ "feature": "agonizing_blast" }],
+        "4": [{ "asi": true }], "8": [{ "asi": true }], "12": [{ "asi": true }], "16": [{ "asi": true }], "19": [{ "asi": true }]
+      }
+    },
+    "bard": {
+      "hitDie": 8,
+      "armor": ["light"], "weapons": ["simple"], "weaponBases": ["hand_crossbow", "longsword", "rapier", "shortsword"],
+      "savingThrows": ["dexterity", "charisma"], "spellcasting": "charisma",
+      "progression": {
+        "1": [{ "spell": "vicious_mockery" }, { "spell": "healing_word" }, { "spell": "thunderwave" }, { "spell": "cure_wounds" }],
+        "2": [{ "feature": "jack_of_all_trades" }],
+        "4": [{ "asi": true }], "8": [{ "asi": true }], "12": [{ "asi": true }], "16": [{ "asi": true }], "19": [{ "asi": true }]
+      }
+    },
+    "cleric": {
+      "hitDie": 8,
+      "armor": ["light", "medium", "heavy", "shield"], "weapons": ["simple"], "weaponBases": [],
+      "savingThrows": ["wisdom", "charisma"], "spellcasting": "wisdom",
+      "progression": {
+        "1": [{ "feature": "disciple_of_life" }, { "spell": "sacred_flame" }, { "spell": "guiding_bolt" }, { "spell": "cure_wounds" }, { "spell": "healing_word" }],
+        "4": [{ "asi": true }], "8": [{ "asi": true }], "12": [{ "asi": true }], "16": [{ "asi": true }], "19": [{ "asi": true }]
+      }
+    }
   },
-  "malkorath": {
-    "character": "malkorath", "class": "rogue", "hitDie": 8, "hitPoints": 90,
-    "abilities": { "strength": 8, "dexterity": 15, "constitution": 14, "intelligence": 13, "wisdom": 12, "charisma": 10 },
-    "armor": ["light"], "weapons": ["simple"], "weaponBases": ["longsword", "shortsword"],
-    "savingThrows": ["dexterity", "intelligence"], "spellcasting": "intelligence", "features": ["sneak_attack"], "spells": ["chill_touch", "magic_missile"]
-  },
-  "malthus": {
-    "character": "malthus", "class": "paladin", "hitDie": 10, "hitPoints": 105,
-    "abilities": { "strength": 15, "dexterity": 10, "constitution": 13, "intelligence": 8, "wisdom": 12, "charisma": 14 },
-    "armor": ["light", "medium", "heavy", "shield"], "weapons": ["simple", "martial"], "weaponBases": [],
-    "savingThrows": ["wisdom", "charisma"], "spellcasting": "charisma", "features": [], "spells": ["searing_smite", "cure_wounds"]
-  },
-  "vesper": {
-    "character": "vesper", "class": "wizard", "hitDie": 6, "hitPoints": 70,
-    "abilities": { "strength": 8, "dexterity": 13, "constitution": 14, "intelligence": 15, "wisdom": 12, "charisma": 10 },
-    "armor": [], "weapons": [], "weaponBases": ["dagger", "dart", "quarterstaff", "light_crossbow"],
-    "savingThrows": ["intelligence", "wisdom"], "spellcasting": "intelligence", "features": [], "spells": ["fire_bolt", "ray_of_frost", "magic_missile", "burning_hands"]
-  },
-  "xanthia": {
-    "character": "xanthia", "class": "sorcerer", "hitDie": 6, "hitPoints": 70,
-    "abilities": { "strength": 8, "dexterity": 13, "constitution": 14, "intelligence": 10, "wisdom": 12, "charisma": 15 },
-    "armor": [], "weapons": [], "weaponBases": ["dagger", "dart", "quarterstaff", "light_crossbow"],
-    "savingThrows": ["constitution", "charisma"], "spellcasting": "charisma", "features": [], "spells": ["ray_of_frost", "chromatic_orb", "thunderwave", "magic_missile"]
-  },
-  "barbarian": {
-    "character": "fighter", "class": "barbarian", "hitDie": 12, "hitPoints": 130,
-    "abilities": { "strength": 15, "dexterity": 13, "constitution": 14, "intelligence": 8, "wisdom": 12, "charisma": 10 },
-    "armor": ["light", "medium", "shield"], "weapons": ["simple", "martial"], "weaponBases": [],
-    "savingThrows": ["strength", "constitution"], "spellcasting": null, "features": ["unarmored_defense"], "spells": []
-  },
-  "warrior": {
-    "character": "hooded_knight", "class": "fighter", "hitDie": 10, "hitPoints": 110,
-    "abilities": { "strength": 15, "dexterity": 13, "constitution": 14, "intelligence": 10, "wisdom": 12, "charisma": 8 },
-    "armor": ["light", "medium", "heavy", "shield"], "weapons": ["simple", "martial"], "weaponBases": [],
-    "savingThrows": ["strength", "constitution"], "spellcasting": null, "features": ["fighting_style_defense"], "spells": []
+  "heroes": {
+    "fighter": {
+      "character": "kaelen", "class": "fighter",
+      "abilities": { "strength": 16, "dexterity": 14, "constitution": 15, "intelligence": 9, "wisdom": 13, "charisma": 11 }
+    },
+    "wizard": {
+      "character": "malkorath", "class": "wizard",
+      "abilities": { "strength": 9, "dexterity": 14, "constitution": 15, "intelligence": 16, "wisdom": 13, "charisma": 11 }
+    },
+    "rogue": {
+      "character": "malthus", "class": "rogue",
+      "abilities": { "strength": 9, "dexterity": 16, "constitution": 15, "intelligence": 14, "wisdom": 13, "charisma": 11 }
+    },
+    "warlock": {
+      "character": "vesper", "class": "warlock",
+      "abilities": { "strength": 9, "dexterity": 14, "constitution": 15, "intelligence": 11, "wisdom": 13, "charisma": 16 }
+    },
+    "bard": {
+      "character": "xanthia", "class": "bard",
+      "abilities": { "strength": 9, "dexterity": 15, "constitution": 14, "intelligence": 11, "wisdom": 13, "charisma": 16 }
+    },
+    "fighter2": {
+      "character": "fighter", "class": "fighter",
+      "abilities": { "strength": 16, "dexterity": 14, "constitution": 15, "intelligence": 9, "wisdom": 13, "charisma": 11 }
+    },
+    "cleric": {
+      "character": "hooded_knight", "class": "cleric",
+      "abilities": { "strength": 15, "dexterity": 11, "constitution": 14, "intelligence": 9, "wisdom": 16, "charisma": 13 }
+    }
   }
 }

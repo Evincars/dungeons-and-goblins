@@ -93,8 +93,8 @@ function mobAt(level, type, tx, ty, heading = { x: 1, y: 0 }) {
   return mob;
 }
 
-/** A hero standing on a tile: the Barbarian unless told (its swing lands at once, with no wind-up). */
-function playerAt(tx, ty, heroClass = 'barbarian') {
+/** A hero standing on a tile: the second Fighter unless told (its swing lands at once, with no wind-up). */
+function playerAt(tx, ty, heroClass = 'fighter2') {
   return createPlayer(centre(tx), centre(ty), heroClass);
 }
 
@@ -1078,10 +1078,10 @@ test('weapon damage: the dice, plus STR in melee, DEX at range, the better for f
   const player = playerAt(2, 2);
   player.equipped = { primary: weapon('dagger', 1), armor: { type: 'armor', name: 'a', value: 1, gear: 'armor', base: 'chain_shirt' } };
   const sheet = characterSheet(player);
-  assert.equal(sheet.heroClass.id, 'barbarian');
-  assert.equal(sheet.armorClass.total, 14, 'chain shirt 13, the barbarian\'s DEX 13 +1');
-  assert.equal(formatDice(sheet.attack.damage), '1d4 + 3', 'the +1 dagger with STR 15 (+2), better than DEX +1');
-  assert.deepEqual(sheet.hitPoints, { current: 130, max: 130 }, 'a barbarian: 10 x d12 + 5 x CON +2');
+  assert.equal(sheet.heroClass.id, 'fighter2');
+  assert.equal(sheet.armorClass.total, 15, 'chain shirt 13 + DEX +2 (the medium cap), no fighting style');
+  assert.equal(formatDice(sheet.attack.damage), '1d4 + 4', 'the +1 dagger with STR 16 (+3), better than DEX +2');
+  assert.deepEqual(sheet.hitPoints, { current: 110, max: 110 }, 'a fighter: 10 x d10 + 5 x CON +2');
 });
 
 test('every catalogue weapon, armour and shield plays as a D&D base, and a guest cannot forge a better one', async () => {
@@ -1096,28 +1096,32 @@ test('every catalogue weapon, armour and shield plays as a D&D base, and a guest
   assert.equal(sameItems({ inventory: [sword], equipped: {} }, { inventory: [{ ...sword, bonus: 3 }], equipped: {} }), false, 'enchanting it in a loadout is caught');
 });
 
-test('the two hero classes: the Barbarian fights best unarmoured, the Warrior is trained in every armour', async () => {
+test('the Fighter and the Cleric: both are trained in every armour, the Cleric with simple weapons only', async () => {
   const { CLASSES } = await load('rules/Classes');
   const { characterSheet } = await load('rules/CharacterSheet');
   const plate = { type: 'armor', name: 'p', value: 1, gear: 'armor', base: 'plate' };
-  assert.deepEqual([...CLASSES.barbarian.armor], ['light', 'medium', 'shield']);
-  assert.deepEqual([...CLASSES.warrior.armor], ['light', 'medium', 'heavy', 'shield']);
-  const barbarian = createPlayer(centre(2), centre(2), 'barbarian');
-  assert.equal(barbarian.character.def, 'fighter');
-  assert.equal(characterSheet(barbarian).armorClass.total, 10 + 1 + 2, 'Unarmored Defense: 10 + DEX + CON');
-  barbarian.equipped = { armor: plate };
-  const heavy = characterSheet(barbarian);
-  assert.equal(heavy.armorClass.proficient, false, 'a barbarian is not trained in plate');
-  assert.equal(heavy.attack.mode, 'disadvantage', 'so every attack is rolled with disadvantage');
-  const warrior = createPlayer(centre(4), centre(2), 'warrior');
-  assert.equal(warrior.character.def, 'hooded_knight');
-  assert.equal(warrior.heroClass, 'warrior');
-  warrior.equipped = { armor: plate };
-  const sheet = characterSheet(warrior);
-  assert.equal(sheet.armorClass.total, 19, 'plate 18 + the Defense style 1');
-  assert.equal(sheet.attack.mode, 'normal');
-  assert.equal(sheet.attack.proficient, true);
-  assert.equal(warrior.health.max, 110, '10 x d10 + 5 x CON +2');
+  assert.deepEqual([...CLASSES.fighter.armor], ['light', 'medium', 'heavy', 'shield']);
+  assert.deepEqual([...CLASSES.cleric.armor], ['light', 'medium', 'heavy', 'shield'], 'the Life domain adds heavy armour');
+  assert.deepEqual([...CLASSES.cleric.weapons], ['simple']);
+  const fighter = createPlayer(centre(2), centre(2), 'fighter2');
+  assert.equal(fighter.character.def, 'fighter');
+  assert.equal(createPlayer(centre(2), centre(2), 'fighter').character.def, 'kaelen', 'a second fighter hero has the other sprites');
+  assert.equal(characterSheet(fighter).armorClass.total, 10 + 2, 'no armour: 10 + DEX');
+  fighter.build.fightingStyle = 'defense';
+  fighter.equipped = { armor: plate };
+  const heavy = characterSheet(fighter);
+  assert.equal(heavy.armorClass.total, 19, 'plate 18 + the Defense style 1');
+  assert.equal(heavy.attack.mode, 'normal');
+  assert.equal(heavy.attack.proficient, true);
+  const cleric = createPlayer(centre(4), centre(2), 'cleric');
+  assert.equal(cleric.character.def, 'hooded_knight');
+  assert.equal(cleric.heroClass, 'cleric');
+  cleric.equipped = { armor: plate, primary: { type: 'weapon', name: 'l', value: 1, gear: 'weapon', base: 'longsword' } };
+  const sheet = characterSheet(cleric);
+  assert.equal(sheet.armorClass.total, 18, 'plate 18, no Defense style');
+  assert.equal(sheet.armorClass.proficient, true);
+  assert.equal(sheet.attack.proficient, false, 'a cleric is not trained in martial weapons');
+  assert.equal(cleric.health.max, 90, '10 x d8 + 5 x CON +2');
 });
 
 test('enemies follow their SRD monster blocks and carry a random low-end weapon', async () => {
@@ -1165,16 +1169,16 @@ test('every blow is rolled and shown over the attacker: hits hurt, misses do not
   updateSword();
   updateSword();
   assert.equal(goblin.health.current, goblin.health.max, 'a natural 1 misses');
-  assert.deepEqual(player.rollLog.map((l) => [l.text, l.tone]), [['5 to hit', 'fumble'], ['CRIT MISS', 'fumble']], 'd20 1 + proficiency 2 + STR 2');
+  assert.deepEqual(player.rollLog.map((l) => [l.text, l.tone]), [['6 to hit', 'fumble'], ['CRIT MISS', 'fumble']], 'd20 1 + proficiency 2 + STR 3');
   useDieRoller((sides) => (sides === 20 ? 15 : 3));
   world.removeComponent(player, 'swordSwing');
   player.swordCooldown = 0;
   player.playerInput.intents.attack = true;
   updateSword();
   updateSword();
-  assert.equal(goblin.health.current, goblin.health.max - 3, 'a bare-handed barbarian punches for 1 + STR +2');
-  assert.equal(player.rollLog.at(-2).text, '19 to hit', 'd20 15 + proficiency 2 + STR 2 against the goblin\'s AC 15');
-  assert.deepEqual([player.rollLog.at(-1).text, player.rollLog.at(-1).tone], ['3 dmg', 'damage']);
+  assert.equal(goblin.health.current, goblin.health.max - 4, 'a bare-handed fighter punches for 1 + STR +3');
+  assert.equal(player.rollLog.at(-2).text, '20 to hit', 'd20 15 + proficiency 2 + STR 3 against the goblin\'s AC 15');
+  assert.deepEqual([player.rollLog.at(-1).text, player.rollLog.at(-1).tone], ['4 dmg', 'damage']);
 });
 
 test('an enemy that touches the player rolls against their Armor Class, and the roll shows over its head', () => {
@@ -1259,7 +1263,7 @@ test('hero class, enemy weapon and roll log reach guests, and bad ones are refus
   validateNetState(state);
   const orcData = state.entities.find((e) => e.data.mobType === 'orc').data;
   assert.equal(orcData.mobWeapon, orc.mobWeapon);
-  assert.equal(state.entities.find((e) => e.data.playerSlot === 'host').data.heroClass, 'barbarian');
+  assert.equal(state.entities.find((e) => e.data.playerSlot === 'host').data.heroClass, 'fighter2');
   const tamper = (edit) => {
     const copy = JSON.parse(JSON.stringify(state));
     edit(copy.entities.find((e) => e.data.mobType === 'orc').data);
@@ -1301,7 +1305,7 @@ test('the combat log names who struck and how it went, and reaches guests checke
   updateSword();
   updateSword();
   const [blow] = currentLog().entries;
-  assert.deepEqual(blow, { seq: 1, actor: 'player', name: 'Evincars', total: 23, result: 'hit', damage: 3 }, 'loaded d20 19 + 4');
+  assert.deepEqual(blow, { seq: 1, actor: 'player', name: 'Evincars', total: 24, result: 'hit', damage: 4 }, 'loaded d20 19 + 5');
   useDieRoller(() => 1);
   beginPerception();
   for (let t = 0; t < 120; t++) updateContactDamage(level);
@@ -1321,7 +1325,7 @@ test('the warrior\'s blow lands on its attack clip\'s impact frame, and the next
   const { SWORD_STATS } = await load('entities/WeaponStats');
   const Characters = await load('characters/Characters');
   const level = arena(10, 6);
-  const warrior = createPlayer(centre(4), centre(2), 'warrior');
+  const warrior = createPlayer(centre(4), centre(2), 'cleric');
   warrior.aimVector = { x: 1, y: 0 };
   const goblin = mobAt(level, 'goblin', 4.6, 2);
   warrior.playerInput.intents.attack = true;
@@ -1391,29 +1395,39 @@ test('the five main characters: each with their D&D class, sprite and training',
   const { CLASSES } = await load('rules/Classes');
   const { characterSheet, weaponAttack } = await load('rules/CharacterSheet');
   const { formatDamage } = await load('rules/Dice');
-  const expect = { kaelen: 'fighter', malkorath: 'rogue', malthus: 'paladin', vesper: 'wizard', xanthia: 'sorcerer' };
+  const expect = { fighter: 'fighter', wizard: 'wizard', rogue: 'rogue', warlock: 'warlock', bard: 'bard' };
   for (const [id, cls] of Object.entries(expect)) {
     assert.equal(CLASSES[id].dndClass, cls, id);
     const hero = createPlayer(centre(2), centre(2), id);
-    assert.equal(hero.character.def, id, `${id} is drawn with its own sprites`);
-    const def = characterDef(id);
+    assert.equal(hero.character.def, CLASSES[id].character, `${id} is drawn with its own sprites`);
+    const def = characterDef(CLASSES[id].character);
     for (const state of ['idle', 'walk', 'run', 'attack', 'cast', 'hurt', 'death']) assert.ok(def.states[state], `${id} ${state}`);
   }
-  assert.equal(CLASSES.vesper.spellcasting, 'intelligence');
-  assert.equal(CLASSES.xanthia.spellcasting, 'charisma');
-  assert.deepEqual([...CLASSES.vesper.armor], [], 'a wizard wears no armour');
-  const vesper = createPlayer(centre(2), centre(2), 'vesper');
-  vesper.equipped = { primary: { type: 'weapon', name: 'g', value: 1, gear: 'weapon', base: 'greatsword' } };
-  assert.equal(characterSheet(vesper).attack.proficient, false, 'nor knows the greatsword');
-  vesper.equipped = { primary: { type: 'weapon', name: 'q', value: 1, gear: 'weapon', base: 'quarterstaff' } };
-  assert.equal(characterSheet(vesper).attack.proficient, true, 'but the quarterstaff, by name');
-  const rogue = createPlayer(centre(2), centre(2), 'malkorath');
+  assert.equal(CLASSES.wizard.spellcasting, 'intelligence');
+  assert.equal(CLASSES.warlock.spellcasting, 'charisma');
+  assert.equal(CLASSES.bard.spellcasting, 'charisma');
+  assert.equal(CLASSES.cleric.spellcasting, 'wisdom');
+  assert.equal(CLASSES.fighter.spellcasting, null);
+  assert.equal(CLASSES.rogue.spellcasting, null, 'a rogue casts nothing');
+  assert.deepEqual([...CLASSES.wizard.armor], [], 'a wizard wears no armour');
+  const wizard = createPlayer(centre(2), centre(2), 'wizard');
+  wizard.equipped = { primary: { type: 'weapon', name: 'g', value: 1, gear: 'weapon', base: 'greatsword' } };
+  assert.equal(characterSheet(wizard).attack.proficient, false, 'nor knows the greatsword');
+  wizard.equipped = { primary: { type: 'weapon', name: 'q', value: 1, gear: 'weapon', base: 'quarterstaff' } };
+  assert.equal(characterSheet(wizard).attack.proficient, true, 'but the quarterstaff, by name');
+  wizard.equipped = { primary: { type: 'weapon', name: 's', value: 1, gear: 'weapon', base: 'sling' } };
+  assert.equal(characterSheet(wizard).attack.proficient, true, 'and the sling');
+  const rogue = createPlayer(centre(2), centre(2), 'rogue');
   rogue.equipped = { primary: { type: 'weapon', name: 'd', value: 1, gear: 'weapon', base: 'dagger' } };
-  assert.equal(formatDamage(characterSheet(rogue).attack.damage, characterSheet(rogue).attack.extra), '1d4 + 1d6 + 2', 'Sneak Attack with a finesse dagger, DEX 15');
+  assert.equal(formatDamage(characterSheet(rogue).attack.damage, characterSheet(rogue).attack.extra), '1d4 + 1d6 + 3', 'Sneak Attack with a finesse dagger, DEX 16');
+  rogue.equipped = { primary: { type: 'weapon', name: 'r', value: 1, gear: 'weapon', base: 'rapier' } };
+  assert.equal(characterSheet(rogue).attack.proficient, true, 'a rogue knows the rapier by name');
   const mods = { strength: 2, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 };
-  assert.equal(weaponAttack({ primary: { type: 'weapon', name: 'm', value: 1, gear: 'weapon', base: 'mace' } }, mods, 1, CLASSES.malkorath).extra, undefined, 'not with a mace');
-  const kaelen = createPlayer(centre(2), centre(2), 'kaelen');
+  assert.equal(weaponAttack({ primary: { type: 'weapon', name: 'm', value: 1, gear: 'weapon', base: 'mace' } }, mods, 1, CLASSES.rogue).extra, undefined, 'not with a mace');
+  const kaelen = createPlayer(centre(2), centre(2), 'fighter');
   assert.equal(kaelen.health.max, 110);
+  const hit = (id) => createPlayer(centre(2), centre(2), id).health.max;
+  assert.deepEqual([hit('wizard'), hit('rogue'), hit('warlock'), hit('bard'), hit('cleric')], [70, 90, 90, 90, 90], '5 x (2 x hit die + CON)');
 });
 
 test('the safe room opens with its lever: barred until pulled, then the portcullis rises and the way is clear', async () => {
@@ -1466,28 +1480,29 @@ test('every character strip the game loads is a file in public/ (a moved folder 
 
 test('the character sheet: proficiency, initiative, speed, passive Perception, saving throws and spellcasting', async () => {
   const { characterSheet } = await load('rules/CharacterSheet');
-  const vesper = createPlayer(centre(2), centre(2), 'vesper');
+  const vesper = createPlayer(centre(2), centre(2), 'warlock');
   const sheet = characterSheet(vesper);
   assert.equal(sheet.proficiency, 2);
-  assert.equal(sheet.initiative, 1, 'DEX 13');
+  assert.equal(sheet.initiative, 2, 'DEX 14');
   assert.equal(sheet.speed, 30);
   assert.equal(sheet.passivePerception, 11, '10 + WIS +1');
-  assert.deepEqual(sheet.saves.intelligence, { bonus: 4, proficient: true }, 'a wizard is trained in INT saves');
+  assert.deepEqual(sheet.saves.wisdom, { bonus: 3, proficient: true }, 'a warlock is trained in WIS saves');
+  assert.deepEqual(sheet.saves.charisma, { bonus: 5, proficient: true }, 'and CHA');
   assert.deepEqual(sheet.saves.strength, { bonus: -1, proficient: false });
-  assert.deepEqual([sheet.spell.ability, sheet.spell.attack, sheet.spell.dc], ['intelligence', 4, 12], 'INT 15: +2 +2, DC 8 + 2 + 2');
+  assert.deepEqual([sheet.spell.ability, sheet.spell.attack, sheet.spell.dc], ['charisma', 5, 13], 'CHA 16: +3 +2, DC 8 + 2 + 3');
   vesper.equipped = { primary: { type: 'weapon', name: 'g', value: 1, gear: 'weapon', base: 'greatsword' } };
-  assert.equal(characterSheet(vesper).spell.attack, 4, 'an untrained weapon in hand does not spoil the spell');
+  assert.equal(characterSheet(vesper).spell.attack, 5, 'an untrained weapon in hand does not spoil the spell');
   const plate = { armor: { type: 'armor', name: 'p', value: 1, gear: 'armor', base: 'plate' } };
   vesper.equipped = plate;
-  assert.equal(characterSheet(vesper).speed, 20, 'plate needs STR 15: Vesper (STR 8) is slowed');
-  const barbarian = playerAt(2, 2);
-  barbarian.equipped = plate;
-  assert.equal(characterSheet(barbarian).speed, 30, 'the barbarian (STR 15) is not');
+  assert.equal(characterSheet(vesper).speed, 20, 'plate needs STR 15: Vesper (STR 9) is slowed');
+  const fighter = playerAt(2, 2);
+  fighter.equipped = plate;
+  assert.equal(characterSheet(fighter).speed, 30, 'the fighter (STR 16) is not');
 });
 
 test('everyone is proficient with an unarmed strike, even a wizard', async () => {
   const { characterSheet } = await load('rules/CharacterSheet');
-  const sheet = characterSheet(createPlayer(centre(2), centre(2), 'vesper'));
+  const sheet = characterSheet(createPlayer(centre(2), centre(2), 'warlock'));
   assert.equal(sheet.attack.base, 'unarmed');
   assert.equal(sheet.attack.proficient, true);
   assert.equal(sheet.attack.attackBonus, 2 - 1, 'proficiency +2, STR -1');
@@ -1528,7 +1543,7 @@ const rollLines = (entity) => (entity.rollLog ?? []).map((line) => line.text);
 
 test('a bolt spell is rolled to hit and strikes with its effect; the spell then recovers before it can be cast again', () => {
   const level = arena(12, 6);
-  const vesper = casterAt(2, 2, 'vesper', 0);
+  const vesper = casterAt(2, 2, 'wizard', 0);
   const orc = mobAt(level, 'orc', 6, 2);
   const before = orc.health.current;
   cast(level, vesper, 1);
@@ -1543,7 +1558,7 @@ test('a bolt spell is rolled to hit and strikes with its effect; the spell then 
 
 test('magic missile always hits with its three darts; cast again too soon, it says how long it still needs', () => {
   const level = arena(12, 6);
-  const vesper = casterAt(2, 2, 'vesper', 2);
+  const vesper = casterAt(2, 2, 'wizard', 2);
   const orc = mobAt(level, 'orc', 5, 2);
   useDieRoller((sides) => (sides === 20 ? 1 : sides));
   cast(level, vesper);
@@ -1558,11 +1573,11 @@ test('magic missile always hits with its three darts; cast again too soon, it sa
 
 test('a burst makes every foe in it save against the spell DC: half damage on a success, nothing beyond its reach', () => {
   const level = arena(14, 6);
-  const xanthia = casterAt(3, 2, 'xanthia', 2);
+  const xanthia = casterAt(3, 2, 'bard', 2);
   const near = mobAt(level, 'orc', 4, 2);
   const far = mobAt(level, 'orc', 10, 2);
   cast(level, xanthia, SPELL_STATS.castTicks + 1);
-  // Loaded dice: the orc's save is 19 + CON against DC 12, made; 2d8 at most is 16, halved to 8.
+  // Loaded dice: the orc's save is 19 + CON against DC 13, made; 2d8 at most is 16, halved to 8.
   const saved = currentLog().entries.filter((e) => e.spell === 'thunderwave');
   assert.equal(saved.length, 1, 'only the orc within the wave');
   assert.equal(saved[0].result, 'saved');
@@ -1578,36 +1593,52 @@ test('a burst makes every foe in it save against the spell DC: half damage on a 
   assert.equal(near.health.current, 0);
 });
 
-test('a healing spell is learnt at its level and mends the caster by the dice + casting ability', () => {
+test('a spell is learnt at its level, and a healing spell mends the caster by the dice + casting ability + Disciple of Life', () => {
   const level = arena(10, 6);
-  const malthus = casterAt(2, 2, 'malthus', 1);
-  malthus.health.current = 10;
-  cast(level, malthus);
-  assert.equal(malthus.health.current, 10, 'Cure Wounds is a level 2 spell');
-  assert.ok(rollLines(malthus).includes('LEVEL 2'));
-  malthus.playerStats.level = 2;
-  malthus.castCooldown = 0;
-  cast(level, malthus);
-  // 1d8 (loaded: 8) + CHA +2, at five hit points a tabletop point.
-  assert.equal(malthus.health.current, 10 + 5 * (8 + 2));
+  const wizard = casterAt(2, 4, 'wizard', 4);
+  cast(level, wizard);
+  assert.equal(wizard.casting, undefined, 'Chromatic Orb is learnt at level 2');
+  assert.ok(rollLines(wizard).includes('LEVEL 2'));
+  const cleric = casterAt(2, 2, 'cleric', 2);
+  cleric.health.current = 10;
+  cast(level, cleric);
+  // 1d8 (loaded: 8) + WIS +3 + Disciple of Life 2 + the spell's level 1, at five hit points a tabletop point.
+  assert.equal(cleric.health.current, 10 + 5 * (8 + 3 + 3));
   assert.equal(currentLog().entries.at(-1).result, 'heal');
-  const empty = casterAt(2, 4, 'barbarian', 0);
+  const empty = casterAt(2, 4, 'fighter', 0);
   cast(level, empty);
   assert.equal(empty.casting, undefined, 'a hero without spells casts nothing');
 });
 
+test('Eldritch Blast adds the casting ability once the Warlock has Agonizing Blast (level 2)', () => {
+  const level = arena(12, 6);
+  const warlock = casterAt(2, 2, 'warlock', 0);
+  const orc = mobAt(level, 'orc', 6, 2);
+  useDieRoller(SURE_HIT);
+  cast(level, warlock, SPELLS.eldritch_blast.recoveryTicks + 90);
+  const first = currentLog().entries.at(-1);
+  assert.equal(first.spell, 'eldritch_blast');
+  assert.equal(first.damage, 10, '1d10, loaded to its highest');
+  warlock.playerStats.level = 2;
+  warlock.castCooldown = 0;
+  warlock.spellbook.recovery[0] = 0;
+  cast(level, warlock, 90);
+  assert.equal(currentLog().entries.at(-1).damage, 10 + 3, 'plus CHA +3');
+  assert.ok(orc.health.current < orc.health.max);
+});
+
 test('initiative: an enemy that engages and its hero each roll d20 + DEX; the winner gets the first strike, with advantage', () => {
   const level = arena(12, 6);
-  const hero = playerAt(2, 2);
+  const hero = playerAt(2, 2, 'cleric');
   const goblin = mobAt(level, 'goblin', 5, 2);
   engage(goblin, hero, 0);
-  // Loaded dice: both roll 19; the goblin's DEX +2 beats the Barbarian's +1.
+  // Loaded dice: both roll 19; the goblin's DEX +2 beats the Cleric's +0.
   updateInitiative();
   assert.equal(goblin.initiative.total, 21);
-  assert.equal(hero.initiative.total, 20);
+  assert.equal(hero.initiative.total, 19);
   assert.equal(goblin.initiative.firstStrike, true);
   assert.equal(hero.initiative.firstStrike, false);
-  assert.ok(rollLines(goblin).includes('FIRST STRIKE') && rollLines(hero).includes('Initiative 20'));
+  assert.ok(rollLines(goblin).includes('FIRST STRIKE') && rollLines(hero).includes('Initiative 19'));
   let d20s = 0;
   useDieRoller((sides) => { if (sides === 20) d20s++; return SURE_HIT(sides); });
   Strike.strike(hero, { attackBonus: 4, damage: SPELLS.fire_bolt.damage, mode: 'normal' }, goblin);
@@ -1632,8 +1663,8 @@ test('hit dice: a click spends one to heal (die + CON), never with none left, at
   const hero = playerAt(2, 2);
   hero.health.current = 20;
   assert.equal(Rest.spendHitDie(hero), true);
-  // The Barbarian's d12 (loaded: 12) + CON +2, at five hit points a tabletop point.
-  assert.equal(hero.health.current, 20 + 5 * 14);
+  // The Fighter's d10 (loaded: 10) + CON +2, at five hit points a tabletop point.
+  assert.equal(hero.health.current, 20 + 5 * 12);
   assert.equal(hero.playerStats.hitDice, 0);
   assert.equal(Rest.spendHitDie(hero), false);
   assert.ok(rollLines(hero).includes('NO HIT DICE'));
@@ -1649,7 +1680,7 @@ test('hit dice: a click spends one to heal (die + CON), never with none left, at
 
 test('rests: a short one recovers spells (two before a long one), a long one heals all and needs the safe room', () => {
   const level = arena(12, 6);
-  const hero = playerAt(2, 2, 'vesper');
+  const hero = playerAt(2, 2, 'warlock');
   world.addComponent(hero, 'playerSlot', 'host');
   hero.spellbook.recovery[0] = 40;
   hero.health.current = 10;
@@ -1657,7 +1688,7 @@ test('rests: a short one recovers spells (two before a long one), a long one hea
   hero.playerStats.hitDice = 0;
   const rest = (kind) => { Rest.queueRestCommand('host', { kind: 'rest', rest: kind }); Rest.updateRest(level); };
   rest('short');
-  assert.deepEqual(hero.spellbook.recovery, [0, 0, 0, 0]);
+  assert.deepEqual(hero.spellbook.recovery, [0, 0, 0]);
   assert.equal(Rest.currentRest().shortRestsLeft, 1);
   assert.equal(Rest.currentRest().notice.notice, 'short_done');
   assert.equal(hero.health.current, 10, 'a short rest heals nothing by itself');
@@ -1682,10 +1713,10 @@ test('rests: a short one recovers spells (two before a long one), a long one hea
 
 test('in co-op a rest waits for every companion to agree; one refusal calls it off', () => {
   const level = arena(12, 6);
-  const host = playerAt(2, 2, 'vesper');
+  const host = playerAt(2, 2, 'warlock');
   world.addComponent(host, 'playerSlot', 'host');
   world.addComponent(host, 'playerName', 'Ana');
-  const guest = playerAt(3, 2, 'xanthia');
+  const guest = playerAt(3, 2, 'bard');
   world.addComponent(guest, 'playerSlot', 'p2');
   world.addComponent(guest, 'playerName', 'Bo');
   host.spellbook.recovery[1] = 30;
@@ -1743,7 +1774,306 @@ test('experience by the SRD: kills give their challenge rating\'s XP, and 300 re
   assert.equal(hero.playerStats.exp, 300, 'six goblins at 50 XP each');
   assert.equal(hero.playerStats.level, 2);
   assert.equal(hero.playerStats.hitDice, 2);
-  // The Barbarian's d12 at its average (7) + CON +2, at five hit points a tabletop point.
-  assert.equal(hero.health.max, maxBefore + 5 * 9);
+  // The Fighter's d10 at its average (6) + CON +2, at five hit points a tabletop point.
+  assert.equal(hero.health.max, maxBefore + 5 * 8);
   assert.equal(hero.health.current, hero.health.max);
+});
+
+// ── Class progression: what each level hands out ─────────────────────────────
+
+test('progression: a class hands out its features, spells and choices by level, and the file is checked', async () => {
+  const { CLASSES, heroGains } = await load('rules/Classes');
+  const { readProgression, gainsAt } = await load('rules/Progression');
+  assert.equal(heroGains(CLASSES.fighter, 1).fightingStyle, true, 'a fighter offers a style from level 1');
+  assert.equal(heroGains(CLASSES.wizard, 1).fightingStyle, false);
+  assert.equal(heroGains(CLASSES.fighter, 3).improvements, 0);
+  assert.equal(heroGains(CLASSES.fighter, 4).improvements, 1);
+  assert.equal(heroGains(CLASSES.fighter, 20).improvements, 7, 'levels 4, 6, 8, 12, 14, 16 and 19');
+  assert.equal(heroGains(CLASSES.rogue, 20).improvements, 6, 'levels 4, 8, 10, 12, 16 and 19');
+  assert.equal(heroGains(CLASSES.cleric, 20).improvements, 5);
+  const flat = readProgression('t', { 4: [{ ability: 'wisdom', amount: 2 }] });
+  assert.equal(gainsAt(flat, 4).abilityBonus.wisdom, 2, 'a fixed bonus');
+  assert.throws(() => readProgression('t', { 4: [{ spell: 'wish' }] }), 'an unknown reward stops the game');
+  assert.throws(() => readProgression('t', { 21: [] }), 'a level past 20');
+  const hero = createPlayer(centre(2), centre(2), 'fighter');
+  const { characterSheet } = await load('rules/CharacterSheet');
+  hero.playerStats.level = 4;
+  assert.equal(characterSheet(hero).proficiency, 2);
+  hero.playerStats.level = 5;
+  assert.equal(characterSheet(hero).proficiency, 3);
+});
+
+test('progression: spells are learnt at their level, features arrive with theirs', async () => {
+  const { CLASSES, hasFeature, spellLevelFor } = await load('rules/Classes');
+  assert.deepEqual([...CLASSES.wizard.spells], ['fire_bolt', 'ray_of_frost', 'magic_missile', 'burning_hands', 'chromatic_orb', 'thunderwave']);
+  assert.equal(spellLevelFor(CLASSES.wizard, 'fire_bolt'), 1);
+  assert.equal(spellLevelFor(CLASSES.wizard, 'chromatic_orb'), 2);
+  assert.equal(spellLevelFor(CLASSES.wizard, 'thunderwave'), 3);
+  assert.deepEqual([...CLASSES.fighter.spells], []);
+  assert.equal(hasFeature(CLASSES.warlock, 'agonizing_blast', 1), false);
+  assert.equal(hasFeature(CLASSES.warlock, 'agonizing_blast', 2), true);
+  assert.deepEqual([...CLASSES.bard.features], [], 'a bard has nothing at level 1 but spells');
+  assert.deepEqual([...CLASSES.cleric.features], ['disciple_of_life']);
+});
+
+test('progression: Sneak Attack gains a d6 every two levels, Jack of All Trades and the Alert feat add to initiative', async () => {
+  const { CLASSES } = await load('rules/Classes');
+  const { characterSheet, weaponAttack } = await load('rules/CharacterSheet');
+  const { formatDamage } = await load('rules/Dice');
+  const { readProgression } = await load('rules/Progression');
+  const mods = { strength: 0, dexterity: 2, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 };
+  const dagger = { primary: { type: 'weapon', name: 'd', value: 1, gear: 'weapon', base: 'dagger' } };
+  const dice = (level) => formatDamage(weaponAttack(dagger, mods, level, CLASSES.rogue).damage, weaponAttack(dagger, mods, level, CLASSES.rogue).extra);
+  assert.equal(dice(1), '1d4 + 1d6 + 2');
+  assert.equal(dice(2), '1d4 + 1d6 + 2');
+  assert.equal(dice(3), '1d4 + 2d6 + 2');
+  assert.equal(dice(20), '1d4 + 10d6 + 2');
+  const bard = createPlayer(centre(2), centre(2), 'bard');
+  assert.equal(characterSheet(bard).initiative, 2, 'DEX +2 at level 1');
+  bard.playerStats.level = 2;
+  assert.equal(characterSheet(bard).initiative, 3, 'Jack of All Trades: half of +2');
+  bard.playerStats.level = 5;
+  assert.equal(characterSheet(bard).initiative, 3, 'half of +3, rounded down: +1');
+  const rogue = createPlayer(centre(2), centre(2), 'rogue');
+  const original = CLASSES.rogue.progression;
+  CLASSES.rogue.progression = readProgression('t', { 1: [{ feat: 'alert' }] });
+  try {
+    assert.equal(characterSheet(rogue).initiative, 3 + 5, 'DEX +3, Alert +5');
+  } finally {
+    CLASSES.rogue.progression = original;
+  }
+});
+
+test('progression: Tough adds its hit points each level, and for every level already gained when taken', async () => {
+  const { CLASSES } = await load('rules/Classes');
+  const { hitPointsPerLevel, startingHitPoints } = await load('rules/HitPoints');
+  const { readProgression } = await load('rules/Progression');
+  assert.equal(startingHitPoints(10, 15), 110);
+  assert.equal(startingHitPoints(6, 15), 70);
+  const tough = { ...CLASSES.fighter, progression: readProgression('t', { 4: [{ feat: 'tough' }] }) };
+  const plain = hitPointsPerLevel(CLASSES.fighter, 2, 3);
+  assert.equal(plain, 5 * (5 + 1 + 2), 'a d10 at its average 6, plus CON');
+  assert.equal(hitPointsPerLevel(tough, 2, 3), plain, 'before the feat');
+  assert.equal(hitPointsPerLevel(tough, 2, 4), plain + 5 * 2 * 4, 'taken at level 4: 2 for each of the four levels');
+  assert.equal(hitPointsPerLevel(tough, 2, 5), plain + 5 * 2, '2 more every level after');
+});
+
+// ── Character customisation: point buy, fighting styles, Improvements, Protection ─
+
+test('point buy: 27 points, scores 8 to 15, a human\'s +1 on top, and the class defaults are a valid buy', async () => {
+  const PointBuy = await load('rules/PointBuy');
+  const { CLASSES } = await load('rules/Classes');
+  const { newBuild, validScores } = await load('rules/Build');
+  assert.deepEqual([8, 9, 10, 11, 12, 13, 14, 15].map(PointBuy.scoreCost), [0, 1, 2, 3, 4, 5, 7, 9]);
+  assert.equal(PointBuy.scoreCost(7), null);
+  assert.equal(PointBuy.scoreCost(16), null);
+  const all8 = { strength: 8, dexterity: 8, constitution: 8, intelligence: 8, wisdom: 8, charisma: 8 };
+  assert.equal(PointBuy.pointsLeft(all8), 27);
+  assert.equal(PointBuy.canLower(all8, 'strength'), false);
+  assert.equal(PointBuy.canRaise({ ...all8, strength: 15, dexterity: 15, constitution: 15 }, 'wisdom'), false, 'out of points');
+  assert.equal(PointBuy.validPointBuy({ ...all8, strength: 15, dexterity: 15, constitution: 15 }), true, '9 + 9 + 9');
+  assert.equal(PointBuy.validPointBuy({ ...all8, strength: 15, dexterity: 15, constitution: 15, wisdom: 9 }), false, 'over the budget');
+  for (const id of ['fighter', 'wizard', 'rogue', 'warlock', 'bard', 'fighter2', 'cleric']) {
+    const build = newBuild(CLASSES[id]);
+    assert.equal(PointBuy.pointsLeft(build.scores), 0, `${id}: the standard array costs exactly 27`);
+    assert.equal(validScores(build.scores), true);
+  }
+  assert.equal(newBuild(CLASSES.fighter).scores.strength, 15, 'the +1 of a human is not part of the buy');
+});
+
+test('customising: the hero buys scores and picks a fighting style in the first safe room, and it is final once they leave', async () => {
+  const { applyCustomization, updateBuildLock } = await load('game/Customize');
+  const { characterSheet } = await load('rules/CharacterSheet');
+  const { run } = await load('game/Run');
+  const level = arena(10, 6);
+  level.markSafeZone(2, 2);
+  const hero = createPlayer(centre(2), centre(2), 'fighter');
+  const bought = { strength: 15, dexterity: 13, constitution: 15, intelligence: 8, wisdom: 8, charisma: 8 };
+  assert.equal(applyCustomization(hero, { kind: 'scores', scores: bought }), true);
+  const sheet = characterSheet(hero);
+  assert.equal(sheet.scores.constitution, 16, 'bought 15 + the human\'s 1');
+  assert.equal(hero.health.max, 5 * (20 + 3), 'hit points follow the new CON +3');
+  assert.equal(applyCustomization(hero, { kind: 'scores', scores: { ...bought, wisdom: 15 } }), false, 'more than 27 points');
+  assert.equal(applyCustomization(hero, { kind: 'fighting_style', style: 'dueling' }), true);
+  assert.equal(applyCustomization(hero, { kind: 'fighting_style', style: 'archery' }), true, 'it may be changed while in the room');
+  assert.equal(hero.build.fightingStyle, 'archery');
+  const caster = createPlayer(centre(2), centre(2), 'wizard');
+  assert.equal(applyCustomization(caster, { kind: 'fighting_style', style: 'defense' }), false, 'a wizard has no fighting style');
+  run.depth = 1;
+  updateBuildLock(level);
+  assert.equal(hero.build.locked, false, 'still in the safe room');
+  hero.position.x = centre(6);
+  updateBuildLock(level);
+  assert.equal(hero.build.locked, true, 'left it');
+  assert.equal(applyCustomization(hero, { kind: 'scores', scores: bought }), false);
+  assert.equal(applyCustomization(hero, { kind: 'fighting_style', style: 'defense' }), false);
+  assert.equal(hero.build.fightingStyle, 'archery');
+  const idle = createPlayer(centre(2), centre(2), 'fighter');
+  idle.position.x = centre(6);
+  updateBuildLock(level);
+  assert.equal(idle.build.fightingStyle, 'defense', 'a fighter who never chose gets Defense');
+});
+
+test('fighting styles: Archery, Defense, Dueling and Great Weapon Fighting change the blow and the armour', async () => {
+  const { weaponAttack, armorClass } = await load('rules/CharacterSheet');
+  const { CLASSES } = await load('rules/Classes');
+  const { rollDice, dice } = await load('rules/Dice');
+  const mods = { strength: 3, dexterity: 2, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 };
+  const weapon = (base) => ({ type: 'weapon', name: base, value: 1, gear: 'weapon', base });
+  const shield = { type: 'shield', name: 's', value: 1, gear: 'offhand', base: 'shield' };
+  const attack = (equipped, style) => weaponAttack(equipped, mods, 1, CLASSES.fighter, true, style);
+  assert.equal(attack({ primary: weapon('longbow') }, 'archery').attackBonus, attack({ primary: weapon('longbow') }, null).attackBonus + 2, 'Archery: +2 to hit at range');
+  assert.equal(attack({ primary: weapon('longsword') }, 'archery').attackBonus, attack({ primary: weapon('longsword') }, null).attackBonus, 'not in melee');
+  const sword = { primary: weapon('longsword'), secondary: shield };
+  assert.equal(attack(sword, 'dueling').damage.bonus, attack(sword, null).damage.bonus + 2, 'Dueling: one-handed with a shield');
+  assert.equal(attack({ primary: weapon('longsword') }, 'dueling').damage.bonus, attack({ primary: weapon('longsword') }, null).damage.bonus, 'a versatile sword held in both hands is not one-handed');
+  assert.equal(attack({ primary: weapon('shortsword') }, 'dueling').damage.bonus, attack({ primary: weapon('shortsword') }, null).damage.bonus + 2, 'a one-handed sword with the other hand empty');
+  assert.equal(attack({ primary: weapon('shortsword'), secondary: weapon('dagger') }, 'dueling').damage.bonus, attack({ primary: weapon('shortsword') }, null).damage.bonus, 'no other weapon');
+  assert.equal(attack({ primary: weapon('greatsword') }, 'great_weapon_fighting').rerollBelow, 2);
+  assert.equal(attack({ primary: weapon('longsword') }, 'great_weapon_fighting').rerollBelow, 2, 'a versatile weapon in both hands');
+  assert.equal(attack(sword, 'great_weapon_fighting').rerollBelow, undefined, 'not with a shield');
+  assert.equal(attack({ primary: weapon('longbow') }, 'great_weapon_fighting').rerollBelow, undefined, 'not at range');
+  const rolls = [1, 5, 6];
+  assert.equal(rollDice(dice(2, 6), false, () => rolls.shift(), 2), 5 + 6, 'the 1 is rolled again (a 5) and the 6 stays');
+  const unlucky = [2, 1, 4];
+  assert.equal(rollDice(dice(1, 6), false, () => unlucky.shift(), 2), 1, 'the new roll stands even when it is worse');
+  const breastplate = { armor: { type: 'armor', name: 'b', value: 1, gear: 'armor', base: 'breastplate' } };
+  assert.equal(armorClass(breastplate, mods, CLASSES.fighter, 'defense').total, armorClass(breastplate, mods, CLASSES.fighter, null).total + 1);
+  assert.equal(armorClass({}, mods, CLASSES.fighter, 'defense').total, armorClass({}, mods, CLASSES.fighter, null).total, 'no armour, no bonus');
+});
+
+test('Ability Score Improvements: a level offers one, taken as two points or a feat, once and for good', async () => {
+  const { CLASSES } = await load('rules/Classes');
+  const Build = await load('rules/Build');
+  const { characterSheet } = await load('rules/CharacterSheet');
+  const hero = createPlayer(centre(2), centre(2), 'fighter');
+  const { build } = hero;
+  const cls = CLASSES.fighter;
+  assert.equal(Build.improvementsPending(cls, 3, build), 0, 'nothing before level 4');
+  assert.equal(Build.improvementsPending(cls, 4, build), 1);
+  assert.equal(Build.improvementsPending(cls, 6, build), 2, 'a fighter has another at level 6');
+  assert.equal(Build.improvementsPending(CLASSES.wizard, 6, createPlayer(centre(2), centre(2), 'wizard').build), 1, 'a wizard does not');
+  assert.equal(Build.takeImprovement(cls, build, 3, { stats: { strength: 2 } }), false, 'too early');
+  assert.equal(Build.takeImprovement(cls, build, 4, { stats: { strength: 3 } }), false, 'three points');
+  assert.equal(Build.takeImprovement(cls, build, 4, { stats: { strength: 1 } }), false, 'one point');
+  assert.equal(Build.takeImprovement(cls, build, 4, { stats: { strength: 2 } }), true);
+  hero.playerStats.level = 4;
+  assert.equal(characterSheet(hero).scores.strength, 18);
+  assert.equal(Build.takeImprovement(cls, build, 4, { stats: { strength: 2 } }), false, 'only one on offer');
+  assert.equal(Build.takeImprovement(cls, build, 6, { stats: { strength: 2 } }), true, 'STR 18 to 20');
+  assert.equal(Build.improvementsPending(cls, 8, build), 1);
+  assert.equal(Build.takeImprovement(cls, build, 8, { stats: { strength: 1, dexterity: 1 } }), false, 'STR 20 is the cap');
+  assert.equal(Build.takeImprovement(cls, build, 8, { stats: { dexterity: 1, wisdom: 1 } }), true, 'two abilities, one point each');
+  assert.equal(Build.takeImprovement(cls, build, 12, { feat: 'alert' }), true, 'a feat in place of the points');
+  assert.equal(Build.hasFeat(cls, 12, build, 'alert'), true);
+  hero.playerStats.level = 12;
+  assert.equal(characterSheet(hero).initiative, 2 + 5, 'DEX 15 (+2) and Alert +5');
+  assert.equal(Build.takeImprovement(cls, build, 16, { feat: 'alert' }), false, 'a feat only once');
+  assert.equal(Build.takeImprovement(cls, build, 16, { feat: 'wish' }), false);
+});
+
+test('Protection: a hero with the style and a shield spoils an attack on the nearest ally, then needs 5 seconds', async () => {
+  const { protectFrom, updateProtection, canProtect, protectedAlly } = await load('systems/ProtectionSystem');
+  const { PROTECTION_COOLDOWN_TICKS } = await load('rules/FightingStyles');
+  const shield = { type: 'shield', name: 's', value: 1, gear: 'offhand', base: 'shield' };
+  const hero = createPlayer(centre(2), centre(2), 'fighter');
+  const near = createPlayer(centre(3), centre(2), 'wizard');
+  const nearer = createPlayer(centre(2) + 20, centre(2), 'bard');
+  const far = createPlayer(centre(8), centre(2), 'rogue');
+  hero.build.fightingStyle = 'protection';
+  assert.equal(canProtect(hero), false, 'no shield');
+  hero.equipped = { secondary: shield };
+  assert.equal(canProtect(hero), true);
+  assert.equal(protectedAlly(hero), nearer, 'the closest ally');
+  assert.equal(protectFrom(far), false, 'an ally out of reach');
+  assert.equal(protectFrom(near), false, 'not the closest one');
+  assert.equal(protectFrom(nearer), true);
+  assert.equal(hero.protectCooldown, PROTECTION_COOLDOWN_TICKS);
+  assert.equal(protectFrom(nearer), false, 'recovering');
+  for (let i = 0; i < PROTECTION_COOLDOWN_TICKS; i++) updateProtection();
+  assert.equal(hero.protectCooldown, 0);
+  assert.equal(protectFrom(nearer), true, 'ready again');
+  assert.equal(protectFrom(hero), false, 'it does not protect its own owner');
+  hero.build.fightingStyle = 'defense';
+  hero.protectCooldown = 0;
+  assert.equal(protectFrom(nearer), false, 'another style');
+});
+
+test('Protection makes an enemy\'s strike on the ally roll with disadvantage', async () => {
+  const { updateContactDamage } = await load('systems/CombatSystem');
+  const level = arena(10, 6);
+  const shield = { type: 'shield', name: 's', value: 1, gear: 'offhand', base: 'shield' };
+  const hero = createPlayer(centre(2), centre(2), 'fighter');
+  hero.build.fightingStyle = 'protection';
+  hero.equipped = { secondary: shield };
+  const ally = createPlayer(centre(3), centre(2), 'wizard');
+  const orc = mobAt(level, 'orc', 3.6, 2);
+  const d20s = [];
+  useDieRoller((sides) => { if (sides === 20) d20s.push(1); return sides === 20 ? 15 : 1; });
+  beginPerception();
+  for (let t = 0; t < 120 && !d20s.length; t++) updateContactDamage(level);
+  assert.equal(d20s.length, 2, 'two d20s: disadvantage');
+  assert.equal(hero.protectCooldown > 0, true);
+  assert.ok(hero.rollLog.some((l) => l.text === 'PROTECTION'), 'said over the protector');
+  assert.ok(orc.health.current > 0 && ally.health.max > 0);
+});
+
+test('a build crosses the network checked: scores, style and Improvements', async () => {
+  const { validBuild, validImprovement } = await load('rules/Build');
+  const { validCommand } = await load('network/protocol');
+  const good = { scores: { strength: 15, dexterity: 13, constitution: 14, intelligence: 8, wisdom: 12, charisma: 10 }, locked: false, improvements: [] };
+  assert.equal(validBuild(good), true);
+  assert.equal(validBuild({ ...good, fightingStyle: 'protection' }), true);
+  assert.equal(validBuild({ ...good, fightingStyle: 'smiting' }), false);
+  assert.equal(validBuild({ ...good, scores: { ...good.scores, strength: 18 } }), false, 'not a point buy');
+  assert.equal(validBuild({ ...good, scores: { ...good.scores, strength: 15, dexterity: 15, constitution: 15 } }), false, 'over 27 points');
+  assert.equal(validBuild({ ...good, improvements: [{ stats: { strength: 2 } }, { feat: 'tough' }] }), true);
+  assert.equal(validBuild({ ...good, improvements: [{ stats: { strength: 5 } }] }), false);
+  assert.equal(validBuild({ ...good, improvements: [{ feat: 'wish' }] }), false);
+  assert.equal(validImprovement({ stats: { strength: 1, wisdom: 1 } }), true);
+  assert.equal(validImprovement({ stats: { strength: 1 } }), false);
+  assert.equal(validCommand({ kind: 'fighting_style', style: 'dueling' }), true);
+  assert.equal(validCommand({ kind: 'fighting_style', style: 'dueling2' }), false);
+  assert.equal(validCommand({ kind: 'scores', scores: good.scores }), true);
+  assert.equal(validCommand({ kind: 'scores', scores: { ...good.scores, strength: 20 } }), false);
+  assert.equal(validCommand({ kind: 'improve', improvement: { feat: 'alert' } }), true);
+  assert.equal(validCommand({ kind: 'improve', improvement: { stats: { strength: 1 } } }), false);
+  const hero = createPlayer(centre(2), centre(2), 'fighter');
+  world.addComponent(hero, 'playerSlot', 'host');
+  const state = JSON.parse(JSON.stringify(captureWorld(false, 3)));
+  validateNetState(state);
+  const data = state.entities.find((e) => e.data.playerSlot === 'host');
+  assert.ok(data.data.build, 'the build is sent');
+  data.data.build.scores.strength = 99;
+  assert.equal(attempt(() => validateNetState(state)).ok, false, 'a tampered build is refused');
+});
+
+test('the level log: each level knows whether it has a choice, and Save makes the starting ones final early', async () => {
+  const { CLASSES } = await load('rules/Classes');
+  const Build = await load('rules/Build');
+  const { applyCustomization } = await load('game/Customize');
+  const { validCommand } = await load('network/protocol');
+  const fighter = CLASSES.fighter;
+  assert.deepEqual([1, 2, 3, 4, 5, 6, 7, 8].map((level) => Build.improvementIndexAt(fighter, level)), [-1, -1, -1, 0, -1, 1, -1, 2]);
+  const hero = createPlayer(centre(2), centre(2), 'fighter');
+  const { build } = hero;
+  assert.equal(Build.levelHasChoice(fighter, 1, build), true, 'the starting scores');
+  assert.equal(Build.levelHasChoice(fighter, 2, build), false);
+  assert.equal(Build.hasChoices(fighter, 1, build), true);
+  assert.equal(applyCustomization(hero, { kind: 'lock_build' }), false, 'a fighter must pick a fighting style first');
+  assert.equal(build.locked, false);
+  applyCustomization(hero, { kind: 'fighting_style', style: 'dueling' });
+  assert.equal(applyCustomization(hero, { kind: 'lock_build' }), true, 'saved before leaving the room');
+  assert.equal(build.locked, true);
+  assert.equal(applyCustomization(hero, { kind: 'lock_build' }), false, 'only once');
+  assert.equal(applyCustomization(hero, { kind: 'fighting_style', style: 'archery' }), false);
+  assert.equal(Build.levelHasChoice(fighter, 1, build), false);
+  assert.equal(Build.hasChoices(fighter, 3, build), false);
+  assert.equal(Build.levelHasChoice(fighter, 4, build), true, 'level 4 offers an Improvement');
+  assert.equal(Build.hasChoices(fighter, 5, build), true, 'and it is still waiting at level 5');
+  Build.takeImprovement(fighter, build, 4, { feat: 'tough' });
+  assert.equal(Build.hasChoices(fighter, 5, build), false);
+  const wizard = createPlayer(centre(2), centre(2), 'wizard');
+  assert.equal(applyCustomization(wizard, { kind: 'lock_build' }), true, 'a class without a style can save at once');
+  assert.equal(validCommand({ kind: 'lock_build' }), true);
 });

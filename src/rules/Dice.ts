@@ -85,12 +85,16 @@ export function diceRange(roll: Dice): { min: number; max: number; average: numb
 
 /**
  * Rolls the dice and adds the bonus. A critical hit rolls the dice twice over (the bonus is added once),
- * as the rules have it.
+ * as the rules have it. A die that shows `rerollBelow` or less is rolled again and the new roll stands (Great
+ * Weapon Fighting).
  */
-export function rollDice(roll: Dice, critical = false, die: DieRoller = rollDie): number {
+export function rollDice(roll: Dice, critical = false, die: DieRoller = rollDie, rerollBelow = 0): number {
   const count = critical ? roll.count * 2 : roll.count;
   let total = roll.bonus;
-  for (let i = 0; i < count; i++) total += die(roll.sides);
+  for (let i = 0; i < count; i++) {
+    const first = die(roll.sides);
+    total += first <= rerollBelow ? die(roll.sides) : first;
+  }
   return total;
 }
 

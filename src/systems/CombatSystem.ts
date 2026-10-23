@@ -11,6 +11,7 @@ import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 import { monsterAttack } from '../rules/CharacterSheet';
 import { MIN_HIT_DAMAGE } from '../rules/Combat';
 import { strike } from './Strike';
+import { protectFrom } from './ProtectionSystem';
 
 const PLAYER_HURT_TIME = 25;
 const PLAYER_FREEZE_TIME = 15;
@@ -90,7 +91,8 @@ function mobStrike(mob: Entity, player: Player): void {
     hurtPlayer(player, mob, MIN_HIT_DAMAGE);
     return;
   }
-  const outcome = strike(player, monsterAttack(mob.mobType, mob.mobWeapon), mob);
+  const attack = monsterAttack(mob.mobType, mob.mobWeapon);
+  const outcome = strike(player, protectFrom(player) ? { ...attack, mode: 'disadvantage' } : attack, mob);
   if (outcome.hit) hurtPlayer(player, mob, outcome.damage);
   else sound.playSound('sword_miss', player.position.x, player.position.y);
 }

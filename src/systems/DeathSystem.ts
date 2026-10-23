@@ -46,7 +46,7 @@ function levelUp(player: Earner): void {
   stats.level++;
   stats.hitDice++;
   const sheet = characterSheet(player);
-  player.health.max += hitPointsPerLevel(sheet.heroClass, sheet.modifiers.constitution);
+  player.health.max += hitPointsPerLevel(sheet.heroClass, sheet.modifiers.constitution, stats.level, player.build);
   player.health.current = player.health.max;
   logLine(player, text('roll.level_up', { level: stats.level }), 'crit');
   sound.playSound('level_up');

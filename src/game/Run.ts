@@ -4,6 +4,7 @@ import { ARMORS, HAND_WEAPONS, SHIELDS } from '../entities/ItemCatalog';
 import { WEAPON_BASES } from '../rules/WeaponTable';
 import { ARMOR_BASES } from '../rules/ArmorTable';
 import type { ItemBase } from '../rules/Equipment';
+import type { Build } from '../rules/Build';
 
 /** A fresh copy of the first catalogue entry of each of these D&D bases (in that order), skipping any the catalogue lacks. */
 function onePerBase(from: readonly InventoryItem[], bases: readonly ItemBase[]): InventoryItem[] {
@@ -40,6 +41,7 @@ type Carry = {
   inventory: NonNullable<Entity['inventory']>;
   equipped: NonNullable<Entity['equipped']>;
   maxHealth: number;
+  build: Build | undefined;
 };
 
 /** Progress of the players in the run so far, by seat. */
@@ -62,6 +64,7 @@ export function descend(): void {
       inventory: structuredClone(player.inventory ?? []),
       equipped: structuredClone(player.equipped ?? {}),
       maxHealth: player.health.max,
+      build: structuredClone(player.build),
     });
   }
   run.depth++;
@@ -81,5 +84,6 @@ export function restorePlayer(player: Entity): void {
   player.inventory = structuredClone(carry.inventory);
   player.equipped = structuredClone(carry.equipped);
   player.health.max = carry.maxHealth;
+  if (carry.build) player.build = structuredClone(carry.build);
   player.health.current = carry.maxHealth;
 }

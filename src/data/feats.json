@@ -1,0 +1,5 @@
+{
+  "$comment": "Feats a level-up can grant in place of an Ability Score Improvement (add {\"feat\": id} to a class's progression in classes.json). initiative: added to initiative rolls. hitPointsPerLevel: tabletop hit points added each level, those of levels already gained too when the feat is taken (the game scales them like every hit point). New effects need a field here, a reader in src/rules/Feats.ts and a hook where the rule applies. Names and descriptions: texts.json, feat.<id>.name/description.",
+  "alert": { "initiative": 5 },
+  "tough": { "hitPointsPerLevel": 2 }
+}

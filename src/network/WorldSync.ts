@@ -10,6 +10,7 @@ import { ensure } from '../core/errors';
 import { hasKey, isFiniteNumber, isRecord } from '../core/guards';
 import { isBagSquare, isInventoryItem } from './protocol';
 import { isHeroClassId } from '../rules/Classes';
+import { validBuild } from '../rules/Build';
 import { isWeaponBase } from '../rules/WeaponTable';
 import { MAX_ROLL_LINES } from '../systems/RollLogSystem';
 import { MAX_LOG_ENTRIES } from '../systems/CombatLogSystem';
@@ -85,6 +86,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
     sprint: 'boolean', mouseX: 'number', mouseY: 'number', mouseAiming: 'boolean', spellSlot: 'number', intents: 'object' },
   casting: { ticks: 'number', dirX: 'number', dirY: 'number', released: 'boolean' },
   spellbook: { recovery: 'object' },
+  build: { scores: 'object', locked: 'boolean', improvements: 'object' },
   projectile: { life: 'number', team: 'number', attack: 'object' },
   glow: { radius: 'number' },
   playerStats: { level: 'number', exp: 'number', gold: 'number', swordTier: 'number', hitDice: 'number',
@@ -122,7 +124,7 @@ const VALUES: Readonly<Record<string, FieldType>> = {
   chasing: 'boolean', frame: 'number', yOffset: 'number', flashTime: 'number', healthBarOffset: 'number',
   mobType: 'string', castCooldown: 'number', swordCooldown: 'number', arrowCooldown: 'number', spawnedBy: 'number', stepTimer: 'number',
   dustTimer: 'number', respawnTicks: 'number', minimapColor: 'number', safeZone: 'boolean', playerSlot: 'string',
-  playerName: 'string', heroClass: 'string', mobWeapon: 'string',
+  playerName: 'string', heroClass: 'string', mobWeapon: 'string', protectCooldown: 'number',
 };
 
 function hasType(v: unknown, type: FieldType): boolean {
@@ -187,6 +189,7 @@ function checkDetails(data: EntityState): void {
   ensure(!data.shopNpc || (Array.isArray(data.shopNpc.items) && data.shopNpc.items.every(isInventoryItem)), 'Invalid shop');
   ensure(!data.door || (Array.isArray(data.door.tiles) && data.door.tiles.length <= MAX_DOOR_TILES && data.door.tiles.every(isTile)), 'Invalid door');
   ensure(!data.swordSwing || isIntList(data.swordSwing.hitIds), 'Invalid sword swing');
+  ensure(!data.build || validBuild(data.build), 'Invalid build');
   ensure(!data.spellbook || isRecoveryList(data.spellbook.recovery), 'Invalid spellbook');
   ensure(!data.casting?.spell || isSpellId(data.casting.spell), 'Invalid spell');
   ensure(!data.projectile?.spell || isSpellId(data.projectile.spell), 'Invalid spell');

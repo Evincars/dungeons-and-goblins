@@ -1,5 +1,9 @@
 import { isEquipSlot, isGearKind, isItemType, isPlayerSlot, isRestKind, isStatName, PLAYER_SLOTS, QUICK_SLOTS, STAT_NAMES } from '../world';
-import type { BagSquare, EquipSlot, InventoryItem, PlayerInput, PlayerSlot, RestKind } from '../world';
+import type { BagSquare, EquipSlot, InventoryItem, PlayerInput, PlayerSlot, RestKind, StatName } from '../world';
+import { validImprovement, validScores } from '../rules/Build';
+import type { Improvement } from '../rules/Build';
+import { isFightingStyle } from '../rules/FightingStyles';
+import type { FightingStyleId } from '../rules/FightingStyles';
 import type { SfxName } from '../audio/SoundPlayer';
 import { cleanName } from '../game/Settings';
 import { ValidationError } from '../core/errors';
@@ -26,7 +30,13 @@ export type GuestCommand =
   | { kind: 'hit_die' }
   /** Ask the party for a rest, or answer the rest someone else asked for. */
   | { kind: 'rest'; rest: RestKind }
-  | { kind: 'rest_answer'; agree: boolean };
+  | { kind: 'rest_answer'; agree: boolean }
+  /** The hero's bought ability scores, their fighting style, an Ability Score Improvement or a feat (rules/Build.ts). */
+  | { kind: 'scores'; scores: Record<StatName, number> }
+  | { kind: 'fighting_style'; style: FightingStyleId }
+  | { kind: 'improve'; improvement: Improvement }
+  /** Save the starting choices for good before leaving the first safe room. */
+  | { kind: 'lock_build' };
 
 export type Message =
   /** `heroClass`: the class the guest picked (the host checks it). */
@@ -136,6 +146,10 @@ export function validCommand(value: unknown): value is GuestCommand {
   if (value.kind === 'hit_die') return true;
   if (value.kind === 'rest') return isRestKind(value.rest);
   if (value.kind === 'rest_answer') return typeof value.agree === 'boolean';
+  if (value.kind === 'scores') return validScores(value.scores);
+  if (value.kind === 'fighting_style') return isFightingStyle(value.style);
+  if (value.kind === 'improve') return validImprovement(value.improvement);
+  if (value.kind === 'lock_build') return true;
   if (value.kind !== 'loadout' || !Array.isArray(value.inventory) || value.inventory.length > MAX_ITEMS) return false;
   return value.inventory.every(isBagSquare) && validEquipped(value.equipped);
 }

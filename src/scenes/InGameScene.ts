@@ -306,7 +306,7 @@ export class InGameScene implements Scene {
   }
 
   private updatePanels(): void {
-    this.hud.update();
+    this.hud.update(this.level);
     this.combatLog.update();
     this.inv.setVisible(isInventoryOpen());
     this.inv.update();

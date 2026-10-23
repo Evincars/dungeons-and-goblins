@@ -2,6 +2,9 @@ import { world, q, isTarget } from '../world';
 import type { Entity, Player } from '../world';
 import type { Level } from '../level/Level';
 import { hitMob } from './SwordSystem';
+import { strike } from './Strike';
+import { characterSheet } from '../rules/CharacterSheet';
+import type { AttackProfile } from '../rules/Combat';
 import { spawnBurstPuff } from '../entities/FxFactory';
 import { AIM_HEIGHT, createSpellBolt } from '../entities/ProjectileFactory';
 import { playEffect } from '../assets/Effects';
@@ -32,6 +35,12 @@ function burst(bolt: Bolt, struck: boolean): void {
   world.addComponent(bolt, 'removed', true);
 }
 
+/** Fire Bolt, a spell attack: d20 + proficiency + INT to hit (with disadvantage in untrained armour), 1d10 fire. */
+function fireBolt(caster: Player): AttackProfile {
+  const sheet = characterSheet(caster);
+  return { attackBonus: sheet.attack.proficiency + sheet.modifiers.intelligence, damage: SPELL_STATS.boltDice, mode: sheet.attack.mode };
+}
+
 function canCast(caster: Player): boolean {
   return caster.health.current > 0 && caster.respawnTicks === undefined && !caster.swordSwing && !caster.falling && !(caster.castCooldown ?? 0);
 }
@@ -50,7 +59,7 @@ function updateCaster(caster: Player): void {
   cast.ticks++;
   if (!cast.released && cast.ticks >= SPELL_STATS.releaseTick) {
     cast.released = true;
-    createSpellBolt(caster.position.x, caster.position.y, cast.dirX, cast.dirY, SPELL_STATS.boltDamage + caster.playerStats.spellBonus);
+    createSpellBolt(caster.position.x, caster.position.y, cast.dirX, cast.dirY, fireBolt(caster), world.id(caster));
     sound.playSound('spell', caster.position.x, caster.position.y);
   }
   if (cast.ticks >= SPELL_STATS.castTicks) world.removeComponent(caster, 'casting');
@@ -78,8 +87,10 @@ function flyBolt(level: Level, bolt: Bolt): void {
   }
   const victim = boltVictim(bolt);
   if (!victim) return;
-  hitMob(victim, bolt, bolt.projectile.damage);
-  burst(bolt, true);
+  const shooter = bolt.projectile.owner === undefined ? undefined : world.entity(bolt.projectile.owner);
+  const outcome = strike(victim, bolt.projectile.attack, shooter);
+  if (outcome.hit) hitMob(victim, bolt, outcome.damage);
+  burst(bolt, outcome.hit);
 }
 
 /** Casting (right mouse / Q) toward the crosshair, and flying spell bolts and arrows. */

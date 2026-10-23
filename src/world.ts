@@ -4,13 +4,16 @@ import type { PixelLabel } from './ui/PixelText';
 import type { CharacterState } from './characters/CharacterDef';
 import type { DropTableId } from './entities/Drops';
 import type { ItemBase } from './rules/Equipment';
+import type { HeroClassId } from './rules/Classes';
+import type { WeaponBase } from './rules/WeaponTable';
+import type { AttackProfile } from './rules/Combat';
 
 export const enum Team { Neutral = 0, Player = 1 }
 
 export const enum Facing { North = 0, East = 1, South = 2, West = 3 }
 
 /** Where a player wears or holds gear, in the order the inventory screen lists them. */
-export const EQUIP_SLOTS = ['head', 'armor', 'primary', 'secondary', 'legs', 'medal', 'other'] as const;
+export const EQUIP_SLOTS = ['head', 'armor', 'primary', 'secondary', 'medal', 'other'] as const;
 export type EquipSlot = (typeof EQUIP_SLOTS)[number];
 
 export function isEquipSlot(value: string): value is EquipSlot {
@@ -18,7 +21,7 @@ export function isEquipSlot(value: string): value is EquipSlot {
 }
 
 /** What kind of gear an item is, which decides the slots it fits (see entities/Items.ts). */
-export const GEAR_KINDS = ['head', 'armor', 'weapon', 'offhand', 'legs', 'trinket', 'medal'] as const;
+export const GEAR_KINDS = ['head', 'armor', 'weapon', 'offhand', 'trinket', 'medal'] as const;
 export type GearKind = (typeof GEAR_KINDS)[number];
 
 export function isGearKind(value: unknown): value is GearKind {
@@ -64,6 +67,17 @@ export type InventoryItem = {
 
 /** A square of the bag: an item, or empty (the bag keeps items where they were put). */
 export type BagSquare = InventoryItem | null;
+
+/** How a line of the roll log reads: a hit, a miss, a natural 20 or 1, or the damage dealt. */
+export const ROLL_TONES = ['hit', 'miss', 'crit', 'fumble', 'damage'] as const;
+export type RollTone = (typeof ROLL_TONES)[number];
+
+export function isRollTone(value: unknown): value is RollTone {
+  return ROLL_TONES.some((tone) => tone === value);
+}
+
+/** One line over a fighter's head ("17+5=22 HIT", "1d8+3: 7"), and the ticks it has been shown. */
+export type RollLine = { text: string; tone: RollTone; age: number };
 
 /** Who controls a player character: the host, or one of up to three guests in a co-op room. */
 export const PLAYER_SLOTS = ['host', 'p2', 'p3', 'p4'] as const;
@@ -168,7 +182,6 @@ export type Entity = {
   facing?: number;
   speed?: number;
   friction?: number;
-  strength?: number;
   aimVector?: { x: number; y: number };
   walkTime?: number;
   limp?: number;
@@ -193,6 +206,12 @@ export type Entity = {
   sprintBar?: Sprite;
   fallMask?: Graphics;
   mobType?: MobType;
+  /** The weapon an enemy carries (its dice, src/rules/WeaponTable.ts), picked when it spawns. */
+  mobWeapon?: WeaponBase;
+  /** A player's hero class (src/data/classes.json): their abilities, hit points and training. */
+  heroClass?: HeroClassId;
+  /** The dice rolls shown over the head, oldest first; each fades after a while (systems/RollLogSystem.ts). */
+  rollLog?: RollLine[];
   /** Runtime display label (price etc.) */
   priceLabel?: PixelLabel;
 
@@ -256,7 +275,8 @@ export type Entity = {
     mouseAiming: boolean;
     keyAim: { x: number; y: number } | null;
     /** One-shot requests raised for a single tick by key presses. */
-    intents: { use: boolean; attack: boolean; cast: boolean; inventoryOpen: boolean };
+    /** One-tick commands; `swap` trades the 1st and 2nd weapon. */
+    intents: { use: boolean; attack: boolean; cast: boolean; inventoryOpen: boolean; swap: boolean };
   };
   /** Breadcrumbs of where this player walked, for enemies to follow. */
   trail?: Trail;
@@ -268,7 +288,11 @@ export type Entity = {
 
   // --- projectiles ---
   /** `arrow`: an arrow, which glints where it strikes, where a spell bolt bursts in dirt. */
-  projectile?: { damage: number; life: number; team: number; arrow?: boolean };
+  /**
+   * `attack`: the shooter's roll to hit and damage (rolled against the AC of whatever it strikes); `owner`:
+   * the shooter's entity id, whose head shows the roll.
+   */
+  projectile?: { life: number; team: number; arrow?: boolean; attack: AttackProfile; owner?: number };
 
   /** Point light this entity emits (spell bolts, …). */
   glow?: {
@@ -283,7 +307,6 @@ export type Entity = {
     exp: number;
     gold: number;
     swordTier: number;
-    armorTier: number;
     sprinting: boolean;
     sprint: number;
     maxSprint: number;
@@ -291,8 +314,7 @@ export type Entity = {
     kills: number;
     /** All gold picked up this level, whatever was spent since. */
     goldEarned: number;
-    /** Extra spell damage (from Intelligence) and the share more coins enemies drop (from Charisma). */
-    spellBonus: number;
+    /** The share more coins enemies drop (from Charisma). */
     lootBonus: number;
   };
   /** The bag, square by square (index = grid square); empty squares are null. */
@@ -305,7 +327,6 @@ export type Entity = {
     ticks: number;
     dirX: number;
     dirY: number;
-    damage: number;
     range: number;
     /** Entities this swing already hit (a list: a swing meets a handful at most, and it travels as JSON). */
     hitIds: number[];
@@ -436,7 +457,7 @@ export type PlayerInput = NonNullable<Entity['playerInput']>;
 export type Intents = PlayerInput['intents'];
 
 export function noIntents(): Intents {
-  return { use: false, attack: false, cast: false, inventoryOpen: false };
+  return { use: false, attack: false, cast: false, inventoryOpen: false, swap: false };
 }
 
 /** Lets go of every key and button, e.g. for a remote player whose input stopped arriving. */

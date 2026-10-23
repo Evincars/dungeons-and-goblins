@@ -1,7 +1,7 @@
 import type { Application, Container } from 'pixi.js';
 import { StateError } from '../core/errors';
 
-export type SceneName = 'title' | 'settings' | 'key_bindings' | 'coop_host' | 'coop_join' | 'in_game';
+export type SceneName = 'title' | 'settings' | 'key_bindings' | 'character_select' | 'coop_host' | 'coop_join' | 'in_game';
 
 export type SceneFactory = (manager: SceneManager) => Scene;
 

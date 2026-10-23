@@ -90,12 +90,20 @@ function settle(v: Point, factor: number): void {
   if (Math.abs(v.y) < REST_SPEED) v.y = 0;
 }
 
-/** Mobs can't step into holes: undo the axis that took them over one. */
-function keepOutOfHoles(level: Level, entity: Body, fromX: number, fromY: number): void {
+/** Ground no enemy may stand on: holes, and the safe rooms players rest in. */
+function offLimits(level: Level, x: number, y: number): boolean {
+  return level.getTileAt(x, y)?.type === TileType.Hole || level.isWorldPosSafe(x, y);
+}
+
+/**
+ * Mobs can't step into holes or safe rooms (walking or knocked back): undo the axis that took them in. One
+ * already inside (spawned or pushed there before) may still walk out.
+ */
+function keepOutOfForbidden(level: Level, entity: Body, fromX: number, fromY: number): void {
   const pos = entity.position;
-  if (!entity.ai || level.getTileAt(pos.x, pos.y)?.type !== TileType.Hole) return;
-  if (level.getTileAt(pos.x, fromY)?.type !== TileType.Hole) pos.y = fromY;
-  else if (level.getTileAt(fromX, pos.y)?.type !== TileType.Hole) pos.x = fromX;
+  if (!entity.ai || !offLimits(level, pos.x, pos.y) || offLimits(level, fromX, fromY)) return;
+  if (!offLimits(level, pos.x, fromY)) pos.y = fromY;
+  else if (!offLimits(level, fromX, pos.y)) pos.x = fromX;
   else { pos.x = fromX; pos.y = fromY; }
   entity.velocity.x = entity.velocity.y = 0;
   if (entity.bump) entity.bump.x = entity.bump.y = 0;
@@ -139,7 +147,7 @@ function moveBody(level: Level, entity: Body): void {
   const fromX = position.x;
   const fromY = position.y;
   move(position, radius, xa, ya, obstaclesFor(level, entity), entity.physicsSlide !== undefined);
-  keepOutOfHoles(level, entity, fromX, fromY);
+  keepOutOfForbidden(level, entity, fromX, fromY);
   settle(velocity, entity.friction ?? DEFAULT_FRICTION);
   if (bump) settle(bump, KNOCKBACK_FADE);
 }

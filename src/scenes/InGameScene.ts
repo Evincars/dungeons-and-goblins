@@ -7,16 +7,18 @@ import { text } from '../core/texts';
 import { buildDungeon, prepareLevel, randomSeed } from '../level/DungeonGenerator';
 import { buildLevelView } from '../level/TileRenderer';
 import type { LevelView } from '../level/TileRenderer';
-import { DarknessRenderer } from '../level/DarknessRenderer';
+import { FogRenderer } from '../level/FogRenderer';
 import { LightRenderer } from '../level/LightRenderer';
 import type { LightSource } from '../level/LightRenderer';
 import { createPlayer } from '../entities/PlayerFactory';
+import { settings } from '../game/Settings';
 import { camera, GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
 import { TILE_WIDTH, TILE_HEIGHT, FOG_REVEAL_TILES } from '../level/TileType';
 import { initInput, resetInput } from '../systems/InputSystem';
 import { SIMULATION, PRESENTATION, runSystems } from '../systems/Simulation';
 import type { FrameContext } from '../systems/Simulation';
 import { resetNameTags, updateNameTags } from '../systems/NameTagSystem';
+import { resetRollTexts } from '../systems/RollTextSystem';
 import { HudPanel } from '../ui/HudPanel';
 import { totalXp } from '../game/Progress';
 import { InventoryOverlay } from '../ui/InventoryOverlay';
@@ -68,7 +70,7 @@ export class InGameScene implements Scene {
   private readonly gameLayer = new Container();
   private readonly uiLayer = new Container();
   private terrain: LevelView | null = null;
-  private readonly darkness = new DarknessRenderer();
+  private readonly darkness = new FogRenderer();
   private readonly lights = new LightRenderer();
   private readonly hud = new HudPanel();
   private readonly inv = new InventoryOverlay();
@@ -104,6 +106,7 @@ export class InGameScene implements Scene {
     closeShop();
     world.clear();
     resetNameTags();
+    resetRollTexts();
 
     this.gameLayer.sortableChildren = true;
     this.container.addChild(this.gameLayer, this.uiLayer);
@@ -124,7 +127,7 @@ export class InGameScene implements Scene {
     if (this.mode === 'guest') {
       this.guest = new GuestGame(() => this.levelComplete(), () => manager.goto('in_game'));
     } else {
-      const me = createPlayer(spawns.playerSpawn.x, spawns.playerSpawn.y);
+      const me = createPlayer(spawns.playerSpawn.x, spawns.playerSpawn.y, settings.heroClass);
       world.addComponent(me, 'playerSlot', 'host');
       restorePlayer(me);
       if (this.mode === 'host') this.host = new HostGame(me, spawns.playerSpawn, seed, depth);
@@ -235,7 +238,7 @@ export class InGameScene implements Scene {
     this.gameLayer.x = -camera.x;
     this.gameLayer.y = -camera.y;
 
-    this.darkness.update(this.level);
+    this.darkness.update(this.app.renderer, this.level, this.tick);
     this.lights.update(this.app, this.gatherLights(), this.tick);
     this.crosshair.update();
     this.updatePanels();

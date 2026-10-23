@@ -2,7 +2,9 @@ import { world, q, Team, isTarget } from '../world';
 import type { Entity, Player } from '../world';
 import { sound } from '../audio/SoundPlayer';
 import { createSwordSwingFx } from '../entities/FxFactory';
-import { SWORD_STATS, swingDamage, swingRange } from '../entities/WeaponStats';
+import { SWORD_STATS, swingRange } from '../entities/WeaponStats';
+import { characterSheet } from '../rules/CharacterSheet';
+import { strike } from './Strike';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 
@@ -59,7 +61,6 @@ function startSwing(player: Player): void {
     ticks: SWORD_STATS.swingTicks,
     dirX: aim.x,
     dirY: aim.y,
-    damage: swingDamage(player.playerStats.swordTier),
     range,
     hitIds: [],
   });
@@ -79,14 +80,24 @@ function inArc(player: Player, swing: Swing, mob: Entity, mobId: number): boolea
   return (dx * swing.dirX + dy * swing.dirY) / (dist || 1) >= SWORD_STATS.arcCos;
 }
 
-/** Hits every enemy (and the training dummy) inside the live swing's arc, each once per swing. */
+/**
+ * The swing meets a target: the attack is rolled against its Armor Class (shown over the player's head), and
+ * only a hit hurts it.
+ */
+function swingAt(player: Player, target: Entity): void {
+  const outcome = strike(target, characterSheet(player).attack, player);
+  if (outcome.hit) hitMob(target, player, outcome.damage);
+  else if (target.position) sound.playSound('sword_miss', target.position.x, target.position.y);
+}
+
+/** Every enemy (and the training dummy) inside the live swing's arc is swung at, each once per swing. */
 function resolveSwing(player: Player, swing: Swing): void {
   for (const mob of nearby(player.position.x, player.position.y, swing.range + MAX_MOB_RADIUS, Sense.mob, struck)) {
     if (!isTarget(mob) || mob.health.current <= 0 || mob.team === Team.Player) continue;
     const mobId = world.id(mob);
     if (mobId === undefined || !inArc(player, swing, mob, mobId)) continue;
     swing.hitIds.push(mobId);
-    hitMob(mob, player, swing.damage);
+    swingAt(player, mob);
   }
 }
 

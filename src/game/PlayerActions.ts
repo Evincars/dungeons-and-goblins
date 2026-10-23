@@ -19,11 +19,10 @@ import { BASE_SPRINT } from '../entities/PlayerFactory';
 export const INVENTORY_COLS = 6;
 export const INVENTORY_ROWS = 7;
 export const MAX_INVENTORY = INVENTORY_COLS * INVENTORY_ROWS;
-/** Sword tier with nothing equipped; each point of strength on gear adds one. */
+/** Sword tier (how far a swing reaches) with nothing equipped; each point of strength on gear adds one. */
 const BASE_SWORD_TIER = 1;
-/** What each point of a stat on worn gear gives: ticks of sprint (Constitution), spell damage (Intelligence), and a share more coins (Charisma). */
+/** What each point of a stat on worn gear gives besides its ability score: ticks of sprint (Constitution) and a share more coins (Charisma). */
 const SPRINT_PER_CONSTITUTION = 10;
-const SPELL_DAMAGE_PER_INTELLIGENCE = 2;
 const LOOT_PER_CHARISMA = 0.05;
 
 export type Loadout = { inventory: BagSquare[]; equipped: Partial<Record<EquipSlot, InventoryItem>> };
@@ -150,9 +149,9 @@ export function requestBuy(player: Player, items: readonly InventoryItem[], inde
 }
 
 /**
- * Puts the bag and equipment in the given arrangement and works out what the worn gear gives: Strength
- * sharpens the sword (and arrows), Dexterity turns blows, Constitution lengthens sprints, Intelligence
- * strengthens spells and Charisma makes enemies drop more coins. Wisdom does nothing yet.
+ * Puts the bag and equipment in the given arrangement and works out what the worn gear gives beyond the
+ * ability scores the rules read (src/rules/CharacterSheet.ts: attacks, damage, Armor Class): Strength
+ * lengthens a swing's reach, Constitution lengthens sprints and Charisma makes enemies drop more coins.
  */
 export function applyLoadout(player: Player, loadout: Loadout): void {
   player.inventory = loadout.inventory;
@@ -160,10 +159,19 @@ export function applyLoadout(player: Player, loadout: Loadout): void {
   const stats = statTotals(loadout.equipped);
   const ps = player.playerStats;
   ps.swordTier = BASE_SWORD_TIER + stats.strength;
-  ps.armorTier = stats.dexterity;
   ps.maxSprint = BASE_SPRINT + stats.constitution * SPRINT_PER_CONSTITUTION;
-  ps.spellBonus = stats.intelligence * SPELL_DAMAGE_PER_INTELLIGENCE;
   ps.lootBonus = stats.charisma * LOOT_PER_CHARISMA;
+}
+
+/**
+ * Q: the 1st and 2nd weapon trade hands (a lone weapon in the 2nd hand moves to the 1st). Nothing happens
+ * when the 2nd hand holds a shield, which cannot be the weapon fought with; returns whether they swapped.
+ */
+export function swapWeapons(player: Player): boolean {
+  const next = moveItem({ inventory: player.inventory ?? [], equipped: player.equipped ?? {} }, { slot: 'secondary' }, { slot: 'primary' });
+  if (!next) return false;
+  applyLoadout(player, next);
+  return true;
 }
 
 /** Rearranging the inventory panel: shown at once, and for a guest also sent to the host to make it real. */
@@ -188,7 +196,7 @@ export function sameItems(a: Loadout, b: Loadout): boolean {
   return x.length === y.length && x.every((key, i) => key === y[i]);
 }
 
-/** Equipment goes in a slot of its kind only: a helmet cannot be worn as boots. */
+/** Equipment goes in a slot of its kind only: a helmet cannot be held as a weapon. */
 function slotsFit(equipped: Loadout['equipped']): boolean {
   return Object.entries(equipped).every(([slot, item]) => !item || (isEquipSlot(slot) && fitsSlot(item, slot)));
 }

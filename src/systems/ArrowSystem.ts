@@ -3,20 +3,18 @@ import type { Player } from '../world';
 import { sound } from '../audio/SoundPlayer';
 import { createArrow } from '../entities/ProjectileFactory';
 import { ARROW_STATS } from '../entities/WeaponStats';
-import { statTotals } from '../entities/Items';
 import { ATTACK_RECOVERY } from '../characters/StateTriggers';
-
-/** Weapon kinds (see src/data/weapons.json) that loose arrows instead of swinging. */
-const ARROW_WEAPONS: readonly string[] = ['bow', 'crossbow'];
+import { characterSheet, weaponInHand } from '../rules/CharacterSheet';
+import { weaponRule } from '../rules/Equipment';
+import { world } from '../world';
 
 /**
- * Archery: a player holding a bow in either hand looses an arrow at the crosshair on attack instead of
- * swinging. Arrows are never used up.
+ * Archery: a player fighting with a ranged weapon (bow, crossbow, pistol, darts) shoots at the crosshair on
+ * attack instead of swinging. The shot rolls to hit when it strikes; ammunition is never used up.
  */
 
 function holdsBow(player: Player): boolean {
-  const { primary, secondary } = player.equipped ?? {};
-  return ARROW_WEAPONS.includes(primary?.kind ?? '') || ARROW_WEAPONS.includes(secondary?.kind ?? '');
+  return weaponRule(weaponInHand(player.equipped ?? {}) ?? undefined)?.rule.range === 'ranged';
 }
 
 function canShoot(player: Player): boolean {
@@ -25,8 +23,7 @@ function canShoot(player: Player): boolean {
 
 function shoot(player: Player): void {
   const aim = player.aimVector ?? { x: 0, y: 1 };
-  const damage = ARROW_STATS.damage + statTotals(player.equipped ?? {}).strength;
-  createArrow(player.position.x, player.position.y, aim.x, aim.y, damage);
+  createArrow(player.position.x, player.position.y, aim.x, aim.y, characterSheet(player).attack, world.id(player));
   player.arrowCooldown = ARROW_STATS.cooldown;
   // Hold the release pose for a moment (the attack clip plays while attackTime is above the recovery).
   player.attackTime = ATTACK_RECOVERY + ARROW_STATS.drawTicks;

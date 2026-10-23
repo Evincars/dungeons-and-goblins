@@ -31,7 +31,8 @@ export type WeaponRule = {
 };
 
 export const WEAPON_BASES = [
-  'unarmed', 'club', 'dagger', 'punch_dagger', 'greatclub', 'mace', 'quarterstaff', 'sickle', 'spear',
+  'unarmed', 'club', 'dagger', 'punch_dagger', 'greatclub', 'handaxe', 'javelin', 'light_hammer', 'mace', 'quarterstaff',
+  'sickle', 'spear',
   'light_crossbow', 'dart', 'shortbow',
   'battleaxe', 'glaive', 'greataxe', 'greatsword', 'halberd', 'longsword', 'maul', 'pike', 'scimitar',
   'shortsword', 'whip', 'heavy_crossbow', 'longbow', 'pistol', 'musket',
@@ -49,6 +50,9 @@ export const WEAPON_TABLE = {
   dagger: { damage: dice(1, 4), type: 'piercing', category: 'simple', range: 'melee', properties: ['finesse', 'light', 'thrown'] },
   punch_dagger: { damage: dice(1, 4), type: 'piercing', category: 'simple', range: 'melee', properties: ['finesse', 'light'] },
   greatclub: { damage: dice(1, 8), type: 'bludgeoning', category: 'simple', range: 'melee', properties: ['two_handed'] },
+  handaxe: { damage: dice(1, 6), type: 'slashing', category: 'simple', range: 'melee', properties: ['light', 'thrown'] },
+  javelin: { damage: dice(1, 6), type: 'piercing', category: 'simple', range: 'melee', properties: ['thrown'] },
+  light_hammer: { damage: dice(1, 4), type: 'bludgeoning', category: 'simple', range: 'melee', properties: ['light', 'thrown'] },
   mace: { damage: dice(1, 6), type: 'bludgeoning', category: 'simple', range: 'melee', properties: [] },
   quarterstaff: { damage: dice(1, 6), type: 'bludgeoning', category: 'simple', range: 'melee', properties: [], versatile: dice(1, 8) },
   sickle: { damage: dice(1, 4), type: 'slashing', category: 'simple', range: 'melee', properties: ['light'] },

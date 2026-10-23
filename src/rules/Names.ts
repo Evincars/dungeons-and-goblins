@@ -1,6 +1,7 @@
 import { text } from '../core/texts';
 import type { ArmorBase, ArmorRule } from './ArmorTable';
 import type { DamageType, WeaponBase, WeaponProperty, WeaponRule } from './WeaponTable';
+import type { ArmorTraining, ClassFeature, HeroClassId, WeaponTraining } from './Classes';
 
 /** How the rules' terms read on screen (from src/data/texts.json). */
 
@@ -30,4 +31,25 @@ export function rangeName(range: WeaponRule['range']): string {
 
 export function propertyName(property: WeaponProperty): string {
   return text(`rules.property.${property}` as const);
+}
+
+export function className(id: HeroClassId): string {
+  return text(`class.${id}.name` as const);
+}
+
+export function classBlurb(id: HeroClassId): string {
+  return text(`class.${id}.blurb` as const);
+}
+
+export function featureName(feature: ClassFeature): string {
+  return text(`feature.${feature}.name` as const);
+}
+
+export function featureDescription(feature: ClassFeature): string {
+  return text(`feature.${feature}.description` as const);
+}
+
+/** Armour or weapon training as a word: "light", "shields", "martial"… */
+export function trainingName(training: ArmorTraining | WeaponTraining): string {
+  return text(`training.${training}` as const);
 }

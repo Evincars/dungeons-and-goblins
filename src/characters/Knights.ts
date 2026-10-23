@@ -21,18 +21,23 @@ export const HERO_KNIGHT: CharacterDef = {
   states: { idle: 'idle', walk: 'run', run: 'run', attack: 'attack', cast: 'cast', hurt: 'hurt', death: 'death' },
 };
 
-/** Its attack frames are 102 px wide (the rest 100), and it has no walk: it glides in its idle pose. */
+/**
+ * The crowned knight from /hooded-knight, played as the Warrior. Its attack strip is 180 px wide (the sword
+ * reaches out) and its power-up (played for casting) 180 px tall, each with the body where the idle has it;
+ * it has no walk, hurt or death strips, so it glides in its idle pose and simply stands when struck.
+ */
 export const HOODED_KNIGHT: CharacterDef = {
   id: 'hooded_knight',
   frameWidth: 100,
   frameHeight: 100,
   scale: 0.42,
-  feetY: 90,
+  feetY: 91,
   headY: 9,
-  bodyX: 50,
+  bodyX: 33,
   clips: {
     idle:   { src: '/hooded-knight/hooded_knight_idle.png', frameTime: 7, mode: 'loop' },
-    attack: { src: '/hooded-knight/hooded_knight_attack.png', frameTime: 2, mode: 'once', impactFrame: 14, frameWidth: 102 },
+    attack: { src: '/hooded-knight/hooded_knight_attack.png', frameTime: 1, mode: 'once', impactFrame: 9, frameWidth: 180, bodyX: 33 },
+    cast:   { src: '/hooded-knight/hooded_knight_powerup.png', frameTime: 1, mode: 'once', frameHeight: 180, feetY: 169 },
   },
-  states: { idle: 'idle', walk: 'idle', attack: 'attack' },
+  states: { idle: 'idle', walk: 'idle', run: 'idle', attack: 'attack', cast: 'cast' },
 };

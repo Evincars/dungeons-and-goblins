@@ -37,13 +37,12 @@ const CHEST_LIFT = 12;
 
 /** What the shop keeper sells: gear for every slot. */
 export const SHOP_ITEMS: readonly InventoryItem[] = [
-  { type: 'weapon', name: 'Short Sword',   value: 50,  gear: 'weapon',  icon: 'item_arms_00', stats: { strength: 2 }, weight: 1.8 },
-  { type: 'weapon', name: 'Long Sword',    value: 120, gear: 'weapon',  icon: 'item_arms_11', stats: { strength: 4 }, weight: 3.0 },
-  { type: 'weapon', name: 'Hand Axe',      value: 70,  gear: 'weapon',  icon: 'item_arms_13', stats: { strength: 3 }, weight: 2.5 },
-  { type: 'shield', name: 'Wooden Shield', value: 45,  gear: 'offhand', icon: 'item_arms_08', stats: { dexterity: 1 }, weight: 4.5 },
+  { type: 'weapon', name: 'Short Sword',   value: 50,  gear: 'weapon',  base: 'shortsword', icon: 'item_arms_00', stats: { strength: 2 }, weight: 1.8 },
+  { type: 'weapon', name: 'Long Sword',    value: 120, gear: 'weapon',  base: 'longsword',  icon: 'item_arms_11', stats: { strength: 4 }, weight: 3.0 },
+  { type: 'weapon', name: 'Hand Axe',      value: 70,  gear: 'weapon',  base: 'handaxe',    icon: 'item_arms_13', stats: { strength: 3 }, weight: 2.5 },
+  { type: 'shield', name: 'Wooden Shield', value: 45,  gear: 'offhand', base: 'shield',     icon: 'item_arms_08', stats: { dexterity: 1 }, weight: 4.5 },
   { type: 'helmet', name: 'Iron Helm',     value: 40,  gear: 'head',    icon: 'prop_armor_bust2', stats: { dexterity: 1 }, weight: 2.0 },
-  { type: 'armor',  name: 'Chain Mail',    value: 80,  gear: 'armor',   icon: 'prop_armor_bust', stats: { dexterity: 2, constitution: 1 }, weight: 12.0 },
-  { type: 'boots',  name: 'Leather Boots', value: 30,  gear: 'legs',    icon: 'icon_boots', stats: { dexterity: 1 }, weight: 1.5 },
+  { type: 'armor',  name: 'Chain Mail',    value: 80,  gear: 'armor',   base: 'chain_mail', icon: 'prop_armor_bust', stats: { dexterity: 2, constitution: 1 }, weight: 12.0 },
   { type: 'ring',   name: 'Copper Ring',   value: 60,  gear: 'trinket', icon: 'icon_ring', stats: { charisma: 2 }, weight: 0.1 },
 ];
 

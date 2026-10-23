@@ -26,7 +26,6 @@ const SLOT_GEAR = {
   armor: ['armor'],
   primary: ['weapon'],
   secondary: ['weapon', 'offhand'],
-  legs: ['legs'],
   medal: ['medal'],
   other: ['trinket'],
 } as const satisfies Record<EquipSlot, readonly GearKind[]>;

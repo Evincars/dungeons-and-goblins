@@ -1,4 +1,4 @@
-import type { EquipSlot, InventoryItem, Player, StatName } from '../world';
+import type { EquipSlot, InventoryItem, MobType, Player, StatName } from '../world';
 import { abilities, proficiencyBonus } from './Abilities';
 import type { Abilities } from './Abilities';
 import { UNARMORED_AC } from './ArmorTable';
@@ -6,20 +6,27 @@ import type { ArmorBase, ArmorRule } from './ArmorTable';
 import { WEAPON_TABLE } from './WeaponTable';
 import type { WeaponBase, WeaponRule } from './WeaponTable';
 import { plus } from './Dice';
-import type { Dice } from './Dice';
+import type { D20Mode, Dice } from './Dice';
 import { armorRule, isShield, magicBonus, weaponRule } from './Equipment';
+import { armorProficient, hasFeature, heroClass, weaponProficient } from './Classes';
+import type { ClassFeature, HeroClass } from './Classes';
+import { MONSTERS } from './Monsters';
 
 /**
- * What the rules make of a character's gear and abilities: Armor Class, the damage and attack bonus of the
- * weapon in hand, and hit points, worked out the way the tabletop game does.
+ * What the rules make of a character's class, gear and abilities: Armor Class, the damage and attack bonus
+ * of the weapon in hand, and hit points, worked out the way the tabletop game does.
  */
 
 type Equipped = Partial<Record<EquipSlot, InventoryItem>>;
+type Modifiers = Readonly<Record<StatName, number>>;
+
+/** The Fighter's Defense style: this much AC while wearing armour. */
+const DEFENSE_STYLE_AC = 1;
 
 export type ArmorClass = {
   total: number;
   /** The body armour worn and its table entry (null with none on). */
-  armor: { item: InventoryItem; base: ArmorBase } | null;
+  armor: { item: InventoryItem; base: ArmorBase; category: ArmorRule['category'] } | null;
   /** The AC before DEX: 10 with no armour, else the armour's own. */
   base: number;
   /** The part of the DEX modifier that counts (heavy armour: none; medium: at most +2). */
@@ -28,6 +35,11 @@ export type ArmorClass = {
   magic: number;
   /** What the shield adds, its magic included (0 with none). */
   shield: number;
+  /** A class feature's share (Unarmored Defense's CON, the Defense style's +1), and which feature. */
+  feature: number;
+  featureName: ClassFeature | null;
+  /** Trained in the armour and shield worn; untrained, every attack roll has disadvantage. */
+  proficient: boolean;
 };
 
 /** Heavy armour ignores DEX either way; medium lets at most +2 of it count; light and none, all of it. */
@@ -42,21 +54,33 @@ function shieldOf(equipped: Equipped): InventoryItem | undefined {
   return isShield(equipped.secondary) ? equipped.secondary : undefined;
 }
 
-/** Armor Class: 10 + DEX bare, or the armour's AC (+ the DEX it allows), plus magic, plus a shield. */
-export function armorClass(equipped: Equipped, dexModifier: number): ArmorClass {
+/** What a class feature adds to AC: Unarmored Defense (CON with no armour) or the Defense style (+1 in armour). */
+function featureAC(cls: HeroClass | null, armored: boolean, modifiers: Modifiers): { feature: number; featureName: ClassFeature | null } {
+  if (cls && !armored && hasFeature(cls, 'unarmored_defense')) return { feature: modifiers.constitution, featureName: 'unarmored_defense' };
+  if (cls && armored && hasFeature(cls, 'fighting_style_defense')) return { feature: DEFENSE_STYLE_AC, featureName: 'fighting_style_defense' };
+  return { feature: 0, featureName: null };
+}
+
+/**
+ * Armor Class: 10 + DEX bare, or the armour's AC (+ the DEX it allows), plus magic, a shield and the class's
+ * feature. `cls` null: a creature without a class (no features, trained in everything).
+ */
+export function armorClass(equipped: Equipped, modifiers: Modifiers, cls: HeroClass | null = null): ArmorClass {
   const worn = armorRule(equipped.armor);
-  const armor = worn && equipped.armor && worn.rule.category !== 'shield' ? { item: equipped.armor, base: worn.base } : null;
-  const rule = armor && worn ? worn.rule : null;
+  const rule = worn && worn.rule.category !== 'shield' ? worn.rule : null;
+  const armor = rule && worn && equipped.armor ? { item: equipped.armor, base: worn.base, category: rule.category } : null;
   const base = rule ? rule.ac : UNARMORED_AC;
-  const dex = countedDex(rule, dexModifier);
+  const dex = countedDex(rule, modifiers.dexterity);
   const magic = magicBonus(armor?.item);
   const shieldItem = shieldOf(equipped);
   const shield = shieldItem ? (armorRule(shieldItem)?.rule.ac ?? 0) + magicBonus(shieldItem) : 0;
-  return { total: base + dex + magic + shield, armor, base, dex, magic, shield };
+  const { feature, featureName } = featureAC(cls, !!armor, modifiers);
+  const proficient = !cls || ((!armor || armorProficient(cls, armor.category)) && (!shieldItem || armorProficient(cls, 'shield')));
+  return { total: base + dex + magic + shield + feature, armor, base, dex, magic, shield, feature, featureName, proficient };
 }
 
 export type WeaponAttack = {
-  /** The weapon in hand (null when fighting bare-handed) and the table entry it fights as. */
+  /** The weapon in hand (null when fighting bare-handed or for an enemy) and the table entry it fights as. */
   item: InventoryItem | null;
   base: WeaponBase;
   rule: WeaponRule;
@@ -64,23 +88,26 @@ export type WeaponAttack = {
   ability: Extract<StatName, 'strength' | 'dexterity'>;
   abilityModifier: number;
   magic: number;
+  /** The proficiency bonus added to hit (0 when untrained in the weapon), and whether the wielder is trained. */
   proficiency: number;
+  proficient: boolean;
   /** A versatile weapon held in both hands (the other hand empty) deals its larger dice. */
   twoHanded: boolean;
   /** The damage roll, every bonus added. */
   damage: Dice;
-  /** What is added to the d20 to hit. */
+  /** What is added to the d20 to hit, and how the d20 is rolled (disadvantage in untrained armour). */
   attackBonus: number;
+  mode: D20Mode;
 };
 
 /** The weapon a character fights with: the primary hand's, else a weapon in the second hand. */
-function weaponInHand(equipped: Equipped): InventoryItem | null {
+export function weaponInHand(equipped: Equipped): InventoryItem | null {
   if (weaponRule(equipped.primary)) return equipped.primary ?? null;
   return weaponRule(equipped.secondary) ? equipped.secondary ?? null : null;
 }
 
 /** Melee weapons use STR, ranged ones DEX; finesse weapons whichever is better. */
-function attackAbility(rule: WeaponRule, modifiers: Record<StatName, number>): WeaponAttack['ability'] {
+function attackAbility(rule: WeaponRule, modifiers: Modifiers): WeaponAttack['ability'] {
   if (rule.properties.includes('finesse')) return modifiers.dexterity > modifiers.strength ? 'dexterity' : 'strength';
   return rule.range === 'ranged' ? 'dexterity' : 'strength';
 }
@@ -91,42 +118,63 @@ function otherHandFree(equipped: Equipped, item: InventoryItem | null): boolean 
   return !other;
 }
 
-/**
- * The attack of the weapon in hand: its dice + the ability modifier + its magic bonus; to hit, d20 +
- * proficiency + the same modifier + magic. Bare-handed it is a punch: 1 + STR.
- */
-export function weaponAttack(equipped: Equipped, modifiers: Record<StatName, number>, level: number): WeaponAttack {
-  const item = weaponInHand(equipped);
-  const found = weaponRule(item ?? undefined);
-  const base: WeaponBase = found?.base ?? 'unarmed';
-  const rule: WeaponRule = found?.rule ?? WEAPON_TABLE.unarmed;
+type Wielding = { item: InventoryItem | null; base: WeaponBase; twoHanded: boolean; proficiency: number; mode: D20Mode };
+
+/** Dice + ability modifier + magic to damage; d20 + proficiency + the same modifier + magic to hit. */
+function attackWith(w: Wielding, modifiers: Modifiers): WeaponAttack {
+  const rule: WeaponRule = WEAPON_TABLE[w.base];
   const ability = attackAbility(rule, modifiers);
   const abilityModifier = modifiers[ability];
-  const magic = magicBonus(item ?? undefined);
-  const proficiency = proficiencyBonus(level);
-  const twoHanded = !!rule.versatile && !!item && otherHandFree(equipped, item);
-  const dice = twoHanded && rule.versatile ? rule.versatile : rule.damage;
+  const magic = magicBonus(w.item ?? undefined);
+  const dice = w.twoHanded && rule.versatile ? rule.versatile : rule.damage;
   return {
-    item, base, rule, ability, abilityModifier, magic, proficiency, twoHanded,
+    item: w.item, base: w.base, rule, ability, abilityModifier, magic,
+    proficiency: w.proficiency, proficient: w.proficiency > 0, twoHanded: w.twoHanded,
     damage: plus(dice, abilityModifier + magic),
-    attackBonus: proficiency + abilityModifier + magic,
+    attackBonus: w.proficiency + abilityModifier + magic,
+    mode: w.mode,
   };
 }
 
+/**
+ * The attack of the weapon in hand; bare-handed it is a punch (1 + STR). Untrained in the weapon, no
+ * proficiency bonus; in untrained armour (`armorProficient` false), the d20 is rolled with disadvantage.
+ */
+export function weaponAttack(equipped: Equipped, modifiers: Modifiers, level: number, cls: HeroClass | null = null, armorTrained = true): WeaponAttack {
+  const item = weaponInHand(equipped);
+  const found = weaponRule(item ?? undefined);
+  const base: WeaponBase = found?.base ?? 'unarmed';
+  const rule: WeaponRule = WEAPON_TABLE[base];
+  const trained = !cls || weaponProficient(cls, rule.category);
+  const twoHanded = !!rule.versatile && !!item && otherHandFree(equipped, item);
+  const mode: D20Mode = armorTrained ? 'normal' : 'disadvantage';
+  return attackWith({ item, base, twoHanded, proficiency: trained ? proficiencyBonus(level) : 0, mode }, modifiers);
+}
+
+/** An enemy's attack with the weapon it carries: its monster block's proficiency and abilities. */
+export function monsterAttack(type: MobType, weapon: WeaponBase): WeaponAttack {
+  const monster = MONSTERS[type];
+  return attackWith({ item: null, base: weapon, twoHanded: false, proficiency: monster.proficiency, mode: 'normal' }, monster.modifiers);
+}
+
 export type CharacterSheet = Abilities & {
+  heroClass: HeroClass;
   armorClass: ArmorClass;
   attack: WeaponAttack;
   hitPoints: { current: number; max: number };
 };
 
-/** Everything the inventory's character sheet shows, from what the player wears. */
-export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' | 'health'>): CharacterSheet {
+/** Everything the inventory's character sheet shows, from the player's class and what they wear. */
+export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' | 'health' | 'heroClass'>): CharacterSheet {
   const equipped = player.equipped ?? {};
-  const scores = abilities(equipped);
+  const cls = heroClass(player.heroClass);
+  const scores = abilities(equipped, cls.abilities);
+  const ac = armorClass(equipped, scores.modifiers, cls);
   return {
     ...scores,
-    armorClass: armorClass(equipped, scores.modifiers.dexterity),
-    attack: weaponAttack(equipped, scores.modifiers, player.playerStats.level),
+    heroClass: cls,
+    armorClass: ac,
+    attack: weaponAttack(equipped, scores.modifiers, player.playerStats.level, cls, ac.proficient),
     hitPoints: { current: player.health.current, max: player.health.max },
   };
 }

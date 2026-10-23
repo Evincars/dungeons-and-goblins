@@ -4,10 +4,12 @@ import { attempt } from '../core/errors';
 import { hasKey, isFiniteNumber, isRecord } from '../core/guards';
 import { createLog } from '../core/log';
 import { text } from '../core/texts';
+import { DEFAULT_CLASS, isHeroClassId } from '../rules/Classes';
+import type { HeroClassId } from '../rules/Classes';
 
 const log = createLog('settings');
 
-export const ACTIONS = ['up', 'down', 'left', 'right', 'sprint', 'attack', 'cast', 'use', 'inventory'] as const;
+export const ACTIONS = ['up', 'down', 'left', 'right', 'sprint', 'attack', 'cast', 'swap', 'use', 'inventory'] as const;
 export type ActionName = (typeof ACTIONS)[number];
 
 /** How the key bindings screen names an action. */
@@ -22,13 +24,16 @@ const DEFAULT_BINDINGS = {
   right: 'KeyD',
   sprint: 'ShiftLeft',
   attack: 'Space',
-  cast: 'KeyQ',
+  cast: 'KeyR',
+  swap: 'KeyQ',
   use: 'KeyE',
   inventory: 'Tab',
 } as const satisfies Record<ActionName, string>;
 
 export type Settings = {
   bindings: Record<ActionName, string>;
+  /** The hero class picked for the next game (character select). */
+  heroClass: HeroClassId;
   sfxVolume: number;
   fullscreen: boolean;
   /** Name the other players see above this character in multiplayer. */
@@ -47,7 +52,7 @@ export function cleanName(text: unknown): string {
 const STORAGE_KEY = 'dungeons-and-goblins-settings';
 
 function defaults(): Settings {
-  return { bindings: { ...DEFAULT_BINDINGS }, sfxVolume: DEFAULT_SFX_VOLUME, fullscreen: false, playerName: '' };
+  return { bindings: { ...DEFAULT_BINDINGS }, heroClass: DEFAULT_CLASS, sfxVolume: DEFAULT_SFX_VOLUME, fullscreen: false, playerName: '' };
 }
 
 function isActionName(key: string): key is ActionName {
@@ -64,11 +69,28 @@ function readBindings(value: unknown): Partial<Record<ActionName, string>> {
   return bindings;
 }
 
+/**
+ * Stored bindings over the defaults. An action added since they were saved takes its default key, and an older
+ * action still on that key moves to its own new default (Q became weapon swap; the spell moved to R).
+ */
+export function mergeBindings(stored: Partial<Record<ActionName, string>>): Record<ActionName, string> {
+  const merged: Record<ActionName, string> = { ...DEFAULT_BINDINGS, ...stored };
+  for (const added of ACTIONS) if (stored[added] === undefined) giveDefaultKey(merged, added);
+  return merged;
+}
+
+/** `action` gets its default key; any other action holding it goes back to its own default. */
+function giveDefaultKey(bindings: Record<ActionName, string>, action: ActionName): void {
+  const key = DEFAULT_BINDINGS[action];
+  for (const other of ACTIONS) if (other !== action && bindings[other] === key) bindings[other] = DEFAULT_BINDINGS[other];
+}
+
 /** Takes what is valid from stored settings, keeping the default for anything missing or damaged. */
 function parseSettings(value: unknown, base: Settings): Settings {
   if (!isRecord(value)) return base;
   return {
-    bindings: { ...base.bindings, ...readBindings(value.bindings) },
+    bindings: mergeBindings(readBindings(value.bindings)),
+    heroClass: isHeroClassId(value.heroClass) ? value.heroClass : base.heroClass,
     sfxVolume: isFiniteNumber(value.sfxVolume) ? MathUtils.clamp(value.sfxVolume, 0, 1) : base.sfxVolume,
     fullscreen: typeof value.fullscreen === 'boolean' ? value.fullscreen : base.fullscreen,
     playerName: cleanName(value.playerName),

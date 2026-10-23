@@ -32,7 +32,7 @@ function wrapParagraph(paragraph: string, maxWidth: number, measure: PixelLabel,
 }
 
 /** Breaks `content` into lines no wider than `maxWidth`; each `\n` starts a new paragraph. */
-function wrapLines(content: string, maxWidth: number): string[] {
+export function wrapLines(content: string, maxWidth: number): string[] {
   const measure = new PixelLabel('');
   const lines: string[] = [];
   for (const paragraph of content.split('\n')) wrapParagraph(paragraph, maxWidth, measure, lines);

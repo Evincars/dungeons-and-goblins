@@ -19,7 +19,16 @@ export type Dice = { count: number; sides: DieSides; bonus: number };
 /** Rolls one die: a whole number from 1 to `sides`. */
 export type DieRoller = (sides: DieSides) => number;
 
-export const rollDie: DieRoller = (sides) => MathUtils.randInt(1, sides);
+const fairDie: DieRoller = (sides) => MathUtils.randInt(1, sides);
+let loaded: DieRoller | null = null;
+
+/** One fair die roll, unless the dice are loaded (useDieRoller). */
+export const rollDie: DieRoller = (sides) => (loaded ?? fairDie)(sides);
+
+/** Tests can load the dice: every roll comes from `roller` until it is set back to null. */
+export function useDieRoller(roller: DieRoller | null): void {
+  loaded = roller;
+}
 
 export function dice(count: number, sides: DieSides, bonus = 0): Dice {
   return { count, sides, bonus };

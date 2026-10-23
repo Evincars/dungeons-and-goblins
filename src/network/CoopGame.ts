@@ -56,7 +56,7 @@ export class HostGame {
 
   private addGuest(slot: PlayerSlot, spawn: { x: number; y: number }, index: number): void {
     const [dx, dy] = GUEST_OFFSETS[index] ?? [0, 0];
-    const guest = createPlayer(spawn.x + dx, spawn.y + dy);
+    const guest = createPlayer(spawn.x + dx, spawn.y + dy, coop.classOf(slot));
     world.addComponent(guest, 'playerSlot', slot);
     restorePlayer(guest);
     world.addComponent(guest, 'remoteInput', true);

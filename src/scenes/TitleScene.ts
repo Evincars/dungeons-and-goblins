@@ -9,6 +9,7 @@ import { text } from '../core/texts';
 import { coop } from '../network/CoopSession';
 import { startRun } from '../game/Run';
 import { world } from '../world';
+import { chooseHeroThen } from './CharacterSelectScene';
 
 const BUTTON_W = 220;
 const BUTTON_H = 26;
@@ -43,9 +44,10 @@ export class TitleScene implements Scene {
     this.container.addChild(logo);
 
     const entries: Array<{ label: string; action: () => void }> = [
-      { label: text('menu.title.start'), action: () => manager.goto('in_game') },
-      { label: text('menu.title.host'), action: () => manager.goto('coop_host') },
-      { label: text('menu.title.join'), action: () => manager.goto('coop_join') },
+      // Every game starts with picking the hero's class, then goes on alone or to the co-op lobby.
+      { label: text('menu.title.start'), action: () => chooseHeroThen(manager, 'in_game') },
+      { label: text('menu.title.host'), action: () => chooseHeroThen(manager, 'coop_host') },
+      { label: text('menu.title.join'), action: () => chooseHeroThen(manager, 'coop_join') },
       { label: text('menu.title.settings'), action: () => manager.goto('settings') },
       { label: text('menu.title.exit'), action: () => this.exit() },
     ];

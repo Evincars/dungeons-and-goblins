@@ -1,4 +1,4 @@
-import { world, isEquipSlot, isItemType, isMobType, isPlayerSlot, MOB_STATES, TACTIC_ROLES } from '../world';
+import { world, isEquipSlot, isItemType, isMobType, isPlayerSlot, isRollTone, MOB_STATES, TACTIC_ROLES } from '../world';
 import type { Entity, PlayerSlot } from '../world';
 import { cleanName } from '../game/Settings';
 import { hasCharacter } from '../characters/Characters';
@@ -9,6 +9,9 @@ import { setVisualFrame } from '../render/AnimatedVisual';
 import { ensure } from '../core/errors';
 import { hasKey, isFiniteNumber, isRecord } from '../core/guards';
 import { isBagSquare, isInventoryItem } from './protocol';
+import { isHeroClassId } from '../rules/Classes';
+import { isWeaponBase } from '../rules/WeaponTable';
+import { MAX_ROLL_LINES } from '../systems/RollLogSystem';
 
 /**
  * The live world as the co-op host sends it: every entity that is not rebuilt locally from the level
@@ -32,6 +35,8 @@ const LOCAL_AFTER_CREATE: ReadonlySet<string> = new Set(['character', 'animation
 
 const MAX_ENTITIES = 5000;
 const MAX_DOOR_TILES = 16;
+/** Longer than any line the roll log writes. */
+const MAX_ROLL_TEXT = 40;
 
 export type EntityState = Omit<Entity, UnsentKey>;
 /** `seed` names the level the update belongs to, so a late update from the previous level is ignored. */
@@ -76,12 +81,12 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   playerInput: { up: 'boolean', down: 'boolean', left: 'boolean', right: 'boolean', attack: 'boolean', use: 'boolean',
     sprint: 'boolean', mouseX: 'number', mouseY: 'number', mouseAiming: 'boolean', intents: 'object' },
   casting: { ticks: 'number', dirX: 'number', dirY: 'number', released: 'boolean' },
-  projectile: { damage: 'number', life: 'number', team: 'number' },
+  projectile: { life: 'number', team: 'number', attack: 'object' },
   glow: { radius: 'number' },
-  playerStats: { level: 'number', exp: 'number', gold: 'number', swordTier: 'number', armorTier: 'number',
+  playerStats: { level: 'number', exp: 'number', gold: 'number', swordTier: 'number',
     sprinting: 'boolean', sprint: 'number', maxSprint: 'number', sprintLocked: 'boolean', kills: 'number', goldEarned: 'number',
-    spellBonus: 'number', lootBonus: 'number' },
-  swordSwing: { ticks: 'number', dirX: 'number', dirY: 'number', damage: 'number', range: 'number', hitIds: 'object' },
+    lootBonus: 'number' },
+  swordSwing: { ticks: 'number', dirX: 'number', dirY: 'number', range: 'number', hitIds: 'object' },
   loot: { value: 'number', kind: 'number', velX: 'number', velY: 'number', suckRadius: 'number', glide: 'number', age: 'number', life: 'number' },
   item: { type: 'string', name: 'string', value: 'number' },
   chest: { opened: 'boolean', disappearTicks: 'number', drops: 'string' },
@@ -98,17 +103,18 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   door: { tiles: 'object', boundaryX: 'number', closed: 'boolean' },
   inventory: {},
   equipped: {},
+  rollLog: {},
 };
 
 /** Components that are plain values. */
 const VALUES: Readonly<Record<string, FieldType>> = {
   blocking: 'boolean', physicsSlide: 'boolean', team: 'number', hurtTime: 'number', attackTime: 'number', freezeTime: 'number',
   bounceWallTime: 'number', regenInterval: 'number', regenAmount: 'number', regenTimer: 'number', deathPoints: 'number',
-  facing: 'number', speed: 'number', friction: 'number', strength: 'number', walkTime: 'number', limp: 'number',
+  facing: 'number', speed: 'number', friction: 'number', walkTime: 'number', limp: 'number',
   chasing: 'boolean', frame: 'number', yOffset: 'number', flashTime: 'number', healthBarOffset: 'number',
   mobType: 'string', castCooldown: 'number', swordCooldown: 'number', arrowCooldown: 'number', spawnedBy: 'number', stepTimer: 'number',
   dustTimer: 'number', respawnTicks: 'number', minimapColor: 'number', safeZone: 'boolean', playerSlot: 'string',
-  playerName: 'string',
+  playerName: 'string', heroClass: 'string', mobWeapon: 'string',
 };
 
 function hasType(v: unknown, type: FieldType): boolean {
@@ -132,6 +138,7 @@ function checkComponent(key: string, value: unknown): void {
 }
 
 const isTile = (t: unknown) => isRecord(t) && Number.isInteger(t.x) && Number.isInteger(t.y);
+const isRollLine = (l: unknown) => isRecord(l) && typeof l.text === 'string' && l.text.length <= MAX_ROLL_TEXT && isRollTone(l.tone) && isFiniteNumber(l.age);
 const isIntList = (v: unknown) => Array.isArray(v) && v.every(Number.isInteger);
 
 /** Rules beyond field types: known names and kinds, clean player names, well-formed lists. */
@@ -139,6 +146,9 @@ function checkDetails(data: EntityState): void {
   ensure(data.playerSlot === undefined || isPlayerSlot(data.playerSlot), 'Invalid player slot');
   ensure(data.playerName === undefined || cleanName(data.playerName) === data.playerName, 'Invalid player name');
   ensure(data.mobType === undefined || isMobType(data.mobType), 'Invalid mob type');
+  ensure(data.mobWeapon === undefined || isWeaponBase(data.mobWeapon), 'Invalid enemy weapon');
+  ensure(data.heroClass === undefined || isHeroClassId(data.heroClass), 'Invalid hero class');
+  ensure(!data.rollLog || (Array.isArray(data.rollLog) && data.rollLog.length <= MAX_ROLL_LINES && data.rollLog.every(isRollLine)), 'Invalid roll log');
   ensure(!data.chest || isDropTableId(data.chest.drops), 'Invalid chest');
   ensure(!data.spawner || isMobType(data.spawner.mobType), 'Invalid spawner');
   ensure(!data.character || (hasCharacter(data.character.def) && isCharacterState(data.character.state)), 'Invalid character');
@@ -151,7 +161,7 @@ function checkDetails(data: EntityState): void {
   ensure(!data.door || (Array.isArray(data.door.tiles) && data.door.tiles.length <= MAX_DOOR_TILES && data.door.tiles.every(isTile)), 'Invalid door');
   ensure(!data.swordSwing || isIntList(data.swordSwing.hitIds), 'Invalid sword swing');
   const intents = data.playerInput?.intents;
-  ensure(!intents || ['use', 'attack', 'cast', 'inventoryOpen'].every((k) => hasKey(intents, k) && typeof intents[k] === 'boolean'),
+  ensure(!intents || ['use', 'attack', 'cast', 'inventoryOpen', 'swap'].every((k) => hasKey(intents, k) && typeof intents[k] === 'boolean'),
     'Invalid controls');
 }
 

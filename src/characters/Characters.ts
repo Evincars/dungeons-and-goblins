@@ -49,6 +49,21 @@ export function anchorX(def: CharacterDef): number {
   return ((def.bodyX ?? (def.trim?.x ?? 0) + width / 2) - (def.trim?.x ?? 0)) / width;
 }
 
+/**
+ * The sprite anchor for a clip with its own body or feet position (a wider or taller strip), so the body
+ * stays where the character's other clips put it; other clips use the character's anchor.
+ */
+export function clipAnchorX(def: CharacterDef, clip: ClipDef): number {
+  if (clip.bodyX === undefined) return anchorX(def);
+  return clip.bodyX / (clip.frameWidth ?? def.frameWidth);
+}
+
+export function clipAnchorY(def: CharacterDef, clip: ClipDef): number {
+  if (clip.feetY === undefined) return 0.5;
+  const height = def.trim?.h ?? def.frameHeight;
+  return (clip.feetY - def.feetY + height / 2) / (clip.frameHeight ?? def.frameHeight);
+}
+
 /** Whether a character looking the given way is drawn mirrored. */
 export function drawnMirrored(def: CharacterDef, flipX: boolean): boolean {
   if (def.facingRows) return false;

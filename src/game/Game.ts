@@ -1,3 +1,4 @@
+import { CharacterSelectScene } from '../scenes/CharacterSelectScene';
 import { Application } from 'pixi.js';
 import { loadAllAssets } from '../assets/AssetLoader';
 import { GAME_WIDTH, GAME_HEIGHT, displayScale } from '../render/Camera';
@@ -50,6 +51,7 @@ export class Game {
       .register('title', (m) => new TitleScene(m))
       .register('settings', (m) => new SettingsScene(m))
       .register('key_bindings', (m) => new KeyBindingsScene(m))
+      .register('character_select', (m) => new CharacterSelectScene(m))
       .register('coop_host', (m) => new CoopScene(m, 'host'))
       .register('coop_join', (m) => new CoopScene(m, 'guest', joinParam()))
       .register('in_game', (m) => new InGameScene(m));

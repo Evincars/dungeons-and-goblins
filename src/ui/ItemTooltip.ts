@@ -7,6 +7,8 @@ import { text } from '../core/texts';
 import { formatDice, formatModifier } from '../rules/Dice';
 import { armorRule, magicBonus, weaponRule } from '../rules/Equipment';
 import type { ArmorRule } from '../rules/ArmorTable';
+import { armorProficient, weaponProficient } from '../rules/Classes';
+import type { HeroClass } from '../rules/Classes';
 import { armorCategoryName, armorName, damageTypeName, propertyName, rangeName, weaponCategoryName, weaponName } from '../rules/Names';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
@@ -23,6 +25,8 @@ const MIN_W = 150;
 /** The tooltip sits this far from the pointer. */
 const OFFSET = 10;
 const BG_ALPHA = 0.94;
+/** Gear the hero is not trained in is flagged in this colour. */
+const UNTRAINED_COLOR = 0xff7060;
 
 type Line = { text: string; color: number };
 
@@ -62,11 +66,26 @@ function armorLines(item: InventoryItem): Line[] {
   return lines;
 }
 
-/** The lines under the header: the item's rules, each stat it adds, how much it weighs and is worth, and what kind of thing it is. */
-function detailLines(item: InventoryItem): Line[] {
+/** Untrained gear is called out: armour gives disadvantage on attacks, a weapon loses the proficiency bonus. */
+function trainingLine(item: InventoryItem, cls: HeroClass | undefined): Line | null {
+  if (!cls) return null;
+  const weapon = weaponRule(item);
+  if (weapon && !weaponProficient(cls, weapon.rule.category)) return { text: text('item.tooltip.untrained_weapon'), color: UNTRAINED_COLOR };
+  const armor = armorRule(item);
+  if (armor && !armorProficient(cls, armor.rule.category)) return { text: text('item.tooltip.untrained_armor'), color: UNTRAINED_COLOR };
+  return null;
+}
+
+/**
+ * The lines under the header: the item's rules (and a warning when `cls` is not trained in it), each stat it
+ * adds, how much it weighs and is worth, and what kind of thing it is.
+ */
+function detailLines(item: InventoryItem, cls: HeroClass | undefined): Line[] {
   const s = item.stats;
   const rules = [...weaponLines(item), ...armorLines(item)];
   const lines = rules.slice(0, -1);
+  const untrained = trainingLine(item, cls);
+  if (untrained) lines.push(untrained);
   if (s) lines.push(...STAT_NAMES.flatMap((stat) => (s[stat] ? [{ text: text('item.tooltip.stat_bonus', { amount: s[stat] ?? 0, stat: statShort(stat) }), color: 0x8fd18f }] : [])));
   if (item.weight !== undefined) lines.push({ text: text('item.tooltip.weight', { kg: item.weight }), color: THEME.text });
   lines.push({ text: text('item.tooltip.value', { gold: item.value }), color: 0xffcc00 });
@@ -94,8 +113,8 @@ export class ItemTooltip {
   }
 
   /** Shows `item` near (x, y), kept inside a `bounds`-sized area starting at 0, 0. */
-  show(item: InventoryItem, x: number, y: number, bounds: { w: number; h: number }): void {
-    if (this.shown !== item) this.layout(item);
+  show(item: InventoryItem, x: number, y: number, bounds: { w: number; h: number }, cls?: HeroClass): void {
+    if (this.shown !== item) this.layout(item, cls);
     this.shown = item;
     const w = this.frame.width;
     const h = this.frame.height;
@@ -110,7 +129,7 @@ export class ItemTooltip {
   }
 
   /** Lays the tooltip out for an item: header across the top, picture on the left, details beside it. */
-  private layout(item: InventoryItem): void {
+  private layout(item: InventoryItem, cls: HeroClass | undefined): void {
     this.header.text = item.name;
     this.header.position.set(PAD, PAD);
     const texture = lazyTexture(itemIcon(item));
@@ -118,7 +137,7 @@ export class ItemTooltip {
     this.picture.scale.set(Math.min(PICTURE / Math.max(1, texture.width), PICTURE / Math.max(1, texture.height)));
     this.picture.position.set(PAD + PICTURE / 2, PAD + HEADER_H + PICTURE / 2);
     for (const child of this.lines.removeChildren()) child.destroy();
-    const details = detailLines(item);
+    const details = detailLines(item, cls);
     details.forEach((line, i) => {
       const label = new PixelLabel(line.text, { color: line.color, shadow: true });
       label.position.set(PAD + PICTURE + GAP, PAD + HEADER_H + i * LINE_H);

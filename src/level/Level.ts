@@ -44,6 +44,8 @@ export class Level {
   readonly pits: Array<{ x: number; y: number }> = [];
 
   readonly seen: boolean[];
+  /** Bumped whenever a corner is seen for the first time, so the fog redraws only when it changed. */
+  seenRevision = 0;
   tilesDirty = false;
   /** Bumped on every tile change, so caches built from the tiles (enemy step costs) know to rebuild. */
   revision = 0;
@@ -103,10 +105,16 @@ export class Level {
 
   markSeen(tileX: number, tileY: number): void {
     const w = this.width + 1;
-    this.seen[tileX + tileY * w] = true;
-    this.seen[tileX + 1 + tileY * w] = true;
-    this.seen[tileX + (tileY + 1) * w] = true;
-    this.seen[tileX + 1 + (tileY + 1) * w] = true;
+    this.seeCorner(tileX + tileY * w);
+    this.seeCorner(tileX + 1 + tileY * w);
+    this.seeCorner(tileX + (tileY + 1) * w);
+    this.seeCorner(tileX + 1 + (tileY + 1) * w);
+  }
+
+  private seeCorner(index: number): void {
+    if (this.seen[index]) return;
+    this.seen[index] = true;
+    this.seenRevision++;
   }
 
   reveal(tileX: number, tileY: number, radius: number): void {

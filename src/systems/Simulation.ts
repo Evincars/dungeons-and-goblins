@@ -32,6 +32,9 @@ import { updateDust } from './DustSystem';
 import { updateEphemerals } from './EphemeralSystem';
 import { updateInventory } from './InventorySystem';
 import { updateChests } from './ChestSystem';
+import { updateWeaponSwap } from './WeaponSwapSystem';
+import { updateRollLogs } from './RollLogSystem';
+import { updateRollTexts } from './RollTextSystem';
 
 export type FrameContext = {
   level: Level;
@@ -53,6 +56,7 @@ export const SIMULATION: readonly System[] = [
   () => updateInput(),
   () => updateTargeting(),
   () => updateInventory(),
+  () => updateWeaponSwap(),
   ({ level, tick }) => updateAI(level, tick),
   () => updateArrows(),
   () => updateSword(),
@@ -65,6 +69,7 @@ export const SIMULATION: readonly System[] = [
   () => updateFootsteps(),
   () => updateEphemerals(),
   () => updateCombatTimers(),
+  () => updateRollLogs(),
   ({ level }) => updateContactDamage(level),
   ({ level }) => updateLoot(level),
   ({ level }) => updateSpawners(level),
@@ -88,6 +93,7 @@ export const PRESENTATION: readonly System[] = [
   () => updateAnimation(),
   ({ level }) => updateRender(level),
   ({ gameLayer }) => updateBars(gameLayer),
+  ({ gameLayer }) => updateRollTexts(gameLayer),
 ];
 
 export function runSystems(systems: readonly System[], ctx: FrameContext): void {

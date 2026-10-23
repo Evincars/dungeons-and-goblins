@@ -8,15 +8,15 @@ import { nearby, Sense } from '../ai/perception/spatial';
 import { stateDuration, stateImpact } from '../characters/Characters';
 import { ATTACK_RECOVERY } from '../characters/StateTriggers';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
+import { monsterAttack } from '../rules/CharacterSheet';
+import { MIN_HIT_DAMAGE } from '../rules/Combat';
+import { strike } from './Strike';
 
 const PLAYER_HURT_TIME = 25;
 const PLAYER_FREEZE_TIME = 15;
 const PLAYER_KNOCKBACK = 10;
 /** Bodies can no longer overlap, so an enemy this close to the player's body counts as touching it. */
 const CONTACT_REACH = 2;
-/** Each point of Defence takes this share off every hit, down to at most this much off. */
-const ARMOR_PER_TIER = 0.05;
-const MAX_ARMOR_SHARE = 0.75;
 /** Regeneration interval for anything without its own. */
 const DEFAULT_REGEN_TICKS = 180;
 
@@ -81,12 +81,26 @@ function strikeLands(mob: Entity): boolean {
   return mob.attackTime === swing + ATTACK_RECOVERY - stateImpact(mob.character.def, 'attack');
 }
 
-/** Mobs deal contact damage to the player, except inside safe zones. */
+/**
+ * The blow lands: the enemy's weapon attack (d20 + proficiency + STR, or DEX for finesse) is rolled against
+ * the player's Armor Class, shown over the enemy's head; only a hit hurts.
+ */
+function mobStrike(mob: Entity, player: Player): void {
+  if (!mob.mobType || !mob.mobWeapon) {
+    hurtPlayer(player, mob, MIN_HIT_DAMAGE);
+    return;
+  }
+  const outcome = strike(player, monsterAttack(mob.mobType, mob.mobWeapon), mob);
+  if (outcome.hit) hurtPlayer(player, mob, outcome.damage);
+  else sound.playSound('sword_miss', player.position.x, player.position.y);
+}
+
+/** Enemies strike players they touch, except inside safe zones. */
 export function updateContactDamage(level: Level): void {
   for (const player of q.players) {
     if (!vulnerable(level, player)) continue;
     const mob = enemyTouching(player);
-    if (mob && strikeLands(mob)) hurtPlayer(player, mob, mob.strength ?? 1);
+    if (mob && strikeLands(mob)) mobStrike(mob, player);
   }
 }
 
@@ -102,12 +116,12 @@ function knockBack(player: Entity, source: Entity): void {
   player.bump.y = (dy / dist) * PLAYER_KNOCKBACK;
 }
 
+/** A blow that got past the player's Armor Class: all of its damage counts (armour already did its job by turning misses). */
 export function hurtPlayer(player: Entity, source: Entity, damage: number): void {
   const h = player.health;
   if (!h || player.falling || player.respawnTicks !== undefined || h.current <= 0) return;
 
-  const armorMod = 1.0 - Math.min(MAX_ARMOR_SHARE, (player.playerStats?.armorTier ?? 0) * ARMOR_PER_TIER);
-  const finalDamage = Math.max(1, Math.round(damage * armorMod));
+  const finalDamage = Math.max(MIN_HIT_DAMAGE, Math.round(damage));
 
   player.hurtTime = PLAYER_HURT_TIME;
   player.freezeTime = PLAYER_FREEZE_TIME;

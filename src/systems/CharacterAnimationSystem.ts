@@ -1,5 +1,5 @@
 import { q } from '../world';
-import { characterDef, drawnMirrored, facingRow, stateClip } from '../characters/Characters';
+import { characterDef, clipAnchorX, clipAnchorY, drawnMirrored, facingRow, stateClip } from '../characters/Characters';
 import type { CharacterComponent } from '../characters/Characters';
 import type { ClipDef } from '../characters/CharacterDef';
 import { frameTexture, sheetCols } from '../render/Sheets';
@@ -31,6 +31,7 @@ export function updateCharacterAnimation(): void {
     advance(c, found.clip, sheetCols(found.sheet));
     const sprite = entity.sprite;
     sprite.texture = frameTexture(found.sheet, c.frame, facingRow(def, c.flipX));
+    sprite.anchor.set(clipAnchorX(def, found.clip), clipAnchorY(def, found.clip));
     sprite.scale.x = (drawnMirrored(def, c.flipX) ? -1 : 1) * Math.abs(sprite.scale.x);
   }
 }

@@ -115,9 +115,14 @@ function tickWorld(level, tick) {
   updateTrails(level, tick);
 }
 
+const { useDieRoller } = await load('rules/Dice');
+/** Loaded dice for the gameplay tests: every d20 a 19 (a hit against any AC here, not a critical), every other die its top face. */
+const SURE_HIT = (sides) => (sides === 20 ? 19 : sides);
+
 beforeEach(() => {
   world.clear();
   beginPerception();
+  useDieRoller(SURE_HIT);
 });
 
 // ── Library-backed infrastructure ────────────────────────────────────────────
@@ -631,7 +636,7 @@ test('dragging items: they stay on the square they are dropped on, gear is worn 
   const corner = moveItem(start, { bag: 0 }, { bag: 41 });
   assert.equal(corner.inventory[41], sword, 'moved to the bottom corner, and it stays there');
   assert.equal(corner.inventory[0], null, 'leaving its square empty');
-  assert.equal(moveItem(start, { bag: 1 }, { slot: 'legs' }), null, 'a helm is not worn on the legs');
+  assert.equal(moveItem(start, { bag: 1 }, { slot: 'primary' }), null, 'a helm is not a weapon');
   const armed = moveItem(start, { bag: 0 }, { slot: 'primary' });
   assert.equal(armed.equipped.primary, sword);
   assert.deepEqual(armed.inventory, [null, helm, axe]);
@@ -729,7 +734,9 @@ test('a new run starts with one weapon of every type, a shield and every type of
   giveStartingKit(player);
   const bag = player.inventory;
   const bases = new Set(bag.map((i) => i.base));
-  for (const base of [...WEAPON_BASES, ...ARMOR_BASES].filter((b) => b !== 'unarmed')) assert.ok(bases.has(base), `${base} is in the bag`);
+  const inCatalogue = new Set([...HAND_WEAPONS, ...SHIELDS, ...ARMORS].map((i) => i.base));
+  for (const base of [...WEAPON_BASES, ...ARMOR_BASES].filter((b) => inCatalogue.has(b))) assert.ok(bases.has(base), `${base} is in the bag`);
+  assert.ok(bases.size >= 39, 'every weapon and armour type the catalogue has');
   assert.equal(bag.length, bases.size, 'one of each');
   assert.ok(bag.length <= PlayerActions.MAX_INVENTORY, 'and it all fits');
   assert.notEqual(bag[0], HAND_WEAPONS.find((w) => w.base === bag[0].base), 'copies, not the catalogue entries');
@@ -743,9 +750,7 @@ test('worn gear applies all its stats, and an item dropped on the gear panel fin
   applyLoadout(player, { inventory: [], equipped: gear });
   const ps = player.playerStats;
   assert.equal(ps.swordTier, 4);
-  assert.equal(ps.armorTier, 4);
   assert.equal(ps.maxSprint, 140);
-  assert.equal(ps.spellBonus, 4);
   assert.ok(Math.abs(ps.lootBonus - 0.1) < 1e-9);
   assert.equal(slotFor({ primary: gear.primary }, HAND_WEAPONS[0]), 'secondary', 'a second weapon goes to the free hand');
 });
@@ -1002,6 +1007,7 @@ test('dice: notation, ranges, criticals, advantage and attack rolls', async () =
   const rolls = [3, 17];
   const next = () => rolls.shift();
   assert.equal(rollD20('advantage', next), 17);
+  useDieRoller(null);
   for (let i = 0; i < 200; i++) {
     const r = rollDice(dice(1, 4));
     assert.ok(r >= 1 && r <= 4 && Number.isInteger(r));
@@ -1013,11 +1019,11 @@ test('dice: notation, ranges, criticals, advantage and attack rolls', async () =
 });
 
 test('ability modifiers and proficiency follow the tabletop tables', async () => {
-  const { abilityModifier, abilities, proficiencyBonus, BASE_ABILITIES } = await load('rules/Abilities');
+  const { abilityModifier, abilities, proficiencyBonus } = await load('rules/Abilities');
   const table = { 1: -5, 3: -4, 8: -1, 9: -1, 10: 0, 11: 0, 12: 1, 15: 2, 18: 4, 20: 5, 30: 10 };
   for (const [score, mod] of Object.entries(table)) assert.equal(abilityModifier(Number(score)), mod, `score ${score}`);
-  assert.equal(BASE_ABILITIES.strength, 8);
-  const { scores, modifiers } = abilities({ primary: { type: 'weapon', name: 'w', value: 1, gear: 'weapon', stats: { strength: 4 } } });
+  const base = { strength: 8, dexterity: 8, constitution: 8, intelligence: 8, wisdom: 8, charisma: 8 };
+  const { scores, modifiers } = abilities({ primary: { type: 'weapon', name: 'w', value: 1, gear: 'weapon', stats: { strength: 4 } } }, base);
   assert.equal(scores.strength, 12);
   assert.equal(modifiers.strength, 1);
   assert.equal(modifiers.dexterity, -1, '8 gives -1');
@@ -1026,17 +1032,18 @@ test('ability modifiers and proficiency follow the tabletop tables', async () =>
 
 test('Armor Class: 10 + DEX bare, armour sets its own base, heavy ignores DEX, medium caps it, a shield adds 2', async () => {
   const { armorClass } = await load('rules/CharacterSheet');
+  const dexOf = (dexterity) => ({ strength: 0, dexterity, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 });
   const armor = (base, bonus) => ({ type: 'armor', name: base, value: 1, gear: 'armor', base, bonus });
   const shield = { type: 'shield', name: 's', value: 1, gear: 'offhand', base: 'shield' };
-  assert.equal(armorClass({}, -1).total, 9, 'no armour: 10 + DEX');
-  assert.equal(armorClass({}, 3).total, 13);
-  assert.equal(armorClass({ armor: armor('leather') }, 3).total, 14, 'light armour adds all of DEX');
-  assert.equal(armorClass({ armor: armor('breastplate') }, 4).total, 16, 'medium armour adds at most +2');
-  assert.equal(armorClass({ armor: armor('breastplate') }, -1).total, 13, 'but a penalty still counts');
-  assert.equal(armorClass({ armor: armor('chain_mail') }, 4).total, 16, 'heavy armour ignores DEX');
-  assert.equal(armorClass({ armor: armor('plate') }, -1).total, 18, 'either way');
-  assert.equal(armorClass({ armor: armor('plate', 1), secondary: shield }, 0).total, 21, 'plate +1 with a shield');
-  assert.equal(armorClass({ secondary: { ...shield, bonus: 2 } }, 0).total, 14, 'a +2 shield adds 4');
+  assert.equal(armorClass({}, dexOf(-1)).total, 9, 'no armour: 10 + DEX');
+  assert.equal(armorClass({}, dexOf(3)).total, 13);
+  assert.equal(armorClass({ armor: armor('leather') }, dexOf(3)).total, 14, 'light armour adds all of DEX');
+  assert.equal(armorClass({ armor: armor('breastplate') }, dexOf(4)).total, 16, 'medium armour adds at most +2');
+  assert.equal(armorClass({ armor: armor('breastplate') }, dexOf(-1)).total, 13, 'but a penalty still counts');
+  assert.equal(armorClass({ armor: armor('chain_mail') }, dexOf(4)).total, 16, 'heavy armour ignores DEX');
+  assert.equal(armorClass({ armor: armor('plate') }, dexOf(-1)).total, 18, 'either way');
+  assert.equal(armorClass({ armor: armor('plate', 1), secondary: shield }, dexOf(0)).total, 21, 'plate +1 with a shield');
+  assert.equal(armorClass({ secondary: { ...shield, bonus: 2 } }, dexOf(0)).total, 14, 'a +2 shield adds 4');
 });
 
 test('weapon damage: the dice, plus STR in melee, DEX at range, the better for finesse, plus magic', async () => {
@@ -1059,8 +1066,9 @@ test('weapon damage: the dice, plus STR in melee, DEX at range, the better for f
   const player = playerAt(2, 2);
   player.equipped = { primary: weapon('dagger', 1), armor: { type: 'armor', name: 'a', value: 1, gear: 'armor', base: 'chain_shirt' } };
   const sheet = characterSheet(player);
-  assert.equal(sheet.armorClass.total, 12, 'chain shirt 13, DEX -1');
-  assert.equal(formatDice(sheet.attack.damage), '1d4');
+  assert.equal(sheet.heroClass.id, 'barbarian');
+  assert.equal(sheet.armorClass.total, 14, 'chain shirt 13, the barbarian\'s DEX 13 +1');
+  assert.equal(formatDice(sheet.attack.damage), '1d4 + 3', 'the +1 dagger with STR 15 (+2), better than DEX +1');
   assert.deepEqual(sheet.hitPoints, { current: 100, max: 100 }, 'every hero has 100 hit points for now');
 });
 
@@ -1074,4 +1082,197 @@ test('every catalogue weapon, armour and shield plays as a D&D base, and a guest
   assert.equal(validCommand({ kind: 'loadout', inventory: [{ ...sword, bonus: 4 }], equipped: {} }), false, 'no +4');
   assert.equal(validCommand({ kind: 'loadout', inventory: [{ ...sword, base: 'vorpal_sword' }], equipped: {} }), false);
   assert.equal(sameItems({ inventory: [sword], equipped: {} }, { inventory: [{ ...sword, bonus: 3 }], equipped: {} }), false, 'enchanting it in a loadout is caught');
+});
+
+test('the two hero classes: the Barbarian fights best unarmoured, the Warrior is trained in every armour', async () => {
+  const { CLASSES } = await load('rules/Classes');
+  const { characterSheet } = await load('rules/CharacterSheet');
+  const plate = { type: 'armor', name: 'p', value: 1, gear: 'armor', base: 'plate' };
+  assert.deepEqual([...CLASSES.barbarian.armor], ['light', 'medium', 'shield']);
+  assert.deepEqual([...CLASSES.warrior.armor], ['light', 'medium', 'heavy', 'shield']);
+  const barbarian = createPlayer(centre(2), centre(2), 'barbarian');
+  assert.equal(barbarian.character.def, 'fighter');
+  assert.equal(characterSheet(barbarian).armorClass.total, 10 + 1 + 2, 'Unarmored Defense: 10 + DEX + CON');
+  barbarian.equipped = { armor: plate };
+  const heavy = characterSheet(barbarian);
+  assert.equal(heavy.armorClass.proficient, false, 'a barbarian is not trained in plate');
+  assert.equal(heavy.attack.mode, 'disadvantage', 'so every attack is rolled with disadvantage');
+  const warrior = createPlayer(centre(4), centre(2), 'warrior');
+  assert.equal(warrior.character.def, 'hooded_knight');
+  assert.equal(warrior.heroClass, 'warrior');
+  warrior.equipped = { armor: plate };
+  const sheet = characterSheet(warrior);
+  assert.equal(sheet.armorClass.total, 19, 'plate 18 + the Defense style 1');
+  assert.equal(sheet.attack.mode, 'normal');
+  assert.equal(sheet.attack.proficient, true);
+  assert.equal(warrior.health.max, 100);
+});
+
+test('enemies follow their SRD monster blocks and carry a random low-end weapon', async () => {
+  const { MONSTERS } = await load('rules/Monsters');
+  const { monsterAttack } = await load('rules/CharacterSheet');
+  const { formatDice } = await load('rules/Dice');
+  assert.equal(MONSTERS.orc.ac, 13);
+  assert.equal(MONSTERS.orc.health, 15);
+  assert.equal(MONSTERS.orc.modifiers.strength, 3);
+  const club = monsterAttack('orc', 'club');
+  assert.equal(club.attackBonus, 5, 'proficiency +2 and STR +3, as the SRD orc');
+  assert.equal(formatDice(club.damage), '1d4 + 3');
+  assert.equal(monsterAttack('goblin', 'dagger').attackBonus, 4, 'a goblin stabs with DEX (finesse)');
+  const level = arena(8, 6);
+  for (let i = 0; i < 20; i++) {
+    const orc = mobAt(level, 'orc', 3, 3);
+    assert.ok(MONSTERS.orc.weapons.includes(orc.mobWeapon), orc.mobWeapon);
+    assert.equal(orc.health.max, 15);
+  }
+});
+
+test('an attack: d20 + bonus against AC, natural 20 always hits and doubles the dice, natural 1 always misses', async () => {
+  const { resolveAttack, MIN_HIT_DAMAGE } = await load('rules/Combat');
+  const { dice } = await load('rules/Dice');
+  const attack = { attackBonus: 4, damage: dice(1, 6, 2), mode: 'normal' };
+  const rolls = (...values) => () => values.shift();
+  const hit = resolveAttack(attack, 15, rolls(11, 5));
+  assert.deepEqual([hit.hit, hit.total, hit.damage], [true, 15, 7], 'meets the AC: 1d6+2 rolled 5');
+  assert.equal(resolveAttack(attack, 15, rolls(10)).hit, false, 'one short misses');
+  const crit = resolveAttack(attack, 30, rolls(20, 6, 6));
+  assert.deepEqual([crit.hit, crit.critical, crit.damage, crit.damageDice.count], [true, true, 14, 2]);
+  const fumble = resolveAttack({ ...attack, attackBonus: 40 }, 10, rolls(1));
+  assert.deepEqual([fumble.hit, fumble.fumble, fumble.damage], [false, true, 0]);
+  assert.equal(resolveAttack({ ...attack, damage: dice(1, 4, -5) }, 5, rolls(15, 1)).damage, MIN_HIT_DAMAGE, 'a hit always hurts');
+  assert.equal(resolveAttack({ ...attack, mode: 'disadvantage' }, 15, rolls(18, 3)).hit, false, 'disadvantage keeps the lower d20');
+});
+
+test('every blow is rolled and shown over the attacker: hits hurt, misses do not', async () => {
+  const level = arena(10, 6);
+  const player = playerAt(4, 2);
+  player.aimVector = { x: 1, y: 0 };
+  const goblin = mobAt(level, 'goblin', 4.5, 2);
+  useDieRoller(() => 1);
+  player.playerInput.intents.attack = true;
+  updateSword();
+  updateSword();
+  assert.equal(goblin.health.current, goblin.health.max, 'a natural 1 misses');
+  assert.deepEqual(player.rollLog.map((l) => [l.text, l.tone]), [['NAT 1 CRIT MISS', 'fumble']]);
+  useDieRoller((sides) => (sides === 20 ? 15 : 3));
+  world.removeComponent(player, 'swordSwing');
+  player.swordCooldown = 0;
+  player.playerInput.intents.attack = true;
+  updateSword();
+  updateSword();
+  assert.equal(goblin.health.current, goblin.health.max - 3, 'a bare-handed barbarian punches for 1 + STR +2');
+  assert.equal(player.rollLog.at(-2).text, '15+4=19 HIT', 'd20 15 + proficiency 2 + STR 2 against the goblin\'s AC 15');
+  assert.equal(player.rollLog.at(-1).tone, 'damage');
+});
+
+test('an enemy that touches the player rolls against their Armor Class, and the roll shows over its head', () => {
+  const level = arena(12, 6);
+  const player = playerAt(6, 3);
+  const orc = mobAt(level, 'orc', 5.4, 3);
+  useDieRoller(() => 1);
+  beginPerception();
+  const before = player.health.current;
+  for (let t = 0; t < 120; t++) updateContactDamage(level);
+  assert.equal(player.health.current, before, 'natural 1s never hit');
+  assert.ok(orc.rollLog?.length, 'the misses are shown over the orc');
+  assert.equal(orc.rollLog[0].text, 'NAT 1 CRIT MISS');
+});
+
+test('the roll log is a queue: newest at the bottom, the top line fades first, at most four lines', async () => {
+  const { logLine, updateRollLogs, ROLL_LINE_TICKS, MAX_ROLL_LINES } = await load('systems/RollLogSystem');
+  const player = playerAt(2, 2);
+  for (let i = 0; i < 6; i++) logLine(player, `line ${i}`, 'hit');
+  assert.equal(player.rollLog.length, MAX_ROLL_LINES);
+  assert.equal(player.rollLog[0].text, 'line 2', 'the oldest were pushed out');
+  for (let t = 0; t < ROLL_LINE_TICKS; t++) updateRollLogs();
+  assert.equal(player.rollLog[0].text, 'line 3', 'the top line went first');
+  assert.equal(player.rollLog.length, MAX_ROLL_LINES - 1, 'the next one lingers a moment longer');
+  for (let t = 0; t < ROLL_LINE_TICKS * MAX_ROLL_LINES; t++) updateRollLogs();
+  assert.equal(player.rollLog.length, 0);
+});
+
+test('Q swaps the 1st and 2nd weapon; a shield in the second hand stays put', async () => {
+  const { swapWeapons } = PlayerActions;
+  const player = playerAt(2, 2);
+  const sword = SHOP_ITEMS.find((i) => i.name === 'Short Sword');
+  const axe = SHOP_ITEMS.find((i) => i.name === 'Hand Axe');
+  const shield = SHOP_ITEMS.find((i) => i.gear === 'offhand');
+  player.equipped = { primary: sword, secondary: axe };
+  assert.equal(swapWeapons(player), true);
+  assert.equal(player.equipped.primary, axe);
+  assert.equal(player.equipped.secondary, sword);
+  player.equipped = { primary: sword, secondary: shield };
+  assert.equal(swapWeapons(player), false);
+  assert.equal(player.equipped.primary, sword);
+  const { updateWeaponSwap } = await load('systems/WeaponSwapSystem');
+  player.equipped = { primary: sword, secondary: axe };
+  player.playerInput.intents.swap = true;
+  updateWeaponSwap();
+  assert.equal(player.equipped.primary, axe, 'the Q intent does it in play');
+  assert.equal(player.playerInput.intents.swap, false);
+});
+
+test('enemies cannot walk or be knocked into a safe room', () => {
+  const level = arena(12, 6);
+  for (let y = 1; y < 5; y++) for (let x = 7; x < 11; x++) level.markSafeZone(x, y);
+  const mob = mobAt(level, 'orc', 5.5, 3);
+  for (let t = 0; t < 120; t++) {
+    mob.velocity.x = 2;
+    beginPerception();
+    updateMovement(level);
+  }
+  assert.ok(!level.isWorldPosSafe(mob.position.x, mob.position.y), 'it stopped at the edge');
+  assert.ok(mob.position.x > centre(6), 'having walked right up to it');
+  mob.bump = { x: 30, y: 0 };
+  updateMovement(level);
+  assert.ok(!level.isWorldPosSafe(mob.position.x, mob.position.y), 'nor shoved in');
+});
+
+test('saved key bindings from before weapon swap: Q goes to the swap, the spell moves to R', async () => {
+  const { mergeBindings } = await load('game/Settings');
+  const old = { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', sprint: 'ShiftLeft', attack: 'Space', cast: 'KeyQ', use: 'KeyE', inventory: 'Tab' };
+  const merged = mergeBindings(old);
+  assert.equal(merged.swap, 'KeyQ');
+  assert.equal(merged.cast, 'KeyR');
+  assert.equal(mergeBindings({ ...old, cast: 'KeyF', swap: 'KeyG' }).cast, 'KeyF', 'chosen keys are kept');
+});
+
+test('hero class, enemy weapon and roll log reach guests, and bad ones are refused', () => {
+  const host = playerAt(2, 2);
+  world.addComponent(host, 'playerSlot', 'host');
+  const level = arena(8, 6);
+  const orc = mobAt(level, 'orc', 4, 3);
+  world.addComponent(orc, 'rollLog', [{ text: '12+5=17 HIT', tone: 'hit', age: 3 }]);
+  const state = JSON.parse(JSON.stringify(captureWorld(false, 7)));
+  validateNetState(state);
+  const orcData = state.entities.find((e) => e.data.mobType === 'orc').data;
+  assert.equal(orcData.mobWeapon, orc.mobWeapon);
+  assert.equal(state.entities.find((e) => e.data.playerSlot === 'host').data.heroClass, 'barbarian');
+  const tamper = (edit) => {
+    const copy = JSON.parse(JSON.stringify(state));
+    edit(copy.entities.find((e) => e.data.mobType === 'orc').data);
+    return attempt(() => validateNetState(copy)).ok;
+  };
+  assert.equal(tamper((d) => { d.rollLog[0].tone = 'boom'; }), false);
+  assert.equal(tamper((d) => { d.mobWeapon = 'vorpal_sword'; }), false);
+  assert.equal(tamper((d) => { d.heroClass = 'paladin'; }), false);
+});
+
+test('the warrior\'s wide attack and tall power-up keep the body where the idle has it', async () => {
+  const { clipAnchorX, clipAnchorY } = await load('characters/Characters');
+  const def = characterDef('hooded_knight');
+  assert.equal(clipAnchorX(def, def.clips.idle), 0.33);
+  assert.equal(clipAnchorX(def, def.clips.attack), 33 / 180);
+  assert.equal(clipAnchorY(def, def.clips.idle), 0.5);
+  assert.equal(clipAnchorY(def, def.clips.cast), (169 - 91 + 50) / 180, 'the feet stay on the same line');
+});
+
+test('the fog redraws only when something new has been seen', () => {
+  const level = arena(10, 10);
+  const before = level.seenRevision;
+  level.reveal(5, 5, 3);
+  const after = level.seenRevision;
+  assert.ok(after > before);
+  level.reveal(5, 5, 3);
+  assert.equal(level.seenRevision, after, 'seeing the same tiles again changes nothing');
 });

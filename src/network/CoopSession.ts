@@ -1,3 +1,5 @@
+import { DEFAULT_CLASS, isHeroClassId } from '../rules/Classes';
+import type { HeroClassId } from '../rules/Classes';
 import Peer from 'peerjs';
 import type { DataConnection } from 'peerjs';
 import { PLAYER_SLOTS, isPlayerSlot } from '../world';
@@ -77,6 +79,8 @@ function validPacket(value: unknown): value is ArrayBuffer | Uint8Array {
 /** One peer on the other end of the line: the host for a guest, each guest for the host. */
 class Link {
   name = '';
+  /** The hero class this guest picked (checked by the host; the default for anything else). */
+  heroClass: HeroClassId = DEFAULT_CLASS;
   ready = false;
   fast: RTCDataChannel | null = null;
   sequence = -1;
@@ -143,6 +147,12 @@ export class CoopSession {
   /** Guests that have finished joining, in slot order. */
   guestSlots(): PlayerSlot[] {
     return PLAYER_SLOTS.filter((slot) => this.links.get(slot)?.ready);
+  }
+
+  /** The hero class a seat's player picked: the host's own from its settings, a guest's from its greeting. */
+  classOf(slot: PlayerSlot): HeroClassId {
+    if (slot === 'host') return settings.heroClass;
+    return this.links.get(slot)?.heroClass ?? DEFAULT_CLASS;
   }
 
   nameOf(slot: PlayerSlot): string | undefined {
@@ -226,7 +236,7 @@ export class CoopSession {
     connection.on('open', () => {
       this.openFastChannel(link);
       // The host waits to be greeted; a guest introduces itself.
-      if (this.role === 'guest') this.send(link, { type: 'hello', version: PROTOCOL_VERSION, name: cleanName(settings.playerName) });
+      if (this.role === 'guest') this.send(link, { type: 'hello', version: PROTOCOL_VERSION, name: cleanName(settings.playerName), heroClass: settings.heroClass });
     });
     connection.on('data', (value) => {
       link.receiving = link.receiving.then(() => this.receive(link, value)).catch((error: unknown) => {
@@ -298,6 +308,7 @@ export class CoopSession {
     if (message.version !== PROTOCOL_VERSION) throw new NetworkError('Multiplayer version mismatch. Reload both browsers.');
     const slot = slotOf(link);
     link.name = this.uniqueName(cleanName(message.name), slot);
+    link.heroClass = isHeroClassId(message.heroClass) ? message.heroClass : DEFAULT_CLASS;
     link.ready = true;
     clearTimeout(link.timeout);
     this.connected = true;

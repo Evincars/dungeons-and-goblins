@@ -32,6 +32,12 @@ export type ClipDef = {
   /** This strip's frames, when they differ from the character's (a wider attack). */
   frameWidth?: number;
   frameHeight?: number;
+  /**
+   * Where the body's middle and the feet are in this strip's frames, when they differ from the character's
+   * (a wider or taller strip): the sprite is anchored so the body stays put as the clip changes.
+   */
+  bodyX?: number;
+  feetY?: number;
 };
 
 export type CharacterDef = {

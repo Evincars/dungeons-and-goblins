@@ -12,7 +12,19 @@ export type TerrainPiece = {
   dx: number; dy: number; sx: number; sy: number; w: number; h: number; z?: number;
   /** Texture the rect is cut from, when not the catacomb tileset: cave ground lies beneath all of it. */
   sheet?: typeof CAVE_GROUND;
+  /** A floor tile: drawn under the soft edges where one kind of ground meets another (GroundBlend.ts). */
+  floor?: true;
 };
+
+/**
+ * The kinds of ground a floor tile can be, softest first: where two meet, the softer spills a little over the
+ * edge of the other (cave earth over cobbles, rough earth over stone, corridor stone over the safe room's slabs).
+ */
+export const GROUND_KINDS = ['cave', 'rough', 'stone', 'safe'] as const;
+export type GroundKind = (typeof GROUND_KINDS)[number];
+
+/** A floor tile's ground: its kind, and the 32×32 rect of the tileset (or the cave sheet) it is drawn from. */
+export type Ground = { kind: GroundKind; sx: number; sy: number; sheet?: typeof CAVE_GROUND };
 
 /** The cave tileset (/caves/MainLev2.0.png), whose charcoal ground tiles floor the cave halls. */
 export const CAVE_GROUND = 'cave_ground';
@@ -246,36 +258,12 @@ class TerrainBuilder {
   // ── Floors (per 32px game tile; obstacles stand on floor) ──────────────────
 
   private readonly addFloor = (tx: number, ty: number): void => {
-    const t = this.level.getTile(tx, ty);
-    if (!t || (t.type !== TileType.Floor && t.type !== TileType.Obstacle)) return;
-    const cave = this.caveSource(tx, ty);
-    if (cave) {
-      this.floorPieces.push({ dx: tx * TILE_WIDTH, dy: ty * TILE_HEIGHT, sx: cave[0], sy: cave[1], w: TILE_WIDTH, h: TILE_HEIGHT, sheet: CAVE_GROUND });
-      return;
-    }
-    quad(this.floorPieces, tx * TILE_WIDTH, ty * TILE_HEIGHT, this.floorSource(t, tx, ty), TILE_WIDTH, TILE_HEIGHT);
+    const ground = groundAt(this.level, tx, ty);
+    if (!ground) return;
+    const piece: TerrainPiece = { dx: tx * TILE_WIDTH, dy: ty * TILE_HEIGHT, sx: ground.sx, sy: ground.sy, w: TILE_WIDTH, h: TILE_HEIGHT, floor: true };
+    if (ground.sheet) piece.sheet = ground.sheet;
+    this.floorPieces.push(piece);
   };
-
-  /** In a cave hall, patches of the floor are cave ground: bare, pebbly or grassy. */
-  private caveSource(tx: number, ty: number): Src | null {
-    if (!this.level.caveFloor.has(tx + ty * this.level.width)) return null;
-    const n = noise(tx, ty, CAVE_NOISE_SCALE);
-    if (n < CAVE_LEVEL) return null;
-    const v = hash(tx, ty);
-    if (n > CAVE_GRASS_LEVEL) return CAVE_GRASS[v % CAVE_GRASS.length];
-    if (v % CAVE_PEBBLE_EVERY === 0) return CAVE_PEBBLES[v % CAVE_PEBBLES.length];
-    return CAVE_PLAIN[v % CAVE_PLAIN.length];
-  }
-
-  private floorSource(t: TileData, tx: number, ty: number): Src {
-    const v = hash(tx, ty);
-    if (this.level.isSafeZone(tx, ty)) return FLOOR_SAFE[v % FLOOR_SAFE.length];
-    const n = noise(tx, ty, FLOOR_NOISE_SCALE);
-    if (v % GRATE_EVERY === 0 && t.type === TileType.Floor) return FLOOR_GRATE;
-    if (n > FLOOR_ROUGH_LEVEL) return FLOOR_ROUGH[v % FLOOR_ROUGH.length];
-    if (n > FLOOR_PATCH_LEVEL) return FLOOR_PATCH[v % FLOOR_PATCH.length];
-    return FLOOR_MAIN[v % FLOOR_MAIN.length];
-  }
 
   // ── Framed pits (2×2 holes) — rims spill onto the surrounding floor ────────
 
@@ -397,6 +385,37 @@ class TerrainBuilder {
     }
     quad(out, x1 * SUB, y, LINTEL_RIGHT, SUB, LINTEL_END_H, z);
   }
+}
+
+/** In a cave hall, patches of the floor are cave ground: bare, pebbly or grassy. */
+function caveGround(level: Level, tx: number, ty: number): Ground | null {
+  if (!level.caveFloor.has(tx + ty * level.width)) return null;
+  const n = noise(tx, ty, CAVE_NOISE_SCALE);
+  if (n < CAVE_LEVEL) return null;
+  const v = hash(tx, ty);
+  const pick = (from: ReadonlyArray<Src>): Ground => ({ kind: 'cave', sx: from[v % from.length][0], sy: from[v % from.length][1], sheet: CAVE_GROUND });
+  if (n > CAVE_GRASS_LEVEL) return pick(CAVE_GRASS);
+  if (v % CAVE_PEBBLE_EVERY === 0) return pick(CAVE_PEBBLES);
+  return pick(CAVE_PLAIN);
+}
+
+/** Catacomb floor: the safe room's slabs, an odd drain grate, patches of moss and rough earth in the cobbles. */
+function stoneGround(level: Level, t: TileData, tx: number, ty: number): Ground {
+  const v = hash(tx, ty);
+  const at = (kind: GroundKind, from: ReadonlyArray<Src>): Ground => ({ kind, sx: from[v % from.length][0], sy: from[v % from.length][1] });
+  if (level.isSafeZone(tx, ty)) return at('safe', FLOOR_SAFE);
+  const n = noise(tx, ty, FLOOR_NOISE_SCALE);
+  if (v % GRATE_EVERY === 0 && t.type === TileType.Floor) return at('stone', [FLOOR_GRATE]);
+  if (n > FLOOR_ROUGH_LEVEL) return at('rough', FLOOR_ROUGH);
+  if (n > FLOOR_PATCH_LEVEL) return at('stone', FLOOR_PATCH);
+  return at('stone', FLOOR_MAIN);
+}
+
+/** The ground a tile is floored with, or null when it isn't floor (walls, holes, off the map). */
+export function groundAt(level: Level, tx: number, ty: number): Ground | null {
+  const t = level.getTile(tx, ty);
+  if (!t || (t.type !== TileType.Floor && t.type !== TileType.Obstacle)) return null;
+  return caveGround(level, tx, ty) ?? stoneGround(level, t, tx, ty);
 }
 
 export function buildTerrainPieces(level: Level): TerrainPiece[] {

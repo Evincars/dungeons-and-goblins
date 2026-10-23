@@ -65,6 +65,8 @@ export type CharacterDef = {
   keyColor?: number;
   /** Every strip the character owns, by name. */
   clips: Record<string, ClipDef>;
+  /** Its art swings its own blade, so the generic sword-swing effect is not drawn over it (default: drawn). */
+  swingFx?: boolean;
   /** Which clip plays for each state; states left out are skipped. Every character idles. */
   states: Partial<Record<CharacterState, string>> & { idle: string };
 };

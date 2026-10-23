@@ -1153,7 +1153,7 @@ test('every blow is rolled and shown over the attacker: hits hurt, misses do not
   updateSword();
   updateSword();
   assert.equal(goblin.health.current, goblin.health.max, 'a natural 1 misses');
-  assert.deepEqual(player.rollLog.map((l) => [l.text, l.tone]), [['NAT 1 CRIT MISS', 'fumble']]);
+  assert.deepEqual(player.rollLog.map((l) => [l.text, l.tone]), [['5 to hit', 'fumble'], ['CRIT MISS', 'fumble']], 'd20 1 + proficiency 2 + STR 2');
   useDieRoller((sides) => (sides === 20 ? 15 : 3));
   world.removeComponent(player, 'swordSwing');
   player.swordCooldown = 0;
@@ -1161,8 +1161,8 @@ test('every blow is rolled and shown over the attacker: hits hurt, misses do not
   updateSword();
   updateSword();
   assert.equal(goblin.health.current, goblin.health.max - 3, 'a bare-handed barbarian punches for 1 + STR +2');
-  assert.equal(player.rollLog.at(-2).text, '15+4=19 HIT', 'd20 15 + proficiency 2 + STR 2 against the goblin\'s AC 15');
-  assert.equal(player.rollLog.at(-1).tone, 'damage');
+  assert.equal(player.rollLog.at(-2).text, '19 to hit', 'd20 15 + proficiency 2 + STR 2 against the goblin\'s AC 15');
+  assert.deepEqual([player.rollLog.at(-1).text, player.rollLog.at(-1).tone], ['3 dmg', 'damage']);
 });
 
 test('an enemy that touches the player rolls against their Armor Class, and the roll shows over its head', () => {
@@ -1175,7 +1175,7 @@ test('an enemy that touches the player rolls against their Armor Class, and the 
   for (let t = 0; t < 120; t++) updateContactDamage(level);
   assert.equal(player.health.current, before, 'natural 1s never hit');
   assert.ok(orc.rollLog?.length, 'the misses are shown over the orc');
-  assert.equal(orc.rollLog[0].text, 'NAT 1 CRIT MISS');
+  assert.deepEqual(orc.rollLog.slice(0, 2).map((l) => l.text), ['6 to hit', 'CRIT MISS'], 'd20 1 + 5');
 });
 
 test('the roll log is a queue: newest at the bottom, the top line fades first, at most four lines', async () => {
@@ -1275,4 +1275,97 @@ test('the fog redraws only when something new has been seen', () => {
   assert.ok(after > before);
   level.reveal(5, 5, 3);
   assert.equal(level.seenRevision, after, 'seeing the same tiles again changes nothing');
+});
+
+test('the combat log names who struck and how it went, and reaches guests checked', async () => {
+  const { currentLog, MAX_LOG_ENTRIES } = await load('systems/CombatLogSystem');
+  const level = arena(12, 6);
+  const player = playerAt(4, 2);
+  world.addComponent(player, 'playerName', 'Evincars');
+  world.addComponent(player, 'playerSlot', 'host');
+  player.aimVector = { x: 1, y: 0 };
+  const orc = mobAt(level, 'orc', 4.6, 2);
+  player.playerInput.intents.attack = true;
+  updateSword();
+  updateSword();
+  const [blow] = currentLog().entries;
+  assert.deepEqual(blow, { seq: 1, actor: 'player', name: 'Evincars', total: 23, result: 'hit', damage: 3 }, 'loaded d20 19 + 4');
+  useDieRoller(() => 1);
+  beginPerception();
+  for (let t = 0; t < 120; t++) updateContactDamage(level);
+  const orcBlow = currentLog().entries.find((e) => e.actor === 'mob');
+  assert.deepEqual([orcBlow.name, orcBlow.result, orcBlow.damage], ['orc', 'fumble', 0]);
+  assert.ok(currentLog().entries.length <= MAX_LOG_ENTRIES);
+  const state = JSON.parse(JSON.stringify(captureWorld(false, 3)));
+  validateNetState(state);
+  const logData = state.entities.find((e) => e.data.combatLog).data;
+  logData.combatLog.entries[0].name = 'goblin_king';
+  logData.combatLog.entries[0].actor = 'mob';
+  assert.equal(attempt(() => validateNetState(state)).ok, false, 'an unknown enemy is refused');
+  void orc;
+});
+
+test('the warrior\'s blow lands on its attack clip\'s impact frame, and the next waits for the clip', async () => {
+  const { SWORD_STATS } = await load('entities/WeaponStats');
+  const Characters = await load('characters/Characters');
+  const level = arena(10, 6);
+  const warrior = createPlayer(centre(4), centre(2), 'warrior');
+  warrior.aimVector = { x: 1, y: 0 };
+  const goblin = mobAt(level, 'goblin', 4.6, 2);
+  warrior.playerInput.intents.attack = true;
+  updateSword();
+  const delay = warrior.swordSwing.delay;
+  assert.equal(delay + 1, Characters.clipImpactTicks('hooded_knight', 'attack'), 'the first tick of the wind-up has passed');
+  assert.ok(delay > 0);
+  assert.ok(warrior.swordCooldown >= SWORD_STATS.cooldown);
+  for (let t = 0; t < delay; t++) updateSword();
+  assert.equal(goblin.health.current, goblin.health.max, 'nothing lands while the blade comes round');
+  updateSword();
+  assert.ok(goblin.health.current < goblin.health.max, 'then it does');
+  assert.equal(characterDef('hooded_knight').swingFx, false, 'its own art draws the slash');
+  assert.ok(characterDef('hooded_knight').clips.walk && characterDef('hooded_knight').clips.run, 'it walks and runs');
+});
+
+test('where kinds of ground meet, the softer spills over the edge of the harder', async () => {
+  const { groundBlends } = await load('level/GroundBlend');
+  const { groundAt } = await load('level/TerrainAutotile');
+  const level = arena(10, 6);
+  for (let y = 1; y < 5; y++) for (let x = 1; x < 4; x++) level.markSafeZone(x, y);
+  const blends = groundBlends(level);
+  assert.equal(groundAt(level, 2, 2).kind, 'safe');
+  assert.ok(blends.length > 0);
+  assert.ok(blends.every((b) => b.from.kind !== 'safe'), 'the corridor spills onto the safe room, never the other way');
+  const onto = blends.map((b) => Math.floor(b.dx / TILE_WIDTH));
+  assert.ok(onto.every((x) => x === 3), 'only along the safe room\'s edge');
+  assert.ok(blends.some((b) => b.side === 'e'));
+  assert.equal(groundAt(level, 0, 0), null, 'walls are not ground');
+});
+
+test('a generated level saves to JSON and gzip, and comes back the same; a damaged map is refused', async () => {
+  const { encodeLevelMap, decodeLevelMap, packLevelMap, unpackLevelMap } = await load('level/LevelMap');
+  const { level, spawns } = buildDungeon(1234, true);
+  const map = encodeLevelMap(level, spawns);
+  const json = JSON.stringify(map);
+  const back = decodeLevelMap(JSON.parse(json));
+  for (let y = 0; y < level.height; y++) {
+    for (let x = 0; x < level.width; x++) {
+      assert.equal(back.level.getTile(x, y).type, level.getTile(x, y).type);
+      assert.equal(back.level.getTile(x, y).imageVariant, level.getTile(x, y).imageVariant);
+      assert.equal(back.level.isSafeZone(x, y), level.isSafeZone(x, y));
+    }
+  }
+  assert.deepEqual([...back.level.caveFloor].sort(), [...level.caveFloor].sort());
+  assert.deepEqual([...back.level.wallDecor], [...level.wallDecor]);
+  assert.deepEqual([...back.level.blockBoxes], [...level.blockBoxes]);
+  assert.deepEqual(back.level.pits, level.pits);
+  assert.deepEqual(back.spawns, spawns);
+  const packed = await packLevelMap(map);
+  assert.ok(packed.byteLength < json.length / 2, `gzip shrinks it (${json.length} → ${packed.byteLength} bytes)`);
+  const unpacked = await unpackLevelMap(packed);
+  assert.equal(unpacked.level.width, level.width);
+  const broken = (edit) => attempt(() => decodeLevelMap(edit(JSON.parse(json)))).ok;
+  assert.equal(broken((m) => ({ ...m, version: 99 })), false);
+  assert.equal(broken((m) => ({ ...m, safe: [[0, 1e9]] })), false, 'a run off the map');
+  assert.equal(broken((m) => ({ ...m, wallDecor: [[1, 'fresco']] })), false);
+  assert.equal(broken((m) => ({ ...m, tiles: btoa('xyz') })), false, 'tiles that do not fill the map');
 });

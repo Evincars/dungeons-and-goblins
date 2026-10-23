@@ -17,13 +17,15 @@ import { menuBackdrop } from '../ui/MenuBackdrop';
 import { PixelButton } from '../ui/PixelButton';
 import { PixelLabel, makeTitle } from '../ui/PixelText';
 import { wrapLines } from '../ui/InfoTooltip';
+import { NameField } from '../ui/NameField';
 import { THEME } from '../ui/Theme';
 
-/** Two cards side by side under the title, the buttons under them. */
-const TITLE_Y = 22;
-const CARD_TOP = 52;
+/** The title, the hero's name under it, two cards side by side, the buttons under them. */
+const TITLE_Y = 12;
+const NAME = { y: 34, w: 160, h: 18, labelGap: 8 };
+const CARD_TOP = 60;
 const CARD_GAP = 12;
-const CARD_H = 268;
+const CARD_H = 262;
 const CARD_PAD = 8;
 const BUTTON_W = 120;
 const BUTTON_H = 24;
@@ -79,16 +81,28 @@ export class CharacterSelectScene implements Scene {
   private readonly cards: Card[] = [];
   private picked: HeroClassId = settings.heroClass;
   private tick = 0;
+  private readonly nameField: NameField;
 
   constructor(private readonly manager: SceneManager) {
     this.container.addChild(menuBackdrop());
     const title = makeTitle(text('select.title'));
     title.position.set(LAYOUT_LEFT + LAYOUT_WIDTH / 2, TITLE_Y);
     this.container.addChild(title);
+    this.nameField = this.addNameField();
     const cardW = Math.floor((LAYOUT_WIDTH - CARD_GAP * 3) / 2);
     HERO_CLASSES.forEach((id, i) => this.addCard(CLASSES[id], LAYOUT_LEFT + CARD_GAP + i * (cardW + CARD_GAP), cardW));
     this.addButtons();
     this.drawCards();
+  }
+
+  /** "Your name" and a box to type it: the name the combat log (and, in co-op, the others) call the hero. */
+  private addNameField(): NameField {
+    const centre = LAYOUT_LEFT + LAYOUT_WIDTH / 2;
+    const label = new PixelLabel(text('select.name'), { color: THEME.text, align: 'right', shadow: true });
+    label.position.set(Math.round(centre - NAME.w / 2 - NAME.labelGap), NAME.y + Math.round((NAME.h - 8) / 2));
+    const field = new NameField(this.manager.canvas, Math.round(centre - NAME.w / 2), NAME.y, NAME.w, NAME.h);
+    this.container.addChild(label, field.view);
+    return field;
   }
 
   private addCard(cls: HeroClass, x: number, w: number): void {
@@ -137,6 +151,7 @@ export class CharacterSelectScene implements Scene {
   }
 
   private confirm(): void {
+    this.nameField.commit();
     settings.heroClass = this.picked;
     saveSettings();
     this.manager.goto(destination);
@@ -166,6 +181,7 @@ export class CharacterSelectScene implements Scene {
   }
 
   destroy(): void {
+    this.nameField.destroy();
     this.container.destroy({ children: true });
   }
 }

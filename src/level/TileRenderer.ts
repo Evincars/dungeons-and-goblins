@@ -4,6 +4,8 @@ import { buildTerrainPieces } from './TerrainAutotile';
 import type { TerrainPiece } from './TerrainAutotile';
 import { tilesetRect } from '../render/Sheets';
 import { StaticTileLayer } from '../render/StaticTileLayer';
+import { groundBlends } from './GroundBlend';
+import { blendTexture, commitBlendAtlas } from '../render/BlendAtlas';
 
 export type LevelView = {
   /** Floors, faces and wall tops that lie beneath every entity. */
@@ -29,18 +31,23 @@ function layerFor(piece: TerrainPiece, base: StaticTileLayer, byZ: Map<number, S
 
 /**
  * Batches the autotiled terrain into Pixi v8 ParticleContainers (see StaticTileLayer): the terrain never
- * moves, so it is uploaded once and drawn as a handful of batches instead of thousands of sprites.
+ * moves, so it is uploaded once and drawn as a handful of batches instead of thousands of sprites. Bottom
+ * up: cave ground and catacomb floors, the soft edges where kinds of ground meet, then walls and overlays.
  */
 export function buildLevelView(level: Level): LevelView {
-  const base = new StaticTileLayer();
-  // A batch draws from one image, so cave ground has its own, laid first: plinths and pit rims cover it.
+  // A batch draws from one image, so cave ground, the other floors, the edge fades and the walls each have one.
   const cave = new StaticTileLayer();
+  const floors = new StaticTileLayer();
+  const blends = new StaticTileLayer();
+  const base = new StaticTileLayer();
   const byZ = new Map<number, StaticTileLayer>();
   for (const p of buildTerrainPieces(level)) {
-    const layer = p.sheet ? cave : layerFor(p, base, byZ);
+    const layer = p.sheet ? cave : p.floor ? floors : layerFor(p, base, byZ);
     layer.addTile(tilesetRect(p.sx, p.sy, p.w, p.h, p.sheet), p.dx, p.dy);
   }
+  for (const blend of groundBlends(level)) blends.addTile(blendTexture(blend), blend.dx, blend.dy);
+  commitBlendAtlas();
   const container = new Container();
-  container.addChild(cave, base);
+  container.addChild(cave, floors, blends, base);
   return { base: container, occluders: [...byZ.values()] };
 }

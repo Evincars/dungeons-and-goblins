@@ -6,6 +6,7 @@ import { characterSheet } from '../rules/CharacterSheet';
 import { MONSTERS } from '../rules/Monsters';
 import { UNARMORED_AC } from '../rules/ArmorTable';
 import { logAttack } from './RollLogSystem';
+import { recordBlow } from './CombatLogSystem';
 
 /**
  * Every blow in the game goes through here: the attack is rolled against the target's Armor Class, and the
@@ -19,9 +20,14 @@ export function armorClassOf(target: Entity): number {
   return UNARMORED_AC;
 }
 
-/** Rolls `attack` against `target`, logging the result over `logOn` (the attacker, or a projectile's shooter). */
+/**
+ * Rolls `attack` against `target`, showing the result over `logOn` (the attacker, or a projectile's shooter)
+ * and writing it into the combat log.
+ */
 export function strike(target: Entity, attack: AttackProfile, logOn: Entity | undefined): AttackOutcome {
   const outcome = resolveAttack(attack, armorClassOf(target));
-  if (logOn) logAttack(logOn, outcome);
+  if (!logOn) return outcome;
+  logAttack(logOn, outcome);
+  recordBlow(logOn, outcome);
   return outcome;
 }

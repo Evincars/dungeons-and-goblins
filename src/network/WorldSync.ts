@@ -1,4 +1,4 @@
-import { world, isEquipSlot, isItemType, isMobType, isPlayerSlot, isRollTone, MOB_STATES, TACTIC_ROLES } from '../world';
+import { world, isBlowResult, isEquipSlot, isItemType, isMobType, isPlayerSlot, isRollTone, MOB_STATES, TACTIC_ROLES } from '../world';
 import type { Entity, PlayerSlot } from '../world';
 import { cleanName } from '../game/Settings';
 import { hasCharacter } from '../characters/Characters';
@@ -12,6 +12,7 @@ import { isBagSquare, isInventoryItem } from './protocol';
 import { isHeroClassId } from '../rules/Classes';
 import { isWeaponBase } from '../rules/WeaponTable';
 import { MAX_ROLL_LINES } from '../systems/RollLogSystem';
+import { MAX_LOG_ENTRIES } from '../systems/CombatLogSystem';
 
 /**
  * The live world as the co-op host sends it: every entity that is not rebuilt locally from the level
@@ -86,7 +87,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   playerStats: { level: 'number', exp: 'number', gold: 'number', swordTier: 'number',
     sprinting: 'boolean', sprint: 'number', maxSprint: 'number', sprintLocked: 'boolean', kills: 'number', goldEarned: 'number',
     lootBonus: 'number' },
-  swordSwing: { ticks: 'number', dirX: 'number', dirY: 'number', range: 'number', hitIds: 'object' },
+  swordSwing: { delay: 'number', ticks: 'number', dirX: 'number', dirY: 'number', range: 'number', hitIds: 'object' },
   loot: { value: 'number', kind: 'number', velX: 'number', velY: 'number', suckRadius: 'number', glide: 'number', age: 'number', life: 'number' },
   item: { type: 'string', name: 'string', value: 'number' },
   chest: { opened: 'boolean', disappearTicks: 'number', drops: 'string' },
@@ -104,6 +105,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   inventory: {},
   equipped: {},
   rollLog: {},
+  combatLog: { seq: 'number', entries: 'object' },
 };
 
 /** Components that are plain values. */
@@ -138,6 +140,10 @@ function checkComponent(key: string, value: unknown): void {
 }
 
 const isTile = (t: unknown) => isRecord(t) && Number.isInteger(t.x) && Number.isInteger(t.y);
+/** A combat log entry: a player named as names may be, or a known enemy, and whole, sane numbers. */
+const isLogEntry = (e: unknown) => isRecord(e) && Number.isInteger(e.seq) && Number.isInteger(e.total) && Number.isInteger(e.damage)
+  && Number(e.damage) >= 0 && isBlowResult(e.result)
+  && ((e.actor === 'mob' && typeof e.name === 'string' && isMobType(e.name)) || (e.actor === 'player' && typeof e.name === 'string' && cleanName(e.name) === e.name));
 const isRollLine = (l: unknown) => isRecord(l) && typeof l.text === 'string' && l.text.length <= MAX_ROLL_TEXT && isRollTone(l.tone) && isFiniteNumber(l.age);
 const isIntList = (v: unknown) => Array.isArray(v) && v.every(Number.isInteger);
 
@@ -148,6 +154,8 @@ function checkDetails(data: EntityState): void {
   ensure(data.mobType === undefined || isMobType(data.mobType), 'Invalid mob type');
   ensure(data.mobWeapon === undefined || isWeaponBase(data.mobWeapon), 'Invalid enemy weapon');
   ensure(data.heroClass === undefined || isHeroClassId(data.heroClass), 'Invalid hero class');
+  ensure(!data.combatLog || (Array.isArray(data.combatLog.entries) && data.combatLog.entries.length <= MAX_LOG_ENTRIES
+    && data.combatLog.entries.every(isLogEntry)), 'Invalid combat log');
   ensure(!data.rollLog || (Array.isArray(data.rollLog) && data.rollLog.length <= MAX_ROLL_LINES && data.rollLog.every(isRollLine)), 'Invalid roll log');
   ensure(!data.chest || isDropTableId(data.chest.drops), 'Invalid chest');
   ensure(!data.spawner || isMobType(data.spawner.mobType), 'Invalid spawner');

@@ -19,6 +19,15 @@ let clicked = false;
 let bound = false;
 let captured = false;
 
+/** On-screen controls under the pointer (HUD buttons, the combat log, a dialog): their clicks are not attacks. */
+const pointerOwners = new Set<object>();
+
+/** A control says the pointer is over it (or has left); while any is under it, mouse buttons don't fight. */
+export function claimPointer(owner: object, over: boolean): void {
+  if (over) pointerOwners.add(owner);
+  else pointerOwners.delete(owner);
+}
+
 export function setInputCaptured(on: boolean): void {
   captured = on;
   keys.clear();
@@ -120,15 +129,16 @@ export function updateInput(): void {
     pi.left  = isActionDown('left');
     pi.right = isActionDown('right');
     pi.sprint = isActionDown('sprint');
-    pi.attack = !captured && (mouseDown || isActionDown('attack'));
+    const mouseFree = pointerOwners.size === 0;
+    pi.attack = !captured && ((mouseDown && mouseFree) || isActionDown('attack'));
     pi.use    = !captured && isActionDown('use');
     pi.mouseX = mouse.x;
     pi.mouseY = mouse.y;
     pi.mouseAiming = true;
 
     const it = pi.intents;
-    it.attack       = !captured && (wasActionPressed('attack') || mouseDown);
-    it.cast         = !captured && (wasActionPressed('cast') || rightDown);
+    it.attack       = !captured && (wasActionPressed('attack') || (mouseDown && mouseFree));
+    it.cast         = !captured && (wasActionPressed('cast') || (rightDown && mouseFree));
     it.use          = wasActionPressed('use');
     it.inventoryOpen = wasActionPressed('inventory');
     it.swap         = !captured && wasActionPressed('swap');

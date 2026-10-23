@@ -1,3 +1,4 @@
+import { gunzipJson, gzipText } from '../core/compression';
 import { DEFAULT_CLASS, isHeroClassId } from '../rules/Classes';
 import type { HeroClassId } from '../rules/Classes';
 import Peer from 'peerjs';
@@ -46,29 +47,9 @@ function mergeIntents(target: Intents, source: Intents): void {
   target.attack ||= source.attack;
   target.cast ||= source.cast;
   target.inventoryOpen ||= source.inventoryOpen;
+  target.swap ||= source.swap;
 }
-const hasIntent = (i: Intents) => i.use || i.cast || i.inventoryOpen;
-
-async function gzip(text: string): Promise<Uint8Array> {
-  return new Uint8Array(await new Response(new Blob([text]).stream()
-    .pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
-}
-
-async function gunzip(input: ArrayBuffer | Uint8Array, limit: number): Promise<unknown> {
-  const bytes = input instanceof ArrayBuffer ? new Uint8Array(input) : Uint8Array.from(input);
-  const reader = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip')).getReader();
-  const chunks: ArrayBuffer[] = [];
-  let size = 0;
-  for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
-    size += chunk.value.byteLength;
-    if (size > limit) {
-      await reader.cancel();
-      throw new ValidationError('World packet exceeds size limit', { limit });
-    }
-    chunks.push(Uint8Array.from(chunk.value).buffer);
-  }
-  return JSON.parse(await new Blob(chunks).text());
-}
+const hasIntent = (i: Intents) => i.use || i.cast || i.inventoryOpen || i.swap;
 
 function validPacket(value: unknown): value is ArrayBuffer | Uint8Array {
   if (!(value instanceof ArrayBuffer) && !(value instanceof Uint8Array)) return false;
@@ -494,7 +475,7 @@ export class CoopSession {
   private async decodeNext(link: Link, { seq, bytes }: { seq: number; bytes: Uint8Array }): Promise<void> {
     this.pendingState = null;
     if (seq <= this.stateSeqIn) return;
-    const decoded = await gunzip(bytes, MAX_DECOMPRESSED);
+    const decoded = await gunzipJson(bytes, MAX_DECOMPRESSED, 'World packet');
     if (this.uplink !== link || seq <= this.stateSeqIn) return;
     validateNetState(decoded);
     if (!this.slot || !decoded.entities.some((e) => e.data.playerSlot === this.slot)) return;
@@ -512,7 +493,7 @@ export class CoopSession {
     this.sending = true;
     const seq = this.stateSeqOut++;
     const json = JSON.stringify(state);
-    const sent = gzip(json).then((compressed) => {
+    const sent = gzipText(json).then((compressed) => {
       const packet = new Uint8Array(compressed.byteLength + 4);
       new DataView(packet.buffer).setUint32(0, seq);
       packet.set(compressed, 4);

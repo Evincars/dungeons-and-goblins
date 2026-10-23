@@ -76,8 +76,22 @@ export function isRollTone(value: unknown): value is RollTone {
   return ROLL_TONES.some((tone) => tone === value);
 }
 
-/** One line over a fighter's head ("17+5=22 HIT", "1d8+3: 7"), and the ticks it has been shown. */
+/** One line over a fighter's head ("17 to hit", "7 dmg"), and the ticks it has been shown. */
 export type RollLine = { text: string; tone: RollTone; age: number };
+
+/** How a blow went: a hit, a miss, a natural 20 or a natural 1. */
+export const BLOW_RESULTS = ['hit', 'miss', 'crit', 'fumble'] as const;
+export type BlowResult = (typeof BLOW_RESULTS)[number];
+
+export function isBlowResult(value: unknown): value is BlowResult {
+  return BLOW_RESULTS.some((result) => result === value);
+}
+
+/**
+ * One blow in the combat log: who struck (a player by name, an enemy by kind), what they rolled to hit, how it
+ * went and the damage. `seq` counts up, so a screen shows each entry once.
+ */
+export type CombatLogEntry = { seq: number; actor: 'player' | 'mob'; name: string; total: number; result: BlowResult; damage: number };
 
 /** Who controls a player character: the host, or one of up to three guests in a co-op room. */
 export const PLAYER_SLOTS = ['host', 'p2', 'p3', 'p4'] as const;
@@ -212,6 +226,8 @@ export type Entity = {
   heroClass?: HeroClassId;
   /** The dice rolls shown over the head, oldest first; each fades after a while (systems/RollLogSystem.ts). */
   rollLog?: RollLine[];
+  /** The level's combat log (one entity holds it): the latest blows, newest last (systems/CombatLogSystem.ts). */
+  combatLog?: { seq: number; entries: CombatLogEntry[] };
   /** Runtime display label (price etc.) */
   priceLabel?: PixelLabel;
 
@@ -324,6 +340,8 @@ export type Entity = {
   // --- sword melee ---
   /** Active swing hitbox: ticks remaining, direction, damage */
   swordSwing?: {
+    /** Ticks before the blow lands (the attack clip's impact frame); then `ticks` with the hitbox live. */
+    delay: number;
     ticks: number;
     dirX: number;
     dirY: number;

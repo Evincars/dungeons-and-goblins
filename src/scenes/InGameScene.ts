@@ -11,7 +11,7 @@ import { FogRenderer } from '../level/FogRenderer';
 import { LightRenderer } from '../level/LightRenderer';
 import type { LightSource } from '../level/LightRenderer';
 import { createPlayer } from '../entities/PlayerFactory';
-import { settings } from '../game/Settings';
+import { cleanName, settings } from '../game/Settings';
 import { camera, GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
 import { TILE_WIDTH, TILE_HEIGHT, FOG_REVEAL_TILES } from '../level/TileType';
 import { initInput, resetInput } from '../systems/InputSystem';
@@ -20,6 +20,7 @@ import type { FrameContext } from '../systems/Simulation';
 import { resetNameTags, updateNameTags } from '../systems/NameTagSystem';
 import { resetRollTexts } from '../systems/RollTextSystem';
 import { HudPanel } from '../ui/HudPanel';
+import { CombatLogPanel } from '../ui/CombatLogPanel';
 import { totalXp } from '../game/Progress';
 import { InventoryOverlay } from '../ui/InventoryOverlay';
 import { ShopPanel } from '../ui/ShopPanel';
@@ -73,6 +74,7 @@ export class InGameScene implements Scene {
   private readonly darkness = new FogRenderer();
   private readonly lights = new LightRenderer();
   private readonly hud = new HudPanel();
+  private readonly combatLog = new CombatLogPanel();
   private readonly inv = new InventoryOverlay();
   private readonly shop = new ShopPanel();
   private readonly pause: PauseMenu;
@@ -129,6 +131,8 @@ export class InGameScene implements Scene {
     } else {
       const me = createPlayer(spawns.playerSpawn.x, spawns.playerSpawn.y, settings.heroClass);
       world.addComponent(me, 'playerSlot', 'host');
+      // The name typed on the character select; the combat log calls the hero by it (co-op renames it below).
+      world.addComponent(me, 'playerName', cleanName(settings.playerName) || text('combat_log.default_hero'));
       restorePlayer(me);
       if (this.mode === 'host') this.host = new HostGame(me, spawns.playerSpawn, seed, depth);
     }
@@ -137,7 +141,7 @@ export class InGameScene implements Scene {
     this.gameLayer.addChild(this.darkness.container);
     // Light overlay placed in uiLayer so it sits above game but below HUD
     this.lights.init();
-    this.uiLayer.addChild(this.lights.overlay, this.hud.container, this.inv.container, this.shop.container);
+    this.uiLayer.addChild(this.lights.overlay, this.hud.container, this.combatLog.container, this.inv.container, this.shop.container);
 
     this.status = makeText('', 0xff8888, 8, 'center');
     this.status.x = GAME_WIDTH / 2;
@@ -174,7 +178,7 @@ export class InGameScene implements Scene {
     }
     if (e.code !== 'Escape') return;
     if (this.manager.hasOverlay) this.manager.escapeOverlay();
-    else if (this.result.open) return;
+    else if (this.result.open || this.hud.closeDialog()) return;
     else if (!this.pause.handleEscape()) this.setPaused(!this.pause.open);
   }
 
@@ -303,6 +307,7 @@ export class InGameScene implements Scene {
 
   private updatePanels(): void {
     this.hud.update();
+    this.combatLog.update();
     this.inv.setVisible(isInventoryOpen());
     this.inv.update();
     // Shop: refresh its rows on the open transition, then track visibility
@@ -410,6 +415,7 @@ export class InGameScene implements Scene {
     this.darkness.destroy();
     this.lights.destroy();
     this.hud.destroy();
+    this.combatLog.destroy();
     this.inv.destroy();
     this.pause.destroy();
     this.result.destroy();

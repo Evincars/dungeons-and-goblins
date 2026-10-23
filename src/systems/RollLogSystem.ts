@@ -1,12 +1,11 @@
 import { world } from '../world';
-import type { Entity, RollTone } from '../world';
+import type { BlowResult, Entity, RollTone } from '../world';
 import { text } from '../core/texts';
-import { formatDice, formatModifier } from '../rules/Dice';
 import type { AttackOutcome } from '../rules/Combat';
 
 /**
- * The dice rolls over a fighter's head, as a queue: each attack adds its d20 line (and, on a hit, its
- * damage line) at the bottom; the top line fades first, and the next one waits a moment after it.
+ * The dice rolls over a fighter's head, as a queue: each attack adds what it rolled to hit and how it went
+ * (the damage, or a miss) at the bottom; the top line fades first, and the next one waits a moment after it.
  * The host keeps the log; guests are sent it with the rest of the world.
  */
 
@@ -27,25 +26,25 @@ export function logLine(entity: Entity, line: string, tone: RollTone): void {
   if (log.length > MAX_ROLL_LINES) log.shift();
 }
 
-/** The d20 line of an attack: "NAT 20 CRIT HIT!", "NAT 1 CRIT MISS", or "17+5=22 HIT" / "9+5=14 MISS". */
-function attackLine(outcome: AttackOutcome): { line: string; tone: RollTone } {
-  const vars = { natural: outcome.natural, bonus: formatModifier(outcome.attackBonus), total: outcome.total };
-  if (outcome.critical) return { line: text('roll.crit_hit', vars), tone: 'crit' };
-  if (outcome.fumble) return { line: text('roll.crit_miss', vars), tone: 'fumble' };
-  return outcome.hit ? { line: text('roll.hit', vars), tone: 'hit' } : { line: text('roll.miss', vars), tone: 'miss' };
+/** How a blow went: a hit, a miss, a natural 20 (critical) or a natural 1 (critical miss). */
+export function blowResult(outcome: AttackOutcome): BlowResult {
+  if (outcome.critical) return 'crit';
+  if (outcome.fumble) return 'fumble';
+  return outcome.hit ? 'hit' : 'miss';
 }
 
-/** The damage line: "1d8+3: 7", or "3 dmg" for a blow with no dice (a punch). */
-function damageLine(outcome: AttackOutcome): string {
-  if (outcome.damageDice.count === 0) return text('roll.damage_flat', { amount: outcome.damage });
-  return text('roll.damage', { dice: formatDice(outcome.damageDice, true), amount: outcome.damage });
+/** The second line: "MISS", "CRIT MISS", "7 dmg" or "CRIT! 14 dmg". */
+function resultLine(result: BlowResult, damage: number): string {
+  if (result === 'crit') return text('roll.crit_damage', { amount: damage });
+  if (result === 'fumble') return text('roll.crit_miss');
+  return result === 'hit' ? text('roll.damage', { amount: damage }) : text('roll.miss');
 }
 
-/** Logs an attack over the attacker's head: the d20 roll, then (if it hit) what the damage dice came to. */
+/** Logs an attack over the attacker's head: what it rolled to hit ("17 to hit"), then how it went. */
 export function logAttack(attacker: Entity, outcome: AttackOutcome): void {
-  const { line, tone } = attackLine(outcome);
-  logLine(attacker, line, tone);
-  if (outcome.hit) logLine(attacker, damageLine(outcome), 'damage');
+  const result = blowResult(outcome);
+  logLine(attacker, text('roll.to_hit', { total: outcome.total }), result);
+  logLine(attacker, resultLine(result, outcome.damage), result === 'hit' || result === 'crit' ? 'damage' : result);
 }
 
 /** Ages every log; the top line goes once it has been up long enough, and the one under it lingers a little. */

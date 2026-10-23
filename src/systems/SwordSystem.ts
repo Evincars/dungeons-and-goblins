@@ -5,6 +5,7 @@ import { createSwordSwingFx } from '../entities/FxFactory';
 import { SWORD_STATS, swingRange } from '../entities/WeaponStats';
 import { characterSheet } from '../rules/CharacterSheet';
 import { strike } from './Strike';
+import { characterDef, clipImpactTicks, stateDuration } from '../characters/Characters';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 
@@ -53,20 +54,34 @@ function canSwing(player: Player): boolean {
     && !player.casting && !player.falling;
 }
 
+/**
+ * A swing starts: its blow lands on the attack clip's impact frame (at once for characters without one), and
+ * the next swing can't start before the clip has played (or the usual cooldown, if longer).
+ */
 function startSwing(player: Player): void {
   player.playerInput.intents.attack = false;
   const aim = player.aimVector ?? { x: 0, y: 1 };
-  const range = swingRange(player.playerStats.swordTier);
-  world.addComponent(player, 'swordSwing', {
+  const def = player.character?.def;
+  const swing: Swing = {
+    delay: def ? clipImpactTicks(def, 'attack') : 0,
     ticks: SWORD_STATS.swingTicks,
     dirX: aim.x,
     dirY: aim.y,
-    range,
+    range: swingRange(player.playerStats.swordTier),
     hitIds: [],
-  });
-  player.swordCooldown = SWORD_STATS.cooldown;
+  };
+  world.addComponent(player, 'swordSwing', swing);
+  player.swordCooldown = Math.max(SWORD_STATS.cooldown, def ? stateDuration(def, 'attack') : 0);
+  if (swing.delay === 0) swingLands(player, swing);
+}
+
+/** The blow comes down: its whoosh, and the slash effect (unless the character's art draws its own). */
+function swingLands(player: Player, swing: Swing): void {
   const pos = player.position;
-  createSwordSwingFx(pos.x + aim.x * range * 0.5, pos.y + aim.y * range * 0.5, aim.x, aim.y);
+  const def = player.character ? characterDef(player.character.def) : null;
+  if (def?.swingFx !== false) {
+    createSwordSwingFx(pos.x + swing.dirX * swing.range * 0.5, pos.y + swing.dirY * swing.range * 0.5, swing.dirX, swing.dirY);
+  }
   sound.playSound('sword_swing', pos.x, pos.y);
 }
 
@@ -107,11 +122,19 @@ export function updateSword(): void {
     if (canSwing(player)) startSwing(player);
 
     const swing = player.swordSwing;
-    if (!swing) continue;
-    if (--swing.ticks <= 0) {
-      world.removeComponent(player, 'swordSwing');
-      continue;
-    }
-    resolveSwing(player, swing);
+    if (swing) advanceSwing(player, swing);
   }
+}
+
+/** One tick of a swing: winding up to its impact, then its hitbox live for a few ticks, then gone. */
+function advanceSwing(player: Player, swing: Swing): void {
+  if (swing.delay > 0) {
+    if (--swing.delay === 0) swingLands(player, swing);
+    return;
+  }
+  if (--swing.ticks <= 0) {
+    world.removeComponent(player, 'swordSwing');
+    return;
+  }
+  resolveSwing(player, swing);
 }

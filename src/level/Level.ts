@@ -18,7 +18,12 @@ export const WALL_SINK = 26;
 const FLOOR_VARIANTS = 4;
 
 /** Decoration painted onto the brick face of a wall tile (the tile directly above a floor). */
-export type WallDecor = 'niche0' | 'niche1';
+export const WALL_DECORS = ['niche0', 'niche1'] as const;
+export type WallDecor = (typeof WALL_DECORS)[number];
+
+export function isWallDecor(value: unknown): value is WallDecor {
+  return WALL_DECORS.some((decor) => decor === value);
+}
 
 function isWallType(tile: TileData | null): boolean {
   return tile?.type === TileType.Wall || tile?.type === TileType.BreakableWall;
@@ -85,6 +90,16 @@ export class Level {
 
   markSafeZone(tx: number, ty: number): void {
     this.safeZoneSet.add(tx + ty * this.width);
+  }
+
+  /** Every safe-zone tile (packed index), for saving the map. */
+  get safeZoneTiles(): ReadonlySet<number> {
+    return this.safeZoneSet;
+  }
+
+  /** Where fallen players come back, for saving the map. */
+  get respawnPoints(): readonly SpawnPoint[] {
+    return this.spawnPoints;
   }
 
   isSafeZone(tx: number, ty: number): boolean {

@@ -85,12 +85,29 @@
 
   "stat.score_detail": "Score {score} ({base} base, {gear} from gear)\nModifier {modifier}",
 
-  "roll.hit": "{natural}{bonus}={total} HIT",
-  "roll.miss": "{natural}{bonus}={total} MISS",
-  "roll.crit_hit": "NAT 20 CRIT HIT!",
-  "roll.crit_miss": "NAT 1 CRIT MISS",
-  "roll.damage": "{dice}: {amount}",
-  "roll.damage_flat": "{amount} dmg",
+  "roll.to_hit": "{total} to hit",
+  "roll.miss": "MISS",
+  "roll.crit_miss": "CRIT MISS",
+  "roll.damage": "{amount} dmg",
+  "roll.crit_damage": "CRIT! {amount} dmg",
+
+  "combat_log.title": "COMBAT LOG",
+  "combat_log.hit": "{name} {total} to hit, {damage} dmg",
+  "combat_log.crit": "{name} {total} to hit, CRIT {damage} dmg",
+  "combat_log.miss": "{name} {total} to hit, miss",
+  "combat_log.fumble": "{name} {total} to hit, crit miss",
+  "combat_log.default_hero": "Hero",
+  "combat_log.toggle_aria": "Show or hide the combat log",
+
+  "mob.goblin": "Goblin",
+  "mob.skeleton": "Skeleton",
+  "mob.orc": "Orc",
+  "mob.troll": "Troll",
+  "mob.goblin_grunt": "Goblin",
+  "mob.goblin_rogue": "Goblin rogue",
+  "mob.goblin_warrior": "Goblin boss",
+  "mob.ghost_wizard": "Specter",
+  "mob.evil_wizard": "Mage",
 
   "proficiency.title": "{class} proficiencies",
 
@@ -140,6 +157,7 @@
   "select.title": "CHOOSE YOUR HERO",
   "select.back": "Back",
   "select.continue": "Continue",
+  "select.name": "Your name",
   "select.ability": "{stat} {score} ({modifier})",
   "select.hit_points": "Hit die d{die}    {hp} HP",
   "select.armor": "Armour: {list}",
@@ -215,9 +233,11 @@
   "rules.property.loading": "Loading",
   "rules.property.ammunition": "Ammunition",
 
-  "hud.bar.health": "Health",
-  "hud.bar.stamina": "Stamina",
-  "hud.bar.reading": "{bar} {current}/{max}",
+  "hud.bar.value": "{current}/{max}",
+  "hud.button.character": "Character",
+  "hud.button.level": "Level",
+  "hud.button.map": "Map",
+  "hud.dialog.placeholder": "test text",
 
   "shop.title": "SHOP",
   "shop.close_hint": "E to close",

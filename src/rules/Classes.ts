@@ -122,7 +122,7 @@ export function armorProficient(cls: HeroClass, category: ArmorTraining): boolea
   return cls.armor.includes(category);
 }
 
-/** Trained in this weapon, by its kind or by name (adds the proficiency bonus to hit). */
+/** Trained in this weapon, by its kind or by name (adds the proficiency bonus to hit); everyone can punch. */
 export function weaponProficient(cls: HeroClass, base: WeaponBase): boolean {
-  return cls.weapons.includes(WEAPON_TABLE[base].category) || cls.weaponBases.includes(base);
+  return base === 'unarmed' || cls.weapons.includes(WEAPON_TABLE[base].category) || cls.weaponBases.includes(base);
 }

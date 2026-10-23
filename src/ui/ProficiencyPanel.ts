@@ -6,6 +6,7 @@ import type { CharacterSheet } from '../rules/CharacterSheet';
 import { heroName, trainingName, weaponName } from '../rules/Names';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
+import { wrapLines } from './InfoTooltip';
 
 const LINE_H = 10;
 /** A checkbox's side, the mark inside it, and the space after it and after its word. */
@@ -38,8 +39,10 @@ export class ProficiencyPanel {
   /** Single weapons trained beyond the kinds ticked (a wizard's dagger and quarterstaff). */
   private readonly extraWeapons: PixelLabel;
   private readonly checks: Check[] = [];
+  private readonly width: number;
 
   constructor(x: number, y: number, w: number) {
+    this.width = w;
     this.view.position.set(x, y);
     this.header = new PixelLabel('', { color: THEME.title, shadow: true });
     this.view.addChild(this.header);
@@ -48,7 +51,7 @@ export class ProficiencyPanel {
     this.extraWeapons = new PixelLabel('', { color: THEME.text, shadow: true });
     this.extraWeapons.y = 5 * LINE_H;
     this.warning = new PixelLabel('', { color: WARNING_COLOR, shadow: true });
-    this.warning.y = 6 * LINE_H;
+    this.warning.y = 5 * LINE_H;
     this.view.addChild(this.extraWeapons, this.warning);
   }
 
@@ -76,7 +79,9 @@ export class ProficiencyPanel {
   set(sheet: CharacterSheet): void {
     this.header.text = text('proficiency.title', { class: heroName(sheet.heroClass.id) });
     const extra = sheet.heroClass.weaponBases;
-    this.extraWeapons.text = extra.length ? text('proficiency.weapons_also', { list: extra.map(weaponName).join(', ') }) : '';
+    const also = extra.length ? wrapLines(text('proficiency.weapons_also', { list: extra.map(weaponName).join(', ') }), this.width) : [];
+    this.extraWeapons.text = also.join('\n');
+    this.warning.y = (5 + also.length) * LINE_H;
     for (const check of this.checks) {
       const trained = check.trained(sheet);
       drawBox(check.box, trained);

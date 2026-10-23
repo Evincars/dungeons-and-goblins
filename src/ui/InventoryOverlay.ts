@@ -1,7 +1,7 @@
 import { Container, Graphics, Rectangle, Sprite } from 'pixi.js';
 import type { FederatedPointerEvent } from 'pixi.js';
-import { EQUIP_SLOTS, STAT_NAMES, localPlayer } from '../world';
-import type { BagSquare, EquipSlot, InventoryItem, Player, StatName } from '../world';
+import { EQUIP_SLOTS, localPlayer } from '../world';
+import type { BagSquare, EquipSlot, InventoryItem, Player } from '../world';
 import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
 import { getTexture } from '../assets/Textures';
 import { lazyTexture, onArtLoaded } from '../assets/LazyArt';
@@ -11,15 +11,17 @@ import type { TipTopic } from './InfoTooltip';
 import { SheetField } from './SheetField';
 import { armorClassTopic, armorTrainingTopic, damageTopic, hitPointsTopic, statTopic, weaponTrainingTopic } from './SheetTopics';
 import { ProficiencyPanel } from './ProficiencyPanel';
+import { ABILITY_CELL_H, AbilityGrid } from './AbilityGrid';
+import { SheetInfoPanel } from './SheetInfoPanel';
 import { text } from '../core/texts';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
 import { INVENTORY_COLS, INVENTORY_ROWS, MAX_CARRY_KG, carriedWeight, freeSquare, moveItem, requestLoadout } from '../game/PlayerActions';
 import type { ItemPlace } from '../game/PlayerActions';
-import { itemIcon, slotFor, slotLabel, statShort } from '../entities/Items';
+import { itemIcon, slotFor, slotLabel } from '../entities/Items';
 import { characterSheet } from '../rules/CharacterSheet';
 import type { CharacterSheet } from '../rules/CharacterSheet';
-import { formatDamage, formatModifier } from '../rules/Dice';
+import { formatDamage } from '../rules/Dice';
 
 /** inventory.png, measured in its own pixels: the leather bag panel, the cloth gear panel, and its two tabs. */
 const ART = { w: 2752, h: 1536 };
@@ -59,19 +61,14 @@ const BAG_PAD = 2;
 const BAG_GAP = 1;
 /** Two presses on one square this quickly (the usual desktop double-click time) is a double-click: it puts the item on, or takes it off. */
 const DOUBLE_CLICK_MS = 500;
-/** The part of a stat's short name that reacts to the pointer reaches this far past the letters. */
-const STAT_HIT_PAD = 2;
 /** Between an equipment label and its square, and between the gear and stats columns. */
 const LABEL_GAP = 6;
 const COLUMN_GAP = 10;
 /**
- * The stats take this share of the Gear page's height; under them, a rule, the Armor Class, hit point and
- * damage fields (this tall), another rule, and the hero's proficiencies.
+ * The stats column, top down: the six abilities in a row of cells, a rule, the Armor Class, hit point and
+ * damage fields (this tall), a rule, the rest of the character sheet, a rule, and the hero's proficiencies.
  */
-const STATS_SHARE = 0.42;
 const FIELD_H = 24;
-/** A stat's score sits this far left of its modifier (the modifier, what rolls add, is the number that matters). */
-const SCORE_COLUMN = 24;
 /** Space round each rule, and between the fields. */
 const RULE_GAP = 4;
 const FIELD_GAP = 4;
@@ -85,9 +82,6 @@ type Rect = { x: number; y: number; w: number; h: number };
 /** `page`: the tab page the square is on (bag squares are always shown). */
 /** `box` is the square drawn; `zone` the area that takes a dropped item (a gear slot's whole row). */
 type Square = { place: ItemPlace; box: Rectangle; zone: Rectangle; icon: Sprite; page: Container | null };
-/** A stat's row on the Gear page, and the area that shows its tooltip. */
-type StatRow = { stat: StatName; hit: Rectangle };
-type StatValue = { score: PixelLabel; modifier: PixelLabel };
 /** A read-only field of the character sheet: what it shows, and its tooltip. */
 type FieldDef = { caption: string; accent: number; value: (sheet: CharacterSheet) => string; topic: (sheet: CharacterSheet) => TipTopic };
 type Field = { field: SheetField; def: FieldDef };
@@ -131,8 +125,8 @@ export class InventoryOverlay {
   readonly container = new Container();
   private readonly root = new Container();
   private readonly squares: Square[] = [];
-  private readonly statValues = new Map<StatName, StatValue>();
-  private readonly statRows: StatRow[] = [];
+  private abilities: AbilityGrid | null = null;
+  private info: SheetInfoPanel | null = null;
   private readonly fields: Field[] = [];
   private proficiencies: ProficiencyPanel | null = null;
   /** What the rules make of the player's gear, as last drawn (for the tooltips). */
@@ -292,9 +286,9 @@ export class InventoryOverlay {
   }
 
   /**
-   * The Gear tab: each equipment square with its name to its right, a dividing line, then the stats (score
-   * and modifier) in the upper part, the Armor Class, hit point and damage fields under them, and the hero's
-   * proficiencies at the bottom. A whole row (square and name) takes a dropped item.
+   * The Gear tab: each equipment square with its name to its right, a dividing line, then the character
+   * sheet: the abilities in a row of cells, the Armor Class, hit point and damage fields, the hero's other
+   * numbers and saving throws, and their proficiencies. A whole row (square and name) takes a dropped item.
    */
   private buildGear(area: Rect, page: Container): void {
     const rowH = (area.h - 2 * PAD) / EQUIP_SLOTS.length;
@@ -312,25 +306,28 @@ export class InventoryOverlay {
     });
     page.addChild(new Graphics()
       .rect(dividerX, area.y + PAD, 1, area.h - 2 * PAD).fill({ color: SQUARE_EDGE, alpha: SQUARE_EDGE_ALPHA }));
-    const statsX = dividerX + COLUMN_GAP;
-    const valueX = area.x + area.w - PAD;
-    const statsH = (area.h - 2 * PAD) * STATS_SHARE;
-    const statRowH = statsH / STAT_NAMES.length;
-    STAT_NAMES.forEach((stat, i) => this.addStatRow(stat, statsX, valueX, area.y + PAD + i * statRowH + (statRowH - 8) / 2, page));
-    this.buildFields({ x: statsX, y: area.y + PAD + statsH, w: valueX - statsX, h: area.h - 2 * PAD - statsH }, page);
+    const statsX = Math.round(dividerX + COLUMN_GAP);
+    const colW = Math.round(area.x + area.w - PAD - statsX);
+    const top = Math.round(area.y + PAD);
+    this.abilities = new AbilityGrid(statsX, top, colW);
+    page.addChild(this.abilities.view);
+    this.buildSheet(statsX, top + ABILITY_CELL_H, colW, page);
   }
 
-  /** A rule across the stats column, the sheet's fields side by side, another rule, then the proficiencies. */
-  private buildFields(area: Rect, page: Container): void {
-    const top = this.addRule(area.x, area.y, area.w, page);
-    const w = Math.floor((area.w - FIELD_GAP * (FIELDS.length - 1)) / FIELDS.length);
+  /** Under the abilities: the sheet's fields side by side, the rest of the sheet, then the proficiencies, ruled apart. */
+  private buildSheet(x: number, y: number, w: number, page: Container): void {
+    const top = this.addRule(x, y, w, page);
+    const fieldW = Math.floor((w - FIELD_GAP * (FIELDS.length - 1)) / FIELDS.length);
     FIELDS.forEach((def, i) => {
-      const field = new SheetField(def.caption, Math.round(area.x + i * (w + FIELD_GAP)), top, w, FIELD_H, def.accent);
+      const field = new SheetField(def.caption, Math.round(x + i * (fieldW + FIELD_GAP)), top, fieldW, FIELD_H, def.accent);
       this.fields.push({ field, def });
       page.addChild(field.view);
     });
-    const below = this.addRule(area.x, top + FIELD_H, area.w, page);
-    this.proficiencies = new ProficiencyPanel(Math.round(area.x), below, Math.round(area.w));
+    const infoTop = this.addRule(x, top + FIELD_H, w, page);
+    this.info = new SheetInfoPanel(x, infoTop, w, this.abilities?.columnCentres() ?? []);
+    page.addChild(this.info.view);
+    const below = this.addRule(x, infoTop + this.info.height, w, page);
+    this.proficiencies = new ProficiencyPanel(x, below, w);
     page.addChild(this.proficiencies.view);
   }
 
@@ -346,19 +343,6 @@ export class InventoryOverlay {
     const placeholder = new PixelLabel(text('inventory.stats_tab_placeholder'), { color: THEME.muted, shadow: true });
     placeholder.position.set(Math.round(area.x + PAD * 2), Math.round(area.y + PAD * 2));
     page.addChild(placeholder);
-  }
-
-  /** A stat's row: its short name, its score (quiet) and its modifier (bright); the whole row shows its tooltip. */
-  private addStatRow(stat: StatName, x: number, valueX: number, y: number, page: Container): void {
-    const label = new PixelLabel(statShort(stat), { color: THEME.text, shadow: true });
-    const score = new PixelLabel('0', { color: THEME.muted, align: 'right', shadow: true });
-    const modifier = new PixelLabel('+0', { color: THEME.title, align: 'right', shadow: true });
-    label.position.set(Math.round(x), Math.round(y));
-    score.position.set(Math.round(valueX - SCORE_COLUMN), Math.round(y));
-    modifier.position.set(Math.round(valueX), Math.round(y));
-    this.statValues.set(stat, { score, modifier });
-    this.statRows.push({ stat, hit: new Rectangle(x - STAT_HIT_PAD, y - STAT_HIT_PAD, valueX - x + 2 * STAT_HIT_PAD, 8 + 2 * STAT_HIT_PAD) });
-    page.addChild(label, score, modifier);
   }
 
   /**
@@ -405,11 +389,9 @@ export class InventoryOverlay {
     }
     const sheet = characterSheet(player);
     this.sheet = sheet;
-    for (const [stat, row] of this.statValues) {
-      row.score.text = String(sheet.scores[stat]);
-      row.modifier.text = formatModifier(sheet.modifiers[stat]);
-    }
+    this.abilities?.set(sheet);
     for (const { field, def } of this.fields) field.set(def.value(sheet));
+    this.info?.set(sheet);
     this.proficiencies?.set(sheet);
     this.gold.text = text('inventory.gold', { amount: player.playerStats.gold });
     const kg = carriedWeight(player);
@@ -502,8 +484,10 @@ export class InventoryOverlay {
   private topicAt(x: number, y: number): TipTopic | null {
     const sheet = this.sheet;
     if (!sheet) return null;
-    const row = this.statRows.find((r) => r.hit.contains(x, y));
-    if (row) return statTopic(row.stat, sheet);
+    const stat = this.abilities?.statAt(x, y);
+    if (stat) return statTopic(stat, sheet);
+    const fact = this.info?.topicAt(x, y, sheet);
+    if (fact) return fact;
     const entry = this.fields.find((f) => f.field.hit.contains(x, y));
     if (entry) return entry.def.topic(sheet);
     if (this.proficiencies?.armorHit.contains(x, y)) return armorTrainingTopic(sheet);

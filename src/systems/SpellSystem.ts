@@ -45,8 +45,7 @@ function burst(bolt: Bolt, struck: boolean): void {
  */
 function spellBolt(caster: Player): AttackProfile {
   const sheet = characterSheet(caster);
-  const ability = sheet.heroClass.spellcasting ?? 'intelligence';
-  return { attackBonus: sheet.attack.proficiency + sheet.modifiers[ability], damage: SPELL_STATS.boltDice, mode: sheet.attack.mode };
+  return { attackBonus: sheet.spell.attack, damage: SPELL_STATS.boltDice, mode: sheet.attack.mode };
 }
 
 function canCast(caster: Player): boolean {

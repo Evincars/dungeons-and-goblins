@@ -3,7 +3,8 @@ import { text } from '../core/texts';
 import { statDescription, statName, statShort } from '../entities/Items';
 import type { CharacterSheet } from '../rules/CharacterSheet';
 import { formatDamage, formatDice, formatModifier } from '../rules/Dice';
-import { armorName, damageTypeName, featureName, trainingName, weaponName } from '../rules/Names';
+import { armorName, damageTypeName, dndClassName, featureName, trainingName, weaponName } from '../rules/Names';
+import { BASE_SPEED_FT } from '../rules/CharacterSheet';
 import type { TipTopic } from './InfoTooltip';
 
 /** The character sheet's tooltips: what each value means, and how the player's own one adds up. */
@@ -67,4 +68,47 @@ export function weaponTrainingTopic(sheet: CharacterSheet): TipTopic {
   const vars = { weapon: weaponName(attack.base), kind: trainingName(attack.rule.category), bonus: formatModifier(attack.proficiency) };
   const detail = [text(attack.proficient ? 'proficiency.weapon_trained' : 'proficiency.weapon_untrained', vars)];
   return { title: text('proficiency.weapons_title'), body: text('proficiency.weapons_description'), detail };
+}
+
+/** The proficiency bonus: what it is added to, and this hero's at their level. */
+export function proficiencyBonusTopic(sheet: CharacterSheet): TipTopic {
+  const detail = [text('sheet.proficiency.detail', { level: sheet.level, bonus: formatModifier(sheet.proficiency) })];
+  return { title: text('sheet.proficiency.name'), body: text('sheet.proficiency.description'), detail };
+}
+
+export function initiativeTopic(sheet: CharacterSheet): TipTopic {
+  const detail = [text('sheet.initiative.detail', { modifier: formatModifier(sheet.initiative) })];
+  return { title: text('sheet.initiative.name'), body: text('sheet.initiative.description'), detail };
+}
+
+/** Speed, and why it is down when heavy armour is too heavy for the hero. */
+export function speedTopic(sheet: CharacterSheet): TipTopic {
+  const armor = sheet.armorClass.armor;
+  const slowed = sheet.speed < BASE_SPEED_FT && armor;
+  const detail = [slowed ? text('sheet.speed.slowed', { armor: armorName(armor.base) }) : text('sheet.speed.detail', { feet: sheet.speed })];
+  return { title: text('sheet.speed.name'), body: text('sheet.speed.description'), detail };
+}
+
+export function perceptionTopic(sheet: CharacterSheet): TipTopic {
+  const detail = [text('sheet.passive.detail', { modifier: formatModifier(sheet.modifiers.wisdom), total: sheet.passivePerception })];
+  return { title: text('sheet.passive.name'), body: text('sheet.passive.description'), detail };
+}
+
+export function hitDiceTopic(sheet: CharacterSheet): TipTopic {
+  const detail = [text('sheet.hit_dice.detail', { count: sheet.level, die: sheet.heroClass.hitDie, class: dndClassName(sheet.heroClass.dndClass) })];
+  return { title: text('sheet.hit_dice.name'), body: text('sheet.hit_dice.description'), detail };
+}
+
+/** Spellcasting: the ability spells use, the attack bonus and save DC it gives (and a note for non-casters). */
+export function spellTopic(sheet: CharacterSheet): TipTopic {
+  const s = sheet.spell;
+  const detail = [text('sheet.spell.detail', { ability: statShort(s.ability), modifier: formatModifier(sheet.modifiers[s.ability]), attack: formatModifier(s.attack), dc: s.dc })];
+  if (!s.trained) detail.push(text('sheet.spell.untrained'));
+  return { title: text('sheet.spell.name'), body: text('sheet.spell.description'), detail };
+}
+
+/** Saving throws: how they are rolled, and the two this class is trained in. */
+export function savesTopic(sheet: CharacterSheet): TipTopic {
+  const trained = sheet.heroClass.savingThrows.map((stat) => `${statShort(stat)} ${formatModifier(sheet.saves[stat].bonus)}`).join(', ');
+  return { title: text('sheet.saves.name'), body: text('sheet.saves.description'), detail: [text('sheet.saves.detail', { list: trained })] };
 }

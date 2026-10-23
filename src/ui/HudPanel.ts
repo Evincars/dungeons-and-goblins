@@ -1,4 +1,4 @@
-import { Circle, Container, Graphics, Rectangle } from 'pixi.js';
+import { Circle, Container, Graphics } from 'pixi.js';
 import { localPlayer } from '../world';
 import type { Player } from '../world';
 import { GAME_HEIGHT, GAME_WIDTH } from '../render/Camera';

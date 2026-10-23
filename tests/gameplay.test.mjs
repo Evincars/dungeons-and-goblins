@@ -1454,3 +1454,32 @@ test('every character strip the game loads is a file in public/ (a moved folder 
   const missing = allCharacters().flatMap((def) => Object.values(def.clips).map((c) => c.src)).filter((src) => !existsSync(`public${src}`));
   assert.deepEqual(missing, []);
 });
+
+test('the character sheet: proficiency, initiative, speed, passive Perception, saving throws and spellcasting', async () => {
+  const { characterSheet } = await load('rules/CharacterSheet');
+  const vesper = createPlayer(centre(2), centre(2), 'vesper');
+  const sheet = characterSheet(vesper);
+  assert.equal(sheet.proficiency, 2);
+  assert.equal(sheet.initiative, 1, 'DEX 13');
+  assert.equal(sheet.speed, 30);
+  assert.equal(sheet.passivePerception, 11, '10 + WIS +1');
+  assert.deepEqual(sheet.saves.intelligence, { bonus: 4, proficient: true }, 'a wizard is trained in INT saves');
+  assert.deepEqual(sheet.saves.strength, { bonus: -1, proficient: false });
+  assert.deepEqual([sheet.spell.ability, sheet.spell.attack, sheet.spell.dc], ['intelligence', 4, 12], 'INT 15: +2 +2, DC 8 + 2 + 2');
+  vesper.equipped = { primary: { type: 'weapon', name: 'g', value: 1, gear: 'weapon', base: 'greatsword' } };
+  assert.equal(characterSheet(vesper).spell.attack, 4, 'an untrained weapon in hand does not spoil the spell');
+  const plate = { armor: { type: 'armor', name: 'p', value: 1, gear: 'armor', base: 'plate' } };
+  vesper.equipped = plate;
+  assert.equal(characterSheet(vesper).speed, 20, 'plate needs STR 15: Vesper (STR 8) is slowed');
+  const barbarian = playerAt(2, 2);
+  barbarian.equipped = plate;
+  assert.equal(characterSheet(barbarian).speed, 30, 'the barbarian (STR 15) is not');
+});
+
+test('everyone is proficient with an unarmed strike, even a wizard', async () => {
+  const { characterSheet } = await load('rules/CharacterSheet');
+  const sheet = characterSheet(createPlayer(centre(2), centre(2), 'vesper'));
+  assert.equal(sheet.attack.base, 'unarmed');
+  assert.equal(sheet.attack.proficient, true);
+  assert.equal(sheet.attack.attackBonus, 2 - 1, 'proficiency +2, STR -1');
+});

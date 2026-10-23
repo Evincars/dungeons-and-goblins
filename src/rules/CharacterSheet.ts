@@ -166,12 +166,60 @@ export function monsterAttack(type: MobType, weapon: WeaponBase): WeaponAttack {
   return attackWith({ item: null, base: weapon, twoHanded: false, proficiency: monster.proficiency, mode: 'normal' }, monster.modifiers);
 }
 
+/** A walker's pace in the tabletop game (feet a round), and what heavy armour too heavy for its wearer takes off. */
+export const BASE_SPEED_FT = 30;
+const HEAVY_ARMOR_SLOW_FT = 10;
+/** Passive checks and spell save DCs are a fixed base plus the bonuses: 10 for a passive check, 8 for a DC. */
+const PASSIVE_BASE = 10;
+const SPELL_DC_BASE = 8;
+
+/** A saving throw: the ability modifier, plus proficiency for the class's two trained saves. */
+export type SavingThrow = { bonus: number; proficient: boolean };
+
+/** A hero's spellcasting: the ability it uses, d20 + this to hit with a spell, and the DC foes must beat. */
+export type Spellcasting = { ability: StatName; attack: number; dc: number; trained: boolean };
+
 export type CharacterSheet = Abilities & {
   heroClass: HeroClass;
+  level: number;
+  /** The proficiency bonus at this level (+2 from 1 to 4). */
+  proficiency: number;
   armorClass: ArmorClass;
   attack: WeaponAttack;
   hitPoints: { current: number; max: number };
+  /** Who acts first: d20 + this (the DEX modifier). */
+  initiative: number;
+  /** Feet a round in the tabletop game. */
+  speed: number;
+  /** What the hero notices without looking: 10 + WIS. */
+  passivePerception: number;
+  saves: Record<StatName, SavingThrow>;
+  spell: Spellcasting;
 };
+
+/** Each ability's saving throw; the class's saves add the proficiency bonus. */
+function savingThrows(modifiers: Modifiers, cls: HeroClass, proficiency: number): Record<StatName, SavingThrow> {
+  const save = (stat: StatName): SavingThrow => {
+    const proficient = cls.savingThrows.includes(stat);
+    return { bonus: modifiers[stat] + (proficient ? proficiency : 0), proficient };
+  };
+  return {
+    strength: save('strength'), dexterity: save('dexterity'), constitution: save('constitution'),
+    intelligence: save('intelligence'), wisdom: save('wisdom'), charisma: save('charisma'),
+  } satisfies Record<StatName, SavingThrow>;
+}
+
+/** Heavy armour slows a wearer without the STR it asks for by 10 ft. */
+function speedIn(ac: ArmorClass, scores: Readonly<Record<StatName, number>>): number {
+  const needs = ac.armor ? armorRule(ac.armor.item)?.rule.strength : undefined;
+  return needs !== undefined && scores.strength < needs ? BASE_SPEED_FT - HEAVY_ARMOR_SLOW_FT : BASE_SPEED_FT;
+}
+
+/** Spells use the class's casting ability (anyone else: Intelligence, untrained but still proficient in the attack). */
+function spellcasting(cls: HeroClass, modifiers: Modifiers, proficiency: number): Spellcasting {
+  const ability = cls.spellcasting ?? 'intelligence';
+  return { ability, attack: proficiency + modifiers[ability], dc: SPELL_DC_BASE + proficiency + modifiers[ability], trained: cls.spellcasting !== null };
+}
 
 /** Everything the inventory's character sheet shows, from the player's class and what they wear. */
 export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' | 'health' | 'heroClass'>): CharacterSheet {
@@ -179,11 +227,20 @@ export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' |
   const cls = heroClass(player.heroClass);
   const scores = abilities(equipped, cls.abilities);
   const ac = armorClass(equipped, scores.modifiers, cls);
+  const level = player.playerStats.level;
+  const proficiency = proficiencyBonus(level);
   return {
     ...scores,
     heroClass: cls,
+    level,
+    proficiency,
     armorClass: ac,
-    attack: weaponAttack(equipped, scores.modifiers, player.playerStats.level, cls, ac.proficient),
+    attack: weaponAttack(equipped, scores.modifiers, level, cls, ac.proficient),
     hitPoints: { current: player.health.current, max: player.health.max },
+    initiative: scores.modifiers.dexterity,
+    speed: speedIn(ac, scores.scores),
+    passivePerception: PASSIVE_BASE + scores.modifiers.wisdom,
+    saves: savingThrows(scores.modifiers, cls, proficiency),
+    spell: spellcasting(cls, scores.modifiers, proficiency),
   };
 }

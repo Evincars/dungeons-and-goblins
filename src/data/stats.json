@@ -1,48 +1,48 @@
 {
-  "$comment": "Enemies, from the D&D 5e SRD monster blocks (source). health: hit points. ac: Armor Class. proficiency: proficiency bonus (+2 up to challenge 4, +3 from 5). abilities: the six scores (modifiers are worked out from them). weapons: the low-end weapons each one may carry, picked at random when it spawns (names from src/rules/WeaponTable.ts); it attacks with d20 + proficiency + STR (DEX for finesse) and deals the weapon's dice + the same modifier. deathPoints: XP for the kill. The heroes are in classes.json.",
+  "$comment": "Enemies, from the D&D 5e SRD monster blocks (source). health: hit points. ac: Armor Class. proficiency: proficiency bonus (+2 up to challenge 4, +3 from 5). abilities: the six scores (modifiers are worked out from them). weapons: the low-end weapons each one may carry, picked at random when it spawns (names from src/rules/WeaponTable.ts); it attacks with d20 + proficiency + STR (DEX for finesse) and deals the weapon's dice + the same modifier. xp: experience for the kill (SRD, by challenge rating; the party shares it). deathPoints: what the coins it drops are worth. The heroes are in classes.json.",
   "mobs": {
     "goblin": {
-      "source": "Goblin", "health": 7, "ac": 15, "proficiency": 2,
+      "source": "Goblin", "health": 7, "ac": 15, "proficiency": 2, "xp": 50,
       "abilities": { "strength": 8, "dexterity": 14, "constitution": 10, "intelligence": 10, "wisdom": 8, "charisma": 8 },
       "weapons": ["club", "dagger", "sickle", "light_hammer"], "deathPoints": 50
     },
     "skeleton": {
-      "source": "Skeleton", "health": 13, "ac": 13, "proficiency": 2,
+      "source": "Skeleton", "health": 13, "ac": 13, "proficiency": 2, "xp": 50,
       "abilities": { "strength": 10, "dexterity": 14, "constitution": 15, "intelligence": 6, "wisdom": 8, "charisma": 5 },
       "weapons": ["club", "dagger", "mace", "sickle"], "deathPoints": 8
     },
     "orc": {
-      "source": "Orc", "health": 15, "ac": 13, "proficiency": 2,
+      "source": "Orc", "health": 15, "ac": 13, "proficiency": 2, "xp": 100,
       "abilities": { "strength": 16, "dexterity": 12, "constitution": 16, "intelligence": 7, "wisdom": 11, "charisma": 10 },
       "weapons": ["club", "handaxe", "mace", "spear", "greatclub"], "deathPoints": 200
     },
     "troll": {
-      "source": "Troll", "health": 84, "ac": 15, "proficiency": 3,
+      "source": "Troll", "health": 84, "ac": 15, "proficiency": 3, "xp": 1800,
       "abilities": { "strength": 18, "dexterity": 13, "constitution": 20, "intelligence": 7, "wisdom": 9, "charisma": 7 },
       "weapons": ["greatclub", "club", "mace"], "deathPoints": 50
     },
     "goblin_grunt": {
-      "source": "Goblin", "health": 7, "ac": 15, "proficiency": 2,
+      "source": "Goblin", "health": 7, "ac": 15, "proficiency": 2, "xp": 50,
       "abilities": { "strength": 8, "dexterity": 14, "constitution": 10, "intelligence": 10, "wisdom": 8, "charisma": 8 },
       "weapons": ["club", "dagger", "sickle", "light_hammer"], "deathPoints": 50
     },
     "goblin_rogue": {
-      "source": "Goblin", "health": 7, "ac": 15, "proficiency": 2,
+      "source": "Goblin", "health": 7, "ac": 15, "proficiency": 2, "xp": 50,
       "abilities": { "strength": 8, "dexterity": 14, "constitution": 10, "intelligence": 10, "wisdom": 8, "charisma": 8 },
       "weapons": ["dagger", "sickle"], "deathPoints": 100
     },
     "goblin_warrior": {
-      "source": "Goblin Boss", "health": 21, "ac": 17, "proficiency": 2,
+      "source": "Goblin Boss", "health": 21, "ac": 17, "proficiency": 2, "xp": 200,
       "abilities": { "strength": 10, "dexterity": 14, "constitution": 10, "intelligence": 10, "wisdom": 8, "charisma": 10 },
       "weapons": ["handaxe", "mace", "spear"], "deathPoints": 200
     },
     "ghost_wizard": {
-      "source": "Specter", "health": 22, "ac": 12, "proficiency": 2,
+      "source": "Specter", "health": 22, "ac": 12, "proficiency": 2, "xp": 200,
       "abilities": { "strength": 1, "dexterity": 14, "constitution": 11, "intelligence": 10, "wisdom": 10, "charisma": 11 },
       "weapons": ["dagger"], "deathPoints": 160
     },
     "evil_wizard": {
-      "source": "Mage", "health": 40, "ac": 12, "proficiency": 3,
+      "source": "Mage", "health": 40, "ac": 12, "proficiency": 3, "xp": 2300,
       "abilities": { "strength": 9, "dexterity": 14, "constitution": 11, "intelligence": 17, "wisdom": 12, "charisma": 11 },
       "weapons": ["dagger", "quarterstaff"], "deathPoints": 320
     }

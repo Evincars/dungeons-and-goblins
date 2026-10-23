@@ -1,0 +1,39 @@
+{
+  "$comment": "Spells (D&D 5e SRD), cast with right click / R; the quick bar's keys 1-5 pick which. There are no spell slots: each spell has a recovery (seconds) before it can be cast again, and a short rest recovers them all. minLevel: the hero level a spell is learnt at. kind: bolt (a projectile; a spell attack, d20 + proficiency + casting ability, against AC), missiles (count darts that always hit), burst (everyone within radius px of the point aimed at — or of the caster when range is 0 — rolls a save against the spell DC: full damage on a failure, half on a success), heal (the caster, dice + casting ability). damage: dice notation; damageType: fire, cold, lightning, force, necrotic, radiant, thunder, acid. effect: [shape, colour] from src/assets/Effects.ts, played where it strikes (and as its icon); effectScale sizes it.",
+  "fire_bolt": {
+    "kind": "bolt", "minLevel": 1, "damage": "1d10", "damageType": "fire", "recovery": 0.75,
+    "effect": ["flame_lick", "coral"], "effectScale": 0.8
+  },
+  "ray_of_frost": {
+    "kind": "bolt", "minLevel": 1, "damage": "1d8", "damageType": "cold", "recovery": 0.75,
+    "effect": ["frost_shard", "azure"], "effectScale": 0.8
+  },
+  "chill_touch": {
+    "kind": "bolt", "minLevel": 1, "damage": "1d8", "damageType": "necrotic", "recovery": 0.75,
+    "effect": ["claw_swirl", "indigo"], "effectScale": 0.8
+  },
+  "chromatic_orb": {
+    "kind": "bolt", "minLevel": 1, "damage": "3d8", "damageType": "acid", "recovery": 5,
+    "effect": ["orb_bloom", "green"], "effectScale": 1
+  },
+  "magic_missile": {
+    "kind": "missiles", "minLevel": 1, "damage": "1d4+1", "damageType": "force", "count": 3, "recovery": 4,
+    "effect": ["spark_scatter", "violet"], "effectScale": 0.6
+  },
+  "burning_hands": {
+    "kind": "burst", "minLevel": 1, "damage": "3d6", "damageType": "fire", "save": "dexterity", "range": 56, "radius": 40, "recovery": 6,
+    "effect": ["cloud_burst", "coral"], "effectScale": 1.4
+  },
+  "thunderwave": {
+    "kind": "burst", "minLevel": 1, "damage": "2d8", "damageType": "thunder", "save": "constitution", "range": 0, "radius": 48, "recovery": 6,
+    "effect": ["ring_ripple", "white"], "effectScale": 1.6
+  },
+  "cure_wounds": {
+    "kind": "heal", "minLevel": 2, "damage": "1d8", "damageType": "radiant", "recovery": 10,
+    "effect": ["sparkle_ring", "green"], "effectScale": 1
+  },
+  "searing_smite": {
+    "kind": "bolt", "minLevel": 2, "damage": "2d6", "damageType": "radiant", "recovery": 3,
+    "effect": ["sun_flare", "amber"], "effectScale": 1
+  }
+}

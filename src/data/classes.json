@@ -1,0 +1,23 @@
+{
+  "$comment": "The hero classes a new game offers (D&D 5e SRD). character: the sprite set (src/characters/). hitDie: rolled per level in the tabletop game. hitPoints: what the hero has here (for now the same for everyone). abilities: the standard array (15, 14, 13, 12, 10, 8) placed as the class's quick build suggests. armor: light, medium, heavy, shield; weapons: simple, martial (wearing armour without proficiency gives disadvantage on attacks; a weapon without it loses the proficiency bonus). features: unarmored_defense (no armour: AC 10 + DEX + CON), fighting_style_defense (+1 AC in armour).",
+  "barbarian": {
+    "character": "fighter",
+    "hitDie": 12,
+    "hitPoints": 100,
+    "abilities": { "strength": 15, "dexterity": 13, "constitution": 14, "intelligence": 8, "wisdom": 12, "charisma": 10 },
+    "armor": ["light", "medium", "shield"],
+    "weapons": ["simple", "martial"],
+    "savingThrows": ["strength", "constitution"],
+    "features": ["unarmored_defense"]
+  },
+  "warrior": {
+    "character": "hooded_knight",
+    "hitDie": 10,
+    "hitPoints": 100,
+    "abilities": { "strength": 15, "dexterity": 13, "constitution": 14, "intelligence": 10, "wisdom": 12, "charisma": 8 },
+    "armor": ["light", "medium", "heavy", "shield"],
+    "weapons": ["simple", "martial"],
+    "savingThrows": ["strength", "constitution"],
+    "features": ["fighting_style_defense"]
+  }
+}

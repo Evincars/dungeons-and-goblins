@@ -3,28 +3,27 @@
 
   "stat.strength.short": "STR",
   "stat.strength.name": "Strength",
-  "stat.strength.description": "Raw physical power. Each point sharpens your sword and your arrows.",
+  "stat.strength.description": "Raw physical power: melee weapons add its modifier to hit and to damage, and heavy armour needs it. Points on gear also lengthen your swing.",
   "stat.dexterity.short": "DEX",
   "stat.dexterity.name": "Dexterity",
-  "stat.dexterity.description": "Agility and reflexes. Each point turns aside more of the damage you take.",
+  "stat.dexterity.description": "Agility and reflexes: ranged and finesse weapons add its modifier to hit and to damage, and it raises your Armor Class (fully in light armour, up to +2 in medium).",
   "stat.constitution.short": "CON",
   "stat.constitution.name": "Constitution",
-  "stat.constitution.description": "Toughness and stamina. Each point lets you sprint for longer.",
+  "stat.constitution.description": "Toughness and stamina: a Barbarian with no armour adds it to Armor Class. Points on gear let you sprint for longer.",
   "stat.intelligence.short": "INT",
   "stat.intelligence.name": "Intelligence",
-  "stat.intelligence.description": "Reasoning and arcane skill. Each point adds 2 damage to your spells.",
+  "stat.intelligence.description": "Reasoning and arcane skill: your Fire Bolt adds its modifier to hit.",
   "stat.wisdom.short": "WIS",
   "stat.wisdom.name": "Wisdom",
   "stat.wisdom.description": "Awareness and insight. It has no effect yet.",
   "stat.charisma.short": "CHA",
   "stat.charisma.name": "Charisma",
-  "stat.charisma.description": "Force of personality. Each point makes enemies drop 5% more coins.",
+  "stat.charisma.description": "Force of personality. Each point on gear makes enemies drop 5% more coins.",
 
   "slot.head": "Head",
   "slot.armor": "Armor",
-  "slot.primary": "Primary weapon",
-  "slot.secondary": "Secondary weapon",
-  "slot.legs": "Legs",
+  "slot.primary": "1st wpn",
+  "slot.secondary": "2nd wpn",
   "slot.medal": "Medal",
   "slot.other": "Other",
 
@@ -50,10 +49,12 @@
   "item.tooltip.stealth": "Stealth disadvantage",
   "item.tooltip.weapon_kind": "{base} ({category} {range})",
   "item.tooltip.armor_kind": "{base} ({category})",
+  "item.tooltip.untrained_weapon": "Not trained: no proficiency bonus",
+  "item.tooltip.untrained_armor": "Not trained: attacks at disadvantage",
 
   "sheet.ac.short": "AC",
   "sheet.ac.name": "Armor Class",
-  "sheet.ac.description": "How hard you are to hit: a blow lands when the attacker's d20 roll plus their bonus reaches your AC. With no armour it is 10 + your DEX modifier. Armour sets its own base instead (light adds all of DEX, medium at most +2, heavy none) and a shield adds +2.",
+  "sheet.ac.description": "How hard you are to hit: a blow lands when the attacker's d20 roll plus their bonus reaches your AC. With no armour it is 10 + your DEX modifier (a Barbarian adds CON too). Armour sets its own base instead (light adds all of DEX, medium at most +2, heavy none), a shield adds +2 and a Warrior's Defense style +1 in armour.",
   "sheet.ac.unarmored": "No armour: 10",
   "sheet.ac.armor": "{armor}: {ac}",
   "sheet.ac.dex": "DEX {modifier}",
@@ -61,10 +62,15 @@
   "sheet.ac.magic": "Magic {bonus}",
   "sheet.ac.shield": "Shield {bonus}",
   "sheet.ac.total": "= AC {total}",
+  "sheet.ac.feature": "{feature} {bonus}",
+
   "sheet.hp.short": "HP",
   "sheet.hp.name": "Hit Points",
-  "sheet.hp.description": "How much harm you can take before you fall. Your class will decide it (a fighter rolls a d10 a level, a wizard a d6, plus CON); for now every hero has 100.",
+  "sheet.hp.description": "How much harm you can take before you fall. In the tabletop game your class's hit die decides it (a d12 a level for a Barbarian, a d10 for a Warrior, plus CON); here every hero starts with 100.",
   "sheet.hp.detail": "{current} of {max} left",
+  "sheet.hp.value": "{current}/{max}",
+  "sheet.hp.hit_die": "Class hit die: d{die}",
+
   "sheet.dmg.short": "DMG",
   "sheet.dmg.name": "Weapon Damage",
   "sheet.dmg.description": "What a hit with your weapon deals: its dice plus a modifier. Melee weapons add STR, ranged ones DEX, and finesse weapons (dagger, shortsword, scimitar...) the better of the two. A magic weapon adds its bonus to hit and to damage; a versatile one hits harder with the other hand free.",
@@ -75,13 +81,79 @@
   "sheet.dmg.magic": "Magic {bonus}",
   "sheet.dmg.total": "= {dice}",
   "sheet.dmg.to_hit": "To hit: d20 {bonus} (proficiency {proficiency})",
+  "sheet.dmg.disadvantage": "Disadvantage: untrained armour",
+
   "stat.score_detail": "Score {score} ({base} base, {gear} from gear)\nModifier {modifier}",
+
+  "roll.hit": "{natural}{bonus}={total} HIT",
+  "roll.miss": "{natural}{bonus}={total} MISS",
+  "roll.crit_hit": "NAT 20 CRIT HIT!",
+  "roll.crit_miss": "NAT 1 CRIT MISS",
+  "roll.damage": "{dice}: {amount}",
+  "roll.damage_flat": "{amount} dmg",
+
+  "proficiency.title": "{class} proficiencies",
+
+  "proficiency.armor": "Armour",
+
+  "proficiency.weapons": "Weapons",
+
+  "proficiency.warning_armor": "Untrained armour: disadvantage!",
+
+  "proficiency.warning_weapon": "Untrained weapon: no prof. bonus",
+
+  "proficiency.armor_title": "Armour Proficiency",
+
+  "proficiency.armor_description": "Your class decides which armour you are trained in. Wearing armour you are not trained in gives disadvantage on every attack roll: two d20s are rolled and the lower one counts.",
+
+  "proficiency.armor_trained": "{armor} ({kind}): trained",
+
+  "proficiency.armor_untrained": "{armor} ({kind}): NOT trained",
+
+  "proficiency.weapons_title": "Weapon Proficiency",
+
+  "proficiency.weapons_description": "Simple weapons (clubs, daggers, spears, short bows) and martial ones (swords, axes, polearms, longbows). A weapon you are trained in adds your proficiency bonus (+2 at level 1) to hit; others don't.",
+
+  "proficiency.weapon_trained": "{weapon} ({kind}): trained, {bonus} to hit",
+
+  "proficiency.weapon_untrained": "{weapon} ({kind}): NOT trained",
+
+  "training.light": "light",
+  "training.medium": "medium",
+  "training.heavy": "heavy",
+  "training.shield": "shields",
+  "training.simple": "simple",
+  "training.martial": "martial",
+
+  "class.barbarian.name": "Barbarian",
+  "class.barbarian.blurb": "A fierce warrior of primal rage, toughest of all heroes. Fights best in light gear, or none.",
+
+  "class.warrior.name": "Warrior",
+  "class.warrior.blurb": "A trained soldier, at home in any armour and with any weapon.",
+
+  "feature.unarmored_defense.name": "Unarmored Defense",
+  "feature.unarmored_defense.description": "With no armour on, AC is 10 + DEX + CON (a shield still adds).",
+
+  "feature.fighting_style_defense.name": "Fighting Style: Defense",
+  "feature.fighting_style_defense.description": "+1 AC while wearing armour.",
+
+  "select.title": "CHOOSE YOUR HERO",
+  "select.back": "Back",
+  "select.continue": "Continue",
+  "select.ability": "{stat} {score} ({modifier})",
+  "select.hit_points": "Hit die d{die}    {hp} HP",
+  "select.armor": "Armour: {list}",
+  "select.weapons": "Weapons: {list}",
+  "select.saves": "Saving throws: {list}",
 
   "rules.weapon.unarmed": "Unarmed strike",
   "rules.weapon.club": "Club",
   "rules.weapon.dagger": "Dagger",
   "rules.weapon.punch_dagger": "Punch dagger",
   "rules.weapon.greatclub": "Greatclub",
+  "rules.weapon.handaxe": "Handaxe",
+  "rules.weapon.javelin": "Javelin",
+  "rules.weapon.light_hammer": "Light hammer",
   "rules.weapon.mace": "Mace",
   "rules.weapon.quarterstaff": "Quarterstaff",
   "rules.weapon.sickle": "Sickle",
@@ -104,6 +176,7 @@
   "rules.weapon.longbow": "Longbow",
   "rules.weapon.pistol": "Pistol",
   "rules.weapon.musket": "Musket",
+
   "rules.armor.padded": "Padded armour",
   "rules.armor.leather": "Leather armour",
   "rules.armor.studded_leather": "Studded leather",
@@ -117,17 +190,22 @@
   "rules.armor.splint": "Splint",
   "rules.armor.plate": "Plate",
   "rules.armor.shield": "Shield",
+
   "rules.armor_category.light": "light armour",
   "rules.armor_category.medium": "medium armour",
   "rules.armor_category.heavy": "heavy armour",
   "rules.armor_category.shield": "shield",
+
   "rules.damage.bludgeoning": "bludgeoning",
   "rules.damage.piercing": "piercing",
   "rules.damage.slashing": "slashing",
+
   "rules.category.simple": "simple",
   "rules.category.martial": "martial",
+
   "rules.range.melee": "melee",
   "rules.range.ranged": "ranged",
+
   "rules.property.finesse": "Finesse",
   "rules.property.light": "Light",
   "rules.property.heavy": "Heavy",
@@ -152,7 +230,7 @@
   "menu.title.join": "Join game",
   "menu.title.settings": "Settings",
   "menu.title.exit": "Exit",
-  "menu.title.controls_hint": "WASD move   Mouse aim   Click sword   RMB/Q spell\nE use   TAB inventory   SHIFT sprint   ESC pause",
+  "menu.title.controls_hint": "WASD move   Mouse aim   Click attack   Q swap weapons   RMB/R spell\nE use   TAB inventory   SHIFT sprint   ESC pause",
   "menu.title.farewell": "Close this browser tab to leave the dungeon.",
 
   "menu.pause.resume": "Resume",
@@ -185,28 +263,44 @@
   "keys.action.left": "LEFT",
   "keys.action.right": "RIGHT",
   "keys.action.sprint": "SPRINT",
-  "keys.action.attack": "SWORD",
+  "keys.action.attack": "ATTACK",
   "keys.action.cast": "SPELL",
+  "keys.action.swap": "SWAP WPN",
   "keys.action.use": "USE",
   "keys.action.inventory": "INVENTORY",
 
   "coop.host_title": "Host game",
+
   "coop.join_title": "Join game",
+
   "coop.invite_aria_host": "Invite link",
+
   "coop.invite_aria_guest": "Host invite link or peer ID",
+
   "coop.invite_placeholder": "Paste the invite link",
+
   "coop.action_host": "Copy invite",
+
   "coop.action_guest": "Connect",
+
   "coop.name_label": "Your name",
+
   "coop.settings": "Settings",
+
   "coop.start": "Start game",
+
   "coop.cancel": "Cancel",
+
   "coop.paste_prompt": "Paste the link your host sent you.",
+
   "coop.invite_copied": "Invite copied. Send it to the other players.",
+
   "coop.roster": "Players in the room\n{players}",
+
   "coop.lobby_error_scope": "Co-op lobby",
 
   "coop.roster_host_tag": " (host)",
+
   "coop.status.players_in_room": "{count} of {max} players in the room.",
   "coop.status.connecting": "Connecting to PeerJS...",
   "coop.status.signaling_lost": "Signaling disconnected. Return to the menu and reconnect.",
@@ -222,12 +316,17 @@
   "coop.status.connected": "Connected. Waiting for the host to start.",
   "coop.status.host_silent": "The host stopped answering.",
   "coop.status.player_silent": "{name} stopped answering.",
+
   "coop.default_host_name": "Host",
+
   "coop.default_player_name": "Player {number}",
 
   "game.depth": "Depth {depth}",
+
   "game.host_paused": "The host paused the game",
+
   "game.joining": "Joining the host...",
+
   "game.level_complete.title": "LEVEL COMPLETE",
   "game.level_complete.kills": "Kills: {count}",
   "game.level_complete.xp": "XP gained: {count}",
@@ -235,6 +334,7 @@
   "game.level_complete.waiting": "Waiting for the host...",
   "game.level_complete.next": "Next Level",
   "game.level_complete.end_run": "End Run",
+
   "game.game_over.title": "GAME OVER",
   "game.game_over.depth": "Depth reached: {depth}",
   "game.game_over.kills": "Total kills: {count}",

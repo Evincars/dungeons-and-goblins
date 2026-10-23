@@ -113,7 +113,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `src/level/generators/DungeonConfig.ts`; enemy AI knobs (sight, squad sizes, flanking, trail
   following) in `src/ai/constants.ts`; the D&D rules tables (SRD weapons and armour) in `src/rules/WeaponTable.ts`
   and `src/rules/ArmorTable.ts`; hero classes (abilities, hit points, proficiencies, features) in
-  `src/data/classes.json`; enemies' SRD monster blocks (AC, abilities, weapons, hit points) in `src/data/stats.json`.
+  `src/data/classes.json`; enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`;
+  spells (dice, recovery, save, area, effect) in `src/data/spells.json`.
 - Type such tables with `satisfies Record<Key, Shape>` so a missing or misspelt key is a compile error.
 
 ## 8. Design patterns for 2-D games in TypeScript (as used here)
@@ -157,12 +158,17 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   Items name their rules entry with `base` and their magic with `bonus` (+0…+3) in `src/data/*.json`. Every blow
   in play goes through `systems/Strike.ts`, which logs the roll over the attacker's head (`RollLogSystem.ts`,
   drawn by `RollTextSystem.ts`) and into the level's combat log (`CombatLogSystem.ts`, one synced entity, shown by
-  `ui/CombatLogPanel.ts`).
+  `ui/CombatLogPanel.ts`), and spends a won initiative's first strike as advantage (`systems/InitiativeSystem.ts`).
+  Spells (`Spells.ts`, from `src/data/spells.json`: bolt, missiles, burst with a save, heal) have no slots but a
+  recovery each (`spellbook.recovery`), are picked on the quick bar (`playerInput.spellSlot`) and cast by
+  `systems/SpellSystem.ts` with effects from the library (`assets/Effects.ts`). Experience follows the SRD
+  (`game/Progress.ts`, monster `xp`); hit points per level and hit dice are in `rules/HitPoints.ts`.
 - `src/entities/` — factories and stat tables. `src/render/` — sheets, camera, terrain layers.
 - `src/core/` — cross-cutting: `errors/`, `log/`, `geometry.ts`, `guards.ts`, `debugHooks.ts`, `compression.ts` (gzip with a size limit).
-- `src/game/` — game loop, `SceneManager`, persisted settings, player actions. `src/scenes/` — title, settings,
+- `src/game/` — game loop, `SceneManager`, persisted settings, player actions, resting (`Rest.ts`: hit dice, short
+  and long rests, the co-op rest vote on one synced `restState` entity). `src/scenes/` — title, settings,
   key bindings, character select, co-op lobby and the level itself. `src/ui/` — buttons, HUD (health bar, round
-  buttons, `HudDialog`, `MinimapView`), combat log, the inventory's character sheet (`AbilityGrid`, `SheetField`,
+  buttons, `HudDialog`, `MinimapView`, `QuickBar`, `RestMenu`, `RestBanner`), combat log, the inventory's character sheet (`AbilityGrid`, `SheetField`,
   `SheetInfoPanel`, `ProficiencyPanel`, tooltips in `SheetTopics`), panels, pause menu. On-screen controls call `claimPointer` (systems/InputSystem.ts) while
   under the pointer, so their clicks are not attacks.
 - `src/network/` — co-op: `protocol.ts` (messages and their validators), `CoopSession.ts` (PeerJS room),

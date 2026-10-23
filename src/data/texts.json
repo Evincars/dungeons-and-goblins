@@ -238,6 +238,9 @@
   "hud.button.level": "Level",
   "hud.button.map": "Map",
   "hud.dialog.placeholder": "test text",
+  "map.legend.you": "You",
+  "map.legend.treasure": "Treasure",
+  "map.legend.hole": "Hole",
 
   "shop.title": "SHOP",
   "shop.close_hint": "E to close",

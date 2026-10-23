@@ -29,17 +29,21 @@ const TOGGLE = 9;
 /** Players' blows read gold, enemies' red. */
 const PLAYER_COLOR = 0xf2d27a;
 const MOB_COLOR = 0xff8a7a;
+/** Coins and finds read pale gold. */
+const LOOT_COLOR = 0xffe08a;
 /** Entries kept for scrolling back. */
 const HISTORY = 60;
 
 type Line = { text: string; color: number };
 
-/** One blow as the log writes it: "Evincars 20 to hit, 9 dmg", "Orc 12 to hit, miss". */
+/** One line as the log writes it: "Evincars 20 to hit, 9 dmg", "Orc 12 to hit, miss", "Evincars +12 gold". */
 function describe(entry: CombatLogEntry): Line {
   const kind = entry.actor === 'mob' ? entry.name : '';
   const name = isMobType(kind) ? text(`mob.${kind}` as const) : entry.name;
-  const vars = { name, total: entry.total, damage: entry.damage, spell: entry.spell ? spellName(entry.spell) : '' };
-  const line = entry.spell ? text(`combat_log.spell.${entry.result}` as const, vars) : text(`combat_log.${entry.result}` as const, vars);
+  const vars = { name, total: entry.total, damage: entry.damage, spell: entry.spell ? spellName(entry.spell) : '', item: entry.item ?? '' };
+  const result = entry.result;
+  if (result === 'gold' || result === 'need' || result === 'won') return { text: text(`combat_log.${result}`, vars), color: LOOT_COLOR };
+  const line = entry.spell ? text(`combat_log.spell.${result}`, vars) : text(`combat_log.${result}`, vars);
   return { text: line, color: entry.actor === 'mob' ? MOB_COLOR : PLAYER_COLOR };
 }
 

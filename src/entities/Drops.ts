@@ -1,15 +1,21 @@
-import { createItemPickup, spillMoney } from './LootFactory';
+import type { Player } from '../world';
+import { createItemPickup } from './LootFactory';
 import { ARMORS, HAND_WEAPONS, SHIELDS, randomItem } from './ItemCatalog';
+import { pay } from '../game/Purse';
+import { offerLoot } from '../game/LootRoll';
 
 /**
  * What something leaves behind when opened or broken, as data: a table of weighted entries, each a kind
- * of drop with its own handler: coins, or a piece of gear. A new kind (a potion, a key) is a new member of
- * `Drop` and a handler in `DROP_HANDLERS`, and every table can use it.
+ * of drop with its own handler: coins (paid straight to whoever found them), or a piece of gear (on the
+ * floor, or — a rare one in co-op — rolled for by the party). A new kind (a potion, a key) is a new member
+ * of `Drop` and a handler in `DROP_HANDLERS`, and every table can use it.
  */
 export type Drop =
   | { kind: 'coins'; min: number; max: number }
   /** One random thing from the catalogues: a weapon, a shield or a suit of armour. */
-  | { kind: 'gear' };
+  | { kind: 'gear' }
+  /** Nothing at all (most kills give up no gear). */
+  | { kind: 'none' };
 
 export type DropTable = {
   /** Always dropped. */
@@ -19,20 +25,30 @@ export type DropTable = {
   entries: ReadonlyArray<{ weight: number; drop: Drop }>;
 };
 
-type DropHandlers = { [K in Drop['kind']]: (x: number, y: number, drop: Extract<Drop, { kind: K }>) => void };
+/** `finder`: who opened or killed it, paid the coins. */
+type DropHandlers = { [K in Drop['kind']]: (x: number, y: number, drop: Extract<Drop, { kind: K }>, finder: Player | undefined) => void };
 
 /** Gear a chest may hold: every hand weapon, shield and suit of armour. */
 const GEAR = [...HAND_WEAPONS, ...SHIELDS, ...ARMORS];
 
 const DROP_HANDLERS: DropHandlers = {
-  coins: (x, y, drop) => spillMoney(x, y, drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1))),
-  gear: (x, y) => { createItemPickup(x, y, randomItem(GEAR)); },
+  coins: (_x, _y, drop, finder) => { if (finder) pay(finder, drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1))); },
+  gear: (x, y) => {
+    const item = randomItem(GEAR);
+    if (!offerLoot(item)) createItemPickup(x, y, item);
+  },
+  none: () => undefined,
 };
+
+/** One kill in this many gives up a piece of gear. */
+const MOB_GEAR_ONE_IN = 12;
 
 /** The drop tables, by what drops them. */
 export const DROP_TABLES = {
   // A chest always holds a weapon or armour, and some coins.
   chest: { always: [{ kind: 'gear' }], rolls: 1, entries: [{ weight: 1, drop: { kind: 'coins', min: 10, max: 30 } }] },
+  // An enemy's coins are its kill reward (entities/LootFactory.ts); now and then it also drops gear.
+  mob: { always: [], rolls: 1, entries: [{ weight: MOB_GEAR_ONE_IN - 1, drop: { kind: 'none' } }, { weight: 1, drop: { kind: 'gear' } }] },
 } as const satisfies Record<string, DropTable>;
 
 export type DropTableId = keyof typeof DROP_TABLES;
@@ -50,19 +66,20 @@ function pickEntry(table: DropTable): Drop | undefined {
   return table.entries[table.entries.length - 1]?.drop;
 }
 
-function dropOne(x: number, y: number, drop: Drop): void {
+function dropOne(x: number, y: number, drop: Drop, finder: Player | undefined): void {
   switch (drop.kind) {
-    case 'coins': DROP_HANDLERS.coins(x, y, drop); break;
-    case 'gear': DROP_HANDLERS.gear(x, y, drop); break;
+    case 'coins': DROP_HANDLERS.coins(x, y, drop, finder); break;
+    case 'gear': DROP_HANDLERS.gear(x, y, drop, finder); break;
+    case 'none': DROP_HANDLERS.none(x, y, drop, finder); break;
   }
 }
 
-/** Rolls a table and throws out what it gives, at (x, y). */
-export function spawnDrops(x: number, y: number, id: DropTableId): void {
+/** Rolls a table and gives out what it holds at (x, y): coins to `finder`, gear on the floor or to the party's roll. */
+export function spawnDrops(x: number, y: number, id: DropTableId, finder?: Player): void {
   const table: DropTable = DROP_TABLES[id];
-  for (const drop of table.always) dropOne(x, y, drop);
+  for (const drop of table.always) dropOne(x, y, drop, finder);
   for (let i = 0; i < table.rolls; i++) {
     const drop = pickEntry(table);
-    if (drop) dropOne(x, y, drop);
+    if (drop) dropOne(x, y, drop, finder);
   }
 }

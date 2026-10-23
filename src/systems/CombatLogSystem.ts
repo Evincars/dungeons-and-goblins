@@ -1,5 +1,5 @@
 import { world, isPlayer } from '../world';
-import type { BlowResult, CombatLogEntry, Entity } from '../world';
+import type { BlowResult, CombatLogEntry, Entity, LogResult } from '../world';
 import type { SpellId } from '../rules/Spells';
 import { text } from '../core/texts';
 import type { AttackOutcome } from '../rules/Combat';
@@ -27,12 +27,26 @@ function actorOf(attacker: Entity): Pick<CombatLogEntry, 'actor' | 'name'> {
   return { actor: 'player', name: (isPlayer(attacker) && attacker.playerName) || text('combat_log.default_hero') };
 }
 
+/** The longest item name an entry carries (catalogue names are shorter). */
+export const MAX_LOG_ITEM = 40;
+
 /** Writes one entry into the log. */
-function record(attacker: Entity, total: number, result: BlowResult, damage: number, spell: SpellId | undefined): void {
+function record(attacker: Entity, total: number, result: LogResult, damage: number, spell: SpellId | undefined, item?: string): void {
   const log = theLog();
   log.seq++;
-  log.entries.push({ seq: log.seq, ...actorOf(attacker), total, result, damage, ...(spell ? { spell } : {}) });
+  const about = { ...(spell ? { spell } : {}), ...(item ? { item: item.slice(0, MAX_LOG_ITEM) } : {}) };
+  log.entries.push({ seq: log.seq, ...actorOf(attacker), total, result, damage, ...about });
   if (log.entries.length > MAX_LOG_ENTRIES) log.entries.shift();
+}
+
+/** Writes coins a hero was paid (a kill, a chest, a stash). */
+export function recordGold(player: Entity, amount: number): void {
+  record(player, 0, 'gold', amount, undefined);
+}
+
+/** Writes a hero's d20 of need for a rare find, or that they won it. */
+export function recordLoot(player: Entity, result: Extract<LogResult, 'need' | 'won'>, total: number, item: string): void {
+  record(player, total, result, 0, undefined, item);
 }
 
 /** Writes one rolled blow into the log (`spell`: the spell it was, for a spell attack). */

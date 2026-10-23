@@ -1,5 +1,7 @@
 import { world, q, isActivePlayer } from '../world';
 import type { Level } from '../level/Level';
+import { text } from '../core/texts';
+import { logLine } from './RollLogSystem';
 import { createTile, TileType, TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
 import { sound } from '../audio/SoundPlayer';
 import { GATE_LIFT } from '../entities/DungeonFactory';
@@ -9,6 +11,9 @@ const RESPAWN_TILES_PAST_DOOR = 2;
 /** A raised portcullis takes this many ticks to slide up out of sight, rising this far. */
 const GATE_RISE_TICKS = 45;
 const GATE_RISE = 34;
+/** Once open, the gate shuts on the safe room after this long (10 s): whoever is still inside dies. */
+export const GATE_CLOSE_TICKS = 600;
+const TICKS_PER_SECOND = 60;
 
 const doors = world.with('door', 'position');
 const gates = world.with('gate', 'position');
@@ -34,6 +39,7 @@ function wallUp(level: Level, door: Door): void {
 
 function seal(level: Level, door: Door): void {
   const d = door.door;
+  d.closingTicks = null;
   wallUp(level, door);
   // The safe room is now unreachable, so respawn just past the door instead.
   const mid = d.tiles[Math.floor(d.tiles.length / 2)];
@@ -49,11 +55,12 @@ function clearWay(level: Level, door: Door): void {
   }
 }
 
-/** The lever was pulled: the doorway opens and every portcullis starts to rise. */
+/** The lever was pulled: the doorway opens, every portcullis starts to rise, and the countdown to shutting it starts. */
 export function unlockDoors(level: Level): void {
   for (const door of doors) {
     if (!door.door.locked) continue;
     door.door.locked = false;
+    door.door.closingTicks = GATE_CLOSE_TICKS;
     clearWay(level, door);
     sound.playSound('door_open', door.position.x, door.position.y);
   }
@@ -81,10 +88,39 @@ export function mirrorSealedDoors(level: Level): void {
   for (const gate of gates) if (gate.sprite) gate.sprite.alpha = 1 - gate.gate.lift;
 }
 
-/** Raises unlocked gates, and seals each opened door once every living player has crossed into the dungeon. */
+/** The gate shut on whoever stayed in the safe room: they die there (unless the console made them a god). */
+function crushStragglers(boundaryX: number): void {
+  for (const p of q.players) {
+    if (!isActivePlayer(p) || p.position.x > boundaryX || p.godMode) continue;
+    p.health.current = 0;
+    logLine(p, text('roll.crushed'), 'fumble');
+  }
+}
+
+/** Seconds left until an open gate shuts on the safe room, while one is counting down (for the banner); null otherwise. */
+export function gateCountdown(): number | null {
+  for (const door of doors) {
+    const left = door.door.closingTicks;
+    if (left !== null && !door.door.closed) return Math.ceil(left / TICKS_PER_SECOND);
+  }
+  return null;
+}
+
+/**
+ * Raises unlocked gates, and seals each opened door once every living player has crossed into the dungeon —
+ * or when its ten seconds are up, on whoever is still inside.
+ */
 export function updateDoors(level: Level): void {
   raiseGates();
   for (const door of doors) {
-    if (!door.door.closed && !door.door.locked && everyoneLeft(door.door.boundaryX)) seal(level, door);
+    const d = door.door;
+    if (d.closed || d.locked) continue;
+    if (everyoneLeft(d.boundaryX)) {
+      seal(level, door);
+      continue;
+    }
+    if (d.closingTicks === null || --d.closingTicks > 0) continue;
+    crushStragglers(d.boundaryX);
+    seal(level, door);
   }
 }

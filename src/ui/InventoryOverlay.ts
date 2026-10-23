@@ -1,6 +1,6 @@
 import { Container, Graphics, Rectangle, Sprite } from 'pixi.js';
 import type { FederatedPointerEvent } from 'pixi.js';
-import { EQUIP_SLOTS, localPlayer } from '../world';
+import { EQUIP_SLOTS, localPlayer, q } from '../world';
 import type { BagSquare, EquipSlot, InventoryItem, Player } from '../world';
 import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
 import { getTexture } from '../assets/Textures';
@@ -16,7 +16,10 @@ import { SheetInfoPanel } from './SheetInfoPanel';
 import { text } from '../core/texts';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
-import { INVENTORY_COLS, INVENTORY_ROWS, MAX_CARRY_KG, carriedWeight, freeSquare, moveItem, requestLoadout } from '../game/PlayerActions';
+import { INVENTORY_COLS, INVENTORY_ROWS, MAX_CARRY_KG, carriedWeight, freeSquare, moveItem, requestGive, requestLoadout } from '../game/PlayerActions';
+import { seatOf } from '../game/Party';
+import { PopupMenu } from './PopupMenu';
+import type { MenuRow } from './PopupMenu';
 import type { ItemPlace } from '../game/PlayerActions';
 import { itemIcon, slotFor, slotLabel } from '../entities/Items';
 import { characterSheet } from '../rules/CharacterSheet';
@@ -38,6 +41,8 @@ const TAB_HOVER_ALPHA = 0.06;
 const TAB_ACTIVE_ALPHA = 0.12;
 const TAB_IDLE_DIM = 0.35;
 const TAB_UNDERLINE = 2;
+/** The mouse button that opens an item's menu. */
+const RIGHT_BUTTON = 2;
 /** Where the title (the hero's name) sits, above the bag panel. */
 const TITLE = { x: 80, y: 6 };
 /** The weight carried shows under the gold; it turns orange past this share of what can be carried. */
@@ -134,6 +139,8 @@ export class InventoryOverlay {
   /** What the rules make of the player's gear, as last drawn (for the tooltips). */
   private sheet: CharacterSheet | null = null;
   private readonly infoTip = new InfoTooltip();
+  /** An item's right-click menu (send it to another player). */
+  private readonly itemMenu = new PopupMenu();
   private readonly gold = new PixelLabel('', { color: 0xffcc00, align: 'right', shadow: true });
   private readonly tooltip = new ItemTooltip();
   private readonly ghost = new Sprite();
@@ -170,6 +177,7 @@ export class InventoryOverlay {
     if (!visible) {
       this.endDrag();
       this.infoTip.hide();
+      this.itemMenu.hide();
     }
   }
 
@@ -217,7 +225,7 @@ export class InventoryOverlay {
     this.ghost.anchor.set(0.5);
     this.ghost.alpha = GHOST_ALPHA;
     this.ghost.visible = false;
-    this.root.addChild(this.ghost, this.tooltip.view, this.infoTip.view);
+    this.root.addChild(this.ghost, this.tooltip.view, this.infoTip.view, this.itemMenu.view);
   }
 
   /** A clickable tab over the art's tab: it lights up under the pointer and when open, and shows its page. */
@@ -424,6 +432,26 @@ export class InventoryOverlay {
     return this.squares.find((s) => (!s.page || s.page.visible) && (forDrop ? s.zone : s.box).contains(p.x, p.y));
   }
 
+  /**
+   * Right-click on an item: a menu of what can be done with it — for now, send it to another player (into
+   * the first free square of their bag).
+   */
+  private openItemMenu(player: Player, e: FederatedPointerEvent): void {
+    const square = this.squareAt(e);
+    if (!square || !this.itemIn(player, square.place)) return;
+    const place = square.place;
+    const rows: MenuRow[] = [];
+    for (const other of q.players) {
+      if (other === player) continue;
+      const name = other.playerName ?? '';
+      rows.push({ label: text('inventory.menu.send_to', { name }), action: () => requestGive(player, place, seatOf(other)) });
+    }
+    if (!rows.length) rows.push({ label: text('inventory.menu.no_one'), action: null });
+    const p = this.root.toLocal(e.global);
+    this.tooltip.hide();
+    this.itemMenu.show(rows, p.x, p.y, { w: DESIGN_W, h: DESIGN_H });
+  }
+
   /** Whether the pointer is on the sheet's hit dice (a click spends one). */
   private onHitDice(e: FederatedPointerEvent): boolean {
     const p = this.root.toLocal(e.global);
@@ -463,6 +491,13 @@ export class InventoryOverlay {
 
   private startDrag(e: FederatedPointerEvent): void {
     const player = localPlayer();
+    // A press on the menu is for its rows; anywhere else closes it.
+    if (this.itemMenu.covers(e.global)) return;
+    this.itemMenu.hide();
+    if (player && e.button === RIGHT_BUTTON) {
+      this.openItemMenu(player, e);
+      return;
+    }
     if (player && this.onHitDice(e)) {
       requestHitDie(player);
       // Its tooltip counted the die just spent; it comes back up to date at the next move.
@@ -488,7 +523,7 @@ export class InventoryOverlay {
     this.ghost.position.set(p.x, p.y);
     const player = localPlayer();
     const square = this.squareAt(e);
-    const item = player && square && !this.dragging ? this.itemIn(player, square.place) : undefined;
+    const item = player && square && !this.dragging && !this.itemMenu.open ? this.itemIn(player, square.place) : undefined;
     if (item) this.tooltip.show(item, p.x, p.y, { w: DESIGN_W, h: DESIGN_H }, this.sheet?.heroClass);
     else this.tooltip.hide();
     this.updateInfoTip(p.x, p.y);

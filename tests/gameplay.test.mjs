@@ -48,7 +48,7 @@ const { updateHoles } = await load('systems/HoleSystem');
 const { moveItem, addToBag, carriedWeight } = await load('game/PlayerActions');
 const { statTotals } = await load('entities/Items');
 const { spawnDrops } = await load('entities/Drops');
-const { createLoot, dropLoot, LOOT_KINDS } = await load('entities/LootFactory');
+const { createLoot, killReward, LOOT_KINDS } = await load('entities/LootFactory');
 const { updateInventory } = await load('systems/InventorySystem');
 const { updateLoot } = await load('systems/LootSystem');
 const { updateArrows } = await load('systems/ArrowSystem');
@@ -60,6 +60,8 @@ const { giveStartingKit } = await load('game/Run');
 const PlayerActions = await load('game/PlayerActions');
 const { slotFor } = await load('entities/Items');
 const { prepareLevel } = await load('level/DungeonGenerator');
+const { updateDeath } = await load('systems/DeathSystem');
+const { currentLog } = await load('systems/CombatLogSystem');
 
 const centre = (t) => t * TILE_WIDTH + TILE_WIDTH / 2;
 const tileOf = (level, e) => ({ x: Math.floor(e.position.x / TILE_WIDTH), y: Math.floor(e.position.y / TILE_WIDTH) });
@@ -654,16 +656,18 @@ test('dragging items: they stay on the square they are dropped on, gear is worn 
   assert.deepEqual(statTotals({ primary: axe, head: helm }), { strength: 3, dexterity: 1, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 });
 });
 
-test('an opened chest throws out a weapon or armour and some coins; walking over the gear picks it up', () => {
-  spawnDrops(centre(3), centre(3), 'chest');
-  const coins = world.entities.filter((e) => e.loot);
+test('an opened chest pays its coins straight to the opener and throws out a weapon or armour; walking over the gear picks it up', () => {
+  const player = playerAt(3, 3);
+  player.inventory = [];
+  const before = player.playerStats.gold;
+  spawnDrops(centre(3), centre(3), 'chest', player);
+  assert.equal(world.entities.filter((e) => e.loot).length, 0, 'no coins on the floor');
+  const paid = player.playerStats.gold - before;
+  assert.ok(paid >= 10 && paid <= 30, `paid ${paid}`);
+  assert.equal(currentLog().entries.at(-1).result, 'gold', 'and the combat log says so');
   const gear = world.entities.filter((e) => e.item);
   assert.equal(gear.length, 1, 'one piece of gear');
   assert.ok(['weapon', 'offhand', 'armor'].includes(gear[0].item.gear));
-  const total = coins.reduce((sum, e) => sum + e.loot.value, 0);
-  assert.ok(total >= 10 && total <= 30, `coins worth ${total}`);
-  const player = playerAt(3, 3);
-  player.inventory = [];
   player.position.x = gear[0].position.x;
   player.position.y = gear[0].position.y;
   beginPerception();
@@ -674,17 +678,27 @@ test('an opened chest throws out a weapon or armour and some coins; walking over
   assert.equal(LOOT_KINDS[gem.loot.kind].sheet, 'pickup_gem_ruby_12', 'an exact 200 is a ruby');
 });
 
-test('a kill drops only a few coins (gems are rare), and nobody carries more than 100 kg', () => {
+test('a kill pays a few coins (a gem now and then) to whoever struck last, and nobody carries more than 100 kg', () => {
   let gems = 0;
   for (let i = 0; i < 200; i++) {
-    world.clear();
-    dropLoot(0, 0, 200);
-    const drops = world.entities.filter((e) => e.loot);
-    const coins = drops.filter((e) => LOOT_KINDS[e.loot.kind].sheet.includes('coin'));
-    assert.ok(coins.length >= 1 && coins.length <= 3, `${coins.length} coins`);
-    gems += drops.length - coins.length;
+    const reward = killReward(200);
+    assert.ok(reward >= 40, `${reward} coins`);
+    if (reward > 40) gems++;
   }
   assert.ok(gems < 20, `${gems} gems in 200 kills`);
+  world.clear();
+  const level = arena(10, 6);
+  const killer = playerAt(2, 2);
+  const other = playerAt(2, 4);
+  const goblin = mobAt(level, 'goblin', 6, 2);
+  const [killerGold, otherGold] = [killer.playerStats.gold, other.playerStats.gold];
+  goblin.lastHitBy = world.id(killer);
+  goblin.health.current = 0;
+  updateDeath(level);
+  assert.ok(killer.playerStats.gold > killerGold, 'the killer is paid');
+  assert.equal(other.playerStats.gold, otherGold, 'the other hero is not');
+  assert.equal(world.entities.filter((e) => e.loot).length, 0, 'no coins on the floor');
+  assert.equal(killer.playerStats.exp, other.playerStats.exp, 'the experience is shared by everyone');
   world.clear();
   const player = playerAt(2, 2);
   player.inventory = [];
@@ -867,7 +881,7 @@ test('guest controls, commands, rosters and level starts are checked before they
   assert.equal(validCommand({ kind: 'hit_die' }), true);
   assert.equal(validCommand({ kind: 'rest', rest: 'long' }), true);
   assert.equal(validCommand({ kind: 'rest', rest: 'nap' }), false);
-  assert.equal(validCommand({ kind: 'rest_answer', agree: 'yes' }), false);
+  assert.equal(validCommand({ kind: 'vote_answer', agree: 'yes' }), false);
   assert.equal(validCommand({ kind: 'buy', index: 2 }), true);
   assert.equal(validCommand({ kind: 'buy', index: 1.5 }), false);
   const helm = SHOP_ITEMS.find((item) => item.gear === 'head');
@@ -876,9 +890,10 @@ test('guest controls, commands, rosters and level starts are checked before they
   assert.equal(validCommand({ kind: 'loadout', inventory: [{ type: 'dragon', name: 'x', value: 1 }], equipped: {} }), false);
   assert.equal(validCommand({ kind: 'loadout', inventory: [], equipped: { hat: helm } }), false);
 
-  assert.equal(validRoster([{ slot: 'host', name: 'Ana' }, { slot: 'p2', name: 'Bo' }]), true);
-  assert.equal(validRoster([{ slot: 'host', name: 'Ana' }, { slot: 'host', name: 'Bo' }]), false, 'seats are unique');
-  assert.equal(validRoster([{ slot: 'host', name: '<script>' }]), false, 'names arrive clean');
+  assert.equal(validRoster([{ slot: 'host', name: 'Ana', heroClass: 'wizard' }, { slot: 'p2', name: 'Bo', heroClass: 'wizard' }]), true, 'two may play one hero');
+  assert.equal(validRoster([{ slot: 'host', name: 'Ana', heroClass: 'wizard' }, { slot: 'host', name: 'Bo', heroClass: 'fighter' }]), false, 'seats are unique');
+  assert.equal(validRoster([{ slot: 'host', name: '<script>', heroClass: 'wizard' }]), false, 'names arrive clean');
+  assert.equal(validRoster([{ slot: 'host', name: 'Ana', heroClass: 'dragon' }]), false, 'only known heroes');
   assert.equal(validStart(123, 1), true);
   assert.equal(validStart(-1, 1), false);
   assert.equal(cleanName('  Sir   Lance<>lot!!  the brave '), 'Sir Lancelot', 'stripped, squeezed and cut to 12');
@@ -1513,12 +1528,13 @@ test('everyone is proficient with an unarmed strike, even a wizard', async () =>
 const { updateSpells } = await load('systems/SpellSystem');
 const { SPELLS } = await load('rules/Spells');
 const { SPELL_STATS } = await load('entities/WeaponStats');
-const { updateDeath } = await load('systems/DeathSystem');
 const { updateInitiative } = await load('systems/InitiativeSystem');
 const Strike = await load('systems/Strike');
 const Rest = await load('game/Rest');
+const Party = await load('game/Party');
+/** One tick of the party's answers, then of the rests acting on them (the game's order). */
+const tickParty = (level) => { Party.updateParty(); Rest.updateRest(level); };
 const { levelForXp, nextLevelXp } = await load('game/Progress');
-const { currentLog } = await load('systems/CombatLogSystem');
 
 /** A caster aiming east at a point, with the quick-bar square picked. */
 function casterAt(tx, ty, heroClass, slot) {
@@ -1686,29 +1702,29 @@ test('rests: a short one recovers spells (two before a long one), a long one hea
   hero.health.current = 10;
   hero.playerStats.level = 4;
   hero.playerStats.hitDice = 0;
-  const rest = (kind) => { Rest.queueRestCommand('host', { kind: 'rest', rest: kind }); Rest.updateRest(level); };
+  const rest = (kind) => { Rest.queueRestRequest('host', kind); tickParty(level); };
   rest('short');
   assert.deepEqual(hero.spellbook.recovery, [0, 0, 0]);
-  assert.equal(Rest.currentRest().shortRestsLeft, 1);
-  assert.equal(Rest.currentRest().notice.notice, 'short_done');
+  assert.equal(Party.currentParty().shortRestsLeft, 1);
+  assert.equal(Party.currentParty().notice.notice, 'short_done');
   assert.equal(hero.health.current, 10, 'a short rest heals nothing by itself');
   rest('short');
   rest('short');
-  assert.equal(Rest.currentRest().notice.notice, 'no_short_left');
+  assert.equal(Party.currentParty().notice.notice, 'no_short_left');
   rest('long');
-  assert.equal(Rest.currentRest().notice.notice, 'unsafe');
+  assert.equal(Party.currentParty().notice.notice, 'unsafe');
   level.markSafeZone(2, 2);
   rest('long');
-  assert.equal(Rest.currentRest().notice.notice, 'long_done');
+  assert.equal(Party.currentParty().notice.notice, 'long_done');
   assert.equal(hero.health.current, hero.health.max);
   assert.equal(hero.playerStats.hitDice, 2, 'half the level back');
-  assert.equal(Rest.currentRest().shortRestsLeft, Rest.SHORT_RESTS_PER_LONG_REST);
+  assert.equal(Party.currentParty().shortRestsLeft, Rest.SHORT_RESTS_PER_LONG_REST);
   const goblin = mobAt(level, 'goblin', 8, 3);
   engage(goblin, hero, 0);
   rest('short');
-  assert.equal(Rest.currentRest().notice.notice, 'hunted');
-  for (let i = 0; i <= Rest.REST_NOTICE_TICKS; i++) Rest.updateRest(level);
-  assert.equal(Rest.currentRest().notice, null, 'the notice goes after a while');
+  assert.equal(Party.currentParty().notice.notice, 'hunted');
+  for (let i = 0; i <= Party.NOTICE_TICKS; i++) tickParty(level);
+  assert.equal(Party.currentParty().notice, null, 'the notice goes after a while');
 });
 
 test('in co-op a rest waits for every companion to agree; one refusal calls it off', () => {
@@ -1720,23 +1736,23 @@ test('in co-op a rest waits for every companion to agree; one refusal calls it o
   world.addComponent(guest, 'playerSlot', 'p2');
   world.addComponent(guest, 'playerName', 'Bo');
   host.spellbook.recovery[1] = 30;
-  Rest.queueRestCommand('host', { kind: 'rest', rest: 'short' });
-  Rest.updateRest(level);
-  const state = Rest.currentRest();
+  Rest.queueRestRequest('host', 'short');
+  tickParty(level);
+  const state = Party.currentParty();
   assert.deepEqual(state.vote.agreed, ['host']);
   assert.equal(state.notice.notice, 'asked');
   assert.equal(state.notice.name, 'Ana');
   assert.equal(host.spellbook.recovery[1] > 0, true, 'not yet');
-  handleGuestCommand('p2', { kind: 'rest_answer', agree: true });
-  Rest.updateRest(level);
+  handleGuestCommand('p2', { kind: 'vote_answer', agree: true });
+  tickParty(level);
   assert.equal(state.vote, null);
   assert.equal(state.notice.notice, 'short_done');
   assert.equal(host.spellbook.recovery[1], 0);
 
   handleGuestCommand('p2', { kind: 'rest', rest: 'short' });
-  Rest.updateRest(level);
-  Rest.queueRestCommand('host', { kind: 'rest_answer', agree: false });
-  Rest.updateRest(level);
+  tickParty(level);
+  Party.queueAnswer('host', false);
+  tickParty(level);
   assert.equal(state.vote, null);
   assert.equal(state.notice.notice, 'declined');
   assert.equal(state.notice.name, 'Ana');
@@ -1744,15 +1760,17 @@ test('in co-op a rest waits for every companion to agree; one refusal calls it o
 
   const sent = JSON.parse(JSON.stringify(captureWorld(false, 7)));
   validateNetState(sent);
-  assert.ok(sent.entities.some((e) => e.data.restState), 'guests see the rest state');
+  assert.ok(sent.entities.some((e) => e.data.party), 'guests see the rest state');
   const tamper = (edit) => {
     const copy = JSON.parse(JSON.stringify(sent));
     edit(copy.entities);
     return attempt(() => validateNetState(copy)).ok;
   };
-  assert.equal(tamper((es) => { es.find((e) => e.data.restState).data.restState.vote = { kind: 'nap', by: 'host', agreed: [], ticks: 1 }; }), false);
-  assert.equal(tamper((es) => { es.find((e) => e.data.restState).data.restState.notice.name = '<b>'; }), false);
+  assert.equal(tamper((es) => { es.find((e) => e.data.party).data.party.vote = { kind: 'nap', by: 'host', agreed: [], ticks: 1 }; }), false);
+  assert.equal(tamper((es) => { es.find((e) => e.data.party).data.party.notice.name = '<b>'; }), false);
   assert.equal(tamper((es) => { es.find((e) => e.data.playerSlot === 'p2').data.spellbook.recovery = [-1]; }), false);
+  assert.equal(tamper((es) => { es.find((e) => e.data.playerSlot === 'p2').data.spellbook.recovery = Array(8).fill(0); }), true,
+    'a hero may know more spells than the quick bar holds');
   assert.equal(tamper((es) => { es.find((e) => e.data.playerSlot === 'p2').data.playerInput.spellSlot = 9; }), false);
   assert.equal(tamper((es) => { es.find((e) => e.data.playerSlot === 'p2').data.casting = { ticks: 1, dirX: 1, dirY: 0, released: false, spell: 'wish' }; }), false);
 });
@@ -2076,4 +2094,155 @@ test('the level log: each level knows whether it has a choice, and Save makes th
   const wizard = createPlayer(centre(2), centre(2), 'wizard');
   assert.equal(applyCustomization(wizard, { kind: 'lock_build' }), true, 'a class without a style can save at once');
   assert.equal(validCommand({ kind: 'lock_build' }), true);
+});
+
+// ── The party's lever, loot rolls, stashes, gifts and the console ────────────
+
+const { updateLevers } = await load('systems/LeverSystem');
+const { updateDoors, GATE_CLOSE_TICKS, gateCountdown } = await load('systems/DoorSystem');
+const LootRoll = await load('game/LootRoll');
+const { runCommand } = await load('game/Console');
+const { updateStashes } = await load('systems/StashSystem');
+const { createStash } = await load('entities/DungeonFactory');
+const { hurtPlayer } = await load('systems/CombatSystem');
+
+/** A player in a seat, with a name. */
+function seated(tx, ty, slot, name) {
+  const player = playerAt(tx, ty);
+  world.addComponent(player, 'playerSlot', slot);
+  world.addComponent(player, 'playerName', name);
+  return player;
+}
+
+test('in co-op the lever asks the others first; once all agree the gate opens and shuts after 10 s on whoever stayed inside', () => {
+  const { level } = buildDungeon(777, true);
+  const door = world.entities.find((e) => e.door);
+  const lever = world.entities.find((e) => e.lever);
+  const ana = seated(0, 0, 'host', 'Ana');
+  const bo = seated(0, 0, 'p2', 'Bo');
+  ana.position.x = lever.position.x + 6;
+  ana.position.y = lever.position.y;
+  bo.position.x = lever.position.x + 10;
+  bo.position.y = lever.position.y;
+  const pull = () => { ana.playerInput.intents.use = true; beginPerception(); Party.updateParty(); updateLevers(level); ana.playerInput.intents.use = false; };
+  pull();
+  assert.equal(lever.lever.pulled, false, 'not before Bo agrees');
+  assert.equal(Party.currentParty().vote.kind, 'gate');
+  pull();
+  assert.ok(lever.rollLog.some((l) => l.text === 'Waiting for an answer...'), 'one pull at a time');
+  Party.queueAnswer('p2', false);
+  pull();
+  assert.equal(Party.currentParty().notice.notice, 'declined');
+  pull();
+  assert.equal(Party.currentParty().vote, null, 'the lever rests a moment after a refusal');
+  for (let i = 0; i < 200; i++) updateLevers(level);
+  pull();
+  Party.queueAnswer('p2', true);
+  Party.updateParty();
+  updateLevers(level);
+  assert.equal(lever.lever.pulled, true, 'everyone agreed');
+  assert.equal(door.door.locked, false);
+  assert.equal(gateCountdown(), GATE_CLOSE_TICKS / 60);
+  bo.position.x = door.door.boundaryX + 40;
+  for (let t = 0; t < GATE_CLOSE_TICKS; t++) updateDoors(level);
+  assert.equal(door.door.closed, true, 'shut at the end of the countdown');
+  assert.equal(ana.health.current, 0, 'Ana stayed inside');
+  assert.ok(bo.health.current > 0, 'Bo got out');
+  assert.equal(gateCountdown(), null);
+});
+
+test('a rare find in co-op is rolled for: Need rolls a d20, ties roll again, the winner gets it; nobody needing it, it is gone', () => {
+  const ana = seated(2, 2, 'host', 'Ana');
+  const bo = seated(3, 2, 'p2', 'Bo');
+  const cy = seated(4, 2, 'p3', 'Cy');
+  for (const p of [ana, bo, cy]) p.inventory = [];
+  const sword = { ...WEAPONS.find((w) => (w.bonus ?? 0) >= 2), weight: 1 };
+  assert.equal(LootRoll.offerLoot({ ...sword, bonus: 0 }), false, 'a common find just drops');
+  assert.equal(LootRoll.offerLoot(sword), true);
+  const roll = world.entities.find((e) => e.lootRoll).lootRoll;
+  LootRoll.chooseLoot('host', roll.id, true);
+  handleGuestCommand('p2', { kind: 'loot', roll: roll.id, need: true });
+  LootRoll.chooseLoot('p3', roll.id, false);
+  // Ana and Bo tie on 12; rolling again, the second of them to roll gets the 17.
+  const d20s = [12, 12, 5, 17];
+  useDieRoller((sides) => (sides === 20 ? d20s.shift() : sides));
+  LootRoll.updateLootRolls();
+  const lines = currentLog().entries.filter((e) => e.result === 'need' || e.result === 'won');
+  assert.deepEqual(lines.map((e) => [e.result, e.total]), [['need', 12], ['need', 12], ['need', 5], ['need', 17], ['won', 0]]);
+  assert.deepEqual(lines.slice(0, 2).map((e) => e.name).sort(), ['Ana', 'Bo'], 'Cy passed');
+  const winner = lines[3].name === 'Ana' ? ana : bo;
+  assert.equal(lines[4].name, lines[3].name, 'the 17 wins');
+  assert.equal(winner.inventory.filter(Boolean).length, 1, 'into the winner\'s bag');
+  assert.equal([ana, bo, cy].reduce((n, p) => n + p.inventory.filter(Boolean).length, 0), 1, 'and nobody else\'s');
+  assert.ok(world.entities.find((e) => e.lootRoll).removed);
+
+  LootRoll.offerLoot(sword);
+  const second = world.entities.filter((e) => e.lootRoll && !e.removed).at(-1);
+  for (let t = 0; t < LootRoll.LOOT_ROLL_TICKS; t++) LootRoll.updateLootRolls();
+  assert.ok(second.removed, 'no answer in 30 s counts as a Pass: gone');
+  assert.equal(winner.inventory.filter(Boolean).length, 1);
+
+  const sent = JSON.parse(JSON.stringify(captureWorld(false, 7)));
+  LootRoll.offerLoot(sword);
+  const withRoll = JSON.parse(JSON.stringify(captureWorld(false, 7)));
+  validateNetState(withRoll);
+  const tampered = JSON.parse(JSON.stringify(withRoll));
+  tampered.entities.find((e) => e.data.lootRoll).data.lootRoll.choices = { p9: 'need' };
+  assert.equal(attempt(() => validateNetState(tampered)).ok, false, 'only real seats choose');
+  assert.ok(sent.entities.length < withRoll.entities.length);
+});
+
+test('some floor props hide a few coins: E (in reach) finds them, once', () => {
+  const finder = playerAt(3, 3);
+  let stash = null;
+  for (let i = 0; i < 50 && !stash; i++) stash = createStash({ kind: 'urn', tx: 3, ty: 3 });
+  assert.ok(stash, 'an urn may hide coins');
+  assert.equal(createStash({ kind: 'banner_red', tx: 3, ty: 3 }), null, 'a banner never does');
+  const before = finder.playerStats.gold;
+  finder.playerInput.intents.use = true;
+  beginPerception();
+  updateStashes();
+  assert.equal(finder.playerStats.gold, before + stash.stash.coins);
+  assert.ok(stash.removed);
+});
+
+test('the inventory sends an item to another player, into their bag', () => {
+  const ana = seated(2, 2, 'host', 'Ana');
+  const bo = seated(3, 2, 'p2', 'Bo');
+  const dagger = { ...WEAPONS[0], weight: 1 };
+  ana.inventory = [dagger];
+  bo.inventory = [];
+  bo.equipped = {};
+  assert.equal(validCommand({ kind: 'give', from: { bag: 0 }, to: 'host' }), true);
+  assert.equal(validCommand({ kind: 'give', from: { slot: 'hat' }, to: 'host' }), false);
+  assert.equal(PlayerActions.giveItem(ana, { bag: 0 }, 'p2'), true);
+  assert.equal(ana.inventory.filter(Boolean).length, 0);
+  assert.equal(bo.inventory[0].name, dagger.name);
+  handleGuestCommand('p2', { kind: 'give', from: { bag: 0 }, to: 'host' });
+  assert.equal(ana.inventory[0].name, dagger.name, 'and back, asked by the guest');
+  assert.equal(PlayerActions.giveItem(ana, { bag: 3 }, 'p2'), false, 'nothing on that square');
+});
+
+test('the ~ console: money, god mode, experience and any item by its id; not in co-op', () => {
+  const hero = playerAt(2, 2);
+  hero.inventory = [];
+  const run = (line) => runCommand(line, { player: hero, allowed: true });
+  const gold = hero.playerStats.gold;
+  run('/money 500');
+  assert.equal(hero.playerStats.gold, gold + 500);
+  run('/god on');
+  const health = hero.health.current;
+  hurtPlayer(hero, hero, 50);
+  assert.equal(hero.health.current, health, 'no harm in god mode');
+  run('/god off');
+  assert.equal(hero.godMode, undefined);
+  run('/xp 300');
+  assert.equal(hero.playerStats.level, 2);
+  const id = WEAPONS[1].id;
+  run(`/addItem ${id.replace(/_/g, '-')}`);
+  assert.equal(hero.inventory[0].id, id, 'ids in any case, with dashes');
+  assert.match(run('/additem nothing_like_it')[0], /No item/);
+  assert.ok(run('/items axe').length > 0);
+  assert.match(run('money 5')[0], /slash/);
+  assert.match(runCommand('/money 5', { player: hero, allowed: false })[0], /co-op/);
 });

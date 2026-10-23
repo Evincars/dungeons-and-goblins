@@ -66,7 +66,7 @@ export function createSafeDoor(door: DoorData, level: Level): Entity {
   }
   return world.add({
     position: { x: first.x * TILE_WIDTH + TILE_WIDTH / 2, y: middle.y * TILE_HEIGHT + TILE_HEIGHT / 2 },
-    door: { tiles: door.tiles, boundaryX: door.boundaryX, closed: false, locked: true },
+    door: { tiles: door.tiles, boundaryX: door.boundaryX, closed: false, locked: true, closingTicks: null },
   });
 }
 
@@ -87,7 +87,7 @@ function createGate(tx: number, ty: number): Entity {
 export function createLever(x: number, y: number): Entity {
   return world.add({
     position: { x, y },
-    lever: { pulled: false },
+    lever: { pulled: false, rest: 0 },
     visual: { sheet: 'lever', col: 0, row: 0 },
     radius: { x: 8, y: 6 },
     yOffset: 8,
@@ -169,6 +169,40 @@ export function createProp(p: PropPlacement): Entity {
     localOnly: true,
     ...propAnimation(sheet, def),
     ...propGlow(def),
+  });
+}
+
+/** The floor things that may hide a few coins: urns, closed coffins and sarcophagi, bowls, sacks, jars and vases. */
+const STASH_PROPS: ReadonlySet<string> = new Set([
+  'urn', 'urn_small', 'urn_green', 'urn_green_small', 'coffin', 'coffin_cracked', 'sarcophagus', 'sarcophagus2',
+  'bowl_apples', 'bowl_apples_m', 'bowl_herbs', 'bowl_herbs_m', 'bowl_grain', 'bowl_grain_m', 'bowl_empty', 'bowl_dark',
+  'sack', 'sack_m', 'sack2', 'supplies_vase', 'supplies_jar',
+]);
+/** Only some of them do: this share. */
+const STASH_CHANCE = 0.3;
+/** Coins in a stash. */
+const STASH_MIN_COINS = 2;
+const STASH_MAX_COINS = 12;
+/** A stash's body reaches this far up and down its prop's foot, for the crosshair and the corner brackets. */
+const STASH_DEPTH = 6;
+
+/** Whether a prop of this kind could hide coins. */
+export function canHideCoins(kind: string): boolean {
+  return STASH_PROPS.has(kind);
+}
+
+/**
+ * The coins some props hide (made by whoever runs the game, and sent to guests: the prop itself is decor
+ * every browser builds). It stands where the prop is drawn, its body the prop's size.
+ */
+export function createStash(p: PropPlacement): Entity | null {
+  if (!canHideCoins(p.kind) || Math.random() >= STASH_CHANCE) return null;
+  const def: PropDef = PROPS[p.kind];
+  return world.add({
+    position: { x: p.tx * TILE_WIDTH + TILE_WIDTH / 2, y: p.ty * TILE_HEIGHT + PROP_GROUND },
+    yOffset: def.rect.h / 2,
+    radius: { x: def.rect.w / 2, y: STASH_DEPTH },
+    stash: { coins: STASH_MIN_COINS + Math.floor(Math.random() * (STASH_MAX_COINS - STASH_MIN_COINS + 1)) },
   });
 }
 

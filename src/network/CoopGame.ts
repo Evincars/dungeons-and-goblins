@@ -128,7 +128,6 @@ export class HostGame {
  */
 export class GuestGame {
   readonly replica = new WorldReplica();
-  private sequence = 0;
   hostPaused = false;
   private readonly aim = { x: 0, y: 0 };
 
@@ -169,7 +168,7 @@ export class GuestGame {
     const input = structuredClone(me.playerInput);
     if (idle || me.respawnTicks !== undefined) releaseControls(input);
     const aim = screenToWorld(input.mouseX, input.mouseY, this.aim);
-    coop.sendInput({ input, aim: { x: aim.x, y: aim.y }, sequence: this.sequence++ });
+    coop.sendInput(input, { x: aim.x, y: aim.y });
   }
 
   dispose(): void {

@@ -12,10 +12,12 @@ import { FogRenderer } from '../level/FogRenderer';
 import { LightRenderer } from '../level/LightRenderer';
 import type { LightSource } from '../level/LightRenderer';
 import { createPlayer } from '../entities/PlayerFactory';
-import { cleanName, settings } from '../game/Settings';
+import { bindingFor, cleanName, settings } from '../game/Settings';
 import { camera, GAME_HEIGHT, GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
 import { TILE_WIDTH, TILE_HEIGHT, FOG_REVEAL_TILES } from '../level/TileType';
-import { initInput, resetInput } from '../systems/InputSystem';
+import { initInput, resetInput, setInputCaptured } from '../systems/InputSystem';
+import { runCommand } from '../game/Console';
+import { ConsoleView } from '../ui/ConsoleView';
 import { SIMULATION, PRESENTATION, runSystems } from '../systems/Simulation';
 import type { FrameContext } from '../systems/Simulation';
 import { resetNameTags, updateNameTags } from '../systems/NameTagSystem';
@@ -106,6 +108,8 @@ export class InGameScene implements Scene {
   private readonly host: HostGame | null = null;
   private readonly guest: GuestGame | null = null;
   private readonly onKeyDown: (e: KeyboardEvent) => void;
+  /** The ~ console, for testing: alone only (in co-op its commands say so). */
+  private readonly console = new ConsoleView((line) => runCommand(line, { player: localPlayer(), allowed: this.mode === 'solo' }));
 
   constructor(private readonly manager: SceneManager) {
     this.app = manager.application;
@@ -174,7 +178,7 @@ export class InGameScene implements Scene {
       ? text('menu.pause.warning_guest')
       : this.mode === 'host' ? text('menu.pause.warning_host') : text('menu.pause.warning_solo'));
     // The crosshair replaces the OS pointer and is the player's focus in the world.
-    this.uiLayer.addChild(this.crosshair.graphics, this.pause.container, this.result.container, this.loading, this.fadeIn);
+    this.uiLayer.addChild(this.crosshair.graphics, this.console.container, this.pause.container, this.result.container, this.loading, this.fadeIn);
     this.buildLoadingOverlay();
     manager.canvas.style.cursor = 'none';
     initInput(manager.canvas);
@@ -187,6 +191,7 @@ export class InGameScene implements Scene {
 
   /** Escape backs out of a sub-screen or the confirmation first, and only then opens or closes the pause menu. */
   private handleKey(e: KeyboardEvent): void {
+    if (this.consoleKey(e)) return;
     if (e.code === 'Enter' && this.complete && this.mode !== 'guest') {
       this.nextLevel();
       return;
@@ -195,6 +200,27 @@ export class InGameScene implements Scene {
     if (this.manager.hasOverlay) this.manager.escapeOverlay();
     else if (this.result.open || this.hud.closeDialog()) return;
     else if (!this.pause.handleEscape()) this.setPaused(!this.pause.open);
+  }
+
+  /** The console key opens or closes it; while it is open every key types into it (Escape closes it). Returns whether the key was its. */
+  private consoleKey(e: KeyboardEvent): boolean {
+    if (e.code === bindingFor('console')) {
+      e.preventDefault();
+      this.toggleConsole();
+      return true;
+    }
+    if (!this.console.visible) return false;
+    if (e.code === 'Escape') this.toggleConsole();
+    else this.console.handleKey(e);
+    return true;
+  }
+
+  private toggleConsole(): void {
+    if (this.pause.open || this.result.open) return;
+    const open = !this.console.visible;
+    if (open) this.console.open();
+    else this.console.close();
+    setInputCaptured(open);
   }
 
   /** Opens or closes the pause menu. Only alone does that stop the game; in co-op the world goes on behind it. */
@@ -261,6 +287,7 @@ export class InGameScene implements Scene {
     this.darkness.update(this.app.renderer, this.level, this.tick);
     this.lights.update(this.app, this.gatherLights(), this.tick);
     this.crosshair.update();
+    this.console.update();
     this.updatePanels();
     this.updateStatus(player);
     if (this.mode !== 'guest' && !this.complete && isLevelComplete()) this.levelComplete();
@@ -433,6 +460,7 @@ export class InGameScene implements Scene {
 
   destroy(): void {
     window.removeEventListener('keydown', this.onKeyDown);
+    if (this.console.visible) setInputCaptured(false);
     this.host?.dispose();
     this.guest?.dispose();
     this.manager.canvas.style.cursor = '';

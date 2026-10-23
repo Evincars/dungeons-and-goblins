@@ -8,9 +8,10 @@ import { menuBackdrop } from '../ui/MenuBackdrop';
 import { ACTIONS, actionLabel, bind, codeLabel, resetBindings, settings } from '../game/Settings';
 import type { ActionName } from '../game/Settings';
 
-const ROW_H = 26;
+/** Rows this far apart: eleven actions fit above Reset and Back. */
+const ROW_H = 24;
 const BTN_W = 120;
-const BTN_H = 22;
+const BTN_H = 20;
 const TOP = 72;
 const LABEL_RIGHT = GAME_WIDTH / 2 - 8;
 const TITLE_Y = 26;

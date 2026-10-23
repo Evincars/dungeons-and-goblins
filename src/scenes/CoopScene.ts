@@ -9,6 +9,10 @@ import { PixelButton } from '../ui/PixelButton';
 import { NameField } from '../ui/NameField';
 import { TextBox } from '../ui/TextBox';
 import { menuBackdrop } from '../ui/MenuBackdrop';
+import { HeroPicker } from '../ui/HeroPicker';
+import { settings, saveSettings } from '../game/Settings';
+import type { HeroClassId } from '../rules/Classes';
+import { heroName } from '../rules/Names';
 import { GAME_WIDTH, GAME_HEIGHT, LAYOUT_LEFT } from '../render/Camera';
 import { attempt, attemptAsync, report, StateError } from '../core/errors';
 
@@ -18,15 +22,24 @@ const COL_W = 240;
 const BUTTON_H = 26;
 const INVITE_BOX = { x: LAYOUT_LEFT + 70, y: 108, w: 372, h: 22 };
 const NAME_BOX = { x: COL_X, y: 184, w: COL_W, h: 22 };
+/** The room's players, listed right of the column. */
+const ROSTER = { x: COL_X + COL_W + 14, y: 172 };
+/** "Your hero", and the portraits under it (the names of who took each hero above them). */
+const HERO_LABEL_Y = 242;
+const HEROES_Y = 266;
+/** The host's Start and everyone's Cancel, under the portraits. */
+const START_Y = GAME_HEIGHT - 78;
+const CANCEL_Y = GAME_HEIGHT - 46;
 /** How often the lobby checks whether the settings screen covers it (its text boxes must hide then). */
 const OVERLAY_POLL_MS = 150;
 
 export type CoopRole = 'host' | 'guest';
 
 /**
- * The co-op room. Everyone types the name the others will see; the host shares an invite link and starts
- * the game when the party is ready (there is no map to choose: the dungeon is generated, and every guest
- * builds the same one from the seed the host sends).
+ * The co-op room. Everyone types the name the others will see and picks their hero (whoever took a hero is
+ * named over its portrait; two may play the same one); the host shares an invite link and starts the game
+ * when the party is ready (there is no map to choose: the dungeon is generated, and every guest builds the
+ * same one from the seed the host sends).
  */
 export class CoopScene implements Scene {
   readonly container = new Container();
@@ -34,6 +47,9 @@ export class CoopScene implements Scene {
   private readonly nameField: NameField;
   private readonly status: PixelLabel;
   private readonly roster: PixelLabel;
+  private readonly heroes: HeroPicker;
+  private readonly heroLabel: PixelLabel;
+  private tick = 0;
   private start: PixelButton | null = null;
   private action!: PixelButton;
   private disposed = false;
@@ -47,9 +63,8 @@ export class CoopScene implements Scene {
     this.status = makeText('', 0xffdd88, 8, 'center');
     this.status.x = CENTER;
     this.status.y = 90;
-    this.roster = makeText('', 0xffffff, 8, 'center');
-    this.roster.x = CENTER;
-    this.roster.y = 246;
+    this.roster = makeText('', 0xffffff, 8);
+    this.roster.position.set(ROSTER.x, ROSTER.y);
     this.container.addChild(title, this.status, this.roster);
 
     this.invite = new TextBox(manager.canvas, INVITE_BOX, {
@@ -69,11 +84,17 @@ export class CoopScene implements Scene {
     this.container.addChild(this.nameField.view);
     this.button(text('coop.settings'), 212, () => manager.pushOverlay('settings'));
 
+    this.heroLabel = makeText('', 0xffdd88, 8, 'center');
+    this.heroLabel.position.set(CENTER, HERO_LABEL_Y);
+    this.heroes = new HeroPicker(Math.round(CENTER - HeroPicker.width / 2), HEROES_Y, settings.heroClass);
+    this.heroes.onPick = (id) => this.pickHero(id);
+    this.container.addChild(this.heroLabel, this.heroes.view);
+
     if (role === 'host') {
-      this.start = this.button(text('coop.start'), GAME_HEIGHT - 86, () => this.startGame());
+      this.start = this.button(text('coop.start'), START_Y, () => this.startGame());
       this.start.setEnabled(false);
     }
-    this.button(text('coop.cancel'), GAME_HEIGHT - 52, () => manager.goto('title'));
+    this.button(text('coop.cancel'), CANCEL_Y, () => manager.goto('title'));
     this.connect(destination);
     this.watchOverlays();
   }
@@ -147,6 +168,29 @@ export class CoopScene implements Scene {
     this.action.setEnabled(this.role !== 'host' || !!coop.invite);
     const lines = coop.roster.map((p, i) => `${i + 1}. ${p.name}${p.slot === 'host' ? text('coop.roster_host_tag') : ''}`);
     this.roster.text = lines.length ? text('coop.roster', { players: lines.join('\n') }) : '';
+    this.showTakers();
+  }
+
+  /** Another hero: remembered for next time, and told to the room. */
+  private pickHero(id: HeroClassId): void {
+    if (coop.locked) return;
+    settings.heroClass = id;
+    saveSettings();
+    this.heroes.picked = id;
+    coop.setHero(id);
+    this.refresh();
+  }
+
+  /** Who in the room took which hero, for the names over the portraits. */
+  private showTakers(): void {
+    const takers = new Map<HeroClassId, string[]>();
+    for (const p of coop.roster) takers.set(p.heroClass, [...(takers.get(p.heroClass) ?? []), p.name]);
+    this.heroes.setTakers(takers);
+    this.heroLabel.text = text('coop.your_hero', { hero: heroName(settings.heroClass) });
+  }
+
+  update(): void {
+    this.heroes.update(++this.tick);
   }
 
   private showError(error: unknown): void {

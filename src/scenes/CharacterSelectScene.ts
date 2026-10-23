@@ -1,4 +1,4 @@
-import { Container, Graphics, Rectangle, Sprite } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { STAT_NAMES } from '../world';
 import type { Scene, SceneManager, SceneName } from '../game/SceneManager';
 import { settings, saveSettings } from '../game/Settings';
@@ -9,14 +9,15 @@ import { abilityModifier } from '../rules/Abilities';
 import { formatModifier } from '../rules/Dice';
 import { featureDescription, featureName, heroBlurb, heroName, trainingName, weaponName } from '../rules/Names';
 import { statName, statShort } from '../entities/Items';
-import { characterDef, clipAnchorX, clipAnchorY, clipFrameTexture, clipFrames, clipSheetKey } from '../characters/Characters';
-import type { CharacterDef } from '../characters/CharacterDef';
+import { characterDef } from '../characters/Characters';
 import { LAYOUT_LEFT, LAYOUT_WIDTH } from '../render/Camera';
 import { menuBackdrop } from '../ui/MenuBackdrop';
 import { PixelButton } from '../ui/PixelButton';
 import { PixelLabel, makeTitle } from '../ui/PixelText';
 import { wrapLines } from '../ui/InfoTooltip';
 import { NameField } from '../ui/NameField';
+import { HeroPicker, animatePreview, makePreview } from '../ui/HeroPicker';
+import type { Preview } from '../ui/HeroPicker';
 import { THEME } from '../ui/Theme';
 import { playIntroThen } from './IntroScene';
 
@@ -30,17 +31,13 @@ const PREVIEW_H = 110;
 const PREVIEW_FEET = 190;
 const LINE_H = 10;
 const ARROW = 22;
-/** The portraits: this big, this far apart, under the card. */
-const THUMB = 34;
-const THUMB_GAP = 6;
+/** The portraits' row, under the card. */
 const THUMB_Y = 292;
-const THUMB_H_SHOWN = 26;
 const BUTTON_W = 120;
 const BUTTON_H = 24;
 const BUTTON_GAP = 12;
 const BUTTONS_Y = 340;
 const CARD_ALPHA = 0.9;
-const HOVER_ALPHA = 0.1;
 
 type Line = { text: string; color: number };
 
@@ -76,26 +73,6 @@ export function chooseHeroThen(manager: SceneManager, next: SceneName): void {
   manager.goto('character_select');
 }
 
-/** A sprite showing a character's idle, stood with its feet at (x, feetY) and `height` tall. */
-type Preview = { sprite: Sprite; def: CharacterDef };
-
-function makePreview(def: CharacterDef, x: number, feetY: number, height: number): Preview {
-  const sprite = new Sprite();
-  sprite.scale.set(height / Math.max(1, def.feetY - def.headY));
-  sprite.position.set(Math.round(x), Math.round(feetY - (def.feetY - (def.trim?.h ?? def.frameHeight) / 2) * sprite.scale.y));
-  return { sprite, def };
-}
-
-/** Shows the idle frame for `tick`. */
-function animate(preview: Preview, tick: number): void {
-  const name = preview.def.states.idle;
-  const clip = preview.def.clips[name];
-  const sheet = clipSheetKey(preview.def, name);
-  const frame = Math.floor(tick / clip.frameTime) % clipFrames(clip, sheet);
-  preview.sprite.texture = clipFrameTexture(clip, sheet, frame, 0);
-  preview.sprite.anchor.set(clipAnchorX(preview.def, clip), clipAnchorY(preview.def, clip));
-}
-
 /**
  * Before a game: type the hero's name and pick who they are by class. One hero's card shows at a time, the hero idling beside what their
  * class brings under the tabletop rules; the arrows (or ← →) and the portraits under it change the pick. The
@@ -104,7 +81,7 @@ function animate(preview: Preview, tick: number): void {
 export class CharacterSelectScene implements Scene {
   readonly container = new Container();
   private readonly card = new Container();
-  private readonly thumbs: Array<{ id: HeroClassId; frame: Graphics; preview: Preview }> = [];
+  private readonly thumbs: HeroPicker;
   private picked: HeroClassId = settings.heroClass;
   private preview: Preview | null = null;
   private tick = 0;
@@ -119,7 +96,9 @@ export class CharacterSelectScene implements Scene {
     this.container.addChild(title, this.card);
     this.nameField = this.addNameField();
     this.addArrows();
-    this.addThumbs();
+    this.thumbs = new HeroPicker(LAYOUT_LEFT + Math.round((LAYOUT_WIDTH - HeroPicker.width) / 2), THUMB_Y, this.picked);
+    this.thumbs.onPick = (id) => this.pick(id);
+    this.container.addChild(this.thumbs.view);
     this.addButtons();
     this.showCard();
     window.addEventListener('keydown', this.onKeyDown);
@@ -143,7 +122,7 @@ export class CharacterSelectScene implements Scene {
       .rect(0, 0, CARD.w, CARD.h).fill({ color: THEME.panel, alpha: CARD_ALPHA })
       .stroke({ color: THEME.title, width: 2, alignment: 1 });
     this.preview = makePreview(characterDef(cls.character), PORTRAIT_W / 2, PREVIEW_FEET, PREVIEW_H);
-    animate(this.preview, this.tick);
+    animatePreview(this.preview, this.tick);
     const name = new PixelLabel(heroName(cls.id), { color: THEME.title, scale: 2, shadow: true });
     name.position.set(PORTRAIT_W, CARD.pad);
     this.card.addChild(frame, this.preview.sprite, name);
@@ -153,7 +132,7 @@ export class CharacterSelectScene implements Scene {
       label.position.set(PORTRAIT_W, CARD.pad + 22 + i * LINE_H);
       this.card.addChild(label);
     });
-    for (const thumb of this.thumbs) this.drawThumb(thumb);
+    this.thumbs.picked = this.picked;
   }
 
   private addArrows(): void {
@@ -165,37 +144,6 @@ export class CharacterSelectScene implements Scene {
     next.position.set(LAYOUT_LEFT + CARD.x + CARD.w + 8, y);
     next.onPress = () => this.step(1);
     this.container.addChild(back, next);
-  }
-
-  /** A small portrait of every hero; the one picked is framed in gold. */
-  private addThumbs(): void {
-    const total = HERO_CLASSES.length * THUMB + (HERO_CLASSES.length - 1) * THUMB_GAP;
-    const left = LAYOUT_LEFT + Math.round((LAYOUT_WIDTH - total) / 2);
-    HERO_CLASSES.forEach((id, i) => {
-      const box = new Container();
-      box.position.set(left + i * (THUMB + THUMB_GAP), THUMB_Y);
-      const frame = new Graphics();
-      const preview = makePreview(characterDef(CLASSES[id].character), THUMB / 2, THUMB - 3, THUMB_H_SHOWN);
-      const hover = new Graphics().rect(0, 0, THUMB, THUMB).fill({ color: 0xffffff, alpha: HOVER_ALPHA });
-      hover.visible = false;
-      box.addChild(frame, preview.sprite, hover);
-      box.eventMode = 'static';
-      box.cursor = 'pointer';
-      box.hitArea = new Rectangle(0, 0, THUMB, THUMB);
-      box.on('pointerover', () => { hover.visible = true; });
-      box.on('pointerout', () => { hover.visible = false; });
-      box.on('pointertap', () => this.pick(id));
-      this.container.addChild(box);
-      const thumb = { id, frame, preview };
-      this.thumbs.push(thumb);
-      this.drawThumb(thumb);
-    });
-  }
-
-  private drawThumb(thumb: { id: HeroClassId; frame: Graphics }): void {
-    const picked = thumb.id === this.picked;
-    thumb.frame.clear().rect(0, 0, THUMB, THUMB).fill({ color: THEME.panel, alpha: CARD_ALPHA })
-      .stroke({ color: picked ? THEME.title : THEME.panelBorder, width: picked ? 2 : 1, alignment: 1 });
   }
 
   private addButtons(): void {
@@ -238,8 +186,8 @@ export class CharacterSelectScene implements Scene {
   /** The heroes idle, on the card and in their portraits. */
   update(): void {
     this.tick++;
-    if (this.preview) animate(this.preview, this.tick);
-    for (const thumb of this.thumbs) animate(thumb.preview, this.tick);
+    if (this.preview) animatePreview(this.preview, this.tick);
+    this.thumbs.update(this.tick);
   }
 
   destroy(): void {

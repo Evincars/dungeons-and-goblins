@@ -170,8 +170,9 @@ export class QuickBar {
     }
     const total = QUICK_SLOTS * SLOT + (QUICK_SLOTS - 1) * SLOT_GAP;
     const x = Math.round((GAME_WIDTH - total) / 2) + this.hovered * (SLOT + SLOT_GAP);
-    // Shown above the bar: kept inside an area that ends just over the squares.
-    this.tip.show(this.topic.tip, x, 0, { w: GAME_WIDTH, h: GAME_HEIGHT - MARGIN - SLOT - 2 });
+    // Asked for at the bar itself, it is kept inside the area above it: just over the squares.
+    const top = GAME_HEIGHT - MARGIN - SLOT - 2;
+    this.tip.show(this.topic.tip, x, top, { w: GAME_WIDTH, h: top });
   }
 
   destroy(): void {

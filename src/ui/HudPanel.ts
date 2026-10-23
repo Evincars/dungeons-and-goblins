@@ -10,7 +10,8 @@ import { HudDialog } from './HudDialog';
 import { MinimapView } from './MinimapView';
 import { QuickBar } from './QuickBar';
 import { RestMenu } from './RestMenu';
-import { RestBanner } from './RestBanner';
+import { PartyBanner } from './PartyBanner';
+import { LootRollPanel } from './LootRollPanel';
 import { LEVEL_PANEL_H, LEVEL_PANEL_W, LevelPanel } from './LevelPanel';
 import { PassiveHud } from './PassiveHud';
 import { hasChoices } from '../rules/Build';
@@ -109,14 +110,15 @@ function buttonPoints(barX: number, barY: number): Array<{ x: number; y: number 
  * What stays on screen during play. Bottom left: the health bar (dark gold frame, the value on it) and four
  * round buttons over it — the character, the hero's level, the map (which shows what has been explored) and
  * rest (a short or a long rest). Bottom middle: the quick bar of the hero's spells (ui/QuickBar.ts). High in
- * the middle: what the party's rest came to, or a rest someone asked for (ui/RestBanner.ts).
+ * the middle: what the party is asked, or how it went, and the gate's countdown (ui/PartyBanner.ts).
  */
 export class HudPanel {
   readonly container = new Container();
   readonly dialog = new HudDialog();
   private readonly bars: Bar[] = [];
   private readonly quickBar = new QuickBar();
-  private readonly restBanner = new RestBanner();
+  private readonly partyBanner = new PartyBanner();
+  private readonly lootRolls = new LootRollPanel();
   private readonly restMenu: RestMenu;
   private readonly level = new PixelLabel('1', { color: THEME.title, align: 'center', outline: true });
   private readonly minimap = new MinimapView();
@@ -139,7 +141,7 @@ export class HudPanel {
     BUTTONS.forEach((def, i) => this.addButton(def, corners[i]));
     const rest = corners[3];
     this.restMenu = new RestMenu(Math.round(rest.x - BUTTON_R), Math.round(rest.y - BUTTON_R - 2));
-    this.container.addChild(this.quickBar.view, this.restBanner.view, this.passives.view, this.restMenu.view, this.dialog.container);
+    this.container.addChild(this.quickBar.view, this.partyBanner.view, this.lootRolls.view, this.passives.view, this.restMenu.view, this.dialog.container);
   }
 
   private addBar(spec: Pick<Bar, 'color' | 'current' | 'max'>, i: number): void {
@@ -224,7 +226,8 @@ export class HudPanel {
     this.levelShown = level;
     this.refreshMap(level);
     const player = localPlayer();
-    this.restBanner.update();
+    this.partyBanner.update();
+    this.lootRolls.update();
     this.quickBar.update(player);
     this.passives.update();
     if (!player) return;
@@ -271,7 +274,8 @@ export class HudPanel {
     this.passives.destroy();
     this.quickBar.destroy();
     this.restMenu.destroy();
-    this.restBanner.destroy();
+    this.partyBanner.destroy();
+    this.lootRolls.destroy();
     this.container.destroy({ children: true });
   }
 }

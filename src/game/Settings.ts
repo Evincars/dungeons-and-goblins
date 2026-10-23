@@ -9,7 +9,7 @@ import type { HeroClassId } from '../rules/Classes';
 
 const log = createLog('settings');
 
-export const ACTIONS = ['up', 'down', 'left', 'right', 'sprint', 'attack', 'cast', 'swap', 'use', 'inventory'] as const;
+export const ACTIONS = ['up', 'down', 'left', 'right', 'sprint', 'attack', 'cast', 'swap', 'use', 'inventory', 'console'] as const;
 export type ActionName = (typeof ACTIONS)[number];
 
 /** How the key bindings screen names an action. */
@@ -28,6 +28,8 @@ const DEFAULT_BINDINGS = {
   swap: 'KeyQ',
   use: 'KeyE',
   inventory: 'Tab',
+  // The classic ~ key.
+  console: 'Backquote',
 } as const satisfies Record<ActionName, string>;
 
 export type Settings = {

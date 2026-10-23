@@ -2,13 +2,17 @@ import { q, isPlayer } from '../world';
 import type { BagSquare, EquipSlot, Entity, InventoryItem, Player, PlayerSlot } from '../world';
 import { sound } from '../audio/SoundPlayer';
 import { coop } from '../network/CoopSession';
-import type { GuestCommand } from '../network/protocol';
+import type { GuestCommand, ItemSquare } from '../network/protocol';
+import { logLine } from '../systems/RollLogSystem';
+import { text } from '../core/texts';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { REACH } from '../systems/TargetSystem';
 import { fitsSlot, statTotals } from '../entities/Items';
 import { isEquipSlot } from '../world';
 import { BASE_SPRINT } from '../entities/PlayerFactory';
-import { queueRestCommand, spendHitDie } from './Rest';
+import { queueRestRequest, spendHitDie } from './Rest';
+import { queueAnswer } from './Party';
+import { chooseLoot } from './LootRoll';
 import { applyCustomization } from './Customize';
 
 /**
@@ -30,7 +34,7 @@ const LOOT_PER_CHARISMA = 0.05;
 export type Loadout = { inventory: BagSquare[]; equipped: Partial<Record<EquipSlot, InventoryItem>> };
 
 /** A square of the inventory screen: one in the bag's grid, or an equipment slot. */
-export type ItemPlace = { bag: number } | { slot: EquipSlot };
+export type ItemPlace = ItemSquare;
 
 /** Kilograms a player can carry, bag and worn gear together. */
 export const MAX_CARRY_KG = 100;
@@ -211,8 +215,39 @@ function keeperNear(player: Player): Entity | undefined {
   return nearby(x, y, REACH, Sense.usable, keepers).find((e) => !!e.shopNpc);
 }
 
+/**
+ * Hands the item on a square of the giver's inventory to another player, into the first free square of their
+ * bag (if they can carry it). Returns whether it went.
+ */
+export function giveItem(giver: Player, from: ItemPlace, to: PlayerSlot): boolean {
+  const receiver = playerInSlot(to);
+  const loadout: Loadout = { inventory: [...(giver.inventory ?? [])], equipped: { ...giver.equipped } };
+  const item = itemAt(loadout, from);
+  if (!item || !receiver || receiver === giver) return false;
+  if (!addToBag(receiver, item)) {
+    logLine(giver, text('roll.cannot_carry', { name: receiver.playerName ?? '' }), 'miss');
+    sound.playSound('fail', giver.position.x, giver.position.y);
+    return false;
+  }
+  if ('bag' in from) loadout.inventory[from.bag] = null;
+  else delete loadout.equipped[from.slot];
+  applyLoadout(giver, { inventory: trimmed(loadout.inventory), equipped: loadout.equipped });
+  logLine(receiver, text('roll.gift', { item: item.name }), 'gold');
+  sound.playSound('buy', receiver.position.x, receiver.position.y);
+  return true;
+}
+
+/** The inventory's "Send to": at once here, or asked of the host for a guest. */
+export function requestGive(player: Player, from: ItemPlace, to: PlayerSlot): void {
+  if (coop.role === 'guest') coop.sendCommand({ kind: 'give', from, to });
+  else giveItem(player, from, to);
+}
+
 /** Host: carries out what a guest asked for, if it is allowed for that guest's character. */
 export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): void {
+  // Answers to the party count from the fallen too.
+  if (command.kind === 'vote_answer') return queueAnswer(slot, command.agree);
+  if (command.kind === 'loot') return chooseLoot(slot, command.roll, command.need);
   const player = playerInSlot(slot);
   if (!isPlayer(player) || player.health.current <= 0) return;
   if (command.kind === 'buy') {
@@ -228,8 +263,9 @@ export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): voi
     applyCustomization(player, command);
     return;
   }
-  if (command.kind === 'rest' || command.kind === 'rest_answer') {
-    queueRestCommand(slot, command);
+  if (command.kind === 'rest') return queueRestRequest(slot, command.rest);
+  if (command.kind === 'give') {
+    giveItem(player, command.from, command.to);
     return;
   }
   const current: Loadout = { inventory: player.inventory ?? [], equipped: player.equipped ?? {} };

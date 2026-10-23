@@ -100,6 +100,8 @@ export class CoopSession {
   slot: PlayerSlot | null = null;
   /** Everyone in the room, host first; kept current on every browser. */
   roster: RosterEntry[] = [];
+  /** Guest: the number of the next input frame (counting on across levels). */
+  private inputSequence = 0;
   /** Set once a level is under way, so nobody else can join half-way. */
   locked = false;
   /** The level being played: the seed its dungeon is built from, and how deep it is. */
@@ -259,6 +261,7 @@ export class CoopSession {
     switch (message.type) {
       case 'ping': return;
       case 'name': return this.rename(link, message.name);
+      case 'hero': return this.repick(link, message.heroClass);
       case 'input': return this.acceptInput(link, message.frame);
       case 'command':
         if (!validCommand(message.command)) throw new NetworkError('Invalid guest command');
@@ -331,6 +334,15 @@ export class CoopSession {
     this.onChange?.();
   }
 
+  /** A guest picked another hero in the lobby: the room hears of it (before the game starts only). */
+  private repick(link: Link, heroClass: unknown): void {
+    if (this.locked || !isHeroClassId(heroClass)) return;
+    link.heroClass = heroClass;
+    this.refreshRoster();
+    this.broadcastRoster();
+    this.onChange?.();
+  }
+
   private takeRoster(players: unknown): void {
     if (!validRoster(players)) throw new NetworkError('Invalid room roster');
     this.roster = players;
@@ -383,12 +395,24 @@ export class CoopSession {
 
   private refreshRoster(): void {
     if (this.role !== 'host') return;
-    const guests = this.guestSlots().map((slot) => ({ slot, name: this.links.get(slot)?.name ?? slot }));
-    this.roster = [{ slot: 'host', name: this.hostName }, ...guests];
+    const guests = this.guestSlots().map((slot) => ({ slot, name: this.links.get(slot)?.name ?? slot, heroClass: this.classOf(slot) }));
+    this.roster = [{ slot: 'host', name: this.hostName, heroClass: settings.heroClass }, ...guests];
   }
 
   private broadcastRoster(): void {
     this.broadcast({ type: 'roster', players: this.roster });
+  }
+
+  /** This player picked another hero in the lobby: the host tells the room, a guest tells the host. */
+  setHero(heroClass: HeroClassId): void {
+    if (this.role === 'guest' && this.uplink?.ready) {
+      this.send(this.uplink, { type: 'hero', heroClass });
+      return;
+    }
+    if (this.role !== 'host' || this.locked) return;
+    this.refreshRoster();
+    this.broadcastRoster();
+    this.onChange?.();
   }
 
   /** This player's name changed: the host tells the room, a guest asks the host (who may make it unique). */
@@ -564,9 +588,15 @@ export class CoopSession {
     if (!sent.ok) this.dropLink(link, sent.error.message);
   }
 
-  sendInput(frame: InputFrame): void {
+  /**
+   * Guest: this player's controls and crosshair. Frames are numbered here, for the whole session: the host
+   * drops a frame numbered at or below the newest it has, so a count that started again with each level
+   * would leave the guest frozen in the next one.
+   */
+  sendInput(input: InputFrame['input'], aim: InputFrame['aim']): void {
     const link = this.uplink;
     if (!link?.ready) return;
+    const frame: InputFrame = { input, aim, sequence: this.inputSequence++ };
     // One-shot presses must not be lost, so they take the reliable channel; held keys ride the fast one.
     const fast = hasIntent(frame.input.intents) ? null : this.fastReady(link, INPUT_BACKLOG_LIMIT);
     if (!fast) {
@@ -668,6 +698,7 @@ export class CoopSession {
     this.peer = null; this.role = null; this.slot = null;
     this.connected = false; this.invite = ''; this.latest = null; this.level = null;
     this.locked = false; this.roster = [];
+    this.inputSequence = 0;
     this.resetStream();
   }
 

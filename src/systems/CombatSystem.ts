@@ -121,7 +121,8 @@ function knockBack(player: Entity, source: Entity): void {
 /** A blow that got past the player's Armor Class: all of its damage counts (armour already did its job by turning misses). */
 export function hurtPlayer(player: Entity, source: Entity, damage: number): void {
   const h = player.health;
-  if (!h || player.falling || player.respawnTicks !== undefined || h.current <= 0) return;
+  // The console's god mode takes no harm.
+  if (!h || player.godMode || player.falling || player.respawnTicks !== undefined || h.current <= 0) return;
 
   const finalDamage = Math.max(MIN_HIT_DAMAGE, Math.round(damage));
 

@@ -1,7 +1,9 @@
-import { world, q } from '../world';
-import type { Entity, MobType } from '../world';
+import { world, q, isPlayer } from '../world';
+import type { Entity, MobType, Player } from '../world';
 import type { Level } from '../level/Level';
-import { dropLoot } from '../entities/LootFactory';
+import { killReward } from '../entities/LootFactory';
+import { spawnDrops } from '../entities/Drops';
+import { pay } from '../game/Purse';
 import { createDeathFx } from '../entities/FxFactory';
 import { sound } from '../audio/SoundPlayer';
 import type { SfxName } from '../audio/SoundPlayer';
@@ -52,27 +54,36 @@ function levelUp(player: Earner): void {
   sound.playSound('level_up');
 }
 
-/** The party shares a kill's experience, as at the table: each living hero gets an equal part. */
+/** Experience for one hero, with every level it reaches. */
+export function grantExperience(player: Earner, points: number): void {
+  player.playerStats.exp += Math.max(0, Math.floor(points));
+  while (player.playerStats.level < levelForXp(player.playerStats.exp)) levelUp(player);
+}
+
+/** The party shares a kill's experience, as at the table: every hero in the game gets an equal part. */
 function awardExperience(points: number): void {
-  let living = 0;
-  for (const player of earners) if (player.health.current > 0) living++;
-  if (points <= 0 || living === 0) return;
-  const share = Math.floor(points / living);
+  const heroes = earners.entities.length;
+  if (points <= 0 || heroes === 0) return;
+  const share = Math.floor(points / heroes);
   for (const player of earners) {
-    if (player.health.current <= 0) continue;
-    player.playerStats.exp += share;
     player.playerStats.kills++;
-    while (player.playerStats.level < levelForXp(player.playerStats.exp)) levelUp(player);
+    grantExperience(player, share);
   }
 }
 
-/** The luckiest living player's share of extra coins: luck makes kills richer. */
-function bestLootBonus(): number {
-  let best = 0;
-  for (const player of earners) {
-    if (player.health.current > 0) best = Math.max(best, player.playerStats.lootBonus);
+/** Who is paid for a kill: whoever struck last, or failing that (a fall, a trap) the nearest living hero. */
+function killerOf(entity: Entity, pos: { x: number; y: number }): Player | undefined {
+  const struck = entity.lastHitBy === undefined ? undefined : world.entity(entity.lastHitBy);
+  if (isPlayer(struck)) return struck;
+  let nearest: Player | undefined;
+  let best = Infinity;
+  for (const player of q.players) {
+    const d = Math.hypot(player.position.x - pos.x, player.position.y - pos.y);
+    if (player.health.current <= 0 || d >= best) continue;
+    best = d;
+    nearest = player;
   }
-  return best;
+  return nearest;
 }
 
 /** What dying leaves behind, by kind of entity: sound, smoke, experience and loot. */
@@ -89,7 +100,10 @@ function die(entity: Entity, pos: { x: number; y: number }): void {
     sound.playSound(entity.mobType ? DEATH_SOUNDS[entity.mobType] : 'enemy_death', pos.x, pos.y);
     createDeathFx(pos.x, pos.y);
     awardExperience(entity.mobType ? MONSTERS[entity.mobType].xp : deathPts);
-    dropLoot(pos.x, pos.y, Math.round(deathPts * (1 + bestLootBonus())));
+    // The coins go straight to the killer (their Charisma makes kills richer); gear, now and then, drops.
+    const killer = killerOf(entity, pos);
+    if (killer) pay(killer, killReward(Math.round(deathPts * (1 + killer.playerStats.lootBonus))));
+    spawnDrops(pos.x, pos.y, 'mob', killer);
   }
 }
 

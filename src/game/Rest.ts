@@ -1,8 +1,9 @@
-import { world, q, localPlayer } from '../world';
-import type { Entity, Player, PlayerSlot, RestKind, RestNotice } from '../world';
+import { q, localPlayer, REST_KINDS, isRestKind } from '../world';
+import type { Player, PlayerSlot, RestKind, RestNotice } from '../world';
 import type { Level } from '../level/Level';
-import type { GuestCommand } from '../network/protocol';
 import { coop } from '../network/CoopSession';
+import { currentParty, isAlone, nameOf, notify, openVote, partyState, seatOf, SHORT_RESTS_PER_LONG_REST, takeAgreedVote } from './Party';
+import type { PartyState } from './Party';
 import { characterSheet } from '../rules/CharacterSheet';
 import { hitDiceRegained, hitDieHealing } from '../rules/HitPoints';
 import { rollDie } from '../rules/Dice';
@@ -17,50 +18,18 @@ import type { TextId } from '../core/texts';
  * Resting, as in the tabletop game. A short rest (no enemy hunting the party, two before a long one is
  * needed) recovers every spell; a long rest (everyone in the safe room) also heals all wounds and gives back
  * half the hero's hit dice. Hit dice are spent one at a time to heal while no enemy is hunting you. In co-op
- * a rest one player asks for waits until every other player agrees; the host decides, and the party's
- * rest state (one entity, sent to guests) carries the vote and the notice shown over everyone's screen.
+ * a rest one player asks for is put to the party (game/Party.ts) and taken once everyone agrees.
  */
 
-/** Short rests a party may take before it needs a long one (the tabletop game's usual two a day). */
-export const SHORT_RESTS_PER_LONG_REST = 2;
-/** Ticks the others have to answer a rest asked for in co-op (20 s). */
-export const REST_VOTE_TICKS = 1200;
-/** Ticks a notice about a rest stays on screen (4 s). */
-export const REST_NOTICE_TICKS = 240;
-/** Rest commands waiting for the next tick, at most this many (a flood from one guest is cut off). */
+export { SHORT_RESTS_PER_LONG_REST };
+/** Rest requests waiting for the next tick, at most this many (a flood from one guest is cut off). */
 const MAX_QUEUED = 16;
 /** The healing glow over a hero who spends a hit die or wakes from a long rest. */
 const HEAL_EFFECT = 'sparkle_ring';
 const HEAL_COLOUR = 'green';
 const HEAL_SCALE = 0.8;
 
-export type RestCommand = Extract<GuestCommand, { kind: 'rest' | 'rest_answer' }>;
-type RestState = NonNullable<Entity['restState']>;
-
-const rests = world.with('restState');
-const queued: Array<{ slot: PlayerSlot; command: RestCommand }> = [];
-
-/** The seat a player sits in (a lone game's hero is the host's). */
-export const seatOf = (player: Entity): PlayerSlot => player.playerSlot ?? 'host';
-
-const nameOf = (player: Player): string => player.playerName || text('combat_log.default_hero');
-
-/** The party's rest state as this screen sees it (its own, or the copy a guest was sent), once anyone has asked to rest. */
-export function currentRest(): Entity['restState'] {
-  for (const entity of rests) return entity.restState;
-  return undefined;
-}
-
-/** The level's rest state, made the first time anyone asks to rest. */
-function theRest(): RestState {
-  for (const entity of rests) return entity.restState;
-  const fresh: RestState = { shortRestsLeft: SHORT_RESTS_PER_LONG_REST, vote: null, notice: null };
-  return world.add({ restState: fresh }).restState ?? fresh;
-}
-
-function notify(state: RestState, notice: RestNotice, name: string, kind: RestKind): void {
-  state.notice = { notice, name, kind, age: 0 };
-}
+const requests: Array<{ slot: PlayerSlot; kind: RestKind }> = [];
 
 /** Whether any living enemy is hunting the party (alert to it, fighting it or tracking it). */
 export function enemiesHunting(): boolean {
@@ -104,30 +73,21 @@ export function requestHitDie(player: Player): void {
   else spendHitDie(player);
 }
 
-// ── Asking and answering ──────────────────────────────────────────────────────
+// ── Asking ────────────────────────────────────────────────────────────────────
 
-/** Host: a rest command from a seat, carried out on the next tick (which knows the level). */
-export function queueRestCommand(slot: PlayerSlot, command: RestCommand): void {
-  if (queued.length < MAX_QUEUED) queued.push({ slot, command });
-}
-
-function sendOrQueue(command: RestCommand): void {
-  if (coop.role === 'guest') {
-    coop.sendCommand(command);
-    return;
-  }
-  const me = localPlayer();
-  if (me) queueRestCommand(seatOf(me), command);
+/** Host: a seat asks for a rest, looked at on the next tick (which knows the level). */
+export function queueRestRequest(slot: PlayerSlot, kind: RestKind): void {
+  if (requests.length < MAX_QUEUED) requests.push({ slot, kind });
 }
 
 /** The rest menu: this screen's player asks the party for a rest. */
 export function requestRest(kind: RestKind): void {
-  sendOrQueue({ kind: 'rest', rest: kind });
-}
-
-/** The rest prompt: this screen's player agrees to the rest asked for, or turns it down. */
-export function answerRest(agree: boolean): void {
-  sendOrQueue({ kind: 'rest_answer', agree });
+  if (coop.role === 'guest') {
+    coop.sendCommand({ kind: 'rest', rest: kind });
+    return;
+  }
+  const me = localPlayer();
+  if (me) queueRestRequest(seatOf(me), kind);
 }
 
 function playerAt(slot: PlayerSlot): Player | undefined {
@@ -136,7 +96,7 @@ function playerAt(slot: PlayerSlot): Player | undefined {
 }
 
 /** Why the party can't take this rest now; null when it can. */
-function restBlocked(kind: RestKind, level: Level, state: RestState): RestNotice | null {
+function restBlocked(kind: RestKind, level: Level, state: PartyState): RestNotice | null {
   for (const player of q.players) if (player.health.current <= 0 || player.respawnTicks !== undefined) return 'fallen';
   if (kind === 'long') return everyoneSafe(level) ? null : 'unsafe';
   if (state.shortRestsLeft <= 0) return 'no_short_left';
@@ -149,33 +109,12 @@ function everyoneSafe(level: Level): boolean {
 }
 
 /** A player asks for a rest: refused with the reason, taken at once alone, or put to the others in co-op. */
-function ask(player: Player, kind: RestKind, level: Level, state: RestState): void {
+function ask(player: Player, kind: RestKind, level: Level, state: PartyState): void {
   if (state.vote) return;
   const blocked = restBlocked(kind, level, state);
-  if (blocked) {
-    notify(state, blocked, nameOf(player), kind);
-    return;
-  }
-  if (q.players.entities.length <= 1) {
-    takeRest(kind, state);
-    return;
-  }
-  const seat = seatOf(player);
-  state.vote = { kind, by: seat, agreed: [seat], ticks: REST_VOTE_TICKS };
-  notify(state, 'asked', nameOf(player), kind);
-}
-
-/** A player answers the rest asked for: one refusal calls it off. */
-function answer(player: Player, agree: boolean, state: RestState): void {
-  const vote = state.vote;
-  const seat = seatOf(player);
-  if (!vote || vote.agreed.includes(seat)) return;
-  if (agree) {
-    vote.agreed.push(seat);
-    return;
-  }
-  state.vote = null;
-  notify(state, 'declined', nameOf(player), vote.kind);
+  if (blocked) notify(state, blocked, nameOf(player), kind);
+  else if (isAlone()) takeRest(kind, state);
+  else openVote(player, kind, state);
 }
 
 // ── Resting ───────────────────────────────────────────────────────────────────
@@ -189,7 +128,7 @@ function wake(player: Player): void {
 }
 
 /** The party rests: every spell recovered, and after a long rest everyone healed. */
-export function takeRest(kind: RestKind, state: RestState = theRest()): void {
+export function takeRest(kind: RestKind, state: PartyState = partyState()): void {
   for (const player of q.players) {
     player.spellbook?.recovery.fill(0);
     if (kind === 'long') wake(player);
@@ -199,40 +138,18 @@ export function takeRest(kind: RestKind, state: RestState = theRest()): void {
   sound.playSound('buy');
 }
 
-/** Whether every player in the game has agreed to the vote. */
-function everyoneAgreed(agreed: readonly PlayerSlot[]): boolean {
-  for (const player of q.players) if (!agreed.includes(seatOf(player))) return false;
-  return true;
-}
-
-/** The vote ends: the rest is taken (if it still can be) once all agree; nobody answering calls it off. */
-function tickVote(level: Level, state: RestState): void {
-  const vote = state.vote;
-  if (!vote) return;
-  if (everyoneAgreed(vote.agreed)) {
-    state.vote = null;
-    const blocked = restBlocked(vote.kind, level, state);
-    if (blocked) notify(state, blocked, '', vote.kind);
-    else takeRest(vote.kind, state);
-    return;
-  }
-  if (--vote.ticks <= 0) {
-    state.vote = null;
-    notify(state, 'timeout', '', vote.kind);
-  }
-}
-
-/** Host, each tick: the rest commands that came in, the vote, and the notice fading. */
+/** Host, each tick (after the party's answers): rests asked for, and a rest everyone agreed to (if it still can be taken). */
 export function updateRest(level: Level): void {
-  if (!queued.length && !currentRest()) return;
-  const state = theRest();
-  for (const { slot, command } of queued) {
+  if (!requests.length && !currentParty()) return;
+  const state = partyState();
+  for (const { slot, kind } of requests) {
     const player = playerAt(slot);
-    if (!player) continue;
-    if (command.kind === 'rest') ask(player, command.rest, level, state);
-    else answer(player, command.agree, state);
+    if (player) ask(player, kind, level, state);
   }
-  queued.length = 0;
-  tickVote(level, state);
-  if (state.notice && ++state.notice.age > REST_NOTICE_TICKS) state.notice = null;
+  requests.length = 0;
+  const agreed = takeAgreedVote(REST_KINDS);
+  if (!agreed || !isRestKind(agreed.kind)) return;
+  const blocked = restBlocked(agreed.kind, level, state);
+  if (blocked) notify(state, blocked, '', agreed.kind);
+  else takeRest(agreed.kind, state);
 }

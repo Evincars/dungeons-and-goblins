@@ -25,6 +25,8 @@ export function hitMob(mob: Entity, attacker: Entity, damage: number, evenIfFlin
   // A flinching target shrugs off a second blow in the same instant — but not a spell's darts or blast.
   if ((mob.freezeTime ?? 0) > 0 && !evenIfFlinching) return;
 
+  // The kill (and its coins) goes to whoever struck last: a projectile's shooter, not the projectile.
+  mob.lastHitBy = attacker.projectile?.owner ?? world.id(attacker);
   mob.hurtTime = MOB_HURT_TICKS;
   mob.attackTime = 0;
   mob.freezeTime = MOB_FREEZE_TICKS;

@@ -33,13 +33,20 @@ tag with generated notes. In the repository's Settings → Pages, the source mus
 
 Controls: WASD to move, the mouse to aim, left click (or Space) to attack, Q to swap the 1st and 2nd weapon,
 right click / R to cast the spell picked on the quick bar (1–5, or click a square), E to use (shop, chests, the
-exit), Shift to sprint, Tab for the inventory, Esc to pause. Keys can be rebound in Settings → Key bindings.
+exit, the lever, a stash), Shift to sprint, Tab for the inventory, ~ for the console, Esc to pause. Keys can be
+rebound in Settings → Key bindings. What E would use is framed by white corner brackets.
 
 Every game starts with typing your name and picking a hero — a **Fighter**, **Wizard**, **Rogue**, **Warlock**, **Bard**, **Fighter 2** or **Cleric**; heroes
 are named after their class, the player names the character
 (see `classes.json` below) — then the intro plays (`public/intro-video.mp4` under the story; E, Enter or a
 click skip it) and the first level fades in. The safe room starts closed: pull the lever by its door (E) to
-raise the portcullis. In co-op the lever waits until every player has loaded the level.
+raise the portcullis. In co-op the lever waits until every player has loaded the level, and every other player
+must agree to it (Agree / Refuse at the top of their screen); only one pull at a time, and the lever rests a
+moment after each. Once the gate is open the party has **10 seconds** to leave the safe room — whoever is still
+inside when it shuts dies.
+
+In co-op every player picks their hero in the lobby (a guest too, whoever joins by the invite link): the names of
+the players who took a hero show over its portrait, and two players may play the same hero.
 
 On screen: the health bar bottom left, with four round buttons over it — character and level (placeholder
 dialogs for now), the map, which shows the explored dungeon with holes and treasure marked (Esc or ✕ closes a
@@ -50,10 +57,27 @@ back).
 
 The inventory is titled with the hero's name; its sheet shows their level and experience ("XP 450/900") and
 their hit dice ("Hit dice 1/2 d6": left of one a level) — click them to spend one and heal (the die + CON).
+Right-click an item for its menu: **Send to** another player puts it in the first free square of their bag.
+
+### Coins and finds
+
+- Nothing is thrown on the floor any more: a kill's coins go straight into the purse of whoever struck last, a
+  chest's to whoever opened it, and the sum shows over their head and in the combat log ("Evincars +12 gold").
+- Some urns, closed coffins, bowls, sacks and jars hide a few coins: E (or a click) on one finds them, once.
+- Chests always hold a piece of gear, and now and then (one kill in twelve) an enemy drops one. In co-op a
+  **rare** find (+2 or better) is rolled for: it shows at the bottom of every screen (hover it for its stats) with
+  **Need** and **Pass** for 30 seconds. Everyone on Need rolls a d20, the highest wins it (a tie rolls again) and it
+  goes to their bag; Pass, or no answer in time, stays out — if nobody needs it, it is gone.
+
+### The console (~)
+
+For testing, alone (not in co-op), as in Catacomb Snatch Redux: `/help`, `/money <amount>`, `/god [on|off]`,
+`/xp <amount>`, `/additem <item id>` (any case, dashes or underscores: `/additem weapon-axe-001`) and
+`/items [filter]` to look ids up. Up and down recall earlier lines, Esc closes it.
 
 ### Experience, initiative and rest (D&D rules)
 
-- **Experience**: each kill gives its SRD monster's XP (`xp` in `stats.json`), shared among the living heroes.
+- **Experience**: each kill gives its SRD monster's XP (`xp` in `stats.json`), shared equally by every hero in the game.
   Levels come at the SRD totals (300 for level 2, 900 for 3, … 355,000 for 20), each with more hit points (the
   hit die's average + CON), one more hit die and a full heal, and whatever the class's `progression` hands out at that level.
 - **Initiative**: when an enemy engages, it and the hero it hunts each roll d20 + DEX ("Initiative 17" over their
@@ -119,7 +143,7 @@ In co-op a guest's panel only asks; the host checks the request (`game/Customize
 - `abilities` — the six scores,
 - `weapons` — the low-end weapons it may carry (one is picked at random when it spawns),
 - `xp` — the experience it is worth (SRD, by challenge rating),
-- `deathPoints` — the worth of the coins it drops when killed (a nest's experience is three times it).
+- `deathPoints` — the worth of the coins its killer is paid (a nest's experience is three times it).
 
 Speed, size and art of each enemy live next to it in `MOB_CONFIGS` in
 [`src/entities/MobFactory.ts`](src/entities/MobFactory.ts).
@@ -173,7 +197,7 @@ is `medal`).
 A player carries at most **100 kg** — bag and worn gear together (`MAX_CARRY_KG` in
 [`src/game/PlayerActions.ts`](src/game/PlayerActions.ts)); the inventory shows the total next to the gold.
 Things too heavy to carry are left lying where they are, and the shop won't sell them. Chests drop a random
-weapon, shield or suit of armour (and a few coins); walk over it to pick it up.
+weapon, shield or suit of armour (their coins go to the opener); walk over it to pick it up.
 
 ### What the stats do
 
@@ -220,8 +244,11 @@ Not JSON, but kept in one place each:
 
 - [`src/entities/WeaponStats.ts`](src/entities/WeaponStats.ts) — sword swing, spell casting and arrow timing and reach (damage comes from the rules).
 - [`src/game/Rest.ts`](src/game/Rest.ts) — short rests before a long one, how long a rest vote and its notice last.
-- [`src/entities/Drops.ts`](src/entities/Drops.ts) — drop tables (what chests throw out).
-- [`src/entities/LootFactory.ts`](src/entities/LootFactory.ts) — the coins and gems enemies drop, and how few.
+- [`src/entities/Drops.ts`](src/entities/Drops.ts) — drop tables (what chests and kills give up, how often an enemy drops gear).
+- [`src/entities/LootFactory.ts`](src/entities/LootFactory.ts) — what a kill pays, and the coins a fall scatters.
+- [`src/entities/DungeonFactory.ts`](src/entities/DungeonFactory.ts) — which props may hide coins, how often and how many.
+- [`src/game/LootRoll.ts`](src/game/LootRoll.ts) — what counts as rare, and how long Need / Pass stays up.
+- [`src/game/Party.ts`](src/game/Party.ts) — how long a vote waits for answers; the gate's countdown is in `systems/DoorSystem.ts`.
 - [`src/level/generators/DungeonConfig.ts`](src/level/generators/DungeonConfig.ts) — map size, room sizes, halls, pits, enemy density.
 - [`src/level/Props.ts`](src/level/Props.ts) — every decoration and how often it appears.
 - [`src/ai/constants.ts`](src/ai/constants.ts) — enemy senses, squad tactics and chase speed.

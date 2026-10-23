@@ -100,47 +100,23 @@ function createLootOfKind(x: number, y: number, velX: number, velY: number, kind
 }
 
 /**
- * A kill leaves only a few coins — one to three, worth this share of its experience between them — and only
- * now and then a gem; a diamond is a rare find even among those.
+ * What a kill pays its killer (straight into the purse): coins worth this share of its death points, and only
+ * now and then a gem on top; a diamond is a rare find even among those.
  */
 const KILL_COIN_SHARE = 0.2;
-const KILL_MIN_COINS = 1;
-const KILL_EXTRA_COINS = 2;
 const KILL_GEM_CHANCE = 0.03;
 const DIAMOND_SHARE = 0.12;
-/** Indexes into LOOT_KINDS: the largest coin, then the gems. */
-const GOLD_COIN = 5;
+/** Indexes into LOOT_KINDS: the gems. */
 const EMERALD = 6;
 const RUBY = 7;
 const DIAMOND = 8;
-const DROP_MIN_SPEED = 0.4;
-const DROP_SPEED_SPREAD = 0.8;
 
-function flingSpeed(): { vx: number; vy: number } {
-  const angle = Math.random() * Math.PI * 2;
-  const speed = DROP_MIN_SPEED + Math.random() * DROP_SPEED_SPREAD;
-  return { vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed };
-}
-
-/** The coin a sum is paid in: the largest worth no more than it, never a gem. */
-function coinKind(value: number): number {
-  return Math.min(GOLD_COIN, exactKind(value));
-}
-
-export function dropLoot(x: number, y: number, value: number): void {
-  const total = Math.max(1, Math.round(value * KILL_COIN_SHARE));
-  const coins = Math.min(total, KILL_MIN_COINS + Math.floor(Math.random() * (KILL_EXTRA_COINS + 1)));
-  let left = total;
-  for (let i = 0; i < coins; i++) {
-    const worth = i === coins - 1 ? left : Math.max(1, Math.floor(total / coins));
-    left -= worth;
-    const { vx, vy } = flingSpeed();
-    createLootOfKind(x, y, vx, vy, coinKind(worth), worth);
-  }
-  if (Math.random() >= KILL_GEM_CHANCE) return;
+/** The coins (and now and then a gem's worth) a kill worth `value` pays. */
+export function killReward(value: number): number {
+  const coins = Math.max(1, Math.round(value * KILL_COIN_SHARE));
+  if (Math.random() >= KILL_GEM_CHANCE) return coins;
   const gem = Math.random() < DIAMOND_SHARE ? DIAMOND : Math.random() < 0.5 ? EMERALD : RUBY;
-  const { vx, vy } = flingSpeed();
-  createLootOfKind(x, y, vx, vy, gem, LOOT_KINDS[gem].value);
+  return coins + LOOT_KINDS[gem].value;
 }
 
 /** Most pieces a sum of money spills as. */

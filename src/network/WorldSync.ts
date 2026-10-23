@@ -1,4 +1,7 @@
-import { world, isBlowResult, isEquipSlot, isItemType, isMobType, isPlayerSlot, isRestKind, isRestNotice, isRollTone, MOB_STATES, PLAYER_SLOTS, QUICK_SLOTS, TACTIC_ROLES } from '../world';
+import {
+  world, isEquipSlot, isItemType, isLogResult, isMobType, isPlayerSlot, isRestNotice, isRollTone, isVoteKind, MOB_STATES, PLAYER_SLOTS,
+  QUICK_SLOTS, TACTIC_ROLES,
+} from '../world';
 import type { Entity, PlayerSlot } from '../world';
 import { cleanName } from '../game/Settings';
 import { hasCharacter } from '../characters/Characters';
@@ -13,8 +16,8 @@ import { isHeroClassId } from '../rules/Classes';
 import { validBuild } from '../rules/Build';
 import { isWeaponBase } from '../rules/WeaponTable';
 import { MAX_ROLL_LINES } from '../systems/RollLogSystem';
-import { MAX_LOG_ENTRIES } from '../systems/CombatLogSystem';
-import { isSpellId } from '../rules/Spells';
+import { MAX_LOG_ENTRIES, MAX_LOG_ITEM } from '../systems/CombatLogSystem';
+import { isSpellId, SPELL_IDS } from '../rules/Spells';
 
 /**
  * The live world as the co-op host sends it: every entity that is not rebuilt locally from the level
@@ -25,7 +28,7 @@ import { isSpellId } from '../rules/Spells';
 /** Display objects: rebuilt on each screen, never sent. */
 const RUNTIME_KEYS = ['sprite', 'container', 'healthBar', 'hurtOverlay', 'sprintBar', 'fallMask', 'priceLabel'] as const satisfies readonly (keyof Entity)[];
 /** Host bookkeeping a guest has no use for, or sets for itself. */
-const HOST_KEYS = ['trail', 'remoteInput', 'aimWorld', 'removed', 'localOnly', 'initiative'] as const satisfies readonly (keyof Entity)[];
+const HOST_KEYS = ['trail', 'remoteInput', 'aimWorld', 'removed', 'localOnly', 'initiative', 'lastHitBy', 'godMode'] as const satisfies readonly (keyof Entity)[];
 type UnsentKey = (typeof RUNTIME_KEYS)[number] | (typeof HOST_KEYS)[number];
 const UNSENT: ReadonlySet<string> = new Set([...RUNTIME_KEYS, ...HOST_KEYS]);
 /** Keys an entity may never be built with, whatever a packet claims. */
@@ -68,8 +71,8 @@ export function captureWorld(paused: boolean, seed: number): NetState {
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
-/** `object?`: an object, or null. */
-type FieldType = 'number' | 'string' | 'boolean' | 'object' | 'object?';
+/** `object?`: an object, or null; `number?`: a number, or null. */
+type FieldType = 'number' | 'string' | 'boolean' | 'object' | 'object?' | 'number?';
 type Schema = Readonly<Record<string, FieldType>>;
 const POINT: Schema = { x: 'number', y: 'number' };
 
@@ -106,14 +109,16 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   room: { id: 'number', type: 'string', bounds: 'object' },
   exitButton: { activated: 'boolean' },
   shopNpc: { items: 'object' },
-  door: { tiles: 'object', boundaryX: 'number', closed: 'boolean', locked: 'boolean' },
+  door: { tiles: 'object', boundaryX: 'number', closed: 'boolean', locked: 'boolean', closingTicks: 'number?' },
   gate: { lift: 'number' },
-  lever: { pulled: 'boolean' },
+  lever: { pulled: 'boolean', rest: 'number' },
+  stash: { coins: 'number' },
+  lootRoll: { id: 'number', item: 'object', ticks: 'number', choices: 'object' },
   inventory: {},
   equipped: {},
   rollLog: {},
   combatLog: { seq: 'number', entries: 'object' },
-  restState: { shortRestsLeft: 'number', vote: 'object?', notice: 'object?' },
+  party: { shortRestsLeft: 'number', vote: 'object?', notice: 'object?' },
 };
 
 /** Components that are plain values. */
@@ -131,6 +136,7 @@ function hasType(v: unknown, type: FieldType): boolean {
   if (type === 'number') return isFiniteNumber(v);
   if (type === 'object') return typeof v === 'object' && v !== null;
   if (type === 'object?') return typeof v === 'object';
+  if (type === 'number?') return v === null || isFiniteNumber(v);
   return typeof v === type;
 }
 
@@ -151,19 +157,27 @@ function checkComponent(key: string, value: unknown): void {
 const isTile = (t: unknown) => isRecord(t) && Number.isInteger(t.x) && Number.isInteger(t.y);
 /** A combat log entry: a player named as names may be, or a known enemy, and whole, sane numbers. */
 const isLogEntry = (e: unknown) => isRecord(e) && Number.isInteger(e.seq) && Number.isInteger(e.total) && Number.isInteger(e.damage)
-  && Number(e.damage) >= 0 && isBlowResult(e.result) && (e.spell === undefined || isSpellId(e.spell))
+  && Number(e.damage) >= 0 && isLogResult(e.result) && (e.spell === undefined || isSpellId(e.spell))
+  && (e.item === undefined || (typeof e.item === 'string' && e.item.length <= MAX_LOG_ITEM))
   && ((e.actor === 'mob' && typeof e.name === 'string' && isMobType(e.name)) || (e.actor === 'player' && typeof e.name === 'string' && cleanName(e.name) === e.name));
 const isRollLine = (l: unknown) => isRecord(l) && typeof l.text === 'string' && l.text.length <= MAX_ROLL_TEXT && isRollTone(l.tone) && isFiniteNumber(l.age);
 const isIntList = (v: unknown) => Array.isArray(v) && v.every(Number.isInteger);
-/** Ticks until each spell recovers: one a quick-bar square, none negative. */
-const isRecoveryList = (v: unknown) => isIntList(v) && Array.isArray(v) && v.length <= QUICK_SLOTS && v.every((t) => Number(t) >= 0);
+/** Ticks until each of the hero's spells recovers (one a spell the game has, at most), none negative. */
+const isRecoveryList = (v: unknown) => isIntList(v) && Array.isArray(v) && v.length <= SPELL_IDS.length && v.every((t) => Number(t) >= 0);
 const isSlotList = (v: unknown) => Array.isArray(v) && v.length <= PLAYER_SLOTS.length && v.every(isPlayerSlot);
 
-/** A rest being voted on, and the notice on screen: known kinds, seats and notices, a name as names may be. */
-function validRest(rest: NonNullable<EntityState['restState']>): boolean {
-  const { vote, notice } = rest;
-  const voteOk = vote === null || (isRecord(vote) && isRestKind(vote.kind) && isPlayerSlot(vote.by) && isSlotList(vote.agreed) && isFiniteNumber(vote.ticks));
-  const noticeOk = notice === null || (isRecord(notice) && isRestNotice(notice.notice) && isRestKind(notice.kind)
+/** A rare find being rolled for: a real item, and only known seats answering Need or Pass. */
+function validLootRoll(roll: NonNullable<EntityState['lootRoll']>): boolean {
+  const choices = Object.entries(roll.choices);
+  return isInventoryItem(roll.item) && choices.length <= PLAYER_SLOTS.length
+    && choices.every(([slot, choice]) => isPlayerSlot(slot) && (choice === 'need' || choice === 'pass'));
+}
+
+/** A vote under way and the notice on screen: known kinds, seats and notices, a name as names may be. */
+function validParty(party: NonNullable<EntityState['party']>): boolean {
+  const { vote, notice } = party;
+  const voteOk = vote === null || (isRecord(vote) && isVoteKind(vote.kind) && isPlayerSlot(vote.by) && isSlotList(vote.agreed) && isFiniteNumber(vote.ticks));
+  const noticeOk = notice === null || (isRecord(notice) && isRestNotice(notice.notice) && isVoteKind(notice.kind)
     && typeof notice.name === 'string' && cleanName(notice.name) === notice.name && isFiniteNumber(notice.age));
   return voteOk && noticeOk;
 }
@@ -193,7 +207,8 @@ function checkDetails(data: EntityState): void {
   ensure(!data.spellbook || isRecoveryList(data.spellbook.recovery), 'Invalid spellbook');
   ensure(!data.casting?.spell || isSpellId(data.casting.spell), 'Invalid spell');
   ensure(!data.projectile?.spell || isSpellId(data.projectile.spell), 'Invalid spell');
-  ensure(!data.restState || validRest(data.restState), 'Invalid rest');
+  ensure(!data.party || validParty(data.party), 'Invalid party state');
+  ensure(!data.lootRoll || validLootRoll(data.lootRoll), 'Invalid loot roll');
   const slot = data.playerInput?.spellSlot;
   ensure(slot === undefined || (Number.isInteger(slot) && slot >= 0 && slot < QUICK_SLOTS), 'Invalid quick-bar square');
   const intents = data.playerInput?.intents;

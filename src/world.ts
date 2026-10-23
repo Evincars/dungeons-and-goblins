@@ -72,7 +72,7 @@ export type InventoryItem = {
 export type BagSquare = InventoryItem | null;
 
 /** How a line of the roll log reads: a hit, a miss, a natural 20 or 1, or the damage dealt. */
-export const ROLL_TONES = ['hit', 'miss', 'crit', 'fumble', 'damage', 'heal'] as const;
+export const ROLL_TONES = ['hit', 'miss', 'crit', 'fumble', 'damage', 'heal', 'gold'] as const;
 export type RollTone = (typeof ROLL_TONES)[number];
 
 export function isRollTone(value: unknown): value is RollTone {
@@ -100,10 +100,23 @@ export function isBlowResult(value: unknown): value is BlowResult {
 }
 
 /**
- * One blow in the combat log: who struck (a player by name, an enemy by kind), what they rolled to hit, how it
- * went and the damage. `seq` counts up, so a screen shows each entry once.
+ * What the combat log writes besides blows: coins a hero was paid (`gold`, the sum in `damage`), a roll of
+ * need for a rare find (`need`, the d20 in `total`) and who won it (`won`).
  */
-export type CombatLogEntry = { seq: number; actor: 'player' | 'mob'; name: string; total: number; result: BlowResult; damage: number; spell?: SpellId };
+export const LOG_RESULTS = [...BLOW_RESULTS, 'gold', 'need', 'won'] as const;
+export type LogResult = (typeof LOG_RESULTS)[number];
+
+export function isLogResult(value: unknown): value is LogResult {
+  return LOG_RESULTS.some((result) => result === value);
+}
+
+/**
+ * One line of the combat log: who (a player by name, an enemy by kind), what they rolled, how it went and the
+ * damage (or coins); `spell` and `item` name what it was about. `seq` counts up, so a screen shows each once.
+ */
+export type CombatLogEntry = {
+  seq: number; actor: 'player' | 'mob'; name: string; total: number; result: LogResult; damage: number; spell?: SpellId; item?: string;
+};
 
 /** The quick bar's squares (keys 1–5): the spells a hero casts with right click / R. */
 export const QUICK_SLOTS = 5;
@@ -116,7 +129,15 @@ export function isRestKind(value: unknown): value is RestKind {
   return REST_KINDS.some((kind) => kind === value);
 }
 
-/** What the screen says about a rest: it was taken, asked for, turned down, or isn't possible now. */
+/** What the party may be asked to agree to: a rest, or opening the safe room's gate (the lever). */
+export const VOTE_KINDS = [...REST_KINDS, 'gate'] as const;
+export type VoteKind = (typeof VOTE_KINDS)[number];
+
+export function isVoteKind(value: unknown): value is VoteKind {
+  return VOTE_KINDS.some((kind) => kind === value);
+}
+
+/** What the screen says about a vote: a rest taken, a vote asked for, turned down or unanswered, or why it can't be now. */
 export const REST_NOTICES = ['short_done', 'long_done', 'asked', 'declined', 'timeout', 'hunted', 'unsafe', 'no_short_left', 'fallen'] as const;
 export type RestNotice = (typeof REST_NOTICES)[number];
 
@@ -124,10 +145,13 @@ export function isRestNotice(value: unknown): value is RestNotice {
   return REST_NOTICES.some((notice) => notice === value);
 }
 
-/** A rest asked for in co-op: by whom, who has agreed so far (the asker included), and ticks left to answer. */
-export type RestVote = { kind: RestKind; by: PlayerSlot; agreed: PlayerSlot[]; ticks: number };
-/** The notice over the screen: which, about whom and which rest, and the ticks it has shown. */
-export type RestNoticeShown = { notice: RestNotice; name: string; kind: RestKind; age: number };
+/** Something asked of the party in co-op: by whom, who has agreed so far (the asker included), and ticks left to answer. */
+export type PartyVote = { kind: VoteKind; by: PlayerSlot; agreed: PlayerSlot[]; ticks: number };
+/** The notice over the screen: which, about whom and which vote, and the ticks it has shown. */
+export type PartyNoticeShown = { notice: RestNotice; name: string; kind: VoteKind; age: number };
+
+/** A Need or Pass on a rare find; a player who hasn't chosen yet has no entry. */
+export type LootChoice = 'need' | 'pass';
 
 /** Who controls a player character: the host, or one of up to three guests in a co-op room. */
 export const PLAYER_SLOTS = ['host', 'p2', 'p3', 'p4'] as const;
@@ -241,7 +265,8 @@ export type Entity = {
   // --- rendering ---
   /**
    * `rotation`: radians the sprite is turned (an arrow points where it flies). `fit`: drawn so its longer
-   * side is this many pixels, whatever size its art is (icons of things lying on the floor).
+   * side is this many pixels, whatever size its art is — the whole picture, not a frame of it (icons of things
+   * lying on the floor).
    */
   visual?: { sheet: string; col?: number; row?: number; scale?: number; rotation?: number; fit?: number };
   frame?: number;
@@ -489,18 +514,36 @@ export type Entity = {
    * The safe room's door: `locked` until the lever is pulled (its doorway barred by a portcullis), then open,
    * and `closed` (walled up) once everyone has gone through.
    */
-  door?: { tiles: Array<{ x: number; y: number }>; boundaryX: number; closed: boolean; locked: boolean };
+  door?: {
+    tiles: Array<{ x: number; y: number }>; boundaryX: number; closed: boolean; locked: boolean;
+    /** Ticks until the opened gate shuts on whoever is still inside (null: not counting down). */
+    closingTicks: number | null;
+  };
   /** A portcullis over a doorway tile: how far it has risen (0 down, 1 gone). */
   gate?: { lift: number };
-  /** The lever by the safe room's door: pulled opens the way into the dungeon. */
-  lever?: { pulled: boolean };
+  /**
+   * The lever by the safe room's door: pulled opens the way into the dungeon (in co-op once everyone agrees).
+   * `rest`: ticks before it can be pulled again after the others turned it down.
+   */
+  lever?: { pulled: boolean; rest: number };
+  /** Something on the floor worth searching (an urn, a coffin, a bowl): the coins in it, found once. */
+  stash?: { coins: number };
+  /**
+   * A rare find the party rolls for: the item, the ticks left to choose, each player's Need or Pass, and the
+   * id the host gave it (guests answer by it).
+   */
+  lootRoll?: { id: number; item: InventoryItem; ticks: number; choices: Partial<Record<PlayerSlot, LootChoice>> };
+  /** The entity id of whoever last hurt this enemy (a shooter, not their arrow): they are paid for the kill. */
+  lastHitBy?: number;
+  /** The console's god mode: this hero takes no harm. */
+  godMode?: true;
 
   // --- resting (one entity a level, sent to guests) ---
   /**
    * The party's rests: short rests left before a long rest is needed, a rest one player asked for that the
    * others must agree to, and the last word on it shown over the screen.
    */
-  restState?: { shortRestsLeft: number; vote: RestVote | null; notice: RestNoticeShown | null };
+  party?: { shortRestsLeft: number; vote: PartyVote | null; notice: PartyNoticeShown | null };
 
   // --- lifecycle ---
   removed?: true;

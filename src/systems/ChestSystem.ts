@@ -1,34 +1,24 @@
-import { q, isPlayer } from '../world';
-import type { Entity } from '../world';
+import { q } from '../world';
+import type { Player } from '../world';
 import { spawnDrops } from '../entities/Drops';
 import { sound } from '../audio/SoundPlayer';
-import { REACH } from './TargetSystem';
-import { nearby, Sense } from '../ai/perception/spatial';
+import { playerUsing } from './TargetSystem';
 
 type Chest = (typeof q.chests)['entities'][number];
-const openers: Entity[] = [];
 
-/** Whether a living player within reach pressed "use" (E): chests open on purpose, never by walking into them. */
-function opened(chest: Chest): boolean {
-  const cp = chest.position;
-  for (const e of nearby(cp.x, cp.y, REACH, Sense.player, openers)) {
-    if (!isPlayer(e) || e.health.current <= 0 || !e.playerInput.intents.use) continue;
-    if (Math.hypot(e.position.x - cp.x, e.position.y - cp.y) <= REACH) return true;
-  }
-  return false;
-}
-
-/** The lid flies open and the chest throws out what its drop table gives (coins, for now). */
-function spill(chest: Chest): void {
+/** The lid flies open: its coins go to whoever opened it, its gear onto the floor (or, a rare piece in co-op, to the party's roll). */
+function spill(chest: Chest, opener: Player): void {
   const cp = chest.position;
   chest.chest.opened = true;
   sound.playSound('chest_open', cp.x, cp.y);
-  spawnDrops(cp.x, cp.y, chest.chest.drops);
+  spawnDrops(cp.x, cp.y, chest.chest.drops, opener);
 }
 
+/** Chests open on purpose — a living player within reach presses "use" (E) — never by walking into them. */
 export function updateChests(): void {
   for (const chest of q.chests) {
     if (chest.removed || chest.chest.opened) continue;
-    if (opened(chest)) spill(chest);
+    const opener = playerUsing(chest.position.x, chest.position.y);
+    if (opener) spill(chest, opener);
   }
 }

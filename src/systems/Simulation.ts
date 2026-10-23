@@ -38,6 +38,10 @@ import { updateRollLogs } from './RollLogSystem';
 import { updateRollTexts } from './RollTextSystem';
 import { updateInitiative } from './InitiativeSystem';
 import { updateRest } from '../game/Rest';
+import { updateParty } from '../game/Party';
+import { updateLootRolls } from '../game/LootRoll';
+import { updateStashes } from './StashSystem';
+import { updateMarker } from './MarkerSystem';
 import { updateBuildLock } from '../game/Customize';
 import { updateProtection } from './ProtectionSystem';
 
@@ -83,6 +87,10 @@ export const SIMULATION: readonly System[] = [
   ({ level }) => updateHoles(level),
   ({ level }) => updateFalling(level),
   () => updateChests(),
+  () => updateStashes(),
+  () => updateLootRolls(),
+  // The party's answers first: the lever and rests act on a vote everyone agreed to this tick.
+  () => updateParty(),
   ({ level }) => updateLevers(level),
   ({ level }) => updateDoors(level),
   () => updateExit(),
@@ -104,6 +112,7 @@ export const PRESENTATION: readonly System[] = [
   ({ level }) => updateRender(level),
   ({ gameLayer }) => updateBars(gameLayer),
   ({ gameLayer }) => updateRollTexts(gameLayer),
+  ({ gameLayer }) => updateMarker(gameLayer),
 ];
 
 export function runSystems(systems: readonly System[], ctx: FrameContext): void {

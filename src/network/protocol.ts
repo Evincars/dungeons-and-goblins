@@ -7,6 +7,8 @@ import type { FightingStyleId } from '../rules/FightingStyles';
 import type { SfxName } from '../audio/SoundPlayer';
 import { cleanName } from '../game/Settings';
 import { ValidationError } from '../core/errors';
+import { isHeroClassId } from '../rules/Classes';
+import type { HeroClassId } from '../rules/Classes';
 import { isFiniteNumber, isRecord } from '../core/guards';
 import { isItemBase, isMagicBonus } from '../rules/Equipment';
 
@@ -20,7 +22,11 @@ export const PROTOCOL_VERSION = 1;
 export const MAX_GUESTS = PLAYER_SLOTS.length - 1;
 
 export type InputFrame = { input: PlayerInput; aim: { x: number; y: number }; sequence: number };
-export type RosterEntry = { slot: PlayerSlot; name: string };
+/** Someone in the room: their seat, their name and the hero they picked (heroes may be picked twice). */
+export type RosterEntry = { slot: PlayerSlot; name: string; heroClass: HeroClassId };
+
+/** A square of the inventory screen: one in the bag, or an equipment slot. */
+export type ItemSquare = { bag: number } | { slot: EquipSlot };
 
 /** Things a guest asks the host to do for its character, which the host checks and carries out. */
 export type GuestCommand =
@@ -28,9 +34,13 @@ export type GuestCommand =
   | { kind: 'loadout'; inventory: BagSquare[]; equipped: Partial<Record<EquipSlot, InventoryItem>> }
   /** Spend one hit die on healing. */
   | { kind: 'hit_die' }
-  /** Ask the party for a rest, or answer the rest someone else asked for. */
+  /** Ask the party for a rest, or answer what someone else asked the party (a rest, opening the gate). */
   | { kind: 'rest'; rest: RestKind }
-  | { kind: 'rest_answer'; agree: boolean }
+  | { kind: 'vote_answer'; agree: boolean }
+  /** Hand the item on a square of the inventory to another player. */
+  | { kind: 'give'; from: ItemSquare; to: PlayerSlot }
+  /** Need or Pass on a rare find the party is rolling for (by the id the host gave the roll). */
+  | { kind: 'loot'; roll: number; need: boolean }
   /** The hero's bought ability scores, their fighting style, an Ability Score Improvement or a feat (rules/Build.ts). */
   | { kind: 'scores'; scores: Record<StatName, number> }
   | { kind: 'fighting_style'; style: FightingStyleId }
@@ -45,6 +55,8 @@ export type Message =
   | { type: 'refused'; reason: string }
   | { type: 'roster'; players: RosterEntry[] }
   | { type: 'name'; name: string }
+  /** A guest picked another hero in the lobby (the host checks it). */
+  | { type: 'hero'; heroClass: unknown }
   /** The host started a level; the dungeon itself follows in a `map` message (level/LevelMap.ts, gzipped). */
   | { type: 'start'; seed: number; depth: number }
   | { type: 'map'; seed: number; data: ArrayBuffer | Uint8Array }
@@ -94,7 +106,8 @@ export function validInput(value: unknown): value is InputFrame {
 
 export function validRoster(value: unknown): value is RosterEntry[] {
   if (!Array.isArray(value) || value.length < 1 || value.length > PLAYER_SLOTS.length) return false;
-  const entries = value.every((p) => isRecord(p) && isPlayerSlot(p.slot) && typeof p.name === 'string' && cleanName(p.name) === p.name);
+  const entries = value.every((p) => isRecord(p) && isPlayerSlot(p.slot) && typeof p.name === 'string' && cleanName(p.name) === p.name
+    && isHeroClassId(p.heroClass));
   return entries && new Set(value.map((p) => (isRecord(p) ? p.slot : null))).size === value.length;
 }
 
@@ -140,12 +153,20 @@ function validEquipped(value: unknown): value is Partial<Record<EquipSlot, Inven
   return Object.entries(value).every(([slot, item]) => isEquipSlot(slot) && isInventoryItem(item));
 }
 
+function isItemSquare(value: unknown): value is ItemSquare {
+  if (!isRecord(value)) return false;
+  if ('bag' in value) return Number.isInteger(value.bag) && Number(value.bag) >= 0 && Number(value.bag) < MAX_ITEMS;
+  return typeof value.slot === 'string' && isEquipSlot(value.slot);
+}
+
 export function validCommand(value: unknown): value is GuestCommand {
   if (!isRecord(value)) return false;
   if (value.kind === 'buy') return Number.isInteger(value.index) && Number(value.index) >= 0 && Number(value.index) < MAX_ITEMS;
   if (value.kind === 'hit_die') return true;
   if (value.kind === 'rest') return isRestKind(value.rest);
-  if (value.kind === 'rest_answer') return typeof value.agree === 'boolean';
+  if (value.kind === 'vote_answer') return typeof value.agree === 'boolean';
+  if (value.kind === 'give') return isItemSquare(value.from) && isPlayerSlot(value.to);
+  if (value.kind === 'loot') return Number.isSafeInteger(value.roll) && Number(value.roll) >= 0 && typeof value.need === 'boolean';
   if (value.kind === 'scores') return validScores(value.scores);
   if (value.kind === 'fighting_style') return isFightingStyle(value.style);
   if (value.kind === 'improve') return validImprovement(value.improvement);

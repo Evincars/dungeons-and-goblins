@@ -100,8 +100,9 @@ export function respawnPlayer(player: Entity, level: Level, reason: 'fall' | 'de
   const health = player.health;
   if (!pos || !health) return;
 
-  if (reason === 'fall') {
-    sound.playSound('fall', pos.x, pos.y);
+  if (reason === 'fall') sound.playSound('fall', pos.x, pos.y);
+  // A fall costs coins and a little max health (not in the console's god mode).
+  if (reason === 'fall' && !player.godMode) {
     scatterPurse(player, pos.x, pos.y);
     health.max = Math.max(MIN_MAX_HEALTH, health.max - FALL_PENALTY);
   }

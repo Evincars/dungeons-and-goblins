@@ -28,8 +28,11 @@ Controls: WASD to move, the mouse to aim, left click (or Space) to attack, Q to 
 right click / R for a spell, E to use (shop, chests, the exit), Shift to sprint, Tab for the inventory, Esc to
 pause, 1–5 for the quick bar. Keys can be rebound in Settings → Key bindings.
 
-Every game starts with picking a hero — the **Barbarian** or the **Warrior** (see `classes.json` below) — and
-typing the name the combat log (and, in co-op, the other players) will call them.
+Every game starts with typing your name and picking a hero — **Kaelen** (warrior), **Malkorath** (rogue),
+**Malthus** (paladin), **Vesper** (wizard), **Xanthia** (sorcerer), or the Barbarian and the Hooded Knight
+(see `classes.json` below) — then the intro plays (`public/intro-video.mp4` under the story; E, Enter or a
+click skip it) and the first level fades in. The safe room starts closed: pull the lever by its door (E) to
+raise the portcullis. In co-op the lever waits until every player has loaded the level.
 
 On screen: the health bar bottom left, with three round buttons in a triangle over it — character and level
 (placeholder dialogs for now) and the map, which shows the explored dungeon with holes and treasure marked
@@ -40,17 +43,20 @@ wheel or its scrollbar; the `–` in its corner folds it away, `+` brings it bac
 
 Game data you can tune without touching code. Edit a file, save, and the dev server reloads.
 
-### [`src/data/classes.json`](src/data/classes.json) — hero classes
+### [`src/data/classes.json`](src/data/classes.json) — heroes and their classes
 
-The heroes offered on the character select (D&D 5e SRD): `barbarian` (the fighter sprite) and `warrior`
-(the hooded knight). Each has:
+The heroes offered on the character select, each a D&D 5e (SRD) class: `kaelen` (fighter), `malkorath`
+(rogue), `malthus` (paladin), `vesper` (wizard), `xanthia` (sorcerer) — their sprites are in
+`public/main-characters/<name>` — plus `barbarian` and `warrior` (the Hooded Knight). Each has:
 
-- `character` — the sprite set, `hitDie` and `hitPoints` (100 for everyone for now),
+- `character` — the sprite set, `class`, `hitDie` and `hitPoints` (10 × hit die + 5 × CON modifier),
 - `abilities` — the six scores (the standard array: 15, 14, 13, 12, 10, 8),
-- `armor` (`light`, `medium`, `heavy`, `shield`) and `weapons` (`simple`, `martial`) — what the class is trained in;
-  untrained armour gives disadvantage on attacks, an untrained weapon loses the proficiency bonus,
-- `savingThrows`, and `features`: `unarmored_defense` (no armour: AC 10 + DEX + CON) or
-  `fighting_style_defense` (+1 AC in armour).
+- `armor` (`light`, `medium`, `heavy`, `shield`), `weapons` (`simple`, `martial`) and `weaponBases` (single
+  weapons, e.g. a wizard's dagger) — what the class is trained in; untrained armour gives disadvantage on
+  attacks, an untrained weapon loses the proficiency bonus,
+- `spellcasting` — the ability the spell bolt adds to hit (casters fly their own spell art),
+- `savingThrows`, and `features`: `unarmored_defense` (no armour: AC 10 + DEX + CON), `fighting_style_defense`
+  (+1 AC in armour) or `sneak_attack` (+1d6 with finesse or ranged weapons).
 
 ### [`src/data/stats.json`](src/data/stats.json) — enemies
 
@@ -133,7 +139,8 @@ moment ("21 to hit", then "7 dmg" or "MISS"), and each blow goes into the combat
 A generated level can be written out as JSON ([`src/level/LevelMap.ts`](src/level/LevelMap.ts):
 `encodeLevelMap`, `decodeLevelMap`) — tiles one byte each in base64, safe rooms and cave halls as runs of
 tiles, wall niches, pits, prop footprints and spawn points — and gzipped (`packLevelMap`: about 7 KB of JSON becomes about 3 KB) to
-save it or send it to a client. Co-op still sends only the seed for now; reading a map checks all of it.
+save it or send it to a client. The co-op host sends it to every guest when a level starts — terrain, decor and
+the safe room's door and lever — and guests show "Loading..." until it has arrived; reading a map checks all of it.
 
 The inventory shows each stat by its short name (STR, DEX, CON, INT, WIS, CHA); hovering it shows the full name and this description, read from `src/data/texts.json`.
 

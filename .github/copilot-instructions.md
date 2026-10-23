@@ -148,7 +148,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   (`generators/`), terrain autotiling and rendering, soft edges between kinds of ground (`GroundBlend.ts`, baked
   into one atlas by `render/BlendAtlas.ts`), fog of war (`FogRenderer.ts`: per-corner fading buffer, blurred, with
   drifting mist), lighting, and `LevelMap.ts` (a generated level as validated JSON, gzipped to send or save).
-- `src/characters/` — side-view `CharacterDef`s and their animation-state triggers.
+- `src/characters/` — side-view `CharacterDef`s (`Heroes.ts`: the main characters from `public/main-characters`; clips may
+  be grids read row by row, or a frame range of a sheet; casters carry a `bolt`) and their animation-state triggers.
 - `src/rules/` — the tabletop rules: dice (`Dice.ts`: d4–d20 rolls, attacks, checks; tests load the dice with
   `useDieRoller`), ability modifiers and proficiency (`Abilities.ts`), the SRD weapon and armour tables, classes
   (`Classes.ts`) and monsters (`Monsters.ts`) read from `src/data/`, `CharacterSheet.ts` (Armor Class, weapon
@@ -165,7 +166,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   under the pointer, so their clicks are not attacks.
 - `src/network/` — co-op: `protocol.ts` (messages and their validators), `CoopSession.ts` (PeerJS room),
   `WorldSync.ts` (the host's world snapshot, its validation and the guest's replica), `CoopGame.ts` (host and
-  guest per-tick work). The host is the authority; guests build the level from its seed and send input.
+  guest per-tick work). The host is the authority: it sends each guest the level it built (`level/LevelMap.ts`,
+  gzipped), guests build it, say `loaded`, and send input; the safe room's lever waits for every guest.
 - `tests/gameplay.test.mjs` — Node test runner over the real modules via Vite SSR.
 
 ## 10. Working conventions

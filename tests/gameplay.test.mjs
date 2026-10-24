@@ -2250,7 +2250,10 @@ test('the ~ console: money, god mode, experience and any item by its id; not in 
 // ── Sound ────────────────────────────────────────────────────────────────────
 
 const { sound } = await load('audio/SoundPlayer');
-const { allClips, MUSIC_TRACKS } = await load('audio/SoundBank');
+const { allClips, MUSIC_TRACKS, AMBIENCE } = await load('audio/SoundBank');
+const { music } = await load('audio/MusicPlayer');
+const { resetMusic, holdMusic, updateMusic } = await load('systems/MusicSystem');
+const { updateFootsteps } = await load('systems/FootstepSystem');
 
 /** Runs `play` and returns the names of the effects it sounded (as the co-op host would relay them). */
 function soundsOf(play) {
@@ -2264,9 +2267,10 @@ function soundsOf(play) {
   return heard;
 }
 
-test('sounds: every clip the effects play and every piece of music is a file under public/', async () => {
+test('sounds: every clip the effects play, every piece of music and every ambient bed is a file under public/', async () => {
   const { existsSync } = await import('node:fs');
-  const files = new Set([...allClips().map((clip) => clip.file), ...Object.values(MUSIC_TRACKS).flatMap((track) => track.files)]);
+  const files = new Set([...allClips().map((clip) => clip.file), ...Object.values(MUSIC_TRACKS).flatMap((track) => track.files),
+    ...Object.values(AMBIENCE).flatMap((bed) => bed.takes)]);
   assert.deepEqual([...files].filter((file) => !existsSync(`public${file}`)), []);
 });
 
@@ -2296,4 +2300,48 @@ test('sounds: a critical hit cracks bone, and the enemy it leaves standing cries
   const heard = soundsOf(() => { updateSword(); updateSword(); });
   assert.ok(troll.health.current > 0);
   for (const name of ['sword_swing', 'critical', 'sword_hit', 'troll_hurt']) assert.ok(heard.includes(name), name);
+});
+
+test('music: exploring until enemies nearby engage; a great foe brings the boss music; the summary holds its own', () => {
+  const level = arena(12, 6);
+  const player = playerAt(3, 3);
+  resetMusic();
+  assert.equal(music.track, 'explore');
+  const goblin = mobAt(level, 'goblin', 6, 3);
+  goblin.ai.state = 'engage';
+  beginPerception();
+  updateMusic();
+  assert.equal(music.track, 'combat', 'a goblin fight');
+  const troll = mobAt(level, 'troll', 7, 3);
+  troll.ai.state = 'engage';
+  beginPerception();
+  for (let t = 0; t < 30; t++) updateMusic();
+  assert.equal(music.track, 'boss', 'a troll joins: the boss music');
+  goblin.ai.state = 'idle';
+  troll.ai.state = 'idle';
+  for (let t = 0; t < 30; t++) updateMusic();
+  assert.equal(music.track, 'boss', 'it lingers a while after the fight');
+  for (let t = 0; t < 600; t++) updateMusic();
+  assert.equal(music.track, 'explore', 'then exploring comes back');
+  holdMusic('rest');
+  troll.ai.state = 'engage';
+  beginPerception();
+  for (let t = 0; t < 60; t++) updateMusic();
+  assert.equal(music.track, 'rest', 'the level\'s summary keeps its music');
+  assert.ok(player);
+});
+
+test('sounds: a troll is heard walking; smaller enemies are not', () => {
+  const level = arena(12, 6);
+  const troll = mobAt(level, 'troll', 6, 3);
+  const goblin = mobAt(level, 'goblin', 8, 3);
+  const heard = soundsOf(() => {
+    for (let t = 1; t <= 60; t++) {
+      troll.walkTime = t;
+      goblin.walkTime = t;
+      updateFootsteps();
+    }
+  });
+  assert.ok(heard.includes('troll_step'));
+  assert.equal(heard.filter((name) => name !== 'troll_step').length, 0);
 });

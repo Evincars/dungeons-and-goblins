@@ -1,3 +1,4 @@
+import { hasKey } from '../core/guards';
 import type { MobType } from '../world';
 import type { SpellDamageType, SpellId } from '../rules/Spells';
 
@@ -17,12 +18,12 @@ export type Clip = { readonly file: string; readonly slice?: readonly [number, n
  */
 export type Layer = { readonly clips: readonly Clip[]; readonly volume: number; readonly rate: number; readonly delay: number };
 
-/** Most recordings come in three takes, `name_01.wav` … `name_03.wav`. */
+/** Most recordings come in three takes, `name_01.webm` … `name_03.webm`. */
 const TAKES = 3;
 
 /** The numbered takes of a recording under public/audio. */
 function takes(name: string, count = TAKES): Clip[] {
-  return Array.from({ length: count }, (_, i) => ({ file: `/audio/${name}_${String(i + 1).padStart(2, '0')}.wav` }));
+  return Array.from({ length: count }, (_, i) => ({ file: `/audio/${name}_${String(i + 1).padStart(2, '0')}.webm` }));
 }
 
 /** A single file (Catacomb Snatch's clips, kept for coins, gems and pits). */
@@ -34,13 +35,26 @@ function layer(clips: readonly Clip[], volume = 1, rate = 1, delay = 0): Layer {
 
 /** The ashen knight's footsteps loop holds three steps (armour jingling on each); each is played on its own. */
 const KNIGHT_STEPS: Clip[] = [
-  { file: '/audio/player/ashen_knight_footsteps_loop_01.wav', slice: [0, 600] },
-  { file: '/audio/player/ashen_knight_footsteps_loop_01.wav', slice: [870, 650] },
-  { file: '/audio/player/ashen_knight_footsteps_loop_01.wav', slice: [1670, 680] },
+  { file: '/audio/player/ashen_knight_footsteps_loop_01.webm', slice: [0, 600] },
+  { file: '/audio/player/ashen_knight_footsteps_loop_01.webm', slice: [870, 650] },
+  { file: '/audio/player/ashen_knight_footsteps_loop_01.webm', slice: [1670, 680] },
+];
+
+/** The giant knight's footstep loop: three of its stomps, each on its own, for a troll's tread. */
+const GIANT_STEPS: Clip[] = [
+  { file: '/audio/enemies/giant_knight_footstep_loop_01.webm', slice: [50, 600] },
+  { file: '/audio/enemies/giant_knight_footstep_loop_01.webm', slice: [2150, 650] },
+  { file: '/audio/enemies/giant_knight_footstep_loop_01.webm', slice: [5150, 650] },
 ];
 
 /** click_02 holds two clicks a second apart: a dialog opening plays only the first. */
-const DIALOG_CLICK: Clip[] = [{ file: '/audio/interface/click_02.wav', slice: [0, 1000] }];
+const DIALOG_CLICK: Clip[] = [{ file: '/audio/interface/click_02.webm', slice: [0, 1000] }];
+
+/** click_01 and click_03 are one short click each, then a long quiet tail: a button press plays the click alone. */
+const BUTTON_CLICK: Clip[] = [
+  { file: '/audio/interface/click_01.webm', slice: [0, 400] },
+  { file: '/audio/interface/click_03.webm', slice: [0, 400] },
+];
 
 const KNIGHT = {
   light: takes('player/ashen_knight_light_attack'),
@@ -58,6 +72,7 @@ const BLADE = {
   armor: takes('weapons/longsword_hit_armor'),
   blood: takes('weapons/critical_blow_blood_splatter'),
   bone: takes('weapons/critical_blow_bone_crack'),
+  bowDraw: takes('weapons/longbow_draw'),
   bowShoot: takes('weapons/longbow_shoot'),
   arrowImpact: takes('weapons/longbow_arrow_impact'),
 };
@@ -97,6 +112,7 @@ const INTERFACE = {
   felled: takes('interface/enemy_felled'),
   error: takes('interface/error'),
   pickUp: takes('interface/pick_up_item'),
+  openMenu: takes('interface/open_menu'),
 };
 
 export const SFX = {
@@ -115,6 +131,8 @@ export const SFX = {
   drink: [layer(KNIGHT.drink, 0.8)],
   /** Weapons swapped: a shuffle of gear and a blade's ring as it leaves the scabbard. */
   swap: [layer(KNIGHT.roll, 0.5, 1.2), layer(BLADE.armor, 0.15, 1.8, 60)],
+  /** Swapped to a bow: the gear shuffles and the string is drawn. */
+  bow_draw: [layer(KNIGHT.roll, 0.4, 1.2), layer(BLADE.bowDraw, 0.6, 1, 80)],
 
   // --- weapons ---
   sword_hit: [layer(BLADE.flesh, 0.8)],
@@ -173,6 +191,8 @@ export const SFX = {
   troll_attack: [layer(CREATURE.giantSlam, 0.7)],
   troll_hurt: [layer(CREATURE.giantRoar, 0.35, 1.3)],
   troll_die: [layer(CREATURE.giantDie, 0.85)],
+  /** A troll's tread shakes the floor. */
+  troll_step: [layer(GIANT_STEPS, 0.45, 1.1)],
   /** Wizards: a soldier's voice, and dark sorcery in their attacks and their last breath. */
   wizard_alert: [layer(SORCERY.dark, 0.5, 0.7)],
   wizard_attack: [layer(SORCERY.dark, 0.5, 1.25), layer(CREATURE.soldierAttack, 0.3, 1.1)],
@@ -180,6 +200,8 @@ export const SFX = {
   wizard_die: [layer(CREATURE.soldierDie, 0.6, 1.05), layer(SORCERY.dark, 0.45, 0.6, 150)],
   /** A nest torn down: a great slam and the fanfare for a foe felled. */
   nest_destroyed: [layer(CREATURE.giantSlam, 0.6, 0.8), layer(INTERFACE.felled, 0.5)],
+  /** A great foe (see BOSS_FOES) falls: the fanfare, for the whole party. */
+  foe_felled: [layer(INTERFACE.felled, 0.6)],
 
   // --- the world ---
   chest_open: [layer(WORLD.chest, 0.8)],
@@ -205,12 +227,20 @@ export const SFX = {
   fail: [layer(INTERFACE.error, 0.5)],
   /** Inventory, shop, pause menu, a HUD dialog or a pop-up menu opens. */
   dialog: [layer(DIALOG_CLICK, 0.6)],
+  /** Any button pressed. */
+  click: [layer(BUTTON_CLICK, 0.45)],
+  /** A menu screen opens: settings, key bindings, the character select, the co-op lobby. */
+  open_menu: [layer(INTERFACE.openMenu, 0.4)],
 } as const satisfies Record<string, readonly Layer[]>;
 
 export type SfxName = keyof typeof SFX;
 
 /** The cries each enemy makes: on spotting a hero, as it swings, when it is hurt and as it dies. */
-export type MobCries = { readonly alert: SfxName; readonly attack: SfxName; readonly hurt: SfxName; readonly die: SfxName };
+export type MobCries = {
+  readonly alert: SfxName; readonly attack: SfxName; readonly hurt: SfxName; readonly die: SfxName;
+  /** A footfall heavy enough to be heard (only the biggest enemies). */
+  readonly step?: SfxName;
+};
 
 const cries = (voice: 'goblin' | 'soldier' | 'skeleton' | 'troll' | 'wizard'): MobCries => ({
   alert: `${voice}_alert`, attack: `${voice}_attack`, hurt: `${voice}_hurt`, die: `${voice}_die`,
@@ -223,10 +253,13 @@ export const MOB_CRIES = {
   goblin_warrior: cries('soldier'),
   orc: cries('soldier'),
   skeleton: cries('skeleton'),
-  troll: cries('troll'),
+  troll: { ...cries('troll'), step: 'troll_step' },
   ghost_wizard: cries('wizard'),
   evil_wizard: cries('wizard'),
 } as const satisfies Record<MobType, MobCries>;
+
+/** Enemies whose fight has the boss music, and whose fall the fanfare for a foe felled. */
+export const BOSS_FOES: ReadonlySet<MobType> = new Set<MobType>(['troll', 'evil_wizard']);
 
 export const SPELL_SOUNDS = {
   fire_bolt: 'cast_fire_bolt',
@@ -257,9 +290,19 @@ export const SPELL_IMPACTS = {
   thunder: 'impact_force',
 } as const satisfies Record<SpellDamageType, SfxName>;
 
-/** Every clip the effects play (a recording once for each effect layer that uses it). */
+export const SFX_NAMES: readonly SfxName[] = Object.keys(SFX).filter((name) => hasKey(SFX, name));
+
+/** The effects the menus play, loaded behind the loading screen; every other one loads lazily, in the background. */
+export const MENU_SOUNDS: readonly SfxName[] = ['click', 'open_menu', 'dialog', 'fail'];
+
+/** Every clip the given effects play (a recording once for each effect layer that uses it). */
+export function clipsOf(names: readonly SfxName[]): Clip[] {
+  return names.flatMap((name) => SFX[name].flatMap((l: Layer) => l.clips));
+}
+
+/** Every clip any effect plays. */
 export function allClips(): Clip[] {
-  return Object.values(SFX).flatMap((layers: readonly Layer[]) => layers.flatMap((l) => l.clips));
+  return clipsOf(SFX_NAMES);
 }
 
 // --- music ---
@@ -267,13 +310,54 @@ export function allClips(): Clip[] {
 /** A piece of music: its files, played in turn and round again, and how loud it sits in the mix (0..1). */
 export type Track = { readonly files: readonly string[]; readonly level: number };
 
+/** Every take of a recording, as files. */
+const allTakes = (name: string): string[] => takes(name).map((clip) => clip.file);
+
 export const MUSIC_TRACKS = {
   /** The title, settings, character select and co-op lobby. */
-  menu: { files: ['/audio/music/main_theme_loop_03.wav'], level: 0.8 },
+  menu: { files: ['/audio/music/main_theme_loop_03.webm'], level: 0.8 },
   /** Exploring a level: the two exploration loops, one after the other. */
   explore: { files: ['/audio/music/dark-fantasy-exploration-1.ogg', '/audio/music/dark-fantasy-exploration-2.ogg'], level: 0.6 },
   /** Enemies engaged nearby. */
   combat: { files: ['/audio/music/dark-fantasy-combat.ogg'], level: 0.7 },
+  /** A fight with a great foe (BOSS_FOES). */
+  boss: { files: allTakes('music/boss_battle_loop'), level: 0.7 },
+  /** The level's summary, by the fire, before going deeper. */
+  rest: { files: allTakes('music/bonfire_rest_loop'), level: 0.7 },
+  /** The run is over. */
+  lament: { files: allTakes('music/lament_loop'), level: 0.7 },
 } as const satisfies Record<string, Track>;
 
 export type TrackName = keyof typeof MUSIC_TRACKS;
+
+// --- ambience ---
+
+/**
+ * A looping bed of sound under the music: one of its takes (picked at random for the game), and how loud it is at
+ * full strength (0..1, times the sound volume). The area beds fade with where the hero stands; the others swell
+ * with nearness to what makes them.
+ */
+export type Ambience = { readonly takes: readonly string[]; readonly level: number };
+
+export const AMBIENCE = {
+  /** The safe room: a hushed, ruined chapel. */
+  cathedral: { takes: allTakes('ambience/ruined_cathedral_loop'), level: 0.35 },
+  /** Cave halls: dripping, and something in the dark water. */
+  swamp: { takes: allTakes('ambience/cursed_swamp_loop'), level: 0.35 },
+  /** The catacombs' halls and rooms, by depth (HALL_BEDS): stone and echoes, water seeping through, a war above. */
+  catacombs: { takes: allTakes('ambience/catacombs_loop'), level: 0.35 },
+  rain: { takes: allTakes('ambience/rain_loop'), level: 0.3 },
+  battlefield: { takes: allTakes('ambience/distant_battlefield_loop'), level: 0.3 },
+  /** A draught from the way down, near the exit. */
+  wind: { takes: allTakes('ambience/wind_loop'), level: 0.35 },
+  /** Torches and campfires, close by. */
+  crackle: { takes: allTakes('world/bonfire_crackle_loop'), level: 0.45 },
+  /** Goblin war drums, from a nest that still stands. */
+  drums: { takes: allTakes('world/war_drum_beat_loop'), level: 0.45 },
+} as const satisfies Record<string, Ambience>;
+
+export type AmbienceName = keyof typeof AMBIENCE;
+export const AMBIENCE_NAMES: readonly AmbienceName[] = Object.keys(AMBIENCE).filter((name) => hasKey(AMBIENCE, name));
+
+/** The bed under the catacombs' halls on each depth, round again after the last. */
+export const HALL_BEDS: readonly AmbienceName[] = ['catacombs', 'rain', 'battlefield'];

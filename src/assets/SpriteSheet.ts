@@ -124,9 +124,9 @@ export class SpriteSheet {
 }
 
 /** Fetches every sheet's image, then registers them all. */
-export async function loadSheets(sheets: readonly SpriteSheet[]): Promise<void> {
+export async function loadSheets(sheets: readonly SpriteSheet[], onProgress?: (fraction: number) => void): Promise<void> {
   try {
-    await Assets.load(sheets.map((sheet) => sheet.asset));
+    await Assets.load(sheets.map((sheet) => sheet.asset), onProgress);
   } catch (cause) {
     throw new LoadError('Could not load the game art', { cause });
   }

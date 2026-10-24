@@ -1,5 +1,6 @@
 import { Game } from './game/Game';
 import { ensure, errorMessage, installGlobalErrorHandlers, report } from './core/errors';
+import { hideLoadingScreen } from './ui/LoadingScreen';
 
 /** An error and every `cause` behind it, innermost last, each with its stack. */
 function describe(err: unknown): string {
@@ -25,5 +26,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err: unknown) => {
+  hideLoadingScreen();
   showFatal(report(err, 'Dungeons & Goblins failed to start', 'boot'));
 });

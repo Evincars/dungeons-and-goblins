@@ -7,6 +7,7 @@ import { makeText, makeTitle } from '../ui/PixelText';
 import { menuBackdrop } from '../ui/MenuBackdrop';
 import { ACTIONS, actionLabel, bind, codeLabel, resetBindings, settings } from '../game/Settings';
 import type { ActionName } from '../game/Settings';
+import { sound } from '../audio/SoundPlayer';
 
 /** Rows this far apart: eleven actions fit above Reset and Back. */
 const ROW_H = 24;
@@ -26,6 +27,7 @@ export class KeyBindingsScene implements Scene {
   private readonly onKeyDown: (e: KeyboardEvent) => void;
 
   constructor(manager: SceneManager) {
+    sound.playLocal('open_menu');
     this.container.addChild(menuBackdrop());
     this.container.eventMode = 'static';
     const title = makeTitle(text('keys.title'));

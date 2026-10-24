@@ -34,7 +34,8 @@ import { isLevelComplete, resetLevelComplete } from '../systems/ExitSystem';
 import { PixelLabel, makeText } from '../ui/PixelText';
 import { Crosshair } from '../ui/Crosshair';
 import { sound } from '../audio/SoundPlayer';
-import { resetMusic } from '../systems/MusicSystem';
+import { holdMusic, resetMusic } from '../systems/MusicSystem';
+import { resetAmbience } from '../systems/AmbienceSystem';
 import type { Level } from '../level/Level';
 import { exposeForDebugging } from '../core/debugHooks';
 import { coop } from '../network/CoopSession';
@@ -135,6 +136,7 @@ export class InGameScene implements Scene {
     const seed = this.mode === 'guest' ? coop.level?.seed ?? 0 : run.nextSeed ?? randomSeed();
     run.nextSeed = null;
     const depth = this.mode === 'guest' ? coop.level?.depth ?? 1 : run.depth;
+    resetAmbience(depth);
     // A guest builds the very dungeon the host sent (its map came before this scene); the host sends its own.
     const sent = this.mode === 'guest' ? coop.level?.layout : undefined;
     const built = sent ? { ...buildSentDungeon(sent), layout: sent } : buildDungeon(seed, this.mode !== 'guest');
@@ -395,6 +397,7 @@ export class InGameScene implements Scene {
   private levelComplete(): void {
     if (this.complete) return;
     this.complete = true;
+    holdMusic('rest');
     closeShop();
     this.host?.levelComplete();
     if (this.mode !== 'guest') this.prepareNextLevel();
@@ -437,6 +440,7 @@ export class InGameScene implements Scene {
   /** Alone, dying or falling into a pit ends the run: the world stays as it was, with the choice on top. */
   private gameOver(): void {
     this.gameOverShown = true;
+    holdMusic('lament');
     this.pause.hide();
     closeShop();
     closeInventory();

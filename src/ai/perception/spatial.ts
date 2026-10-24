@@ -14,6 +14,8 @@ export const Sense = {
   item: 16,
   /** Things a player can use: the shop keeper, unopened chests, the exit button. */
   usable: 32,
+  /** Torches and campfires (they crackle). */
+  torch: 64,
 } as const;
 
 type Item = { minX: number; minY: number; maxX: number; maxY: number; entity: Entity; kind: number };
@@ -34,6 +36,7 @@ function kindOf(e: Entity): number {
   if (e.loot) return Sense.loot;
   if (e.item) return Sense.item;
   if (e.shopNpc || e.exitButton || e.chest || e.lever || e.stash) return Sense.usable;
+  if (e.torch) return Sense.torch;
   return 0;
 }
 

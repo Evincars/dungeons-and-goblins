@@ -13,7 +13,7 @@ import { world } from '../world';
  * attack instead of swinging. The shot rolls to hit when it strikes; ammunition is never used up.
  */
 
-function holdsBow(player: Player): boolean {
+export function holdsBow(player: Player): boolean {
   return weaponRule(weaponInHand(player.equipped ?? {}) ?? undefined)?.rule.range === 'ranged';
 }
 

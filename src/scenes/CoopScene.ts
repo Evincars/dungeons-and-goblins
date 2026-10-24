@@ -16,6 +16,7 @@ import type { HeroClassId } from '../rules/Classes';
 import { heroName } from '../rules/Names';
 import { GAME_WIDTH, GAME_HEIGHT, LAYOUT_LEFT } from '../render/Camera';
 import { attempt, attemptAsync, report, StateError } from '../core/errors';
+import { sound } from '../audio/SoundPlayer';
 
 const CENTER = GAME_WIDTH / 2;
 const COL_X = LAYOUT_LEFT + 136;
@@ -59,6 +60,7 @@ export class CoopScene implements Scene {
   constructor(private readonly manager: SceneManager, private readonly role: CoopRole, destination?: string) {
     // An invite link opens the lobby first thing: the menu's music starts here too.
     music.play('menu');
+    sound.playLocal('open_menu');
     this.container.addChild(menuBackdrop());
     const title = makeTitle(text(role === 'host' ? 'coop.host_title' : 'coop.join_title'));
     title.x = CENTER;

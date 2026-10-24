@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dungeons &amp; Goblins</title>
+  <link rel="preload" as="image" href="/menu-2.jpg" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -18,9 +19,99 @@
       display: block;
       image-rendering: pixelated;
     }
+
+    /* The loading screen: up from the first moment, kept current by src/ui/LoadingScreen.ts, faded away once in. */
+    #loading {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      background: #05070c;
+      overflow: hidden;
+      transition: opacity 0.7s ease;
+      font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
+    }
+    #loading.done { opacity: 0; pointer-events: none; }
+    #loading-art {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      filter: brightness(0.62) saturate(0.9);
+      transform: scale(1.04);
+      transition: opacity 1.6s ease;
+      animation: loading-drift 24s ease-in-out infinite alternate;
+    }
+    #loading-art.shown { opacity: 1; }
+    @keyframes loading-drift {
+      from { transform: scale(1.04) translate(0, 0); }
+      to { transform: scale(1.12) translate(-1.5%, -1%); }
+    }
+    /* Darkness closing in at the edges, deepest at the foot where the bar sits. */
+    #loading::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 50% 38%, transparent 35%, rgba(2, 3, 8, 0.75) 100%),
+        linear-gradient(to bottom, transparent 55%, rgba(2, 3, 8, 0.92) 100%);
+    }
+    #loading-panel {
+      position: absolute;
+      z-index: 1;
+      left: 50%;
+      bottom: 11vh;
+      width: min(420px, 72vw);
+      transform: translateX(-50%);
+      text-align: center;
+    }
+    #loading-label {
+      color: #9fb0c8;
+      font-size: 13px;
+      letter-spacing: 0.55em;
+      text-transform: uppercase;
+      text-indent: 0.55em;
+      animation: loading-breathe 2.4s ease-in-out infinite;
+    }
+    @keyframes loading-breathe {
+      0%, 100% { opacity: 0.55; }
+      50% { opacity: 1; }
+    }
+    #loading-track {
+      position: relative;
+      height: 3px;
+      margin: 14px 0 12px;
+      background: rgba(140, 160, 200, 0.14);
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+    }
+    /* The ember: the filled part glows like the castle's lit windows. */
+    #loading-fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 0;
+      background: linear-gradient(to right, #7a3a10, #f2b84b);
+      box-shadow: 0 0 10px rgba(242, 184, 75, 0.75), 0 0 24px rgba(242, 140, 40, 0.35);
+      transition: width 0.25s ease-out;
+    }
+    #loading-percent {
+      color: #f2c46b;
+      font-size: 22px;
+      letter-spacing: 0.12em;
+      text-shadow: 0 0 12px rgba(242, 170, 60, 0.55);
+      font-variant-numeric: tabular-nums;
+    }
   </style>
 </head>
 <body>
+  <div id="loading">
+    <img id="loading-art" src="/menu-2.jpg" alt="" onload="this.classList.add('shown')" />
+    <div id="loading-panel">
+      <div id="loading-label">Loading</div>
+      <div id="loading-track"><div id="loading-fill"></div></div>
+      <div id="loading-percent">0%</div>
+    </div>
+  </div>
   <canvas id="game"></canvas>
   <script type="module" src="/src/main.ts"></script>
 </body>

@@ -2,6 +2,7 @@ import { Container, NineSliceSprite } from 'pixi.js';
 import { frameTexture } from '../render/Sheets';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
+import { sound } from '../audio/SoundPlayer';
 
 const BUTTON_W = 128;
 const BUTTON_H = 24;
@@ -64,7 +65,9 @@ export class PixelButton extends Container {
       this.refresh();
     });
     this.on('pointertap', () => {
-      if (this._enabled && this.onPress) this.onPress();
+      if (!this._enabled || !this.onPress) return;
+      sound.playLocal('click');
+      this.onPress();
     });
   }
 

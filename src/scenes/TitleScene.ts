@@ -11,6 +11,7 @@ import { startRun } from '../game/Run';
 import { world } from '../world';
 import { chooseHeroThen } from './CharacterSelectScene';
 import { music } from '../audio/MusicPlayer';
+import { ambience } from '../audio/AmbiencePlayer';
 
 const BUTTON_W = 220;
 const BUTTON_H = 26;
@@ -20,6 +21,8 @@ const MENU_TOP = 156;
 const LOGO_TOP = 10;
 const LOGO_H = 138;
 const HINT_Y = GAME_HEIGHT - 40;
+/** The dungeon's ambience fades away over this long (ms) back at the menu. */
+const AMBIENCE_FADE_MS = 1500;
 /** The prompt pulses at this rate (radians per tick). */
 const PULSE_SPEED = 0.06;
 
@@ -37,6 +40,7 @@ export class TitleScene implements Scene {
     // Nothing of the last game is needed here; a new one fills the world again.
     world.clear();
     music.play('menu');
+    ambience.silence(AMBIENCE_FADE_MS);
 
     this.container.addChild(menuBackdrop());
     const logo = new Sprite(getTexture('logo'));

@@ -7,7 +7,7 @@ import { MathUtils } from 'yuka';
 import { assetUrl } from '../assets/assetUrl';
 import { hasKey } from '../core/guards';
 import { LoadError, report } from '../core/errors';
-import { SFX, allClips } from './SoundBank';
+import { SFX, allClips, clipsOf } from './SoundBank';
 import type { Layer, SfxName } from './SoundBank';
 
 export type { SfxName } from './SoundBank';
@@ -35,7 +35,7 @@ export function isSfxName(value: unknown): value is SfxName {
 /** The Howler sprite that plays a stretch of a recording. */
 const spriteName = (slice: readonly [number, number]) => `${slice[0]}+${slice[1]}`;
 
-/** Every recording the effects use, with the stretches of it (Howler sprites) they play. */
+/** Every recording the effects use, with the stretches of it (Howler sprites) that any of them plays. */
 function recordings(): Map<string, Record<string, [number, number]>> {
   const files = new Map<string, Record<string, [number, number]>>();
   for (const clip of allClips()) {
@@ -64,24 +64,37 @@ class SoundPlayer {
   }
 
   /**
-   * Starts loading every recording in the background: the game need not wait for them, and an effect is silent
-   * until its clips have arrived. Howler resumes the audio itself on the first key press or click.
+   * Loads the recordings of the given effects (those not loading already), reporting each as it settles (for the
+   * loading screen); resolves when all have, loaded or not. An effect whose clips are not in yet is silent. Howler
+   * resumes the audio itself on the first key press or click.
    */
-  load(): void {
-    if (!hasAudio || this.howls.size > 0) return;
+  load(names: readonly SfxName[], onProgress?: (done: number, total: number) => void): Promise<void> {
+    if (!hasAudio) return Promise.resolve();
     // Otherwise Howler suspends the audio after half a minute of quiet, and the next sound comes late.
     Howler.autoSuspend = false;
-    for (const [file, sprites] of recordings()) this.howls.set(file, this.loadRecording(file, sprites));
+    const sprites = recordings();
+    const files = [...new Set(clipsOf(names).map((clip) => clip.file))].filter((file) => !this.howls.has(file));
+    if (files.length === 0) return Promise.resolve();
+    let done = 0;
+    return new Promise((resolve) => {
+      const settled = () => {
+        onProgress?.(++done, files.length);
+        if (done === files.length) resolve();
+      };
+      for (const file of files) this.howls.set(file, this.loadRecording(file, sprites.get(file) ?? {}, settled));
+    });
   }
 
   /** One recording; one that cannot be played stays silent rather than breaking the game. */
-  private loadRecording(file: string, sprites: Record<string, [number, number]>): Howl {
+  private loadRecording(file: string, sprites: Record<string, [number, number]>, settled: () => void): Howl {
     return new Howl({
       src: [assetUrl(file)],
       sprite: Object.keys(sprites).length > 0 ? sprites : undefined,
+      onload: settled,
       onloaderror: (_id, error) => {
         report(new LoadError(`Sound "${file}" could not be loaded`, { context: { file, reason: String(error) } }),
           'A sound clip failed to load; it will be silent', 'audio');
+        settled();
       },
     });
   }

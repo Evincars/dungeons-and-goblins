@@ -12,6 +12,7 @@ import { settings, saveSettings } from '../game/Settings';
 import { sound } from '../audio/SoundPlayer';
 import { music } from '../audio/MusicPlayer';
 import { reportRejection } from '../core/errors';
+import { ambience } from '../audio/AmbiencePlayer';
 
 const COL_X = LAYOUT_LEFT + 136;
 const COL_W = 240;
@@ -25,6 +26,7 @@ export class SettingsScene implements Scene {
   private nameField: NameField;
 
   constructor(manager: SceneManager) {
+    sound.playLocal('open_menu');
     this.container.addChild(menuBackdrop());
     // Over the pause menu the game must not take clicks meant for these controls.
     this.container.eventMode = 'static';
@@ -61,6 +63,7 @@ export class SettingsScene implements Scene {
     volume.onChange = (v) => {
       settings.sfxVolume = v;
       sound.setSfxVolume(v);
+      ambience.setVolume(v);
       saveSettings();
     };
     this.container.addChild(volume);

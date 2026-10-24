@@ -117,8 +117,10 @@ const BUTTON_FRAME = { w: 128, h: 24 };
 const DARK_WOOD: Rgb = { r: 0.72, g: 0.56, b: 0.44 };
 const CHEST_FRAME = { w: 32, h: 53 };
 
-export async function loadAllAssets(onProgress?: (fraction: number) => void): Promise<void> {
-  await loadSheets(allSheets());
+/** Loads and builds every picture, reporting how many of the image files are in (for the loading screen). */
+export async function loadAllAssets(onProgress?: (done: number, total: number) => void): Promise<void> {
+  const sheets = allSheets();
+  await loadSheets(sheets, (fraction) => onProgress?.(Math.floor(fraction * sheets.length), sheets.length));
   registerLazyArt();
   buildTorchStrip();
   buildCampfireStrip();
@@ -127,7 +129,7 @@ export async function loadAllAssets(onProgress?: (fraction: number) => void): Pr
   for (const [key, draw] of Object.entries(PROCEDURAL)) setTexture(key, Texture.from(draw()));
   setTexture('panel_hud', Texture.from(genPanelBg(HUD_PANEL.w, HUD_PANEL.h)));
   setTexture('panel_inv', Texture.from(genPanelBg(INVENTORY_PANEL.w, INVENTORY_PANEL.h)));
-  onProgress?.(1);
+  onProgress?.(sheets.length, sheets.length);
 }
 
 export { getTexture };

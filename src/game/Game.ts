@@ -11,6 +11,10 @@ import { KeyBindingsScene } from '../scenes/KeyBindingsScene';
 import { CoopScene } from '../scenes/CoopScene';
 import { sound } from '../audio/SoundPlayer';
 import { music } from '../audio/MusicPlayer';
+import { ambience } from '../audio/AmbiencePlayer';
+import { MENU_SOUNDS, SFX_NAMES } from '../audio/SoundBank';
+import { reportRejection } from '../core/errors';
+import { hideLoadingScreen, loadingPart } from '../ui/LoadingScreen';
 import { settings } from './Settings';
 import { exposeForDebugging } from '../core/debugHooks';
 import { coop } from '../network/CoopSession';
@@ -46,10 +50,13 @@ export class Game {
     window.addEventListener('resize', () => this.fitToWindow(canvas));
 
     sound.setSfxVolume(settings.sfxVolume);
+    ambience.setVolume(settings.sfxVolume);
     music.setVolume(settings.musicVolume);
-    // The sounds load in the background: the menu needs none of them, and the game must not wait for them.
-    sound.load();
-    await loadAllAssets();
+    // Behind the loading screen: the art, and the few sounds the menus make. Everything else in audio is lazy: the
+    // other effects arrive in the background while the menus are up, the ambience when a level first needs it, and
+    // the music streams as it plays.
+    await Promise.all([loadAllAssets(loadingPart('art')), sound.load(MENU_SOUNDS, loadingPart('sounds'))]);
+    hideLoadingScreen();
 
     this.manager = new SceneManager(this.app, canvas)
       .register('title', (m) => new TitleScene(m))
@@ -62,6 +69,8 @@ export class Game {
       .register('in_game', (m) => new InGameScene(m));
     // An invite link opens straight into the room it invites to.
     this.manager.goto(joinParam() ? 'coop_join' : 'title');
+    // The other effects arrive in the background while the menus are up.
+    reportRejection(sound.load(SFX_NAMES), 'The sound effects could not be loaded', 'audio');
     this.app.ticker.add(() => this.tick());
     exposeForDebugging({ __app: this.app, __scenes: this.manager, __coop: coop });
   }

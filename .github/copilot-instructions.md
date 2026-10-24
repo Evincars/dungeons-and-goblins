@@ -59,7 +59,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 | Sprites, animation, rendering | **Pixi.js v8** `Sprite`, `AnimatedSprite`, `Container` | `src/render/` |
 | 2-D spatial queries (R-tree) | **rbush** | `src/ai/perception/spatial.ts` |
 | Peer-to-peer networking | **PeerJS** (WebRTC) | `src/network/CoopSession.ts` |
-| Sound effects and music (loading, sprites, pitch, pan, fades, streaming) | **Howler** | `src/audio/SoundPlayer.ts`, `src/audio/MusicPlayer.ts` |
+| Sound effects, music and ambience (loading, sprites, pitch, pan, fades, streaming) | **Howler** | `src/audio/` |
 
 - Never write your own A*, Dijkstra, heap, spatial hash, vector or bounding-box class.
 - **Yuka first for graphs and pathfinding.** Add another graph library only for an algorithm Yuka
@@ -116,8 +116,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   and `src/rules/ArmorTable.ts`; hero classes (abilities, hit points, proficiencies, features) in
   `src/data/classes.json`; enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`;
   spells (dice, recovery, save, area, effect) in `src/data/spells.json`; sound effects (clips layered, re-pitched
-  and delayed into recipes; each enemy's cries, each spell's cast and impact) and the music tracks in
-  `src/audio/SoundBank.ts`.
+  and delayed into recipes; each enemy's cries, each spell's cast and impact), the music tracks and the ambient
+  beds in `src/audio/SoundBank.ts` (recordings are `.webm`, the long music `.ogg`).
 - Type such tables with `satisfies Record<Key, Shape>` so a missing or misspelt key is a compile error.
 
 ## 8. Design patterns for 2-D games in TypeScript (as used here)
@@ -167,10 +167,14 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   recovery each (`spellbook.recovery`), are picked on the quick bar (`playerInput.spellSlot`) and cast by
   `systems/SpellSystem.ts` with effects from the library (`assets/Effects.ts`). Experience follows the SRD
   (`game/Progress.ts`, monster `xp`); hit points per level and hit dice are in `rules/HitPoints.ts`.
-- `src/audio/` — Howler: `SoundBank.ts` (the effect recipes and music tracks), `SoundPlayer.ts` (effects, faded and
-  panned by distance; `playSound` is relayed to co-op guests, `playLocal` is not), `MusicPlayer.ts` (one track at a
-  time, crossfaded; menus play `menu`, the intro crossfades the film's sound in and out, levels play `explore` and
-  `systems/MusicSystem.ts` switches to `combat` while enemies nearby are engaged).
+- `src/audio/` — Howler: `SoundBank.ts` (the effect recipes, music tracks and ambient beds), `SoundPlayer.ts` (effects,
+  faded and panned by distance; `playSound` is relayed to co-op guests, `playLocal` is not), `Deck.ts` (one looping
+  piece, faded in and out, paused when silent), `MusicPlayer.ts` (one track at a time, crossfaded; menus play `menu`,
+  the intro crossfades the film's sound in and out, levels play `explore`, `systems/MusicSystem.ts` switches to
+  `combat` or `boss` while enemies nearby are engaged and holds `rest` / `lament` on the level's summary and the end
+  of a run) and `AmbiencePlayer.ts` (beds by area and nearness, driven by `systems/AmbienceSystem.ts`). Only the art
+  and the menus' sounds load behind the loading screen in `index.html` (`ui/LoadingScreen.ts`); audio is otherwise
+  lazy: the other effects load in the background once the title is up, a bed when first heard, music streams.
 - `src/entities/` — factories and stat tables. `src/render/` — sheets, camera, terrain layers.
 - `src/core/` — cross-cutting: `errors/`, `log/`, `geometry.ts`, `guards.ts`, `debugHooks.ts`, `compression.ts` (gzip with a size limit).
 - `src/game/` — game loop, `SceneManager`, persisted settings, player actions (item gifts too), the party's votes

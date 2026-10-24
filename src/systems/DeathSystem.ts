@@ -6,7 +6,7 @@ import { spawnDrops } from '../entities/Drops';
 import { pay } from '../game/Purse';
 import { createDeathFx } from '../entities/FxFactory';
 import { sound } from '../audio/SoundPlayer';
-import { MOB_CRIES } from '../audio/SoundBank';
+import { BOSS_FOES, MOB_CRIES } from '../audio/SoundBank';
 import { destroyAttachments } from './BarSystem';
 import { stateDuration } from '../characters/Characters';
 import { startDying } from './RespawnSystem';
@@ -86,6 +86,7 @@ function die(entity: Entity, pos: { x: number; y: number }): void {
     createDeathFx(pos.x, pos.y);
   } else if (entity.ai) {
     if (entity.mobType) sound.playSound(MOB_CRIES[entity.mobType].die, pos.x, pos.y);
+    if (entity.mobType && BOSS_FOES.has(entity.mobType)) sound.playSound('foe_felled');
     createDeathFx(pos.x, pos.y);
     awardExperience(entity.mobType ? MONSTERS[entity.mobType].xp : deathPts);
     // The coins go straight to the killer (their Charisma makes kills richer); gear, now and then, drops.

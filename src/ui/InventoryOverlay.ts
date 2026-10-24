@@ -27,6 +27,7 @@ import type { CharacterSheet } from '../rules/CharacterSheet';
 import { formatDamage } from '../rules/Dice';
 import { heroName } from '../rules/Names';
 import { requestHitDie } from '../game/Rest';
+import { sound } from '../audio/SoundPlayer';
 
 /** inventory.png, measured in its own pixels: the leather bag panel, the cloth gear panel, and its two tabs. */
 const ART = { w: 2752, h: 1536 };
@@ -174,6 +175,7 @@ export class InventoryOverlay {
     if (this.container.visible === visible) return;
     this.container.visible = visible;
     this.shown = null;
+    if (visible) sound.playLocal('dialog');
     if (!visible) {
       this.endDrag();
       this.infoTip.hide();

@@ -8,6 +8,8 @@ import { nearby, Sense } from '../perception/spatial';
 import { faceTowards, wander } from '../execution/locomotion';
 import { cutOff, flank, followTrail, strike, support } from '../execution/pursuit';
 import { squadOf } from './squads';
+import { sound } from '../../audio/SoundPlayer';
+import { MOB_CRIES } from '../../audio/SoundBank';
 
 /**
  * An enemy's behaviour as a Yuka state machine:
@@ -98,9 +100,10 @@ function alertAllies(mob: Mob, player: Player, tick: number): void {
   }
 }
 
-/** Starts hunting a player that was just seen, and calls the allies around. */
+/** Starts hunting a player that was just seen, with a cry that calls the allies around. */
 function spot(agent: MobAgent, player: Player): void {
   const mob = agent.mob;
+  if (mob.mobType) sound.playSound(MOB_CRIES[mob.mobType].alert, mob.position.x, mob.position.y);
   mob.ai.targetId = world.id(player);
   mob.ai.allyId = undefined;
   noteSighting(mob, player, agent.tick);

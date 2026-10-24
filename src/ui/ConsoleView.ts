@@ -3,6 +3,7 @@ import { GAME_WIDTH } from '../render/Camera';
 import { text } from '../core/texts';
 import { makeText } from './PixelText';
 import type { PixelLabel } from './PixelText';
+import { sound } from '../audio/SoundPlayer';
 
 const VISIBLE_LINES = 10;
 const MAX_INPUT = 80;
@@ -40,6 +41,7 @@ export class ConsoleView {
   }
 
   open(): void {
+    sound.playLocal('dialog');
     this.container.visible = true;
     this.input = '/';
     this.recall = -1;

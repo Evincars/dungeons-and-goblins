@@ -3,6 +3,7 @@ import type { PointData } from 'pixi.js';
 import { claimPointer } from '../systems/InputSystem';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
+import { sound } from '../audio/SoundPlayer';
 
 /** The menu's rows: this tall, with this padding round the text; it is as wide as its longest row. */
 const ROW_H = 12;
@@ -47,6 +48,7 @@ export class PopupMenu {
     const top = above ? y - h : y;
     this.view.position.set(Math.round(Math.max(0, Math.min(x, bounds.w - w))), Math.round(Math.max(0, Math.min(top, bounds.h - h))));
     this.view.visible = true;
+    sound.playLocal('dialog');
   }
 
   private addRow(row: MenuRow, label: PixelLabel, i: number, w: number): void {

@@ -63,7 +63,7 @@ export function spendHitDie(player: Player): boolean {
   player.health.current += healed;
   logHeal(player, healed);
   playEffect(HEAL_EFFECT, HEAL_COLOUR, x, y, AIM_HEIGHT, HEAL_SCALE);
-  sound.playSound('gem', x, y);
+  sound.playSound('drink', x, y);
   return true;
 }
 
@@ -135,7 +135,7 @@ export function takeRest(kind: RestKind, state: PartyState = partyState()): void
   }
   state.shortRestsLeft = kind === 'long' ? SHORT_RESTS_PER_LONG_REST : state.shortRestsLeft - 1;
   notify(state, kind === 'long' ? 'long_done' : 'short_done', '', kind);
-  sound.playSound('buy');
+  sound.playSound('rest');
 }
 
 /** Host, each tick (after the party's answers): rests asked for, and a rest everyone agreed to (if it still can be taken). */

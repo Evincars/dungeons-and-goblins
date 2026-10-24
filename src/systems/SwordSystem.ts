@@ -1,9 +1,12 @@
 import { world, q, Team, isTarget } from '../world';
 import type { Entity, Player } from '../world';
 import { sound } from '../audio/SoundPlayer';
+import type { SfxName } from '../audio/SoundPlayer';
+import { MOB_CRIES } from '../audio/SoundBank';
+import { characterSheet, weaponInHand } from '../rules/CharacterSheet';
+import { weaponRule } from '../rules/Equipment';
 import { createSwordSwingFx } from '../entities/FxFactory';
 import { SWORD_STATS, swingRange } from '../entities/WeaponStats';
-import { characterSheet } from '../rules/CharacterSheet';
 import { strike } from './Strike';
 import { characterDef, clipImpactTicks, stateDuration } from '../characters/Characters';
 import { nearby, Sense } from '../ai/perception/spatial';
@@ -18,13 +21,18 @@ type Swing = NonNullable<Entity['swordSwing']>;
 
 const struck: Entity[] = [];
 
-/** Applies a hit to a target and shoves them back (`evenIfFlinching`: land even while it flinches from the last one). */
+/**
+ * Applies a hit to a target and shoves them back (`evenIfFlinching`: land even while it flinches from the last one).
+ * An enemy cries out when a hit catches it unhurt and leaves it standing (the blow itself is the caller's to sound:
+ * a blade, an arrow or a spell).
+ */
 export function hitMob(mob: Entity, attacker: Entity, damage: number, evenIfFlinching = false): void {
   const h = mob.health;
   if (!h || h.current <= 0) return;
   // A flinching target shrugs off a second blow in the same instant — but not a spell's darts or blast.
   if ((mob.freezeTime ?? 0) > 0 && !evenIfFlinching) return;
 
+  const flinched = (mob.hurtTime ?? 0) > 0;
   // The kill (and its coins) goes to whoever struck last: a projectile's shooter, not the projectile.
   mob.lastHitBy = attacker.projectile?.owner ?? world.id(attacker);
   mob.hurtTime = MOB_HURT_TICKS;
@@ -44,7 +52,13 @@ export function hitMob(mob: Entity, attacker: Entity, damage: number, evenIfFlin
     mob.bump.y = (dy / dist) * SWORD_STATS.knockback;
   }
 
-  sound.playSound('sword_hit', mp?.x ?? 0, mp?.y ?? 0);
+  if (mob.mobType && mp && !flinched && h.current > 0) sound.playSound(MOB_CRIES[mob.mobType].hurt, mp.x, mp.y);
+}
+
+/** A heavy or two-handed weapon swings with a heavier grunt. */
+function swingSound(player: Player): SfxName {
+  const properties = weaponRule(weaponInHand(player.equipped ?? {}) ?? undefined)?.rule.properties ?? [];
+  return properties.includes('heavy') || properties.includes('two_handed') ? 'swing_heavy' : 'sword_swing';
 }
 
 /** How far a body stretches from its centre: a blow that reaches its edge lands. */
@@ -85,7 +99,7 @@ function swingLands(player: Player, swing: Swing): void {
   if (def?.swingFx !== false) {
     createSwordSwingFx(pos.x + swing.dirX * swing.range * 0.5, pos.y + swing.dirY * swing.range * 0.5, swing.dirX, swing.dirY);
   }
-  sound.playSound('sword_swing', pos.x, pos.y);
+  sound.playSound(swingSound(player), pos.x, pos.y);
 }
 
 /** Whether a target stands inside the swing's arc and reach (to the edge of its body), and has not been hit by this swing yet. */
@@ -104,8 +118,8 @@ function inArc(player: Player, swing: Swing, mob: Entity, mobId: number): boolea
  */
 function swingAt(player: Player, target: Entity): void {
   const outcome = strike(target, characterSheet(player).attack, player);
+  if (target.position) sound.playSound(outcome.hit ? 'sword_hit' : 'sword_miss', target.position.x, target.position.y);
   if (outcome.hit) hitMob(target, player, outcome.damage);
-  else if (target.position) sound.playSound('sword_miss', target.position.x, target.position.y);
 }
 
 /** Every enemy (and the training dummy) inside the live swing's arc is swung at, each once per swing. */

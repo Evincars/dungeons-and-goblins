@@ -10,6 +10,7 @@ import { NameField } from '../ui/NameField';
 import { menuBackdrop } from '../ui/MenuBackdrop';
 import { settings, saveSettings } from '../game/Settings';
 import { sound } from '../audio/SoundPlayer';
+import { music } from '../audio/MusicPlayer';
 import { reportRejection } from '../core/errors';
 
 const COL_X = LAYOUT_LEFT + 136;
@@ -18,7 +19,7 @@ const ROW_H = 38;
 const FIRST_ROW = 86;
 const TITLE_Y = 40;
 
-/** Settings, opened from the title or stacked over the pause menu: controls, screen, sound and your name. */
+/** Settings, opened from the title or stacked over the pause menu: controls, screen, sound, music and your name. */
 export class SettingsScene implements Scene {
   readonly container = new Container();
   private nameField: NameField;
@@ -63,6 +64,17 @@ export class SettingsScene implements Scene {
       saveSettings();
     };
     this.container.addChild(volume);
+    y += ROW_H;
+
+    const musicVolume = new PixelSlider(text('settings.music'), settings.musicVolume, COL_W);
+    musicVolume.x = COL_X;
+    musicVolume.y = y;
+    musicVolume.onChange = (v) => {
+      settings.musicVolume = v;
+      music.setVolume(v);
+      saveSettings();
+    };
+    this.container.addChild(musicVolume);
     y += ROW_H;
 
     // The name the other players see above this character in a co-op game.

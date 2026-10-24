@@ -10,6 +10,7 @@ import { SettingsScene } from '../scenes/SettingsScene';
 import { KeyBindingsScene } from '../scenes/KeyBindingsScene';
 import { CoopScene } from '../scenes/CoopScene';
 import { sound } from '../audio/SoundPlayer';
+import { music } from '../audio/MusicPlayer';
 import { settings } from './Settings';
 import { exposeForDebugging } from '../core/debugHooks';
 import { coop } from '../network/CoopSession';
@@ -45,8 +46,10 @@ export class Game {
     window.addEventListener('resize', () => this.fitToWindow(canvas));
 
     sound.setSfxVolume(settings.sfxVolume);
-    sound.autoStart();
-    await Promise.all([loadAllAssets(), sound.load()]);
+    music.setVolume(settings.musicVolume);
+    // The sounds load in the background: the menu needs none of them, and the game must not wait for them.
+    sound.load();
+    await loadAllAssets();
 
     this.manager = new SceneManager(this.app, canvas)
       .register('title', (m) => new TitleScene(m))

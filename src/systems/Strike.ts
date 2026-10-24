@@ -8,6 +8,7 @@ import { UNARMORED_AC } from '../rules/ArmorTable';
 import { logAttack } from './RollLogSystem';
 import { recordBlow } from './CombatLogSystem';
 import type { SpellId } from '../rules/Spells';
+import { sound } from '../audio/SoundPlayer';
 
 /**
  * Every blow in the game goes through here: the attack is rolled against the target's Armor Class, and the
@@ -34,10 +35,11 @@ function withFirstStrike(attack: AttackProfile, attacker: Entity | undefined): A
 
 /**
  * Rolls `attack` against `target`, showing the result over `logOn` (the attacker, or a projectile's shooter)
- * and writing it into the combat log.
+ * and writing it into the combat log. A critical hit is heard: blood and the crack of bone.
  */
 export function strike(target: Entity, attack: AttackProfile, logOn: Entity | undefined, spell?: SpellId): AttackOutcome {
   const outcome = resolveAttack(withFirstStrike(attack, logOn), armorClassOf(target));
+  if (outcome.critical && target.position) sound.playSound('critical', target.position.x, target.position.y);
   if (!logOn) return outcome;
   logAttack(logOn, outcome);
   recordBlow(logOn, outcome, spell);

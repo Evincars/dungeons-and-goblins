@@ -4,6 +4,7 @@ import { claimPointer } from '../systems/InputSystem';
 import { PixelLabel } from './PixelText';
 import { wrapLines } from './InfoTooltip';
 import { THEME } from './Theme';
+import { sound } from '../audio/SoundPlayer';
 
 /** A dialog's size when it shows text, its header band, the padding inside it and the close button in the header's corner. */
 const TEXT_W = 220;
@@ -73,6 +74,7 @@ export class HudDialog {
     else this.body.text = wrapLines(typeof content === 'string' ? content : '', width).join('\n');
     this.layout(width + 2 * PAD, height + HEADER_H + 2 * PAD);
     this.title.text = title;
+    if (!this.container.visible) sound.playLocal('dialog');
     this.container.visible = true;
   }
 

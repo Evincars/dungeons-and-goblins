@@ -13,6 +13,6 @@ export function updateWeaponSwap(): void {
     intents.swap = false;
     if (player.health.current <= 0) continue;
     const { x, y } = player.position;
-    sound.playSound(swapWeapons(player) ? 'sword_swing' : 'fail', x, y);
+    sound.playSound(swapWeapons(player) ? 'swap' : 'fail', x, y);
   }
 }

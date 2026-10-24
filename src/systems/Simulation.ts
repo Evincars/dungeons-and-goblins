@@ -44,6 +44,7 @@ import { updateStashes } from './StashSystem';
 import { updateMarker } from './MarkerSystem';
 import { updateBuildLock } from '../game/Customize';
 import { updateProtection } from './ProtectionSystem';
+import { updateMusic } from './MusicSystem';
 
 export type FrameContext = {
   level: Level;
@@ -113,6 +114,7 @@ export const PRESENTATION: readonly System[] = [
   ({ gameLayer }) => updateBars(gameLayer),
   ({ gameLayer }) => updateRollTexts(gameLayer),
   ({ gameLayer }) => updateMarker(gameLayer),
+  () => updateMusic(),
 ];
 
 export function runSystems(systems: readonly System[], ctx: FrameContext): void {

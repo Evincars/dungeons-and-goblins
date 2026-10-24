@@ -20,7 +20,7 @@ export function updateExit(): void {
     // Kept in the visual too, so co-op guests (who mirror components) see the lever pulled.
     if (button.visual) button.visual.col = PULLED_FRAME;
     if (button.visual && button.sprite) setVisualFrame(button.sprite, button.visual.sheet, PULLED_FRAME, 0);
-    sound.playSound('level_up', x, y);
+    sound.playSound('level_exit', x, y);
     levelComplete = true;
   }
 }

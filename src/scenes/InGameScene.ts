@@ -34,6 +34,7 @@ import { isLevelComplete, resetLevelComplete } from '../systems/ExitSystem';
 import { PixelLabel, makeText } from '../ui/PixelText';
 import { Crosshair } from '../ui/Crosshair';
 import { sound } from '../audio/SoundPlayer';
+import { resetMusic } from '../systems/MusicSystem';
 import type { Level } from '../level/Level';
 import { exposeForDebugging } from '../core/debugHooks';
 import { coop } from '../network/CoopSession';
@@ -95,6 +96,8 @@ export class InGameScene implements Scene {
   private readonly result = new ResultPanel();
   private readonly status: PixelLabel;
   private complete = false;
+  /** Whether this screen's hero was alive last tick, to toll their death the moment it comes. */
+  private heroAlive = true;
   private gameOverShown = false;
   /** What the player carried in, to tell this level's kills, XP and gold from the run's total. */
   private baseline: RunTotals | null = null;
@@ -123,6 +126,7 @@ export class InGameScene implements Scene {
     world.clear();
     resetNameTags();
     resetRollTexts();
+    resetMusic();
 
     this.gameLayer.sortableChildren = true;
     this.container.addChild(this.gameLayer, this.uiLayer);
@@ -280,6 +284,7 @@ export class InGameScene implements Scene {
     this.baseline ??= player ? totalsOf(player.playerStats) : null;
     if (this.mode !== 'solo') updateNameTags(this.gameLayer, player);
     if (player) this.follow(player);
+    this.noticeDeath(player);
     this.revealAroundPlayers();
     this.gameLayer.x = -camera.x;
     this.gameLayer.y = -camera.y;
@@ -309,6 +314,13 @@ export class InGameScene implements Scene {
     sound.setListener(pos.x, pos.y);
     camera.x = Math.max(0, Math.min(this.level.width * TILE_WIDTH - GAME_WIDTH, Math.round(pos.x - GAME_WIDTH / 2)));
     camera.y = Math.max(0, Math.min(this.level.height * TILE_HEIGHT - VIEW_HEIGHT, Math.round(pos.y - VIEW_HEIGHT / 2)));
+  }
+
+  /** This screen's hero has just fallen: the toll is for them alone (everyone near hears their death cry). */
+  private noticeDeath(player: Player | undefined): void {
+    const alive = !player || player.health.current > 0;
+    if (this.heroAlive && !alive) sound.playLocal('you_died');
+    this.heroAlive = alive;
   }
 
   /** The party shares its map: the fog lifts around every player. */

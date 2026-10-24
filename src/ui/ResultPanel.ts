@@ -3,6 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT, LAYOUT_LEFT, LAYOUT_WIDTH } from '../render/Ca
 import { PixelButton } from './PixelButton';
 import { THEME } from './Theme';
 import { makeText } from './PixelText';
+import { sound } from '../audio/SoundPlayer';
 
 const DIM_ALPHA = 0.75;
 const PANEL = { x: LAYOUT_LEFT + 90, y: 90, w: LAYOUT_WIDTH - 180, h: 220 };
@@ -54,6 +55,7 @@ export class ResultPanel {
     if (content.waiting) this.addWaiting(content.waiting);
     else this.addButtons(content.buttons);
     this.container.visible = true;
+    sound.playLocal('dialog');
   }
 
   private addWaiting(message: string): void {

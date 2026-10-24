@@ -7,6 +7,7 @@ import { THEME } from './Theme';
 import { PixelLabel } from './PixelText';
 import { GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
 import { requestBuy } from '../game/PlayerActions';
+import { sound } from '../audio/SoundPlayer';
 
 const PW = 320;
 const ROW_H = 26;
@@ -117,6 +118,7 @@ export class ShopPanel {
   }
 
   setVisible(visible: boolean): void {
+    if (visible && !this.container.visible) sound.playLocal('dialog');
     this.container.visible = visible;
   }
 

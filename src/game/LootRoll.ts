@@ -108,7 +108,7 @@ function award(winner: Player, item: InventoryItem): void {
   if (!addToBag(winner, structuredClone(item))) createItemPickup(winner.position.x, winner.position.y, item);
   logLine(winner, text('roll.won', { item: item.name }), 'crit');
   recordLoot(winner, 'won', 0, item.name);
-  sound.playSound('buy', winner.position.x, winner.position.y);
+  sound.playSound('pickup', winner.position.x, winner.position.y);
 }
 
 /** Whether every player in the game has chosen. */

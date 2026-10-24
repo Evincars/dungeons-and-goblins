@@ -9,6 +9,7 @@ import { PixelButton } from '../ui/PixelButton';
 import { NameField } from '../ui/NameField';
 import { TextBox } from '../ui/TextBox';
 import { menuBackdrop } from '../ui/MenuBackdrop';
+import { music } from '../audio/MusicPlayer';
 import { HeroPicker } from '../ui/HeroPicker';
 import { settings, saveSettings } from '../game/Settings';
 import type { HeroClassId } from '../rules/Classes';
@@ -56,6 +57,8 @@ export class CoopScene implements Scene {
   private overlayWatch?: ReturnType<typeof setInterval>;
 
   constructor(private readonly manager: SceneManager, private readonly role: CoopRole, destination?: string) {
+    // An invite link opens the lobby first thing: the menu's music starts here too.
+    music.play('menu');
     this.container.addChild(menuBackdrop());
     const title = makeTitle(text(role === 'host' ? 'coop.host_title' : 'coop.join_title'));
     title.x = CENTER;

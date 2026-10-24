@@ -3,6 +3,8 @@ import type { Scene, SceneManager, SceneName } from '../game/SceneManager';
 import { bindingFor, settings } from '../game/Settings';
 import { text } from '../core/texts';
 import { reportRejection } from '../core/errors';
+import { music } from '../audio/MusicPlayer';
+import type { TrackName } from '../audio/MusicPlayer';
 import { assetUrl } from '../assets/assetUrl';
 import { context2d, createCanvas } from '../render/canvas';
 import { GAME_HEIGHT, GAME_WIDTH } from '../render/Camera';
@@ -18,6 +20,8 @@ const HAS_FRAME = 2;
 const VEIL_ALPHA = 0.5;
 /** Ticks (60 a second) of each fade: from black at the start, the text in and out, and to black at the end. */
 const FADE_TICKS = 45;
+/** The menu's music fades out under the film's own sound as the picture comes up from black, over the same time. */
+const FADE_MS = (FADE_TICKS / 60) * 1000;
 /** Each half of the story stays up long enough to read: this many ticks a letter, and never less than this. */
 const READ_TICKS_PER_CHAR = 1.8;
 const MIN_HOLD_TICKS = 360;
@@ -31,6 +35,9 @@ const SKIP_KEYS: readonly string[] = ['Enter', 'Escape', 'Space'];
 
 /** Where the intro leads once it has played (or been skipped). */
 let destination: SceneName = 'in_game';
+
+/** The music that takes over from the film's sound as it fades to black: the dungeon's, or the lobby's (the menu's). */
+const musicAfter = (next: SceneName): TrackName => (next === 'in_game' ? 'explore' : 'menu');
 
 /** Plays the intro, then goes on to `next` (the dungeon, or the co-op lobby). */
 export function playIntroThen(manager: SceneManager, next: SceneName): void {
@@ -73,6 +80,10 @@ export class IntroScene implements Scene {
   /** The steps a key press jumps to: the first half fading out (on to the second), and the closing fade. */
   private firstOut = 0;
   private leaving = false;
+  /** The film's sound at full volume (the player's music volume); it rises and falls with the picture. */
+  private readonly filmVolume = Math.max(0, Math.min(1, settings.musicVolume));
+  /** Whether the next scene's music has been started, under the closing fade. */
+  private cued = false;
   private readonly onKeyDown = (e: KeyboardEvent) => {
     if (SKIP_KEYS.includes(e.code) || e.code === bindingFor('use')) this.skip();
   };
@@ -83,7 +94,9 @@ export class IntroScene implements Scene {
     this.video.src = assetUrl(VIDEO);
     this.video.loop = true;
     this.video.playsInline = true;
-    this.video.volume = Math.max(0, Math.min(1, settings.sfxVolume));
+    this.video.volume = 0;
+    // Crossfade: the menu's music fades out as the film and its sound come up out of black.
+    music.stop(FADE_MS);
     this.film.width = GAME_WIDTH;
     this.film.height = GAME_HEIGHT;
     reportRejection(this.video.play(), 'The intro film could not start', 'intro');
@@ -151,6 +164,8 @@ export class IntroScene implements Scene {
     if (!step) return;
     const t = Math.min(1, this.tick / step.ticks);
     this.black.alpha = step.black(t);
+    this.video.volume = this.filmVolume * (1 - this.black.alpha);
+    if (this.step === this.steps.length - 1) this.cueMusic();
     this.story.forEach((label, i) => { label.alpha = i === step.part ? step.text(t, this.from) : 0; });
     if (++this.tick < step.ticks) return;
     this.from = this.story[step.part].alpha;
@@ -159,6 +174,13 @@ export class IntroScene implements Scene {
     if (this.step < this.steps.length || this.leaving) return;
     this.leaving = true;
     this.manager.goto(destination);
+  }
+
+  /** As the film fades to black, the next scene's music fades in over its fading sound. */
+  private cueMusic(): void {
+    if (this.cued) return;
+    this.cued = true;
+    music.play(musicAfter(destination));
   }
 
   destroy(): void {

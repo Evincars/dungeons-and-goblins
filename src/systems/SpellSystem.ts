@@ -21,6 +21,7 @@ import { playEffect } from '../assets/Effects';
 import { SPELL_STATS } from '../entities/WeaponStats';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 import { sound } from '../audio/SoundPlayer';
+import { SPELL_IMPACTS, SPELL_SOUNDS } from '../audio/SoundBank';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { screenToWorld } from '../render/Camera';
 import { text } from '../core/texts';
@@ -51,8 +52,10 @@ const aimed = { x: 0, y: 0 };
 /** Where a projectile ends: the spell's effect (and a caster's own burst art) where it struck; an arrow glints. */
 function burst(bolt: Bolt, struck: boolean): void {
   const p = bolt.position;
-  const { arrow, burst: art, impact } = bolt.projectile;
+  const { arrow, burst: art, impact, spell } = bolt.projectile;
   if (arrow && struck) playEffect(ARROW_HIT_EFFECT, ARROW_HIT_COLOUR, p.x, p.y, AIM_HEIGHT, ARROW_HIT_SCALE);
+  if (arrow && struck) sound.playSound('arrow_hit', p.x, p.y);
+  if (spell) sound.playSound(SPELL_IMPACTS[SPELLS[spell].damageType], p.x, p.y);
   if (art) spawnFx(p.x, p.y, art.sheet, art.count, art.count * art.frameTime, { first: art.first, scale: art.scale, yOffset: AIM_HEIGHT });
   if (impact) playEffect(impact.shape, impact.colour, p.x, p.y, AIM_HEIGHT, impact.scale);
   world.addComponent(bolt, 'removed', true);
@@ -170,6 +173,8 @@ function burstHits(caster: Player, def: SpellDef, foe: Entity, dc: number): void
 function castBurst(caster: Player, def: SpellDef, targetX: number, targetY: number): void {
   const centre = burstCentre(caster, def, targetX, targetY);
   playEffect(def.effect.shape, def.effect.colour, centre.x, centre.y, 0, def.effect.scale);
+  // A burst round the caster is all in its casting sound; one thrown further off goes off where it lands.
+  if (def.range > 0) sound.playSound(SPELL_IMPACTS[def.damageType], centre.x, centre.y);
   const dc = characterSheet(caster).spell.dc;
   for (const foe of nearby(centre.x, centre.y, def.radius + MAX_MOB_RADIUS, Sense.mob, victims)) {
     if (!isTarget(foe) || foe.health.current <= 0) continue;
@@ -202,7 +207,7 @@ function release(caster: Player, cast: NonNullable<Entity['casting']>): void {
   else if (def.kind === 'missiles') castMissiles(caster, def, cast.dirX, cast.dirY);
   else if (def.kind === 'burst') castBurst(caster, def, cast.targetX ?? caster.position.x, cast.targetY ?? caster.position.y);
   else castHeal(caster, def);
-  sound.playSound('spell', caster.position.x, caster.position.y);
+  sound.playSound(SPELL_SOUNDS[def.id], caster.position.x, caster.position.y);
 }
 
 /** Starts a cast toward the crosshair, or plays the one under way and lets it go on its release frame. */

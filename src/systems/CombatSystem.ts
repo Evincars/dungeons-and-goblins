@@ -4,11 +4,13 @@ import type { Entity, Player } from '../world';
 import type { Level } from '../level/Level';
 import { boxAround } from '../core/geometry';
 import { sound } from '../audio/SoundPlayer';
+import type { SfxName } from '../audio/SoundPlayer';
+import { MOB_CRIES } from '../audio/SoundBank';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { stateDuration, stateImpact } from '../characters/Characters';
 import { ATTACK_RECOVERY } from '../characters/StateTriggers';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
-import { monsterAttack } from '../rules/CharacterSheet';
+import { characterSheet, monsterAttack } from '../rules/CharacterSheet';
 import { MIN_HIT_DAMAGE } from '../rules/Combat';
 import { strike } from './Strike';
 import { protectFrom } from './ProtectionSystem';
@@ -78,8 +80,19 @@ function enemyTouching(player: Player): Entity | null {
 function strikeLands(mob: Entity): boolean {
   if (!mob.character) return true;
   const swing = stateDuration(mob.character.def, 'attack');
-  if (!(mob.attackTime ?? 0)) mob.attackTime = swing + ATTACK_RECOVERY;
+  if (!(mob.attackTime ?? 0)) windUp(mob, swing + ATTACK_RECOVERY);
   return mob.attackTime === swing + ATTACK_RECOVERY - stateImpact(mob.character.def, 'attack');
+}
+
+/** The enemy starts its swing, with its battle cry. */
+function windUp(mob: Entity, ticks: number): void {
+  mob.attackTime = ticks;
+  if (mob.mobType && mob.position) sound.playSound(MOB_CRIES[mob.mobType].attack, mob.position.x, mob.position.y);
+}
+
+/** A blow the hero's Armor Class turned: caught on their shield if they carry one, parried if not. */
+function turnedAside(player: Player): SfxName {
+  return characterSheet(player).armorClass.shield > 0 ? 'shield_block' : 'parry';
 }
 
 /**
@@ -94,7 +107,7 @@ function mobStrike(mob: Entity, player: Player): void {
   const attack = monsterAttack(mob.mobType, mob.mobWeapon);
   const outcome = strike(player, protectFrom(player) ? { ...attack, mode: 'disadvantage' } : attack, mob);
   if (outcome.hit) hurtPlayer(player, mob, outcome.damage);
-  else sound.playSound('sword_miss', player.position.x, player.position.y);
+  else sound.playSound(turnedAside(player), player.position.x, player.position.y);
 }
 
 /** Enemies strike players they touch, except inside safe zones. */

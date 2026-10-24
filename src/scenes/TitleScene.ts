@@ -10,6 +10,7 @@ import { coop } from '../network/CoopSession';
 import { startRun } from '../game/Run';
 import { world } from '../world';
 import { chooseHeroThen } from './CharacterSelectScene';
+import { music } from '../audio/MusicPlayer';
 
 const BUTTON_W = 220;
 const BUTTON_H = 26;
@@ -35,6 +36,7 @@ export class TitleScene implements Scene {
     clearJoinLink();
     // Nothing of the last game is needed here; a new one fills the world again.
     world.clear();
+    music.play('menu');
 
     this.container.addChild(menuBackdrop());
     const logo = new Sprite(getTexture('logo'));

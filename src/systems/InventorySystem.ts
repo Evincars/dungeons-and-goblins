@@ -21,7 +21,7 @@ function pickUp(player: Entity): void {
   const { x, y } = player.position;
   for (const e of nearby(x, y, PICKUP_RADIUS, Sense.item, lying)) {
     if (!e.item || !e.position || e.removed || !addToBag(player, e.item)) continue;
-    sound.playSound('coin', e.position.x, e.position.y);
+    sound.playSound('pickup', e.position.x, e.position.y);
     world.addComponent(e, 'removed', true);
   }
 }

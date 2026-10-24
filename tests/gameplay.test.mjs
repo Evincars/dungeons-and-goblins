@@ -2246,3 +2246,54 @@ test('the ~ console: money, god mode, experience and any item by its id; not in 
   assert.match(run('money 5')[0], /slash/);
   assert.match(runCommand('/money 5', { player: hero, allowed: false })[0], /co-op/);
 });
+
+// ── Sound ────────────────────────────────────────────────────────────────────
+
+const { sound } = await load('audio/SoundPlayer');
+const { allClips, MUSIC_TRACKS } = await load('audio/SoundBank');
+
+/** Runs `play` and returns the names of the effects it sounded (as the co-op host would relay them). */
+function soundsOf(play) {
+  const heard = [];
+  sound.onEffect = (name) => heard.push(name);
+  try {
+    play();
+  } finally {
+    sound.onEffect = null;
+  }
+  return heard;
+}
+
+test('sounds: every clip the effects play and every piece of music is a file under public/', async () => {
+  const { existsSync } = await import('node:fs');
+  const files = new Set([...allClips().map((clip) => clip.file), ...Object.values(MUSIC_TRACKS).flatMap((track) => track.files)]);
+  assert.deepEqual([...files].filter((file) => !existsSync(`public${file}`)), []);
+});
+
+test('sounds: an enemy cries as it swings; a blow turned aside is parried, or caught on a shield', () => {
+  const shield = { type: 'shield', name: 's', value: 1, gear: 'offhand', base: 'shield' };
+  const level = arena(12, 6);
+  const player = playerAt(6, 3);
+  mobAt(level, 'orc', 5.4, 3);
+  useDieRoller(() => 1);
+  player.equipped = {};
+  beginPerception();
+  const bare = soundsOf(() => { for (let t = 0; t < 120; t++) updateContactDamage(level); });
+  assert.ok(bare.includes('soldier_attack'), 'an orc swings with the hollow soldier\'s cry');
+  assert.ok(bare.includes('parry') && !bare.includes('shield_block'), 'without a shield the hero parries');
+  player.equipped = { secondary: shield };
+  const shielded = soundsOf(() => { for (let t = 0; t < 120; t++) updateContactDamage(level); });
+  assert.ok(shielded.includes('shield_block') && !shielded.includes('parry'), 'with one the blow rings off it');
+});
+
+test('sounds: a critical hit cracks bone, and the enemy it leaves standing cries out', () => {
+  const level = arena(12, 6);
+  const player = playerAt(4, 2);
+  player.aimVector = { x: 1, y: 0 };
+  const troll = mobAt(level, 'troll', 4.8, 2);
+  useDieRoller((sides) => (sides === 20 ? 20 : 1));
+  player.playerInput.intents.attack = true;
+  const heard = soundsOf(() => { updateSword(); updateSword(); });
+  assert.ok(troll.health.current > 0);
+  for (const name of ['sword_swing', 'critical', 'sword_hit', 'troll_hurt']) assert.ok(heard.includes(name), name);
+});

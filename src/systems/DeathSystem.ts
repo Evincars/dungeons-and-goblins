@@ -1,12 +1,12 @@
 import { world, q, isPlayer } from '../world';
-import type { Entity, MobType, Player } from '../world';
+import type { Entity, Player } from '../world';
 import type { Level } from '../level/Level';
 import { killReward } from '../entities/LootFactory';
 import { spawnDrops } from '../entities/Drops';
 import { pay } from '../game/Purse';
 import { createDeathFx } from '../entities/FxFactory';
 import { sound } from '../audio/SoundPlayer';
-import type { SfxName } from '../audio/SoundPlayer';
+import { MOB_CRIES } from '../audio/SoundBank';
 import { destroyAttachments } from './BarSystem';
 import { stateDuration } from '../characters/Characters';
 import { startDying } from './RespawnSystem';
@@ -16,18 +16,6 @@ import { characterSheet } from '../rules/CharacterSheet';
 import { hitPointsPerLevel } from '../rules/HitPoints';
 import { logLine } from './RollLogSystem';
 import { text } from '../core/texts';
-
-const DEATH_SOUNDS = {
-  goblin: 'enemy_death',
-  skeleton: 'enemy_death',
-  orc: 'enemy_death',
-  troll: 'enemy_death',
-  goblin_grunt: 'enemy_death',
-  goblin_rogue: 'enemy_death',
-  goblin_warrior: 'enemy_death',
-  ghost_wizard: 'enemy_death',
-  evil_wizard: 'enemy_death',
-} as const satisfies Record<MobType, SfxName>;
 
 /** Ticks a dead mob stays on its last death frame before it is cleared away. */
 const CORPSE_LINGER = 60;
@@ -90,14 +78,14 @@ function killerOf(entity: Entity, pos: { x: number; y: number }): Player | undef
 function die(entity: Entity, pos: { x: number; y: number }): void {
   const deathPts = entity.deathPoints ?? 0;
   if (entity.spawner) {
-    sound.playSound('enemy_death', pos.x, pos.y);
+    sound.playSound('nest_destroyed', pos.x, pos.y);
     createDeathFx(pos.x, pos.y);
     awardExperience(deathPts * NEST_XP_FACTOR);
   } else if (entity.chest) {
     sound.playSound('chest_open', pos.x, pos.y);
     createDeathFx(pos.x, pos.y);
   } else if (entity.ai) {
-    sound.playSound(entity.mobType ? DEATH_SOUNDS[entity.mobType] : 'enemy_death', pos.x, pos.y);
+    if (entity.mobType) sound.playSound(MOB_CRIES[entity.mobType].die, pos.x, pos.y);
     createDeathFx(pos.x, pos.y);
     awardExperience(entity.mobType ? MONSTERS[entity.mobType].xp : deathPts);
     // The coins go straight to the killer (their Charisma makes kills richer); gear, now and then, drops.

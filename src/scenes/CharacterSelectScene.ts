@@ -20,6 +20,7 @@ import { HeroPicker, animatePreview, makePreview } from '../ui/HeroPicker';
 import type { Preview } from '../ui/HeroPicker';
 import { THEME } from '../ui/Theme';
 import { playIntroThen } from './IntroScene';
+import { music } from '../audio/MusicPlayer';
 
 /** Top down: the title, the hero's name, the card of the hero picked (arrows either side), the row of portraits, the buttons. */
 const TITLE_Y = 12;
@@ -89,6 +90,7 @@ export class CharacterSelectScene implements Scene {
   private readonly onKeyDown = (e: KeyboardEvent) => this.handleKey(e);
 
   constructor(private readonly manager: SceneManager) {
+    music.play('menu');
     this.container.addChild(menuBackdrop());
     const title = makeTitle(text('select.title'));
     title.position.set(LAYOUT_LEFT + LAYOUT_WIDTH / 2, TITLE_Y);

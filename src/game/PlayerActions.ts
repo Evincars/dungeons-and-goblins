@@ -233,7 +233,7 @@ export function giveItem(giver: Player, from: ItemPlace, to: PlayerSlot): boolea
   else delete loadout.equipped[from.slot];
   applyLoadout(giver, { inventory: trimmed(loadout.inventory), equipped: loadout.equipped });
   logLine(receiver, text('roll.gift', { item: item.name }), 'gold');
-  sound.playSound('buy', receiver.position.x, receiver.position.y);
+  sound.playSound('pickup', receiver.position.x, receiver.position.y);
   return true;
 }
 

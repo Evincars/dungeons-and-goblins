@@ -5,6 +5,7 @@ import { getTexture } from '../assets/Textures';
 import { PixelButton } from './PixelButton';
 import { THEME } from './Theme';
 import { makeText } from './PixelText';
+import { sound } from '../audio/SoundPlayer';
 
 const BTN_W = 220;
 const BTN_H = 26;
@@ -69,6 +70,7 @@ export class PauseMenu {
       this.container.addChild(button);
     });
     this.container.visible = true;
+    sound.playLocal('dialog');
   }
 
   hide(): void {

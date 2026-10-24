@@ -117,99 +117,99 @@ const INTERFACE = {
 
 export const SFX = {
   // --- heroes: every hero has the ashen knight's voice and kit ---
-  step: [layer(KNIGHT_STEPS, 0.35)],
-  sword_swing: [layer(KNIGHT.light, 0.7)],
+  step: [layer(KNIGHT_STEPS, 0.49)],
+  sword_swing: [layer(KNIGHT.light, 0.98)],
   /** A heavy or two-handed weapon comes down. */
-  swing_heavy: [layer(KNIGHT.heavy, 0.8)],
-  hurt: [layer(KNIGHT.hurt, 0.8)],
+  swing_heavy: [layer(KNIGHT.heavy, 1)],
+  hurt: [layer(KNIGHT.hurt, 1)],
   death: [layer(KNIGHT.die)],
   /** A foe's blow turned aside by a hero without a shield… */
-  parry: [layer(KNIGHT.parry, 0.6)],
+  parry: [layer(KNIGHT.parry, 0.84)],
   /** …and by one with a shield. */
-  shield_block: [layer(KNIGHT.block, 0.7)],
+  shield_block: [layer(KNIGHT.block, 0.98)],
   /** A hit die spent: a swig from the flask. */
-  drink: [layer(KNIGHT.drink, 0.8)],
+  drink: [layer(KNIGHT.drink, 1)],
   /** Weapons swapped: a shuffle of gear and a blade's ring as it leaves the scabbard. */
-  swap: [layer(KNIGHT.roll, 0.5, 1.2), layer(BLADE.armor, 0.15, 1.8, 60)],
+  swap: [layer(KNIGHT.roll, 0.7, 1.2), layer(BLADE.armor, 0.21, 1.8, 60)],
   /** Swapped to a bow: the gear shuffles and the string is drawn. */
-  bow_draw: [layer(KNIGHT.roll, 0.4, 1.2), layer(BLADE.bowDraw, 0.6, 1, 80)],
+  bow_draw: [layer(KNIGHT.roll, 0.56, 1.2), layer(BLADE.bowDraw, 0.84, 1, 80)],
 
   // --- weapons ---
-  sword_hit: [layer(BLADE.flesh, 0.8)],
+  sword_hit: [layer(BLADE.flesh, 1)],
   /** A blow that the target's Armor Class turned: it glances off armour. */
-  sword_miss: [layer(BLADE.armor, 0.45, 1.1)],
+  sword_miss: [layer(BLADE.armor, 0.63, 1.1)],
   /** A natural 20: the splatter and the crack of bone together. */
-  critical: [layer(BLADE.blood, 0.8), layer(BLADE.bone, 0.7, 1, 40)],
-  bow_shot: [layer(BLADE.bowShoot, 0.8)],
-  arrow_hit: [layer(BLADE.arrowImpact, 0.7)],
+  critical: [layer(BLADE.blood, 1), layer(BLADE.bone, 0.98, 1, 40)],
+  bow_shot: [layer(BLADE.bowShoot, 1)],
+  arrow_hit: [layer(BLADE.arrowImpact, 0.98)],
 
   // --- spells: four recordings, re-pitched and layered into fourteen ---
-  cast_fire_bolt: [layer(SORCERY.fire, 0.7, 1.15)],
+  cast_fire_bolt: [layer(SORCERY.fire, 0.98, 1.15)],
   /** Frost: dark sorcery pitched up into a hiss, a high shimmer of the miracle over it. */
-  cast_ray_of_frost: [layer(SORCERY.dark, 0.6, 1.45), layer(SORCERY.miracle, 0.25, 1.6)],
-  cast_chill_touch: [layer(SORCERY.dark, 0.7, 0.85)],
-  cast_eldritch_blast: [layer(SORCERY.dark, 0.7), layer(SORCERY.fire, 0.35, 0.75)],
+  cast_ray_of_frost: [layer(SORCERY.dark, 0.84, 1.45), layer(SORCERY.miracle, 0.35, 1.6)],
+  cast_chill_touch: [layer(SORCERY.dark, 0.98, 0.85)],
+  cast_eldritch_blast: [layer(SORCERY.dark, 0.98), layer(SORCERY.fire, 0.49, 0.75)],
   /** An insult with teeth: a high, snarling cackle. */
-  cast_vicious_mockery: [layer(SORCERY.dark, 0.5, 1.6), layer(CREATURE.houndGrowl, 0.3, 1.5)],
-  cast_sacred_flame: [layer(SORCERY.miracle, 0.6, 1.25), layer(SORCERY.fire, 0.35, 1.3)],
-  cast_chromatic_orb: [layer(SORCERY.fire, 0.6, 0.8), layer(SORCERY.dark, 0.35, 1.2)],
+  cast_vicious_mockery: [layer(SORCERY.dark, 0.7, 1.6), layer(CREATURE.houndGrowl, 0.42, 1.5)],
+  cast_sacred_flame: [layer(SORCERY.miracle, 0.84, 1.25), layer(SORCERY.fire, 0.49, 1.3)],
+  cast_chromatic_orb: [layer(SORCERY.fire, 0.84, 0.8), layer(SORCERY.dark, 0.49, 1.2)],
   /** Three darts, three casts in quick succession. */
-  cast_magic_missile: [layer(SORCERY.dark, 0.45, 1.3), layer(SORCERY.dark, 0.4, 1.4, 70), layer(SORCERY.dark, 0.35, 1.5, 140)],
+  cast_magic_missile: [layer(SORCERY.dark, 0.63, 1.3), layer(SORCERY.dark, 0.56, 1.4, 70), layer(SORCERY.dark, 0.49, 1.5, 140)],
   /** A sheet of flame: the cast with a dragon's breath under it. */
-  cast_burning_hands: [layer(SORCERY.fire, 0.7), layer(CREATURE.dragonFire, 0.45, 1.2)],
+  cast_burning_hands: [layer(SORCERY.fire, 0.98), layer(CREATURE.dragonFire, 0.63, 1.2)],
   /** A boom and a gust: a slowed blast with great wings beating behind it. */
-  cast_thunderwave: [layer(SORCERY.explode, 0.75, 0.7), layer(CREATURE.dragonWings, 0.5, 0.8)],
-  cast_arms_of_hadar: [layer(SORCERY.dark, 0.7, 0.7), layer(CREATURE.giantSlam, 0.25, 1.2)],
-  cast_guiding_bolt: [layer(SORCERY.miracle, 0.55, 1.4), layer(SORCERY.fire, 0.4, 1.2)],
-  cast_healing_word: [layer(SORCERY.miracle, 0.6, 1.15)],
-  cast_cure_wounds: [layer(SORCERY.miracle, 0.7)],
+  cast_thunderwave: [layer(SORCERY.explode, 1, 0.7), layer(CREATURE.dragonWings, 0.7, 0.8)],
+  cast_arms_of_hadar: [layer(SORCERY.dark, 0.98, 0.7), layer(CREATURE.giantSlam, 0.35, 1.2)],
+  cast_guiding_bolt: [layer(SORCERY.miracle, 0.77, 1.4), layer(SORCERY.fire, 0.56, 1.2)],
+  cast_healing_word: [layer(SORCERY.miracle, 0.84, 1.15)],
+  cast_cure_wounds: [layer(SORCERY.miracle, 0.98)],
   /** Where a spell strikes, by the kind of damage it does. */
-  impact_fire: [layer(SORCERY.explode, 0.6, 1.15)],
-  impact_frost: [layer(BLADE.armor, 0.4, 1.7), layer(SORCERY.explode, 0.25, 1.6)],
-  impact_dark: [layer(SORCERY.dark, 0.4, 1.7), layer(BLADE.flesh, 0.35, 0.8)],
-  impact_holy: [layer(SORCERY.miracle, 0.35, 1.8), layer(SORCERY.explode, 0.3, 1.4)],
-  impact_force: [layer(SORCERY.explode, 0.4, 1.5), layer(BLADE.flesh, 0.35)],
+  impact_fire: [layer(SORCERY.explode, 0.84, 1.15)],
+  impact_frost: [layer(BLADE.armor, 0.56, 1.7), layer(SORCERY.explode, 0.35, 1.6)],
+  impact_dark: [layer(SORCERY.dark, 0.56, 1.7), layer(BLADE.flesh, 0.49, 0.8)],
+  impact_holy: [layer(SORCERY.miracle, 0.49, 1.8), layer(SORCERY.explode, 0.42, 1.4)],
+  impact_force: [layer(SORCERY.explode, 0.56, 1.5), layer(BLADE.flesh, 0.49)],
 
   // --- enemies: five voices from four creatures' recordings ---
   /** Goblins: the plague hound's snarls and bites, pitched up to something smaller and meaner. */
-  goblin_alert: [layer(CREATURE.houndGrowl, 0.6, 1.2)],
-  goblin_attack: [layer(CREATURE.houndBite, 0.55, 1.2)],
-  goblin_hurt: [layer(CREATURE.houndGrowl, 0.45, 1.35)],
-  goblin_die: [layer(CREATURE.houndDie, 0.7, 1.2)],
+  goblin_alert: [layer(CREATURE.houndGrowl, 0.84, 1.2)],
+  goblin_attack: [layer(CREATURE.houndBite, 0.77, 1.2)],
+  goblin_hurt: [layer(CREATURE.houndGrowl, 0.63, 1.35)],
+  goblin_die: [layer(CREATURE.houndDie, 0.98, 1.2)],
   /** Orcs and goblin warriors: the hollow soldier, deeper. */
-  soldier_alert: [layer(CREATURE.giantRoar, 0.4, 1.35)],
-  soldier_attack: [layer(CREATURE.soldierAttack, 0.6, 0.9)],
-  soldier_hurt: [layer(CREATURE.soldierHurt, 0.55, 0.9)],
-  soldier_die: [layer(CREATURE.soldierDie, 0.75, 0.9)],
+  soldier_alert: [layer(CREATURE.giantRoar, 0.56, 1.35)],
+  soldier_attack: [layer(CREATURE.soldierAttack, 0.84, 0.9)],
+  soldier_hurt: [layer(CREATURE.soldierHurt, 0.77, 0.9)],
+  soldier_die: [layer(CREATURE.soldierDie, 1, 0.9)],
   /** Skeletons: the hollow soldier, drier and higher, and bones breaking as they fall. */
-  skeleton_alert: [layer(CREATURE.soldierHurt, 0.45, 1.25)],
-  skeleton_attack: [layer(CREATURE.soldierAttack, 0.55, 1.15)],
-  skeleton_hurt: [layer(CREATURE.soldierHurt, 0.45, 1.2), layer(BLADE.bone, 0.2, 1.4)],
-  skeleton_die: [layer(CREATURE.soldierDie, 0.6, 1.2), layer(BLADE.bone, 0.6, 0.9, 120)],
+  skeleton_alert: [layer(CREATURE.soldierHurt, 0.63, 1.25)],
+  skeleton_attack: [layer(CREATURE.soldierAttack, 0.77, 1.15)],
+  skeleton_hurt: [layer(CREATURE.soldierHurt, 0.63, 1.2), layer(BLADE.bone, 0.28, 1.4)],
+  skeleton_die: [layer(CREATURE.soldierDie, 0.84, 1.2), layer(BLADE.bone, 0.84, 0.9, 120)],
   /** Trolls: the giant knight, with a dragon's roar when it spots you. */
-  troll_alert: [layer(CREATURE.dragonRoar, 0.6, 1.15)],
-  troll_attack: [layer(CREATURE.giantSlam, 0.7)],
-  troll_hurt: [layer(CREATURE.giantRoar, 0.35, 1.3)],
-  troll_die: [layer(CREATURE.giantDie, 0.85)],
+  troll_alert: [layer(CREATURE.dragonRoar, 0.84, 1.15)],
+  troll_attack: [layer(CREATURE.giantSlam, 0.98)],
+  troll_hurt: [layer(CREATURE.giantRoar, 0.49, 1.3)],
+  troll_die: [layer(CREATURE.giantDie, 1)],
   /** A troll's tread shakes the floor. */
-  troll_step: [layer(GIANT_STEPS, 0.45, 1.1)],
+  troll_step: [layer(GIANT_STEPS, 0.63, 1.1)],
   /** Wizards: a soldier's voice, and dark sorcery in their attacks and their last breath. */
-  wizard_alert: [layer(SORCERY.dark, 0.5, 0.7)],
-  wizard_attack: [layer(SORCERY.dark, 0.5, 1.25), layer(CREATURE.soldierAttack, 0.3, 1.1)],
-  wizard_hurt: [layer(CREATURE.soldierHurt, 0.5, 1.1)],
-  wizard_die: [layer(CREATURE.soldierDie, 0.6, 1.05), layer(SORCERY.dark, 0.45, 0.6, 150)],
+  wizard_alert: [layer(SORCERY.dark, 0.7, 0.7)],
+  wizard_attack: [layer(SORCERY.dark, 0.7, 1.25), layer(CREATURE.soldierAttack, 0.42, 1.1)],
+  wizard_hurt: [layer(CREATURE.soldierHurt, 0.7, 1.1)],
+  wizard_die: [layer(CREATURE.soldierDie, 0.84, 1.05), layer(SORCERY.dark, 0.63, 0.6, 150)],
   /** A nest torn down: a great slam and the fanfare for a foe felled. */
-  nest_destroyed: [layer(CREATURE.giantSlam, 0.6, 0.8), layer(INTERFACE.felled, 0.5)],
+  nest_destroyed: [layer(CREATURE.giantSlam, 0.84, 0.8), layer(INTERFACE.felled, 0.7)],
   /** A great foe (see BOSS_FOES) falls: the fanfare, for the whole party. */
-  foe_felled: [layer(INTERFACE.felled, 0.6)],
+  foe_felled: [layer(INTERFACE.felled, 0.84)],
 
   // --- the world ---
-  chest_open: [layer(WORLD.chest, 0.8)],
-  door_open: [layer(WORLD.door, 0.8)],
+  chest_open: [layer(WORLD.chest, 1)],
+  door_open: [layer(WORLD.door, 1)],
   /** The exit: through the fog gate to the level below. */
   level_exit: [layer(WORLD.fogGate)],
   /** The party rests by a kindled fire. */
-  rest: [layer(WORLD.kindle, 0.8)],
+  rest: [layer(WORLD.kindle, 1)],
   coin: [layer(file('/sound/Small Coin.wav'))],
   coin_big: [layer(file('/sound/Big Coin.wav'))],
   gem: [layer(file('/sound/Gem.wav'))],
@@ -218,19 +218,19 @@ export const SFX = {
   falling: [layer(file('/sound/falling_male.wav'))],
 
   // --- interface ---
-  level_up: [layer(INTERFACE.levelUp, 0.9)],
-  you_died: [layer(INTERFACE.youDied, 0.9)],
+  level_up: [layer(INTERFACE.levelUp, 1)],
+  you_died: [layer(INTERFACE.youDied, 1)],
   /** Something goes into a bag: picked up, given, or won in a roll. */
-  pickup: [layer(INTERFACE.pickUp, 0.6)],
+  pickup: [layer(INTERFACE.pickUp, 0.84)],
   /** Bought: the item into the bag, and the coins out of the purse. */
-  buy: [layer(INTERFACE.pickUp, 0.55), layer(file('/sound/Small Coin.wav'), 0.6, 1, 80)],
-  fail: [layer(INTERFACE.error, 0.5)],
+  buy: [layer(INTERFACE.pickUp, 0.77), layer(file('/sound/Small Coin.wav'), 0.84, 1, 80)],
+  fail: [layer(INTERFACE.error, 0.7)],
   /** Inventory, shop, pause menu, a HUD dialog or a pop-up menu opens. */
-  dialog: [layer(DIALOG_CLICK, 0.6)],
+  dialog: [layer(DIALOG_CLICK, 0.84)],
   /** Any button pressed. */
-  click: [layer(BUTTON_CLICK, 0.45)],
+  click: [layer(BUTTON_CLICK, 0.63)],
   /** A menu screen opens: settings, key bindings, the character select, the co-op lobby. */
-  open_menu: [layer(INTERFACE.openMenu, 0.4)],
+  open_menu: [layer(INTERFACE.openMenu, 0.56)],
 } as const satisfies Record<string, readonly Layer[]>;
 
 export type SfxName = keyof typeof SFX;
@@ -315,17 +315,17 @@ const allTakes = (name: string): string[] => takes(name).map((clip) => clip.file
 
 export const MUSIC_TRACKS = {
   /** The title, settings, character select and co-op lobby. */
-  menu: { files: ['/audio/music/main_theme_loop_03.webm'], level: 0.8 },
+  menu: { files: ['/audio/music/main_theme_loop_03.webm'], level: 0.7 },
   /** Exploring a level: the two exploration loops, one after the other. */
-  explore: { files: ['/audio/music/dark-fantasy-exploration-1.ogg', '/audio/music/dark-fantasy-exploration-2.ogg'], level: 0.6 },
+  explore: { files: ['/audio/music/dark-fantasy-exploration-1.ogg', '/audio/music/dark-fantasy-exploration-2.ogg'], level: 0.4 },
   /** Enemies engaged nearby. */
-  combat: { files: ['/audio/music/dark-fantasy-combat.ogg'], level: 0.7 },
+  combat: { files: ['/audio/music/dark-fantasy-combat.ogg'], level: 0.5 },
   /** A fight with a great foe (BOSS_FOES). */
-  boss: { files: allTakes('music/boss_battle_loop'), level: 0.7 },
+  boss: { files: allTakes('music/boss_battle_loop'), level: 0.5 },
   /** The level's summary, by the fire, before going deeper. */
-  rest: { files: allTakes('music/bonfire_rest_loop'), level: 0.7 },
+  rest: { files: allTakes('music/bonfire_rest_loop'), level: 0.5 },
   /** The run is over. */
-  lament: { files: allTakes('music/lament_loop'), level: 0.7 },
+  lament: { files: allTakes('music/lament_loop'), level: 0.55 },
 } as const satisfies Record<string, Track>;
 
 export type TrackName = keyof typeof MUSIC_TRACKS;
@@ -341,19 +341,19 @@ export type Ambience = { readonly takes: readonly string[]; readonly level: numb
 
 export const AMBIENCE = {
   /** The safe room: a hushed, ruined chapel. */
-  cathedral: { takes: allTakes('ambience/ruined_cathedral_loop'), level: 0.35 },
+  cathedral: { takes: allTakes('ambience/ruined_cathedral_loop'), level: 0.25 },
   /** Cave halls: dripping, and something in the dark water. */
-  swamp: { takes: allTakes('ambience/cursed_swamp_loop'), level: 0.35 },
+  swamp: { takes: allTakes('ambience/cursed_swamp_loop'), level: 0.25 },
   /** The catacombs' halls and rooms, by depth (HALL_BEDS): stone and echoes, water seeping through, a war above. */
-  catacombs: { takes: allTakes('ambience/catacombs_loop'), level: 0.35 },
-  rain: { takes: allTakes('ambience/rain_loop'), level: 0.3 },
-  battlefield: { takes: allTakes('ambience/distant_battlefield_loop'), level: 0.3 },
+  catacombs: { takes: allTakes('ambience/catacombs_loop'), level: 0.25 },
+  rain: { takes: allTakes('ambience/rain_loop'), level: 0.22 },
+  battlefield: { takes: allTakes('ambience/distant_battlefield_loop'), level: 0.22 },
   /** A draught from the way down, near the exit. */
-  wind: { takes: allTakes('ambience/wind_loop'), level: 0.35 },
+  wind: { takes: allTakes('ambience/wind_loop'), level: 0.28 },
   /** Torches and campfires, close by. */
-  crackle: { takes: allTakes('world/bonfire_crackle_loop'), level: 0.45 },
+  crackle: { takes: allTakes('world/bonfire_crackle_loop'), level: 0.35 },
   /** Goblin war drums, from a nest that still stands. */
-  drums: { takes: allTakes('world/war_drum_beat_loop'), level: 0.45 },
+  drums: { takes: allTakes('world/war_drum_beat_loop'), level: 0.35 },
 } as const satisfies Record<string, Ambience>;
 
 export type AmbienceName = keyof typeof AMBIENCE;

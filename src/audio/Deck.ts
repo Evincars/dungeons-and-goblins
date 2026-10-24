@@ -1,22 +1,12 @@
 import { Howl } from 'howler';
 import { assetUrl } from '../assets/assetUrl';
 import { LoadError, report } from '../core/errors';
+import { afterNextGesture } from './AudioUnlock';
 
 /**
  * One looping piece of sound, faded in and out: a music track (its files one after another, a single file looping
  * on its own) or an ambient bed. Faded out it is paused, not stopped, and picks up where it was when it comes back.
  */
-
-const GESTURES = ['pointerdown', 'keydown', 'touchend'] as const;
-
-/** Runs `action` on the player's next click, tap or key press (browsers only start audio after one). */
-function afterGesture(action: () => void): void {
-  const once = () => {
-    GESTURES.forEach((e) => window.removeEventListener(e, once, true));
-    action();
-  };
-  GESTURES.forEach((e) => window.addEventListener(e, once, true));
-}
 
 export type DeckOptions = {
   /**
@@ -47,8 +37,8 @@ export class Deck {
         report(new LoadError(`Sound "${file}" could not be loaded`, { context: { file, reason: String(error) } }),
           'A piece of music or ambience failed to load; it will be silent', 'audio');
       },
-      // The title screen asks for its music before the player has touched anything: it starts on their first click.
-      onplayerror: () => afterGesture(() => this.resume()),
+      // Refused all the same (the browser wants a fresh gesture): it starts on the player's next click or key.
+      onplayerror: () => afterNextGesture(() => this.resume()),
       onend: () => this.next(),
     });
   }

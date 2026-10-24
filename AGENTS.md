@@ -170,7 +170,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   piece, faded in and out, paused when silent), `MusicPlayer.ts` (one track at a time, crossfaded; menus play `menu`,
   the intro crossfades the film's sound in and out, levels play `explore`, `systems/MusicSystem.ts` switches to
   `combat` or `boss` while enemies nearby are engaged and holds `rest` / `lament` on the level's summary and the end
-  of a run) and `AmbiencePlayer.ts` (beds by area and nearness, driven by `systems/AmbienceSystem.ts`). Only the art
+  of a run) and `AmbiencePlayer.ts` (beds by area and nearness, driven by `systems/AmbienceSystem.ts`). Nothing sounds before the
+  player's first click or key: `AudioUnlock.ts` holds music back until Howler has unlocked the audio on it. Only the art
   and the menus' sounds load behind the loading screen in `index.html` (`ui/LoadingScreen.ts`); audio is otherwise
   lazy: the other effects load in the background once the title is up, a bed when first heard, music streams.
 - `src/entities/` — factories and stat tables. `src/render/` — sheets, camera, terrain layers.

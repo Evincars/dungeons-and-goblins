@@ -9,6 +9,7 @@ import { hasKey } from '../core/guards';
 import { LoadError, report } from '../core/errors';
 import { SFX, allClips, clipsOf } from './SoundBank';
 import type { Layer, SfxName } from './SoundBank';
+import { audioUnlocked } from './AudioUnlock';
 
 export type { SfxName } from './SoundBank';
 
@@ -134,7 +135,8 @@ class SoundPlayer {
   }
 
   private play(name: SfxName, x?: number, y?: number): void {
-    if (!hasAudio || !this.place(x, y) || this.repeated(name)) return;
+    // Before the player's first gesture the browser would hold sounds back and let them all out at once on it.
+    if (!hasAudio || !audioUnlocked() || !this.place(x, y) || this.repeated(name)) return;
     try {
       for (const layer of SFX[name]) this.playLayer(layer, heard.gain, heard.pan);
     } catch (thrown) {

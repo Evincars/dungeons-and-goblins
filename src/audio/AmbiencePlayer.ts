@@ -7,6 +7,7 @@
  */
 import { MathUtils } from 'yuka';
 import { Deck } from './Deck';
+import { audioUnlocked } from './AudioUnlock';
 import { AMBIENCE, AMBIENCE_NAMES } from './SoundBank';
 import type { AmbienceName } from './SoundBank';
 
@@ -43,8 +44,8 @@ class AmbiencePlayer {
 
   private apply(name: AmbienceName, ms: number): void {
     const volume = (this.strength.get(name) ?? 0) * AMBIENCE[name].level * this.volume;
-    // A bed never heard yet is not loaded just to be silent.
-    const deck = volume > 0 ? this.deck(name) : this.decks.get(name);
+    // A bed never heard yet is not loaded just to be silent (nor before the browser lets the page make a sound).
+    const deck = volume > 0 && audioUnlocked() ? this.deck(name) : this.decks.get(name);
     deck?.fadeTo(volume, ms);
   }
 

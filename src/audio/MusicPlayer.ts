@@ -4,6 +4,7 @@
  * when it comes back (exploring, a fight, exploring again).
  */
 import { Deck } from './Deck';
+import { audioUnlocked, whenAudioUnlocked } from './AudioUnlock';
 import { MUSIC_TRACKS } from './SoundBank';
 import type { TrackName } from './SoundBank';
 
@@ -29,15 +30,24 @@ class MusicPlayer {
 
   setVolume(volume: number): void {
     this.volume = volume;
-    if (this.current) this.deck(this.current)?.fadeTo(this.levelOf(this.current), VOLUME_FADE_MS);
+    if (this.current && audioUnlocked()) this.deck(this.current)?.fadeTo(this.levelOf(this.current), VOLUME_FADE_MS);
   }
 
-  /** Crossfades to `track` over `fadeMs`; nothing changes if it is already the one playing. */
+  /**
+   * Crossfades to `track` over `fadeMs`; nothing changes if it is already the one playing. Before the player's first
+   * gesture nothing can be heard: the track is noted and starts as soon as they click or press a key.
+   */
   play(track: TrackName, fadeMs = CROSSFADE_MS): void {
     if (track === this.current) return;
     this.fadeOutCurrent(fadeMs);
     this.current = track;
-    this.deck(track)?.fadeTo(this.levelOf(track), fadeMs);
+    if (audioUnlocked()) this.deck(track)?.fadeTo(this.levelOf(track), fadeMs);
+    else whenAudioUnlocked(() => this.startCurrent());
+  }
+
+  /** The audio has just been unlocked: whatever track is wanted by now fades in. */
+  private startCurrent(): void {
+    if (this.current) this.deck(this.current)?.fadeTo(this.levelOf(this.current), CROSSFADE_MS);
   }
 
   /** Fades the music out to silence (the intro film brings its own sound). */

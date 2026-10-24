@@ -3,6 +3,8 @@ import type { Scene, SceneManager, SceneName } from '../game/SceneManager';
 import { bindingFor, settings } from '../game/Settings';
 import { text } from '../core/texts';
 import { reportRejection } from '../core/errors';
+import { createLog } from '../core/log';
+import { afterNextGesture } from '../audio/AudioUnlock';
 import { music } from '../audio/MusicPlayer';
 import type { TrackName } from '../audio/MusicPlayer';
 import { assetUrl } from '../assets/assetUrl';
@@ -32,6 +34,14 @@ const TEXT_COLOR = 0xe8dcc0;
 const HINT_COLOR = 0x8a929c;
 /** Keys that move it on (to the second half, then into the game), besides the use key (E) and a click. */
 const SKIP_KEYS: readonly string[] = ['Enter', 'Escape', 'Space'];
+
+const log = createLog('intro');
+
+/**
+ * The film's element sits in the page while it plays, out of sight (its frames are drawn on the canvas): some
+ * browsers pause, and refuse to play, a video that belongs to no document.
+ */
+const HIDDEN_VIDEO_STYLE = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
 
 /** Where the intro leads once it has played (or been skipped). */
 let destination: SceneName = 'in_game';
@@ -95,11 +105,13 @@ export class IntroScene implements Scene {
     this.video.loop = true;
     this.video.playsInline = true;
     this.video.volume = 0;
+    this.video.style.cssText = HIDDEN_VIDEO_STYLE;
+    document.body.appendChild(this.video);
     // Crossfade: the menu's music fades out as the film and its sound come up out of black.
     music.stop(FADE_MS);
     this.film.width = GAME_WIDTH;
     this.film.height = GAME_HEIGHT;
-    reportRejection(this.video.play(), 'The intro film could not start', 'intro');
+    this.video.play().catch((thrown: unknown) => this.playRefused(thrown));
     const veil = new Graphics().rect(0, 0, GAME_WIDTH, GAME_HEIGHT).fill({ color: 0x000000, alpha: VEIL_ALPHA });
     this.story = [text('intro.part1'), text('intro.part2')].map((part) => this.storyLabel(part));
     const hint = new PixelLabel(text('intro.skip'), { color: HINT_COLOR, align: 'center', shadow: true });
@@ -183,12 +195,21 @@ export class IntroScene implements Scene {
     music.play(musicAfter(destination));
   }
 
+  /** The browser would not start the film yet (it wants a fresh gesture): it starts on the next click or key. */
+  private playRefused(thrown: unknown): void {
+    log.debug('The intro film is waiting for a gesture', { reason: String(thrown) });
+    afterNextGesture(() => {
+      if (this.video.isConnected) reportRejection(this.video.play(), 'The intro film could not start', 'intro');
+    });
+  }
+
   destroy(): void {
     window.removeEventListener('keydown', this.onKeyDown);
     this.manager.canvas.removeEventListener('pointerdown', this.onClick);
     this.video.pause();
     this.video.removeAttribute('src');
     this.video.load();
+    this.video.remove();
     this.container.destroy({ children: true });
   }
 }

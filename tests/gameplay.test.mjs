@@ -30,6 +30,7 @@ const { updateMovement } = await load('systems/MovementSystem');
 const { updateTrails } = await load('systems/TrailSystem');
 const { updateContactDamage } = await load('systems/CombatSystem');
 const { updateSword } = await load('systems/SwordSystem');
+const { resolveUses } = await load('systems/TargetSystem');
 const { attempt, ensure, ValidationError } = await load('core/errors/index');
 const { invitePeer, inviteLink, validInput, validCommand, validRoster, validStart } = await load('network/protocol');
 const { captureWorld, validateNetState, WorldReplica } = await load('network/WorldSync');
@@ -509,9 +510,25 @@ test('a chest opens only when a player within reach presses use (E), never by wa
   updateChests();
   assert.equal(chest.chest.opened, false, 'standing right against it does nothing');
   player.playerInput.intents.use = true;
+  resolveUses();
   updateChests();
   assert.equal(chest.chest.opened, true);
   assert.equal(far.chest.opened, false, 'out of reach');
+});
+
+test('one press of E uses one thing: what the brackets frame, not everything in reach', async () => {
+  const { createStash } = await load('entities/DungeonFactory');
+  const player = playerAt(4, 2);
+  const near = createChest(centre(4) + 8, centre(2));
+  const stash = createStash({ kind: 'barrel', tx: 4, ty: 2 });
+  stash.position.x = centre(4) + 30;
+  stash.stash.coins = 0;
+  player.playerInput.intents.use = true;
+  beginPerception();
+  resolveUses();
+  updateChests();
+  assert.equal(near.chest.opened, true, 'the nearest is used');
+  assert.ok(!stash.removed && !(player.rollLog ?? []).some((l) => l.text === 'Empty'), 'the barrel beside it is left alone');
 });
 
 test('the new goblins are drawn from their side rows and swing once, standing or on the move', () => {
@@ -656,7 +673,7 @@ test('dragging items: they stay on the square they are dropped on, gear is worn 
   assert.deepEqual(statTotals({ primary: axe, head: helm }), { strength: 3, dexterity: 1, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 });
 });
 
-test('an opened chest pays its coins straight to the opener and throws out a weapon or armour; walking over the gear picks it up', () => {
+test('an opened chest pays its coins and hands its weapon or armour straight to the opener; a dropped item is taken back with E', () => {
   const player = playerAt(3, 3);
   player.inventory = [];
   const before = player.playerStats.gold;
@@ -664,21 +681,28 @@ test('an opened chest pays its coins straight to the opener and throws out a wea
   assert.equal(world.entities.filter((e) => e.loot).length, 0, 'no coins on the floor');
   const paid = player.playerStats.gold - before;
   assert.ok(paid >= 10 && paid <= 30, `paid ${paid}`);
-  assert.equal(currentLog().entries.at(-1).result, 'gold', 'and the combat log says so');
-  const gear = world.entities.filter((e) => e.item);
-  assert.equal(gear.length, 1, 'one piece of gear');
-  assert.ok(['weapon', 'offhand', 'armor'].includes(gear[0].item.gear));
-  player.position.x = gear[0].position.x;
-  player.position.y = gear[0].position.y;
+  assert.equal(world.entities.filter((e) => e.item).length, 0, 'nothing on the floor');
+  const [found] = player.inventory.filter(Boolean);
+  assert.ok(['weapon', 'offhand', 'armor'].includes(found.gear), 'the gear is in the bag');
+  assert.ok(player.rollLog.some((l) => l.text === `You've received ${found.name}`));
+  assert.ok(PlayerActions.dropItem(player, { bag: 0 }));
+  const [lying] = world.entities.filter((e) => e.item);
+  assert.ok(lying && !player.inventory.some(Boolean), 'dropped at the hero\'s feet');
+  player.position.x = lying.position.x;
+  player.position.y = lying.position.y;
   beginPerception();
   updateInventory();
-  assert.equal(player.inventory.filter(Boolean).length, 1, 'it is in the bag now');
-  assert.ok(gear[0].removed);
+  assert.ok(!lying.removed, 'standing on it does not pick it up');
+  player.playerInput.intents.use = true;
+  resolveUses();
+  updateInventory();
+  assert.equal(player.inventory.filter(Boolean).length, 1, 'E takes it back');
+  assert.ok(lying.removed);
   const gem = createLoot(0, 0, 0, 0, 200, true);
   assert.equal(LOOT_KINDS[gem.loot.kind].sheet, 'pickup_gem_ruby_12', 'an exact 200 is a ruby');
 });
 
-test('a kill pays 3d20 gold to whoever struck last, and nobody carries more than 100 kg', () => {
+test('a kill pays 3d20 gold, shared by the whole party, and nobody carries more than 115 kg', () => {
   assert.equal(killReward(), 57, 'the loaded dice roll 19 on each d20');
   useDieRoller(() => 1);
   assert.equal(killReward(), 3, 'and at the least 3');
@@ -692,16 +716,18 @@ test('a kill pays 3d20 gold to whoever struck last, and nobody carries more than
   goblin.lastHitBy = world.id(killer);
   goblin.health.current = 0;
   updateDeath(level);
-  assert.ok(killer.playerStats.gold > killerGold, 'the killer is paid');
-  assert.equal(other.playerStats.gold, otherGold, 'the other hero is not');
+  assert.equal(killer.playerStats.gold - killerGold, 29, 'half of 57 each');
+  assert.equal(other.playerStats.gold - otherGold, 29, 'the other hero gets the same');
   assert.equal(world.entities.filter((e) => e.loot).length, 0, 'no coins on the floor');
   assert.equal(killer.playerStats.exp, other.playerStats.exp, 'the experience is shared by everyone');
   world.clear();
   const player = playerAt(2, 2);
   player.inventory = [];
   assert.equal(addToBag(player, { type: 'armor', name: 'Anvil', value: 1, weight: 90 }), true);
-  assert.equal(addToBag(player, { type: 'armor', name: 'Second anvil', value: 1, weight: 20 }), false, 'over 100 kg');
-  assert.equal(carriedWeight(player), 90);
+  assert.equal(addToBag(player, { type: 'armor', name: 'Ingot', value: 1, weight: 20 }), true, 'up to 115 kg is a strain, not a stop');
+  assert.equal(PlayerActions.receiveItem(player, { type: 'armor', name: 'Second anvil', value: 1, weight: 10 }), false, 'over 115 kg');
+  assert.ok(player.rollLog.some((l) => l.text === "You're overloaded"));
+  assert.equal(carriedWeight(player), 110);
 });
 
 test('solid props block only the strip at their foot, so characters walk behind tall ones and up to urns', () => {
@@ -875,7 +901,11 @@ test('guest controls, commands, rosters and level starts are checked before they
   assert.equal(validInput(slotted), false, 'the quick bar has five squares');
   slotted.input.spellSlot = 4;
   assert.equal(validInput(slotted), true);
-  assert.equal(validCommand({ kind: 'hit_die' }), true);
+  assert.equal(validCommand({ kind: 'rest_dice', count: 2 }), true);
+  assert.equal(validCommand({ kind: 'rest_dice', count: 99 }), false, 'no hero has that many hit dice');
+  assert.equal(validCommand({ kind: 'rest', rest: 'short', dice: 1 }), true);
+  assert.equal(validCommand({ kind: 'drop', from: { bag: 3 } }), true);
+  assert.equal(validCommand({ kind: 'drop', from: { bag: -1 } }), false);
   assert.equal(validCommand({ kind: 'rest', rest: 'long' }), true);
   assert.equal(validCommand({ kind: 'rest', rest: 'nap' }), false);
   assert.equal(validCommand({ kind: 'vote_answer', agree: 'yes' }), false);
@@ -1456,8 +1486,11 @@ test('the safe room opens with its lever: barred until pulled, then the portcull
   beginPerception();
   for (let t = 0; t < 120; t++) updateDoors(level);
   assert.ok(door.door.locked && !door.door.closed, 'nobody can leave, so nothing seals');
+  assert.equal(world.entities.filter((e) => e.stash && level.isWorldPosSafe(e.position.x, e.position.y)).length, 0,
+    'nothing in the safe room is there to be searched');
   hero.playerInput.intents.use = true;
   beginPerception();
+  resolveUses();
   updateLevers(level);
   assert.equal(lever.lever.pulled, true);
   assert.equal(door.door.locked, false);
@@ -1671,24 +1704,28 @@ test('initiative: an enemy that engages and its hero each roll d20 + DEX; the wi
   assert.equal(second.initiative, undefined, 'calmed down, it rolls again next time');
 });
 
-test('hit dice: a click spends one to heal (die + CON), never with none left, at full health or while hunted', () => {
+test('hit dice are spent in a short rest, as many as the hero chooses: each the class die + CON', () => {
   const level = arena(12, 6);
   const hero = playerAt(2, 2);
+  world.addComponent(hero, 'playerSlot', 'host');
+  hero.playerStats.level = 3;
+  hero.playerStats.hitDice = 3;
   hero.health.current = 20;
-  assert.equal(Rest.spendHitDie(hero), true);
-  // The Fighter's d10 (loaded: 10) + CON +2, at five hit points a tabletop point.
+  assert.equal(Rest.spendHitDice(hero, 2), 0, 'not outside a short rest');
+  Rest.queueRestRequest('host', 'short', 2);
+  tickParty(level);
+  // Two of the Fighter's d10 (loaded: 10) + CON +2 each, at five hit points a tabletop point.
+  assert.equal(hero.health.current, Math.min(hero.health.max, 20 + 2 * 5 * 12));
+  assert.equal(hero.playerStats.hitDice, 1, 'one left for the next short rest');
+  assert.ok(rollLines(hero).includes('Hit dice 2d10'));
+  assert.equal(hero.playerStats.restDiceOpen, false, 'the choice is made');
+  hero.health.current = 20;
+  Rest.queueRestRequest('host', 'short');
+  tickParty(level);
+  assert.equal(hero.playerStats.restDiceOpen, true, 'asked without a choice: the hero is asked now');
+  assert.equal(Rest.spendHitDice(hero, 5), 1, 'no more than are left');
   assert.equal(hero.health.current, 20 + 5 * 12);
-  assert.equal(hero.playerStats.hitDice, 0);
-  assert.equal(Rest.spendHitDie(hero), false);
-  assert.ok(rollLines(hero).includes('NO HIT DICE'));
-  hero.playerStats.hitDice = 1;
-  hero.health.current = hero.health.max;
-  assert.equal(Rest.spendHitDie(hero), false, 'nothing to heal');
-  hero.health.current = 20;
-  const goblin = mobAt(level, 'goblin', 6, 2);
-  engage(goblin, hero, 0);
-  assert.equal(Rest.spendHitDie(hero), false, 'not with an enemy on the hunt');
-  assert.equal(hero.playerStats.hitDice, 1);
+  assert.equal(Rest.spendHitDice(hero, 1), 0, 'once a rest');
 });
 
 test('rests: a short one recovers spells (two before a long one), a long one heals all and needs the safe room', () => {
@@ -2121,7 +2158,7 @@ test('in co-op the lever asks the others first; once all agree the gate opens an
   ana.position.y = lever.position.y;
   bo.position.x = lever.position.x + 10;
   bo.position.y = lever.position.y;
-  const pull = () => { ana.playerInput.intents.use = true; beginPerception(); Party.updateParty(); updateLevers(level); ana.playerInput.intents.use = false; };
+  const pull = () => { ana.playerInput.intents.use = true; beginPerception(); resolveUses(); Party.updateParty(); updateLevers(level); ana.playerInput.intents.use = false; };
   pull();
   assert.equal(lever.lever.pulled, false, 'not before Bo agrees');
   assert.equal(Party.currentParty().vote.kind, 'gate');
@@ -2205,6 +2242,7 @@ test('barrels, crates, coffins, urns and sacks can be searched: E (in reach) ope
   const before = finder.playerStats.gold;
   finder.playerInput.intents.use = true;
   beginPerception();
+  resolveUses();
   updateStashes();
   assert.equal(finder.playerStats.gold, before + 12);
   assert.ok(full.removed);
@@ -2212,6 +2250,7 @@ test('barrels, crates, coffins, urns and sacks can be searched: E (in reach) ope
   bare.stash.coins = 0;
   finder.playerInput.intents.use = true;
   beginPerception();
+  resolveUses();
   updateStashes();
   assert.ok(bare.removed, 'searched');
   assert.equal(finder.playerStats.gold, before + 12, 'nothing in it');
@@ -2398,4 +2437,11 @@ test('wounds never close on their own: no regeneration, a new level is no heal, 
   restorePlayer(below);
   assert.equal(below.health.current, wounded, 'the wounds come down to the next level');
   startRun();
+});
+
+test('the big glowing crystals are left out of the dungeon for now', () => {
+  for (const seed of [1, 7, 42, 777, 31337]) {
+    const { props } = new DungeonBuilder({ ...DEFAULT_CONFIG, seed }).build();
+    assert.equal(props.filter((p) => p.kind.startsWith('gem_crystal')).length, 0, `seed ${seed}`);
+  }
 });

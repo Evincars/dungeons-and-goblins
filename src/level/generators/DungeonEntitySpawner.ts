@@ -91,5 +91,6 @@ export function spawnLiveEntities(layout: DungeonLayout, cfg: DungeonConfig): vo
   createExitButton(exitButtonPos.x, exitButtonPos.y);
   createShopNpc(shopPos.x, shopPos.y);
   createTrainingDummy(dummyPos.x, dummyPos.y);
-  for (const p of props) createStash(p);
+  // The safe room is where the party gathers and sets out: nothing in it is there to be searched.
+  for (const p of props) if (!level.isSafeZone(p.tx, p.ty)) createStash(p);
 }

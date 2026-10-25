@@ -98,6 +98,8 @@ function detailLines(item: InventoryItem, cls: HeroClass | undefined): Line[] {
  * item under the pointer; it keeps itself inside the area it is given.
  */
 export class ItemTooltip {
+  /** How far from the point it is shown at it sits (down and to the right, off the pointer). */
+  static readonly OFFSET = OFFSET;
   readonly view = new Container();
   private readonly frame = new Graphics();
   private readonly picture = new Sprite();

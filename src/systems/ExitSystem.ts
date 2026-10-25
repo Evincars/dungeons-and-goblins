@@ -15,7 +15,7 @@ const buttons = world.with('position', 'exitButton');
 export function updateExit(): void {
   for (const button of buttons) {
     const { x, y } = button.position;
-    if (button.exitButton.activated || !playerUsing(x, y)) continue;
+    if (button.exitButton.activated || !playerUsing(button)) continue;
     button.exitButton.activated = true;
     // Kept in the visual too, so co-op guests (who mirror components) see the lever pulled.
     if (button.visual) button.visual.col = PULLED_FRAME;

@@ -2,7 +2,7 @@ import type { Container } from 'pixi.js';
 import type { Level } from '../level/Level';
 import { beginPerception } from '../ai/perception/spatial';
 import { updateInput } from './InputSystem';
-import { updateTargeting } from './TargetSystem';
+import { updateTargeting, resolveUses } from './TargetSystem';
 import { updateSpells } from './SpellSystem';
 import { updateAI } from './AISystem';
 import { updateMovement } from './MovementSystem';
@@ -66,6 +66,7 @@ export const SIMULATION: readonly System[] = [
   ({ level, dt }) => updateRespawns(level, dt),
   () => updateInput(),
   () => updateTargeting(),
+  () => resolveUses(),
   () => updateInventory(),
   () => updateWeaponSwap(),
   ({ level, tick }) => updateAI(level, tick),

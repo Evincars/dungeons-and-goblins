@@ -16,7 +16,7 @@ const stashes = world.with('position', 'stash');
 export function updateStashes(): void {
   for (const stash of stashes) {
     if (stash.removed) continue;
-    const finder = playerUsing(stash.position.x, stash.position.y);
+    const finder = playerUsing(stash);
     if (!finder) continue;
     sound.playSound('search', stash.position.x, stash.position.y);
     if (stash.stash.coins > 0) pay(finder, stash.stash.coins);

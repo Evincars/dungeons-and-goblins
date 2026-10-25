@@ -68,7 +68,7 @@ export function updateLevers(level: Level): void {
       continue;
     }
     if (lever.lever.rest > 0 && !voting) lever.lever.rest--;
-    const puller = playerUsing(lever.position.x, lever.position.y);
+    const puller = playerUsing(lever);
     if (puller) pull(lever, puller, level);
   }
 }

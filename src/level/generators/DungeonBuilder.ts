@@ -71,6 +71,11 @@ const STORE_GOODS_MAX = 3;
 const PEDESTAL_CHANCE = 0.4;
 /** Chance a room (or cave hall, three times as likely) holds one of the big glowing crystals: a rare find. */
 const GEM_CRYSTAL_CHANCE = 0.04;
+/**
+ * The big glowing crystals are left out for now. Their chance is still rolled, so a seed builds the same dungeon
+ * as before around where they would have stood.
+ */
+const GEM_CRYSTALS_PLACED = false;
 const HALL_CRYSTAL_FACTOR = 3;
 /** Chance a room gets something standing in its middle (a tomb, a crate stack, a pedestal). */
 const CENTREPIECE_CHANCE = 0.7;
@@ -602,7 +607,8 @@ export class DungeonBuilder {
     }
     if (!middleTaken && this.rng() < CENTREPIECE_CHANCE) this.centrepiece(room, centrepieces, props, keep);
     if (this.rng() < STORE_CHANCE) this.storeroom(room, props, keep);
-    if (this.rng() < GEM_CRYSTAL_CHANCE) this.scatterSolid(room, this.shuffledFreeTiles(room), GEM_CRYSTALS, props, keep);
+    const roomGem = this.rng() < GEM_CRYSTAL_CHANCE;
+    if (roomGem && GEM_CRYSTALS_PLACED) this.scatterSolid(room, this.shuffledFreeTiles(room), GEM_CRYSTALS, props, keep);
     this.urnsAlongWalls(room, roll >= 0.4 && roll < 0.7 ? 4 : 2, props, keep);
   }
 
@@ -674,7 +680,8 @@ export class DungeonBuilder {
     this.centrepiece(room, CAVE_CENTREPIECES, props, keep);
     const open = this.shuffledFreeTiles(room);
     for (let i = this.countIn(CAVE_SPIRE_COUNT); i > 0; i--) this.scatterSolid(room, open, CAVE_SPIRES, props, keep);
-    if (this.rng() < GEM_CRYSTAL_CHANCE * HALL_CRYSTAL_FACTOR) this.scatterSolid(room, open, GEM_CRYSTALS, props, keep);
+    const hallGem = this.rng() < GEM_CRYSTAL_CHANCE * HALL_CRYSTAL_FACTOR;
+    if (hallGem && GEM_CRYSTALS_PLACED) this.scatterSolid(room, open, GEM_CRYSTALS, props, keep);
     const colour = this.pick(PLANT_COLOURS);
     const plants = CAVE_PLANTS.filter((kind) => kind.endsWith(colour) || kind.includes(`${colour}_`));
     this.scatterLoose(open, CAVE_CRYSTALS, this.countIn(CAVE_CRYSTAL_COUNT), props);

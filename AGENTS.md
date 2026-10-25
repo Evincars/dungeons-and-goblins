@@ -145,7 +145,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 
 - `src/world.ts` — Miniplex world, `Entity` component types, shared queries `q`.
 - `src/systems/` — gameplay and presentation systems; `Simulation.ts` orders them. Using things goes through
-  `playerUsing` (`TargetSystem.ts`), which also picks what the corner brackets frame (`MarkerSystem.ts`).
+  `playerUsing` (`TargetSystem.ts`): each press of "use" goes to one thing, the one the corner brackets frame
+  (`MarkerSystem.ts`; `resolveUses` decides it each tick), items on the floor included.
 - `src/ai/` — enemy AI: `perception/` (rbush index, sight, player trails) → `decision/` (Yuka
   `StateMachine` states, squad tactics by Yuka `Think`) → `execution/` (Yuka steering).
 - `src/level/` — `Level` tiles, `TileGraph`/`TileSearch` (Yuka graph search), procedural generation
@@ -179,7 +180,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - `src/core/` — cross-cutting: `errors/`, `log/`, `geometry.ts`, `guards.ts`, `debugHooks.ts`, `compression.ts` (gzip with a size limit).
 - `src/game/` — game loop, `SceneManager`, persisted settings, player actions (item gifts too), the party's votes
   (`Party.ts`: one synced `party` entity; rests and the lever ask through it, and act once everyone agrees), resting
-  (`Rest.ts`: hit dice, short and long rests), payments (`Purse.ts`: kills, chests and stashes pay straight into the
+  (`Rest.ts`: short and long rests; hit dice are spent in a short rest, as many as each hero chooses), payments (`Purse.ts`: kills, chests and stashes pay straight into the
   purse), Need / Pass rolls for rare finds (`LootRoll.ts`) and the ~ console's commands (`Console.ts`). `src/scenes/` — title, settings,
   key bindings, character select, co-op lobby and the level itself. `src/ui/` — buttons, HUD (health bar, round
   buttons, `HudDialog`, `MinimapView`, `QuickBar`, `RestMenu`, `PartyBanner`, `LootRollPanel`), `PopupMenu`, `HeroPicker`,

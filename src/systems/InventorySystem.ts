@@ -1,11 +1,6 @@
-import { world, isPlayer, q } from '../world';
-import type { Entity } from '../world';
-import { addToBag } from '../game/PlayerActions';
-import { sound } from '../audio/SoundPlayer';
-import { nearby, Sense } from '../ai/perception/spatial';
-
-/** Items lying this close to a player's feet are picked up as they walk over them. */
-const PICKUP_RADIUS = 14;
+import { world } from '../world';
+import { receiveItem } from '../game/PlayerActions';
+import { playerUsing } from './TargetSystem';
 
 let inventoryOpen = false;
 
@@ -13,16 +8,17 @@ export function isInventoryOpen(): boolean { return inventoryOpen; }
 
 const carriers = world.with('position', 'playerInput', 'playerStats', 'inventory', 'health');
 type Carrier = (typeof carriers)['entities'][number];
-const lying: Entity[] = [];
+const lying = world.with('position', 'item');
 
-/** Picks up the things lying at a player's feet, as long as there is a free square and it isn't too heavy. */
-function pickUp(player: Entity): void {
-  if (!isPlayer(player) || player.health.current <= 0) return;
-  const { x, y } = player.position;
-  for (const e of nearby(x, y, PICKUP_RADIUS, Sense.item, lying)) {
-    if (!e.item || !e.position || e.removed || !addToBag(player, e.item)) continue;
-    sound.playSound('pickup', e.position.x, e.position.y);
-    world.addComponent(e, 'removed', true);
+/**
+ * Items on the floor are taken on purpose, never by walking over them (a dropped one would be picked straight up
+ * again): "use" (E, or a click) on one the corner brackets frame puts it in the bag, if it fits.
+ */
+function takeItems(): void {
+  for (const e of lying) {
+    if (e.removed) continue;
+    const taker = playerUsing(e);
+    if (taker && receiveItem(taker, e.item)) world.addComponent(e, 'removed', true);
   }
 }
 
@@ -43,7 +39,7 @@ export function updateInventoryToggle(): Carrier | undefined {
 
 export function updateInventory(): void {
   updateInventoryToggle();
-  for (const player of q.players) pickUp(player);
+  takeItems();
 }
 
 /** A new level starts with the panel shut. */

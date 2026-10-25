@@ -3,11 +3,12 @@ import { createItemPickup } from './LootFactory';
 import { ARMORS, HAND_WEAPONS, SHIELDS, randomItem } from './ItemCatalog';
 import { pay } from '../game/Purse';
 import { offerLoot } from '../game/LootRoll';
+import { receiveItem } from '../game/PlayerActions';
 
 /**
  * What something leaves behind when opened or broken, as data: a table of weighted entries, each a kind
- * of drop with its own handler: coins (paid straight to whoever found them), or a piece of gear (on the
- * floor, or — a rare one in co-op — rolled for by the party). A new kind (a potion, a key) is a new member
+ * of drop with its own handler: coins (paid straight to whoever found them), or a piece of gear (into the
+ * finder's bag; on the floor when they can't carry it; a rare one in co-op rolled for by the party). A new kind (a potion, a key) is a new member
  * of `Drop` and a handler in `DROP_HANDLERS`, and every table can use it.
  */
 export type Drop =
@@ -33,9 +34,12 @@ const GEAR = [...HAND_WEAPONS, ...SHIELDS, ...ARMORS];
 
 const DROP_HANDLERS: DropHandlers = {
   coins: (_x, _y, drop, finder) => { if (finder) pay(finder, drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1))); },
-  gear: (x, y) => {
+  // Straight to whoever found it (said over their head); a rare piece in co-op goes to the party's roll instead,
+  // and what the finder can't carry lands on the floor, to be taken with E.
+  gear: (x, y, _drop, finder) => {
     const item = randomItem(GEAR);
-    if (!offerLoot(item)) createItemPickup(x, y, item);
+    if (offerLoot(item) || (finder && receiveItem(finder, item))) return;
+    createItemPickup(x, y, item);
   },
   none: () => undefined,
 };

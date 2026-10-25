@@ -86,7 +86,7 @@ export function restorePlayer(player: Entity): void {
     giveStartingKit(player);
     return;
   }
-  Object.assign(player.playerStats, structuredClone(carry.stats), { sprinting: false, sprint: 0, sprintLocked: false });
+  Object.assign(player.playerStats, structuredClone(carry.stats), { sprinting: false, sprint: 0, sprintLocked: false, restDiceOpen: false });
   player.inventory = structuredClone(carry.inventory);
   player.equipped = structuredClone(carry.equipped);
   player.health.max = carry.maxHealth;

@@ -10,7 +10,9 @@ import { REACH } from '../systems/TargetSystem';
 import { fitsSlot, statTotals } from '../entities/Items';
 import { isEquipSlot } from '../world';
 import { BASE_SPRINT } from '../entities/PlayerFactory';
-import { queueRestRequest, spendHitDie } from './Rest';
+import { queueRestRequest, spendHitDice } from './Rest';
+import { createItemPickup } from '../entities/LootFactory';
+import type { TextId } from '../core/texts';
 import { queueAnswer } from './Party';
 import { chooseLoot } from './LootRoll';
 import { applyCustomization } from './Customize';
@@ -36,8 +38,10 @@ export type Loadout = { inventory: BagSquare[]; equipped: Partial<Record<EquipSl
 /** A square of the inventory screen: one in the bag's grid, or an equipment slot. */
 export type ItemPlace = ItemSquare;
 
-/** Kilograms a player can carry, bag and worn gear together. */
+/** Kilograms a player can carry, bag and worn gear together, without strain. */
 export const MAX_CARRY_KG = 100;
+/** A hero can strain under up to this share of that (115 kg); anything more and they are overloaded. */
+const OVERLOAD_SHARE = 1.15;
 
 /** The items in a bag, without its empty squares. */
 export function bagItems(inventory: readonly BagSquare[]): InventoryItem[] {
@@ -56,13 +60,54 @@ export function carriedWeight(player: Pick<Player, 'inventory' | 'equipped'>): n
   return items.reduce((sum, item) => sum + (item?.weight ?? 0), 0);
 }
 
+/** Why an item can't go in the bag (no free square, or the hero would be overloaded); null when it can. */
+export function bagRefusal(player: Player, item: InventoryItem): TextId | null {
+  if (freeSquare(player.inventory ?? []) < 0) return 'roll.bag_full';
+  return carriedWeight(player) + (item.weight ?? 0) > MAX_CARRY_KG * OVERLOAD_SHARE ? 'roll.overloaded' : null;
+}
+
 /** Puts an item in the first empty square, if there is one and it isn't too heavy to carry; returns whether it went in. */
 export function addToBag(player: Player, item: InventoryItem): boolean {
   const inventory = player.inventory ?? (player.inventory = []);
-  const square = freeSquare(inventory);
-  if (square < 0 || carriedWeight(player) + (item.weight ?? 0) > MAX_CARRY_KG) return false;
-  inventory[square] = item;
+  if (bagRefusal(player, item)) return false;
+  inventory[freeSquare(inventory)] = item;
   return true;
+}
+
+/**
+ * A find for this hero (taken from the floor, or from a chest or a kill): into the bag, said over their head, or —
+ * a full bag, too much to carry — refused, and the hero says why. Returns whether they took it.
+ */
+export function receiveItem(player: Player, item: InventoryItem): boolean {
+  const refusal = bagRefusal(player, item);
+  const { x, y } = player.position;
+  if (refusal) {
+    logLine(player, text(refusal), 'miss');
+    sound.playSound('fail', x, y);
+    return false;
+  }
+  addToBag(player, structuredClone(item));
+  logLine(player, text('roll.received', { item: item.name }), 'gold');
+  sound.playSound('pickup', x, y);
+  return true;
+}
+
+/** The inventory's "Drop": the item leaves the bag (or the body) and lies at the hero's feet, to be taken again with E. */
+export function dropItem(player: Player, from: ItemPlace): boolean {
+  const loadout: Loadout = { inventory: [...(player.inventory ?? [])], equipped: { ...player.equipped } };
+  const item = itemAt(loadout, from);
+  if (!item) return false;
+  if ('bag' in from) loadout.inventory[from.bag] = null;
+  else delete loadout.equipped[from.slot];
+  applyLoadout(player, { inventory: trimmed(loadout.inventory), equipped: loadout.equipped });
+  createItemPickup(player.position.x, player.position.y, item);
+  return true;
+}
+
+/** The inventory's "Drop": at once here, or asked of the host for a guest. */
+export function requestDrop(player: Player, from: ItemPlace): void {
+  if (coop.role === 'guest') coop.sendCommand({ kind: 'drop', from });
+  else dropItem(player, from);
 }
 
 /** A bag with its trailing empty squares dropped (the squares themselves stay put). */
@@ -255,15 +300,19 @@ export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): voi
     if (item) buy(player, item);
     return;
   }
-  if (command.kind === 'hit_die') {
-    spendHitDie(player);
+  if (command.kind === 'rest_dice') {
+    spendHitDice(player, command.count);
+    return;
+  }
+  if (command.kind === 'drop') {
+    dropItem(player, command.from);
     return;
   }
   if (command.kind === 'scores' || command.kind === 'fighting_style' || command.kind === 'improve' || command.kind === 'lock_build') {
     applyCustomization(player, command);
     return;
   }
-  if (command.kind === 'rest') return queueRestRequest(slot, command.rest);
+  if (command.kind === 'rest') return queueRestRequest(slot, command.rest, command.dice);
   if (command.kind === 'give') {
     giveItem(player, command.from, command.to);
     return;

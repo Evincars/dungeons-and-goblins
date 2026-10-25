@@ -1,4 +1,4 @@
-import { localPlayer, isPlayer } from '../world';
+import { localPlayer, q, world } from '../world';
 import type { Entity, Player } from '../world';
 import { screenToWorld } from '../render/Camera';
 import { pointer, wasClicked, isMouseDown } from './InputSystem';
@@ -22,8 +22,11 @@ export type CrosshairTarget = 'enemy' | 'interact' | 'interactFar' | null;
 let target: CrosshairTarget = null;
 /** What this screen's player would use now (the thing framed by the corner brackets): under the crosshair, or the nearest in reach. */
 let focus: Entity | null = null;
-const users: Entity[] = [];
 const around: Entity[] = [];
+/** What each "use" pressed this tick goes to: one thing per press, the thing the player's brackets frame. */
+const usedBy = new Map<Entity, Player>();
+/** The kinds of thing that can be used. */
+const USABLE = Sense.usable | Sense.item;
 /** A click that was spent on using something must not turn into a swing while still held. */
 let swallowHeldClick = false;
 const aim = { x: 0, y: 0 };
@@ -34,10 +37,14 @@ export function crosshairTarget(): CrosshairTarget {
   return target;
 }
 
-/** Something a player can use: the shop keeper, the exit, an unopened chest, the lever before it is pulled, a stash not yet searched. */
+/**
+ * Something a player can use: the shop keeper, the exit, an unopened chest, the lever before it is pulled, a prop
+ * not yet searched, an item lying on the floor.
+ */
 function isInteractable(e: Entity): boolean {
   if (e.removed) return false;
-  return !!e.shopNpc || !!e.stash || (!!e.exitButton && !e.exitButton.activated) || (!!e.chest && !e.chest.opened) || (!!e.lever && !e.lever.pulled);
+  const closed = (!!e.exitButton && !e.exitButton.activated) || (!!e.chest && !e.chest.opened) || (!!e.lever && !e.lever.pulled);
+  return closed || !!e.shopNpc || !!e.stash || !!e.item;
 }
 
 /** The thing this screen's player would use this tick, for the corner brackets (null when there is nothing in reach). */
@@ -45,13 +52,43 @@ export function focusedEntity(): Entity | null {
   return focus;
 }
 
-/** A living player within reach of the point who pressed "use" (E) this tick, if any. */
-export function playerUsing(x: number, y: number): Player | null {
-  for (const e of nearby(x, y, REACH, Sense.player, users)) {
-    if (!isPlayer(e) || e.health.current <= 0 || !e.playerInput.intents.use) continue;
-    if (Math.hypot(e.position.x - x, e.position.y - y) <= REACH) return e;
+/** The living player who pressed "use" (E) on this thing this tick, if any (each press uses one thing). */
+export function playerUsing(thing: Entity): Player | null {
+  return usedBy.get(thing) ?? null;
+}
+
+/**
+ * Host, each tick after the targeting: every press of "use" goes to the one thing its player's brackets frame —
+ * this screen's player's focus (under the crosshair, or the nearest in reach); for a guest, the thing nearest the
+ * crosshair their browser sent, if one is in reach, or else the nearest.
+ */
+export function resolveUses(): void {
+  usedBy.clear();
+  const me = localPlayer();
+  for (const player of q.players) {
+    if (player.health.current <= 0 || !player.playerInput.intents.use) continue;
+    const thing = player === me && isFramed(player, focus) ? focus : remoteTarget(player);
+    if (thing) usedBy.set(thing, player);
   }
-  return null;
+}
+
+/** Whether the brackets' thing is still there to be used by this player (in the world, usable, in reach). */
+function isFramed(player: Player, e: Entity | null): e is Entity {
+  return !!e && world.id(e) !== undefined && isInteractable(e) && inReach(player, e);
+}
+
+/** What a guest's "use" is for: the usable thing in their reach nearest their crosshair, or the nearest to them. */
+function remoteTarget(player: Player): Entity | null {
+  const aimAt = player.aimWorld;
+  if (!aimAt) return nearestUsable(player);
+  aim.x = aimAt.x;
+  aim.y = aimAt.y;
+  const picked = pick();
+  return picked && !picked.ai && inReach(player, picked) ? picked : nearestUsable(player);
+}
+
+function inReach(player: Player, e: Entity): boolean {
+  return !!e.position && Math.hypot(e.position.x - player.position.x, e.position.y - player.position.y) <= REACH;
 }
 
 /** The usable thing nearest the player within reach. */
@@ -59,7 +96,7 @@ function nearestUsable(player: Player): Entity | null {
   const { x, y } = player.position;
   let best: Entity | null = null;
   let bestD = REACH;
-  for (const e of nearby(x, y, REACH, Sense.usable, around)) {
+  for (const e of nearby(x, y, REACH, USABLE, around)) {
     if (!isInteractable(e) || !e.position) continue;
     const d = Math.hypot(e.position.x - x, e.position.y - y);
     if (d > bestD) continue;
@@ -83,7 +120,7 @@ function pickDistance(e: Entity): number {
 function pick(): Entity | null {
   let best: Entity | null = null;
   let bestD = Infinity;
-  for (const e of nearby(aim.x, aim.y, PICK_QUERY_RADIUS, Sense.mob | Sense.usable, candidates)) {
+  for (const e of nearby(aim.x, aim.y, PICK_QUERY_RADIUS, Sense.mob | USABLE, candidates)) {
     if (!isLiveEnemy(e) && !isInteractable(e)) continue;
     const d = pickDistance(e);
     const r = PICK_RADIUS + Math.max(e.radius?.x ?? 0, e.radius?.y ?? 0);
@@ -128,10 +165,9 @@ export function updateTargeting(): void {
     return;
   }
 
-  const pp = player.position;
-  const inReach = Math.hypot(best.position.x - pp.x, best.position.y - pp.y) <= REACH;
-  target = inReach ? 'interact' : 'interactFar';
-  if (!inReach) return;
+  const reached = inReach(player, best);
+  target = reached ? 'interact' : 'interactFar';
+  if (!reached) return;
   focus = best;
 
   intents.attack = false;

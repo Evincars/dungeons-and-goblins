@@ -32,13 +32,18 @@ export type ItemSquare = { bag: number } | { slot: EquipSlot };
 export type GuestCommand =
   | { kind: 'buy'; index: number }
   | { kind: 'loadout'; inventory: BagSquare[]; equipped: Partial<Record<EquipSlot, InventoryItem>> }
-  /** Spend one hit die on healing. */
-  | { kind: 'hit_die' }
-  /** Ask the party for a rest, or answer what someone else asked the party (a rest, opening the gate). */
-  | { kind: 'rest'; rest: RestKind }
+  /** During a short rest: spend this many hit dice on healing (0: none). */
+  | { kind: 'rest_dice'; count: number }
+  /**
+   * Ask the party for a rest (with, for a short one, how many hit dice the asker will spend in it), or answer what
+   * someone else asked the party (a rest, opening the gate).
+   */
+  | { kind: 'rest'; rest: RestKind; dice?: number }
   | { kind: 'vote_answer'; agree: boolean }
   /** Hand the item on a square of the inventory to another player. */
   | { kind: 'give'; from: ItemSquare; to: PlayerSlot }
+  /** Drop the item on a square of the inventory at the hero's feet. */
+  | { kind: 'drop'; from: ItemSquare }
   /** Need or Pass on a rare find the party is rolling for (by the id the host gave the roll). */
   | { kind: 'loot'; roll: number; need: boolean }
   /** The hero's bought ability scores, their fighting style, an Ability Score Improvement or a feat (rules/Build.ts). */
@@ -153,6 +158,10 @@ function validEquipped(value: unknown): value is Partial<Record<EquipSlot, Inven
   return Object.entries(value).every(([slot, item]) => isEquipSlot(slot) && isInventoryItem(item));
 }
 
+/** A hero has at most one hit die a level (20). */
+const MAX_HIT_DICE = 20;
+const isDiceCount = (value: unknown) => Number.isInteger(value) && Number(value) >= 0 && Number(value) <= MAX_HIT_DICE;
+
 function isItemSquare(value: unknown): value is ItemSquare {
   if (!isRecord(value)) return false;
   if ('bag' in value) return Number.isInteger(value.bag) && Number(value.bag) >= 0 && Number(value.bag) < MAX_ITEMS;
@@ -162,10 +171,11 @@ function isItemSquare(value: unknown): value is ItemSquare {
 export function validCommand(value: unknown): value is GuestCommand {
   if (!isRecord(value)) return false;
   if (value.kind === 'buy') return Number.isInteger(value.index) && Number(value.index) >= 0 && Number(value.index) < MAX_ITEMS;
-  if (value.kind === 'hit_die') return true;
-  if (value.kind === 'rest') return isRestKind(value.rest);
+  if (value.kind === 'rest_dice') return isDiceCount(value.count);
+  if (value.kind === 'rest') return isRestKind(value.rest) && (value.dice === undefined || isDiceCount(value.dice));
   if (value.kind === 'vote_answer') return typeof value.agree === 'boolean';
   if (value.kind === 'give') return isItemSquare(value.from) && isPlayerSlot(value.to);
+  if (value.kind === 'drop') return isItemSquare(value.from);
   if (value.kind === 'loot') return Number.isSafeInteger(value.roll) && Number(value.roll) >= 0 && typeof value.need === 'boolean';
   if (value.kind === 'scores') return validScores(value.scores);
   if (value.kind === 'fighting_style') return isFightingStyle(value.style);

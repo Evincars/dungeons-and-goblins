@@ -61,7 +61,18 @@ function awardExperience(points: number): void {
   }
 }
 
-/** Who is paid for a kill: whoever struck last, or failing that (a fall, a trap) the nearest living hero. */
+/**
+ * A kill's gold is the party's, as its experience is: every hero in the game gets an equal part (and their own
+ * Charisma's share more on top).
+ */
+function shareKillGold(total: number): void {
+  const heroes = q.players.entities.length;
+  if (heroes === 0) return;
+  const share = total / heroes;
+  for (const hero of q.players) pay(hero, Math.round(share * (1 + hero.playerStats.lootBonus)));
+}
+
+/** Who finds a kill's gear: whoever struck last, or failing that (a fall, a trap) the nearest living hero. */
 function killerOf(entity: Entity, pos: { x: number; y: number }): Player | undefined {
   const struck = entity.lastHitBy === undefined ? undefined : world.entity(entity.lastHitBy);
   if (isPlayer(struck)) return struck;
@@ -91,10 +102,9 @@ function die(entity: Entity, pos: { x: number; y: number }): void {
     if (entity.mobType && BOSS_FOES.has(entity.mobType)) sound.playSound('foe_felled');
     createDeathFx(pos.x, pos.y);
     awardExperience(entity.mobType ? MONSTERS[entity.mobType].xp : deathPts);
-    // The coins go straight to the killer (their Charisma makes kills richer); gear, now and then, drops.
-    const killer = killerOf(entity, pos);
-    if (killer) pay(killer, Math.round(killReward() * (1 + killer.playerStats.lootBonus)));
-    spawnDrops(pos.x, pos.y, 'mob', killer);
+    // The coins go straight into the party's purses; gear, now and then, to whoever struck last.
+    shareKillGold(killReward());
+    spawnDrops(pos.x, pos.y, 'mob', killerOf(entity, pos));
   }
 }
 

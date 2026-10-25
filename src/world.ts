@@ -402,6 +402,8 @@ export type Entity = {
     swordTier: number;
     /** Hit dice left to spend on healing (a level's worth at most; a long rest gives half back). */
     hitDice: number;
+    /** A short rest has been taken and the hero has yet to say how many hit dice to spend in it. */
+    restDiceOpen: boolean;
     sprinting: boolean;
     sprint: number;
     maxSprint: number;

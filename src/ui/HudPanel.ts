@@ -195,7 +195,7 @@ export class HudPanel {
   /** The map button shows the explored dungeon, rest opens its drop-down; the others, for now, a placeholder. */
   private open(def: ButtonDef): void {
     if (def.id === 'rest') {
-      this.restMenu.toggle();
+      this.restMenu.toggle(localPlayer());
       return;
     }
     if (def.id === 'level') {
@@ -230,6 +230,7 @@ export class HudPanel {
     this.lootRolls.update();
     this.quickBar.update(player);
     this.passives.update();
+    this.restMenu.update(player);
     if (!player) return;
     if (this.dialog.showing(this.levelPanel.view)) this.levelPanel.update(player);
     this.choiceMark.visible = hasChoices(heroClass(player.heroClass), player.playerStats.level, player.build);

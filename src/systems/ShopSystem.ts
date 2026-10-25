@@ -1,6 +1,6 @@
 import { world, isPlayer } from '../world';
 import type { Entity, InventoryItem } from '../world';
-import { REACH } from './TargetSystem';
+import { playerUsing, REACH } from './TargetSystem';
 import { nearby, Sense } from '../ai/perception/spatial';
 
 let shopOpen = false;
@@ -13,18 +13,14 @@ export function closeShop(): void { shopOpen = false; }
 const keepers = world.with('position', 'shopNpc');
 const customers: Entity[] = [];
 
-/**
- * Lets the living players near one keeper toggle its shop with "use"; returns whether any stood near.
- * A "use" spent on the shop is consumed so nothing else reacts to it.
- */
+/** Lets the living players near one keeper toggle its shop with "use" (aimed at the keeper); returns whether any stood near. */
 function visit(keeper: (typeof keepers)['entities'][number]): boolean {
   let near = false;
   for (const e of nearby(keeper.position.x, keeper.position.y, REACH, Sense.player, customers)) {
     // The shop is this screen's panel: only the local player opens it (guests buy through the host).
     if (!isPlayer(e) || e.remoteInput || e.health.current <= 0) continue;
     near = true;
-    if (!e.playerInput.intents.use) continue;
-    e.playerInput.intents.use = false;
+    if (playerUsing(keeper) !== e) continue;
     shopOpen = !shopOpen;
     activeItems = keeper.shopNpc.items;
   }

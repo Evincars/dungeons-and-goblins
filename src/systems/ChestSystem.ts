@@ -18,7 +18,7 @@ function spill(chest: Chest, opener: Player): void {
 export function updateChests(): void {
   for (const chest of q.chests) {
     if (chest.removed || chest.chest.opened) continue;
-    const opener = playerUsing(chest.position.x, chest.position.y);
+    const opener = playerUsing(chest);
     if (opener) spill(chest, opener);
   }
 }

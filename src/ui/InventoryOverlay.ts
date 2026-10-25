@@ -16,7 +16,7 @@ import { SheetInfoPanel } from './SheetInfoPanel';
 import { text } from '../core/texts';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
-import { INVENTORY_COLS, INVENTORY_ROWS, MAX_CARRY_KG, carriedWeight, freeSquare, moveItem, requestGive, requestLoadout } from '../game/PlayerActions';
+import { INVENTORY_COLS, INVENTORY_ROWS, MAX_CARRY_KG, carriedWeight, freeSquare, moveItem, requestDrop, requestGive, requestLoadout } from '../game/PlayerActions';
 import { seatOf } from '../game/Party';
 import { PopupMenu } from './PopupMenu';
 import type { MenuRow } from './PopupMenu';
@@ -26,7 +26,6 @@ import { characterSheet } from '../rules/CharacterSheet';
 import type { CharacterSheet } from '../rules/CharacterSheet';
 import { formatDamage } from '../rules/Dice';
 import { heroName } from '../rules/Names';
-import { requestHitDie } from '../game/Rest';
 import { sound } from '../audio/SoundPlayer';
 
 /** inventory.png, measured in its own pixels: the leather bag panel, the cloth gear panel, and its two tabs. */
@@ -44,6 +43,8 @@ const TAB_IDLE_DIM = 0.35;
 const TAB_UNDERLINE = 2;
 /** The mouse button that opens an item's menu. */
 const RIGHT_BUTTON = 2;
+/** Two items compared stand side by side, this far apart. */
+const COMPARE_GAP = 4;
 /** Where the title (the hero's name) sits, above the bag panel. */
 const TITLE = { x: 80, y: 6 };
 /** The weight carried shows under the gold; it turns orange past this share of what can be carried. */
@@ -144,6 +145,10 @@ export class InventoryOverlay {
   private readonly itemMenu = new PopupMenu();
   private readonly gold = new PixelLabel('', { color: 0xffcc00, align: 'right', shadow: true });
   private readonly tooltip = new ItemTooltip();
+  /** The other item in a comparison, beside the first. */
+  private readonly compareTip = new ItemTooltip();
+  /** While two items are compared, the tooltips stay put (until the next press) instead of following the pointer. */
+  private comparing = false;
   private readonly ghost = new Sprite();
   private readonly tabs: Tab[] = [];
   private activeTab = 0;
@@ -178,6 +183,7 @@ export class InventoryOverlay {
     if (visible) sound.playLocal('dialog');
     if (!visible) {
       this.endDrag();
+      this.endCompare();
       this.infoTip.hide();
       this.itemMenu.hide();
     }
@@ -227,7 +233,7 @@ export class InventoryOverlay {
     this.ghost.anchor.set(0.5);
     this.ghost.alpha = GHOST_ALPHA;
     this.ghost.visible = false;
-    this.root.addChild(this.ghost, this.tooltip.view, this.infoTip.view, this.itemMenu.view);
+    this.root.addChild(this.ghost, this.tooltip.view, this.compareTip.view, this.infoTip.view, this.itemMenu.view);
   }
 
   /** A clickable tab over the art's tab: it lights up under the pointer and when open, and shows its page. */
@@ -435,29 +441,59 @@ export class InventoryOverlay {
   }
 
   /**
-   * Right-click on an item: a menu of what can be done with it — for now, send it to another player (into
-   * the first free square of their bag).
+   * Right-click on an item: a menu of what can be done with it — drop it at the hero's feet, compare it with
+   * another of its kind, or send it to another player (into the first free square of their bag).
    */
   private openItemMenu(player: Player, e: FederatedPointerEvent): void {
     const square = this.squareAt(e);
-    if (!square || !this.itemIn(player, square.place)) return;
+    const item = square ? this.itemIn(player, square.place) : undefined;
+    if (!square || !item) return;
     const place = square.place;
-    const rows: MenuRow[] = [];
+    const p = this.root.toLocal(e.global);
+    const rows: MenuRow[] = [
+      { label: text('inventory.menu.drop'), action: () => requestDrop(player, place) },
+      { label: text('inventory.menu.compare'), action: null, submenu: this.compareRows(player, item, p.x, p.y) },
+    ];
     for (const other of q.players) {
       if (other === player) continue;
       const name = other.playerName ?? '';
       rows.push({ label: text('inventory.menu.send_to', { name }), action: () => requestGive(player, place, seatOf(other)) });
     }
-    if (!rows.length) rows.push({ label: text('inventory.menu.no_one'), action: null });
-    const p = this.root.toLocal(e.global);
     this.tooltip.hide();
     this.itemMenu.show(rows, p.x, p.y, { w: DESIGN_W, h: DESIGN_H });
   }
 
-  /** Whether the pointer is on the sheet's hit dice (a click spends one). */
-  private onHitDice(e: FederatedPointerEvent): boolean {
-    const p = this.root.toLocal(e.global);
-    return this.activeTab === 0 && !!this.info?.hitDiceAt(p.x, p.y);
+  /** "Compare": every other item of the same kind the hero has (weapon with weapon, armour with armour), worn ones marked. */
+  private compareRows(player: Player, item: InventoryItem, x: number, y: number): MenuRow[] {
+    const rows: MenuRow[] = [];
+    for (const other of player.inventory ?? []) {
+      if (other && other !== item && other.type === item.type) rows.push({ label: other.name, action: () => this.compare(item, other, x, y) });
+    }
+    for (const other of Object.values(player.equipped ?? {})) {
+      if (!other || other === item || other.type !== item.type) continue;
+      rows.push({ label: text('inventory.menu.compare_worn', { name: other.name }), action: () => this.compare(item, other, x, y) });
+    }
+    return rows.length ? rows : [{ label: text('inventory.menu.compare_none'), action: null }];
+  }
+
+  /** The two items side by side (the second to the right of the first, or to its left where there is no room). */
+  private compare(item: InventoryItem, other: InventoryItem, x: number, y: number): void {
+    const bounds = { w: DESIGN_W, h: DESIGN_H };
+    this.comparing = true;
+    this.tooltip.show(item, x, y, bounds, this.sheet?.heroClass);
+    const first = this.tooltip.view;
+    const right = first.x + first.width + COMPARE_GAP;
+    this.compareTip.show(other, right - ItemTooltip.OFFSET, y, bounds, this.sheet?.heroClass);
+    if (this.compareTip.view.x < right) this.compareTip.view.x = Math.max(0, first.x - this.compareTip.view.width - COMPARE_GAP);
+    this.compareTip.view.y = first.y;
+  }
+
+  /** The next press ends a comparison. */
+  private endCompare(): void {
+    if (!this.comparing) return;
+    this.comparing = false;
+    this.tooltip.hide();
+    this.compareTip.hide();
   }
 
   /** Whether the pointer is over the Gear page (anywhere on it). */
@@ -496,14 +532,9 @@ export class InventoryOverlay {
     // A press on the menu is for its rows; anywhere else closes it.
     if (this.itemMenu.covers(e.global)) return;
     this.itemMenu.hide();
+    this.endCompare();
     if (player && e.button === RIGHT_BUTTON) {
       this.openItemMenu(player, e);
-      return;
-    }
-    if (player && this.onHitDice(e)) {
-      requestHitDie(player);
-      // Its tooltip counted the die just spent; it comes back up to date at the next move.
-      this.infoTip.hide();
       return;
     }
     const square = this.squareAt(e);
@@ -525,6 +556,7 @@ export class InventoryOverlay {
     this.ghost.position.set(p.x, p.y);
     const player = localPlayer();
     const square = this.squareAt(e);
+    if (this.comparing) return;
     const item = player && square && !this.dragging && !this.itemMenu.open ? this.itemIn(player, square.place) : undefined;
     if (item) this.tooltip.show(item, p.x, p.y, { w: DESIGN_W, h: DESIGN_H }, this.sheet?.heroClass);
     else this.tooltip.hide();

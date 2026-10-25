@@ -35,12 +35,16 @@ type RunState = {
 
 export const run: RunState = { depth: 1, hardcore: false, over: false, nextSeed: null };
 
-/** What a player takes down to the next level: their progress and gear, not their position or wounds. */
+/**
+ * What a player takes down to the next level: their progress, gear and wounds (they heal by resting), not their
+ * position.
+ */
 type Carry = {
   stats: NonNullable<Entity['playerStats']>;
   inventory: NonNullable<Entity['inventory']>;
   equipped: NonNullable<Entity['equipped']>;
   maxHealth: number;
+  health: number;
   build: Build | undefined;
 };
 
@@ -64,6 +68,8 @@ export function descend(): void {
       inventory: structuredClone(player.inventory ?? []),
       equipped: structuredClone(player.equipped ?? {}),
       maxHealth: player.health.max,
+      // A hero who was down (waiting to get up again) comes back on their feet, as getting up would bring them.
+      health: player.health.current > 0 ? player.health.current : player.health.max,
       build: structuredClone(player.build),
     });
   }
@@ -85,5 +91,5 @@ export function restorePlayer(player: Entity): void {
   player.equipped = structuredClone(carry.equipped);
   player.health.max = carry.maxHealth;
   if (carry.build) player.build = structuredClone(carry.build);
-  player.health.current = carry.maxHealth;
+  player.health.current = Math.min(carry.health, carry.maxHealth);
 }

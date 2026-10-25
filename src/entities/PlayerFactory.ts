@@ -5,8 +5,6 @@ import { createTrail } from '../ai/perception/trail';
 import { DEFAULT_CLASS, heroClass } from '../rules/Classes';
 import type { HeroClassId } from '../rules/Classes';
 import { newBuild } from '../rules/Build';
-/** Players regain one hit point this often while unhurt. */
-const PLAYER_REGEN_TICKS = 180;
 const PLAYER_SPEED = 1.2;
 const PLAYER_FRICTION = 0.4;
 /** Half-width of the player's collision box in pixels (two thirds of the original 10). */
@@ -31,9 +29,6 @@ export function createPlayer(x: number, y: number, classId: HeroClassId = DEFAUL
     hurtTime: 0,
     freezeTime: 0,
     bounceWallTime: 0,
-    regenInterval: PLAYER_REGEN_TICKS,
-    regenAmount: 1,
-    regenTimer: PLAYER_REGEN_TICKS,
     speed: PLAYER_SPEED,
     friction: PLAYER_FRICTION,
     aimVector: { x: 0, y: 1 },

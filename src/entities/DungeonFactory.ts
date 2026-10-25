@@ -3,7 +3,8 @@ import type { Entity, InventoryItem } from '../world';
 import { createTile, TileType, TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
 import type { Level } from '../level/Level';
 import { PROPS, PROP_GROUND } from '../level/Props';
-import type { PropDef, PropPlacement } from '../level/Props';
+import type { PropDef, PropKind, PropPlacement } from '../level/Props';
+import { stashCoins } from './LootFactory';
 import type { DoorData, RoomData } from '../level/generators/DungeonBuilder';
 
 /**
@@ -172,37 +173,38 @@ export function createProp(p: PropPlacement): Entity {
   });
 }
 
-/** The floor things that may hide a few coins: urns, closed coffins and sarcophagi, bowls, sacks, jars and vases. */
-const STASH_PROPS: ReadonlySet<string> = new Set([
-  'urn', 'urn_small', 'urn_green', 'urn_green_small', 'coffin', 'coffin_cracked', 'sarcophagus', 'sarcophagus2',
-  'bowl_apples', 'bowl_apples_m', 'bowl_herbs', 'bowl_herbs_m', 'bowl_grain', 'bowl_grain_m', 'bowl_empty', 'bowl_dark',
-  'sack', 'sack_m', 'sack2', 'supplies_vase', 'supplies_jar',
+/**
+ * The floor things that can be opened or searched, by what they are: coffins and sarcophagi still shut, barrels,
+ * crates and boxes, urns, vases and jars, and sacks. (Open bowls, broken or spilt things, racks, shelves
+ * and whatever hangs on a wall, such as the cauldrons, are not.) What each holds, if anything, is rolled by `stashCoins`.
+ */
+const OPENABLE_PROPS: ReadonlySet<PropKind> = new Set<PropKind>([
+  'coffin', 'coffin_cracked', 'sarcophagus', 'sarcophagus2',
+  'barrel', 'barrel2', 'supplies_barrel',
+  'crate', 'crate2', 'crate_stack', 'crate_stack2', 'supplies_crate', 'supplies_crates',
+  'urn', 'urn_small', 'urn_green', 'urn_green_small', 'supplies_vase', 'supplies_jar',
+  'sack', 'sack_m', 'sack_s', 'sack_xs', 'sack2', 'sack2_m', 'sack2_s', 'sack2_xs', 'sacks_pile', 'sacks_pile2', 'sacks_pile3',
 ]);
-/** Only some of them do: this share. */
-const STASH_CHANCE = 0.3;
-/** Coins in a stash. */
-const STASH_MIN_COINS = 2;
-const STASH_MAX_COINS = 12;
 /** A stash's body reaches this far up and down its prop's foot, for the crosshair and the corner brackets. */
 const STASH_DEPTH = 6;
 
-/** Whether a prop of this kind could hide coins. */
-export function canHideCoins(kind: string): boolean {
-  return STASH_PROPS.has(kind);
+/** Whether a prop of this kind stands on the floor and can be opened (searched with "use"). */
+export function isOpenable(kind: PropKind): boolean {
+  return OPENABLE_PROPS.has(kind) && PROPS[kind].mount === 'floor';
 }
 
 /**
- * The coins some props hide (made by whoever runs the game, and sent to guests: the prop itself is decor
- * every browser builds). It stands where the prop is drawn, its body the prop's size.
+ * What an openable prop holds — often nothing (made by whoever runs the game, and sent to guests: the prop itself
+ * is decor every browser builds). It stands where the prop is drawn, its body the prop's size.
  */
 export function createStash(p: PropPlacement): Entity | null {
-  if (!canHideCoins(p.kind) || Math.random() >= STASH_CHANCE) return null;
+  if (!isOpenable(p.kind)) return null;
   const def: PropDef = PROPS[p.kind];
   return world.add({
     position: { x: p.tx * TILE_WIDTH + TILE_WIDTH / 2, y: p.ty * TILE_HEIGHT + PROP_GROUND },
     yOffset: def.rect.h / 2,
     radius: { x: def.rect.w / 2, y: STASH_DEPTH },
-    stash: { coins: STASH_MIN_COINS + Math.floor(Math.random() * (STASH_MAX_COINS - STASH_MIN_COINS + 1)) },
+    stash: { coins: stashCoins() },
   });
 }
 

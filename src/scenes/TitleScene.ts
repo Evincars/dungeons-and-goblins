@@ -20,7 +20,14 @@ const MENU_TOP = 156;
 /** The logo fills the space above the buttons: this far from the top, and this tall. */
 const LOGO_TOP = 10;
 const LOGO_H = 138;
-const HINT_Y = GAME_HEIGHT - 40;
+/** The tagline sits under the buttons, this far from the bottom. */
+const TAGLINE_Y = GAME_HEIGHT - 44;
+const TAGLINE_COLOR = 0xb89a6a;
+/** The credits (bottom left) and the version (bottom right): this far in from the corners, in a smaller hand. */
+const CORNER_INSET = 6;
+const CORNER_Y = GAME_HEIGHT - 12;
+const CORNER_SCALE = 0.75;
+const CORNER_COLOR = 0x9a8a72;
 /** The dungeon's ambience fades away over this long (ms) back at the menu. */
 const AMBIENCE_FADE_MS = 1500;
 /** The prompt pulses at this rate (radians per tick). */
@@ -65,14 +72,15 @@ export class TitleScene implements Scene {
       this.container.addChild(button);
     });
 
-    const hint = makeText(text('menu.title.controls_hint'), 0x776655, 8, 'center');
-    hint.x = Math.floor(GAME_WIDTH / 2);
-    hint.y = HINT_Y;
+    const tagline = makeText(text('menu.title.tagline'), TAGLINE_COLOR, 8, 'center');
+    tagline.x = Math.floor(GAME_WIDTH / 2);
+    tagline.y = TAGLINE_Y;
+    this.container.addChild(tagline, ...cornerLabels());
     this.farewell = makeText(text('menu.title.farewell'), 0xffcc44, 8, 'center');
     this.farewell.x = Math.floor(GAME_WIDTH / 2);
     this.farewell.y = MENU_TOP - 18;
     this.farewell.visible = false;
-    this.container.addChild(hint, this.farewell);
+    this.container.addChild(this.farewell);
   }
 
   /** Browsers only let a script close a tab it opened itself; otherwise say how to leave. */
@@ -89,6 +97,16 @@ export class TitleScene implements Scene {
   destroy(): void {
     this.container.destroy({ children: true });
   }
+}
+
+/** Who made the game, in the bottom-left corner, and its version (from package.json) in the bottom-right. */
+function cornerLabels(): PixelLabel[] {
+  const style = { color: CORNER_COLOR, scale: CORNER_SCALE, shadow: true } as const;
+  const credits = new PixelLabel(text('menu.title.credits'), { ...style, align: 'left' });
+  credits.position.set(CORNER_INSET, CORNER_Y);
+  const version = new PixelLabel(text('menu.title.version', { version: __GAME_VERSION__ }), { ...style, align: 'right' });
+  version.position.set(GAME_WIDTH - CORNER_INSET, CORNER_Y);
+  return [credits, version];
 }
 
 /** Leaving a room drops the invite from the address bar, so a reload does not rejoin it. */

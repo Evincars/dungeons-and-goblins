@@ -110,7 +110,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - No magic numbers in logic: name them (`const PIT_LOOKAHEAD = 16;`) with a doc comment saying what
   they mean in game terms.
 - Tuning tables live together: sword and spell in `src/entities/WeaponStats.ts`; mobs in
-  `src/entities/MobFactory.ts` (`MOB_CONFIGS`); dungeon generation in
+  `src/entities/MobFactory.ts` (`MOB_CONFIGS`); gold from kills and from searching openable props (`KILL_GOLD`,
+  `STASH_FINDS`) in `src/entities/LootFactory.ts`, and which props open in `src/entities/DungeonFactory.ts`; dungeon generation in
   `src/level/generators/DungeonConfig.ts`; enemy AI knobs (sight, squad sizes, flanking, trail
   following) in `src/ai/constants.ts`; the D&D rules tables (SRD weapons and armour) in `src/rules/WeaponTable.ts`
   and `src/rules/ArmorTable.ts`; hero classes (abilities, hit points, proficiencies, features) in

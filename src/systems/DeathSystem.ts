@@ -28,16 +28,18 @@ const earners = world.with('playerStats', 'health');
 type Earner = (typeof earners)['entities'][number];
 
 /**
- * A level gained: hit points by the class's hit die (at its average) plus CON, one more hit die to spend,
- * and a full heal; the proficiency bonus and spells follow from the new level.
+ * A level gained: hit points by the class's hit die (at its average) plus CON, added to the maximum and to the
+ * hit points the hero has now (it is not a heal: wounds stay until rested off), and one more hit die to spend;
+ * the proficiency bonus and spells follow from the new level.
  */
 function levelUp(player: Earner): void {
   const stats = player.playerStats;
   stats.level++;
   stats.hitDice++;
   const sheet = characterSheet(player);
-  player.health.max += hitPointsPerLevel(sheet.heroClass, sheet.modifiers.constitution, stats.level, player.build);
-  player.health.current = player.health.max;
+  const gained = hitPointsPerLevel(sheet.heroClass, sheet.modifiers.constitution, stats.level, player.build);
+  player.health.max += gained;
+  player.health.current += gained;
   logLine(player, text('roll.level_up', { level: stats.level }), 'crit');
   sound.playSound('level_up');
 }
@@ -91,7 +93,7 @@ function die(entity: Entity, pos: { x: number; y: number }): void {
     awardExperience(entity.mobType ? MONSTERS[entity.mobType].xp : deathPts);
     // The coins go straight to the killer (their Charisma makes kills richer); gear, now and then, drops.
     const killer = killerOf(entity, pos);
-    if (killer) pay(killer, killReward(Math.round(deathPts * (1 + killer.playerStats.lootBonus))));
+    if (killer) pay(killer, Math.round(killReward() * (1 + killer.playerStats.lootBonus)));
     spawnDrops(pos.x, pos.y, 'mob', killer);
   }
 }

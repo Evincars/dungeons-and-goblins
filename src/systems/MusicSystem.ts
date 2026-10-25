@@ -8,7 +8,9 @@ import { nearby, Sense } from '../ai/perception/spatial';
 /**
  * The level's music, on each screen for its own hero: exploring, until enemies close by engage and the fight
  * music takes over (the boss music, when one of them is a great foe); once the last of them gives up or falls it
- * lingers a while, then exploring comes back in. The level's summary and the end of a run hold their own music.
+ * lingers a while, then exploring comes back in. An enemy that keeps the hero in sight but never comes to blows
+ * (across a pit, behind bars) is a stand-off, not a fight: after a while without a blow, exploring comes back too.
+ * The level's summary and the end of a run hold their own music.
  */
 
 /** Looks for a fight this often (ticks): music need not answer within a frame. */
@@ -20,12 +22,18 @@ const FIGHT_LINGER_TICKS = 360;
 /** A fight's music comes in quickly (ms); exploring returns slowly. */
 const FIGHT_FADE_IN_MS = 1000;
 const FIGHT_FADE_OUT_MS = 3000;
+/** Engaged enemies near the hero but no blow struck, swung or cast for this long (ticks, 10 s): a stand-off. */
+const STANDOFF_TICKS = 600;
 
 type Fight = 'none' | 'fight' | 'boss';
 
 const foes: Entity[] = [];
 let checkIn = 0;
 let calmTicks = FIGHT_LINGER_TICKS;
+/** How long (ticks) engaged enemies have been near the hero without a blow traded. */
+let quietTicks = 0;
+/** Set by {@link fightNear}: whether blows are being traded in the fight it found. */
+let blows = false;
 /** Whether a great foe has joined the fight under way (the boss music stays until it is over). */
 let bossFight = false;
 /** A track that stays whatever happens around the hero (the level's summary, the end of the run). */
@@ -35,6 +43,7 @@ let held: TrackName | null = null;
 export function resetMusic(): void {
   checkIn = 0;
   calmTicks = FIGHT_LINGER_TICKS;
+  quietTicks = 0;
   bossFight = false;
   held = null;
   music.play('explore');
@@ -46,14 +55,27 @@ export function holdMusic(track: TrackName): void {
   music.play(track);
 }
 
-/** The fight near the living hero, if any (fighting anyone: a friend's fight is the hero's too). */
+/** Whether this body is in the thick of it: hurt a moment ago, or swinging. */
+const inAction = (e: Entity) => (e.hurtTime ?? 0) > 0 || (e.attackTime ?? 0) > 0;
+
+/** Whether the hero is fighting: hurt, or a swing, shot or spell of theirs still recovering. */
+function heroInAction(hero: Player): boolean {
+  const recovering = (hero.swordCooldown ?? 0) > 0 || (hero.arrowCooldown ?? 0) > 0 || (hero.castCooldown ?? 0) > 0;
+  return recovering || inAction(hero);
+}
+
+/**
+ * The fight near the living hero, if any (fighting anyone: a friend's fight is the hero's too); notes in
+ * {@link blows} whether blows are being traded in it.
+ */
 function fightNear(hero: Player): Fight {
+  blows = heroInAction(hero);
   if (hero.health.current <= 0) return 'none';
   let fight: Fight = 'none';
   for (const foe of nearby(hero.position.x, hero.position.y, FIGHT_RADIUS, Sense.mob, foes)) {
     if (foe.ai?.state !== 'engage' || (foe.health?.current ?? 0) <= 0) continue;
-    if (foe.mobType && BOSS_FOES.has(foe.mobType)) return 'boss';
-    fight = 'fight';
+    blows ||= inAction(foe);
+    if (fight !== 'boss') fight = foe.mobType && BOSS_FOES.has(foe.mobType) ? 'boss' : 'fight';
   }
   return fight;
 }
@@ -63,7 +85,9 @@ export function updateMusic(): void {
   checkIn = FIGHT_CHECK_TICKS;
   const hero = localPlayer();
   const fight = hero ? fightNear(hero) : 'none';
-  calmTicks = fight === 'none' ? calmTicks + FIGHT_CHECK_TICKS : 0;
+  quietTicks = fight === 'none' || blows ? 0 : quietTicks + FIGHT_CHECK_TICKS;
+  const standoff = quietTicks >= STANDOFF_TICKS;
+  calmTicks = fight === 'none' || standoff ? calmTicks + FIGHT_CHECK_TICKS : 0;
   const fighting = calmTicks < FIGHT_LINGER_TICKS;
   bossFight = fighting && (bossFight || fight === 'boss');
   if (!fighting) music.play('explore', FIGHT_FADE_OUT_MS);

@@ -144,6 +144,7 @@
   "roll.first_strike": "FIRST STRIKE",
   "roll.no_hit_dice": "NO HIT DICE",
   "roll.full_health": "FULL HEALTH",
+  "roll.empty": "Empty",
   "roll.gold": "+{amount} gold",
   "roll.crushed": "CRUSHED",
   "roll.need": "Need {total}",
@@ -473,7 +474,9 @@
   "menu.title.join": "Join game",
   "menu.title.settings": "Settings",
   "menu.title.exit": "Exit",
-  "menu.title.controls_hint": "WASD move   Mouse aim   Click attack   Q swap weapons   RMB/R spell\nE use   TAB inventory   SHIFT sprint   ESC pause",
+  "menu.title.tagline": "Be brave, heroes: the Carpathians of Romania need saving.\nA classic dungeon crawler.",
+  "menu.title.credits": "Created by ZedsterDomka & Evincars",
+  "menu.title.version": "v{version}",
   "menu.title.farewell": "Close this browser tab to leave the dungeon.",
 
   "menu.pause.resume": "Resume",

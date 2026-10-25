@@ -20,8 +20,6 @@ const PLAYER_FREEZE_TIME = 15;
 const PLAYER_KNOCKBACK = 10;
 /** Bodies can no longer overlap, so an enemy this close to the player's body counts as touching it. */
 const CONTACT_REACH = 2;
-/** Regeneration interval for anything without its own. */
-const DEFAULT_REGEN_TICKS = 180;
 
 const living = world.with('health');
 const playerBox = new Rectangle();
@@ -36,21 +34,14 @@ function tickDown(entity: Entity): void {
   if (entity.flashTime !== undefined && entity.flashTime > 0) entity.flashTime--;
 }
 
-/** Wounds close slowly while nothing hurts the entity. */
-function regenerate(entity: Entity & { health: { current: number; max: number } }): void {
-  const h = entity.health;
-  if ((entity.hurtTime ?? 0) > 0 || h.current >= h.max || entity.regenTimer === undefined) return;
-  entity.regenTimer--;
-  if (entity.regenTimer > 0) return;
-  entity.regenTimer = entity.regenInterval ?? DEFAULT_REGEN_TICKS;
-  h.current = Math.min(h.max, h.current + (entity.regenAmount ?? 1));
-}
-
+/**
+ * The combat timers run down. Wounds never close on their own: heroes heal by resting (short and long rests,
+ * hit dice) and by spells, and enemies not at all.
+ */
 export function updateCombatTimers(): void {
   for (const entity of living) {
     if (entity.respawnTicks !== undefined) continue;
     tickDown(entity);
-    regenerate(entity);
   }
 }
 
@@ -141,7 +132,6 @@ export function hurtPlayer(player: Entity, source: Entity, damage: number): void
 
   player.hurtTime = PLAYER_HURT_TIME;
   player.freezeTime = PLAYER_FREEZE_TIME;
-  player.regenTimer = player.regenInterval ?? DEFAULT_REGEN_TICKS;
   h.current = Math.max(0, h.current - finalDamage);
   knockBack(player, source);
 

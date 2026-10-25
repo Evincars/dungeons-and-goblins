@@ -33,11 +33,12 @@ function layer(clips: readonly Clip[], volume = 1, rate = 1, delay = 0): Layer {
   return { clips, volume, rate, delay };
 }
 
-/** The ashen knight's footsteps loop holds three steps (armour jingling on each); each is played on its own. */
-const KNIGHT_STEPS: Clip[] = [
-  { file: '/audio/player/ashen_knight_footsteps_loop_01.webm', slice: [0, 600] },
-  { file: '/audio/player/ashen_knight_footsteps_loop_01.webm', slice: [870, 650] },
-  { file: '/audio/player/ashen_knight_footsteps_loop_01.webm', slice: [1670, 680] },
+/** A hero's tread: footstep-wood holds four boot steps half a second apart; each is played on its own. */
+const HERO_STEPS: Clip[] = [
+  { file: '/audio/player/footstep-wood.mp3', slice: [80, 400] },
+  { file: '/audio/player/footstep-wood.mp3', slice: [580, 400] },
+  { file: '/audio/player/footstep-wood.mp3', slice: [1080, 400] },
+  { file: '/audio/player/footstep-wood.mp3', slice: [1580, 350] },
 ];
 
 /** The giant knight's footstep loop: three of its stomps, each on its own, for a troll's tread. */
@@ -117,7 +118,7 @@ const INTERFACE = {
 
 export const SFX = {
   // --- heroes: every hero has the ashen knight's voice and kit ---
-  step: [layer(KNIGHT_STEPS, 0.49)],
+  step: [layer(HERO_STEPS, 0.7)],
   sword_swing: [layer(KNIGHT.light, 0.98)],
   /** A heavy or two-handed weapon comes down. */
   swing_heavy: [layer(KNIGHT.heavy, 1)],
@@ -208,6 +209,8 @@ export const SFX = {
   door_open: [layer(WORLD.door, 1)],
   /** The exit: through the fog gate to the level below. */
   level_exit: [layer(WORLD.fogGate)],
+  /** A barrel, crate, coffin or sack opened and rummaged through. */
+  search: [layer(WORLD.chest, 0.5, 1.25), layer(KNIGHT.roll, 0.7, 0.85, 120)],
   /** The party rests by a kindled fire. */
   rest: [layer(WORLD.kindle, 1)],
   coin: [layer(file('/sound/Small Coin.wav'))],

@@ -247,9 +247,6 @@ export type Entity = {
   attackTime?: number;
   freezeTime?: number;
   bounceWallTime?: number;
-  regenInterval?: number;
-  regenAmount?: number;
-  regenTimer?: number;
   deathPoints?: number;
 
   // --- movement ---

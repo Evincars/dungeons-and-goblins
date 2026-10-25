@@ -678,14 +678,11 @@ test('an opened chest pays its coins straight to the opener and throws out a wea
   assert.equal(LOOT_KINDS[gem.loot.kind].sheet, 'pickup_gem_ruby_12', 'an exact 200 is a ruby');
 });
 
-test('a kill pays a few coins (a gem now and then) to whoever struck last, and nobody carries more than 100 kg', () => {
-  let gems = 0;
-  for (let i = 0; i < 200; i++) {
-    const reward = killReward(200);
-    assert.ok(reward >= 40, `${reward} coins`);
-    if (reward > 40) gems++;
-  }
-  assert.ok(gems < 20, `${gems} gems in 200 kills`);
+test('a kill pays 3d20 gold to whoever struck last, and nobody carries more than 100 kg', () => {
+  assert.equal(killReward(), 57, 'the loaded dice roll 19 on each d20');
+  useDieRoller(() => 1);
+  assert.equal(killReward(), 3, 'and at the least 3');
+  useDieRoller(SURE_HIT);
   world.clear();
   const level = arena(10, 6);
   const killer = playerAt(2, 2);
@@ -2192,18 +2189,33 @@ test('a rare find in co-op is rolled for: Need rolls a d20, ties roll again, the
   assert.ok(sent.entities.length < withRoll.entities.length);
 });
 
-test('some floor props hide a few coins: E (in reach) finds them, once', () => {
+test('barrels, crates, coffins, urns and sacks can be searched: E (in reach) opens one, once; most are empty', async () => {
+  const { isOpenable } = await load('entities/DungeonFactory');
+  const { stashCoins } = await load('entities/LootFactory');
+  for (const kind of ['barrel', 'crate', 'coffin', 'sarcophagus', 'urn', 'sack', 'supplies_jar']) assert.ok(isOpenable(kind), kind);
+  for (const kind of ['banner_red', 'bowl_apples', 'urn_broken', 'coffin_open', 'shelf_goods', 'cauldron']) assert.equal(isOpenable(kind), false, kind);
+  assert.equal(createStash({ kind: 'banner_red', tx: 3, ty: 3 }), null, 'a banner holds nothing to find');
+  const finds = Array.from({ length: 2000 }, () => stashCoins());
+  const empty = finds.filter((c) => c === 0).length;
+  assert.ok(empty > 1100 && empty < 1500, `${empty} of 2000 empty`);
+  assert.ok(finds.every((c) => c >= 0 && c <= 40), 'at most 2d20');
   const finder = playerAt(3, 3);
-  let stash = null;
-  for (let i = 0; i < 50 && !stash; i++) stash = createStash({ kind: 'urn', tx: 3, ty: 3 });
-  assert.ok(stash, 'an urn may hide coins');
-  assert.equal(createStash({ kind: 'banner_red', tx: 3, ty: 3 }), null, 'a banner never does');
+  const full = createStash({ kind: 'barrel', tx: 3, ty: 3 });
+  full.stash.coins = 12;
   const before = finder.playerStats.gold;
   finder.playerInput.intents.use = true;
   beginPerception();
   updateStashes();
-  assert.equal(finder.playerStats.gold, before + stash.stash.coins);
-  assert.ok(stash.removed);
+  assert.equal(finder.playerStats.gold, before + 12);
+  assert.ok(full.removed);
+  const bare = createStash({ kind: 'crate', tx: 3, ty: 3 });
+  bare.stash.coins = 0;
+  finder.playerInput.intents.use = true;
+  beginPerception();
+  updateStashes();
+  assert.ok(bare.removed, 'searched');
+  assert.equal(finder.playerStats.gold, before + 12, 'nothing in it');
+  assert.equal(finder.rollLog.at(-1).text, 'Empty');
 });
 
 test('the inventory sends an item to another player, into their bag', () => {
@@ -2344,4 +2356,46 @@ test('sounds: a troll is heard walking; smaller enemies are not', () => {
   });
   assert.ok(heard.includes('troll_step'));
   assert.equal(heard.filter((name) => name !== 'troll_step').length, 0);
+});
+
+test('music: an enemy that keeps the hero in sight but never comes to blows is a stand-off, and exploring comes back', () => {
+  const level = arena(12, 6);
+  playerAt(3, 3);
+  resetMusic();
+  const troll = mobAt(level, 'troll', 7, 3);
+  troll.ai.state = 'engage';
+  beginPerception();
+  for (let t = 0; t < 30; t++) updateMusic();
+  assert.equal(music.track, 'boss', 'it comes for the hero');
+  for (let t = 0; t < 30 * 40; t++) updateMusic();
+  assert.equal(music.track, 'explore', 'no blow in a long while: back to exploring, though it still stares');
+  troll.attackTime = 20;
+  for (let t = 0; t < 30; t++) updateMusic();
+  assert.equal(music.track, 'boss', 'it swings again: the fight is back');
+});
+
+test('wounds never close on their own: no regeneration, a new level is no heal, and neither is the next one', async () => {
+  const { updateCombatTimers } = await load('systems/CombatSystem');
+  const { grantExperience } = await load('systems/DeathSystem');
+  startRun();
+  const hero = playerAt(2, 2);
+  const level = arena(10, 6);
+  const goblin = mobAt(level, 'goblin', 6, 2);
+  hero.health.current = hero.health.max - 10;
+  goblin.health.current = goblin.health.max - 3;
+  for (let t = 0; t < 3000; t++) updateCombatTimers();
+  assert.equal(hero.health.current, hero.health.max - 10, 'the hero stays wounded');
+  assert.equal(goblin.health.current, goblin.health.max - 3, 'and so does the goblin');
+  const max = hero.health.max;
+  grantExperience(hero, 300);
+  assert.equal(hero.playerStats.level, 2);
+  assert.equal(hero.health.max - max, hero.health.current - (max - 10), 'a new level adds its hit points, nothing more');
+  assert.ok(hero.health.current < hero.health.max);
+  const wounded = hero.health.current;
+  descend();
+  world.clear();
+  const below = playerAt(2, 2);
+  restorePlayer(below);
+  assert.equal(below.health.current, wounded, 'the wounds come down to the next level');
+  startRun();
 });

@@ -2,6 +2,8 @@ import { world } from '../world';
 import type { Entity, InventoryItem } from '../world';
 import { itemIcon } from './Items';
 import type { SfxName } from '../audio/SoundPlayer';
+import { dice, rollDice } from '../rules/Dice';
+import type { Dice } from '../rules/Dice';
 
 /**
  * Coins and gems, ported from Catacomb Snatch Redux: its nine pickups, how a drop rolls which one it is,
@@ -99,24 +101,32 @@ function createLootOfKind(x: number, y: number, velX: number, velY: number, kind
   });
 }
 
-/**
- * What a kill pays its killer (straight into the purse): coins worth this share of its death points, and only
- * now and then a gem on top; a diamond is a rare find even among those.
- */
-const KILL_COIN_SHARE = 0.2;
-const KILL_GEM_CHANCE = 0.03;
-const DIAMOND_SHARE = 0.12;
-/** Indexes into LOOT_KINDS: the gems. */
-const EMERALD = 6;
-const RUBY = 7;
-const DIAMOND = 8;
+/** What a kill pays its killer, straight into the purse (before their Charisma's share): not much, but not a few. */
+const KILL_GOLD = dice(3, 20);
 
-/** The coins (and now and then a gem's worth) a kill worth `value` pays. */
-export function killReward(value: number): number {
-  const coins = Math.max(1, Math.round(value * KILL_COIN_SHARE));
-  if (Math.random() >= KILL_GEM_CHANCE) return coins;
-  const gem = Math.random() < DIAMOND_SHARE ? DIAMOND : Math.random() < 0.5 ? EMERALD : RUBY;
-  return coins + LOOT_KINDS[gem].value;
+/** The gold a kill pays. */
+export function killReward(): number {
+  return rollDice(KILL_GOLD);
+}
+
+/**
+ * What searching a barrel, crate, coffin or sack turns up, checked from the rarest: now and then a little hoard
+ * (2d20), a purse (1d20), more often a few coins (1d6); whatever is left over holds nothing.
+ */
+const STASH_FINDS: ReadonlyArray<{ chance: number; coins: Dice }> = [
+  { chance: 0.03, coins: dice(2, 20) },
+  { chance: 0.07, coins: dice(1, 20) },
+  { chance: 0.25, coins: dice(1, 6) },
+];
+
+/** The coins one openable prop holds (0: it is empty). */
+export function stashCoins(): number {
+  let roll = Math.random();
+  for (const find of STASH_FINDS) {
+    if (roll < find.chance) return rollDice(find.coins);
+    roll -= find.chance;
+  }
+  return 0;
 }
 
 /** Most pieces a sum of money spills as. */

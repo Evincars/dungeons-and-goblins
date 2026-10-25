@@ -10,8 +10,6 @@ import { MONSTERS, randomMonsterWeapon } from '../rules/Monsters';
 
 /** Gap between the top of the head and the health bar. */
 const HEALTH_BAR_GAP = 6;
-/** Mobs regain one hit point this often while unhurt. */
-const MOB_REGEN_TICKS = 300;
 const MOB_FRICTION = 0.2;
 /** The largest body of any mob, for proximity queries that must catch every one. */
 export const MAX_MOB_RADIUS = 16;
@@ -117,9 +115,6 @@ export function createMob(_level: Level, type: MobType, x: number, y: number): E
     hurtTime: 0,
     freezeTime: 0,
     bounceWallTime: 0,
-    regenInterval: MOB_REGEN_TICKS,
-    regenAmount: 1,
-    regenTimer: MOB_REGEN_TICKS,
     deathPoints: cfg.deathPoints,
     mobWeapon: randomMonsterWeapon(type),
     speed: cfg.speed,

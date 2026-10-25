@@ -15,7 +15,6 @@ import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 /** A mob that takes a hit flinches (can't act) for this long, and shows hurt for this long. */
 const MOB_FREEZE_TICKS = 6;
 const MOB_HURT_TICKS = 40;
-const DEFAULT_REGEN_TICKS = 180;
 
 type Swing = NonNullable<Entity['swordSwing']>;
 
@@ -38,7 +37,6 @@ export function hitMob(mob: Entity, attacker: Entity, damage: number, evenIfFlin
   mob.hurtTime = MOB_HURT_TICKS;
   mob.attackTime = 0;
   mob.freezeTime = MOB_FREEZE_TICKS;
-  mob.regenTimer = mob.regenInterval ?? DEFAULT_REGEN_TICKS;
   h.current = Math.max(0, h.current - damage);
 
   const ap = attacker.position;

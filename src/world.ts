@@ -519,7 +519,11 @@ export type Entity = {
     closingTicks: number | null;
   };
   /** A portcullis over a doorway tile: how far it has risen (0 down, 1 gone). */
-  gate?: { lift: number };
+  /**
+   * A portcullis over a doorway tile: `lift` from 0 (down, barring the way) to 1 (risen out of sight); `dropping`
+   * while it falls back down onto the doorway as the safe room is shut.
+   */
+  gate?: { lift: number; dropping?: boolean };
   /**
    * The lever by the safe room's door: pulled opens the way into the dungeon (in co-op once everyone agrees).
    * `rest`: ticks before it can be pulled again after the others turned it down.

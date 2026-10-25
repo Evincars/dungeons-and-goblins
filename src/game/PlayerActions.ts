@@ -11,7 +11,7 @@ import { fitsSlot, statTotals } from '../entities/Items';
 import { isEquipSlot } from '../world';
 import { BASE_SPRINT } from '../entities/PlayerFactory';
 import { queueRestRequest, spendHitDice } from './Rest';
-import { createItemPickup } from '../entities/LootFactory';
+import { setDownItem } from '../entities/LootFactory';
 import type { TextId } from '../core/texts';
 import { queueAnswer } from './Party';
 import { chooseLoot } from './LootRoll';
@@ -92,7 +92,7 @@ export function receiveItem(player: Player, item: InventoryItem): boolean {
   return true;
 }
 
-/** The inventory's "Drop": the item leaves the bag (or the body) and lies at the hero's feet, to be taken again with E. */
+/** The inventory's "Drop": the item leaves the bag (or the body) and is set down at the hero's feet, to be taken again with E. */
 export function dropItem(player: Player, from: ItemPlace): boolean {
   const loadout: Loadout = { inventory: [...(player.inventory ?? [])], equipped: { ...player.equipped } };
   const item = itemAt(loadout, from);
@@ -100,7 +100,7 @@ export function dropItem(player: Player, from: ItemPlace): boolean {
   if ('bag' in from) loadout.inventory[from.bag] = null;
   else delete loadout.equipped[from.slot];
   applyLoadout(player, { inventory: trimmed(loadout.inventory), equipped: loadout.equipped });
-  createItemPickup(player.position.x, player.position.y, item);
+  setDownItem(player.position.x, player.position.y, item);
   return true;
 }
 

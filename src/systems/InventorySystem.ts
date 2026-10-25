@@ -1,4 +1,6 @@
 import { world } from '../world';
+import type { Level } from '../level/Level';
+import { layDownItems } from '../entities/LootFactory';
 import { receiveItem } from '../game/PlayerActions';
 import { playerUsing } from './TargetSystem';
 
@@ -37,8 +39,9 @@ export function updateInventoryToggle(): Carrier | undefined {
   return undefined;
 }
 
-export function updateInventory(): void {
+export function updateInventory(level?: Level): void {
   updateInventoryToggle();
+  layDownItems(level);
   takeItems();
 }
 

@@ -31,6 +31,8 @@ const { updateTrails } = await load('systems/TrailSystem');
 const { updateContactDamage } = await load('systems/CombatSystem');
 const { updateSword } = await load('systems/SwordSystem');
 const { resolveUses } = await load('systems/TargetSystem');
+/** The inventory's Drop, for a hero with nothing to take it from: the item is put down at their feet. */
+const setDown = (hero, item) => hero.inventory.push(structuredClone(item)) && PlayerActions.dropItem(hero, { bag: hero.inventory.length - 1 });
 const { attempt, ensure, ValidationError } = await load('core/errors/index');
 const { invitePeer, inviteLink, validInput, validCommand, validRoster, validStart } = await load('network/protocol');
 const { captureWorld, validateNetState, WorldReplica } = await load('network/WorldSync');
@@ -686,6 +688,7 @@ test('an opened chest pays its coins and hands its weapon or armour straight to 
   assert.ok(['weapon', 'offhand', 'armor'].includes(found.gear), 'the gear is in the bag');
   assert.ok(player.rollLog.some((l) => l.text === `You've received ${found.name}`));
   assert.ok(PlayerActions.dropItem(player, { bag: 0 }));
+  updateInventory();
   const [lying] = world.entities.filter((e) => e.item);
   assert.ok(lying && !player.inventory.some(Boolean), 'dropped at the hero\'s feet');
   player.position.x = lying.position.x;
@@ -2444,4 +2447,52 @@ test('the big glowing crystals are left out of the dungeon for now', () => {
     const { props } = new DungeonBuilder({ ...DEFAULT_CONFIG, seed }).build();
     assert.equal(props.filter((p) => p.kind.startsWith('gem_crystal')).length, 0, `seed ${seed}`);
   }
+});
+
+test('dropped items spread round the hero, one per spot and never into a wall; picking one up leaves the brackets on nothing', async () => {
+  const { focusedEntity } = await load('systems/TargetSystem');
+  const level = arena(12, 12);
+  wallRect(level, 8, 1, 8, 10);
+  const hero = playerAt(7, 5);
+  const sword = { type: 'weapon', name: 'Sword', value: 1, gear: 'weapon', base: 'longsword', weight: 1 };
+  for (let i = 0; i < 40; i++) setDown(hero, sword);
+  updateInventory(level);
+  const lying = world.entities.filter((e) => e.item);
+  assert.equal(lying.length, 40);
+  for (const a of lying) {
+    assert.ok(level.canPass(a.position.x, a.position.y), 'on the floor, not in the wall');
+    const crowd = lying.filter((b) => b !== a && Math.hypot(a.position.x - b.position.x, a.position.y - b.position.y) < 11);
+    assert.equal(crowd.length, 0, 'each on a spot of its own');
+  }
+  hero.inventory = [];
+  hero.playerInput.intents.use = true;
+  beginPerception();
+  resolveUses();
+  updateInventory(level);
+  assert.equal(world.entities.filter((e) => e.item && !e.removed).length, 39, 'E takes one');
+  assert.equal(focusedEntity(), null, 'the brackets let go of what was taken');
+});
+
+test('the safe room shuts behind the party with its portcullis dropping back down, not a wall', async () => {
+  const { updateLevers } = await load('systems/LeverSystem');
+  const { updateDoors } = await load('systems/DoorSystem');
+  const { level, layout } = buildDungeon(777, true);
+  const door = world.entities.find((e) => e.door);
+  const lever = world.entities.find((e) => e.lever);
+  const hero = createPlayer(lever.position.x + 6, lever.position.y);
+  hero.playerInput.intents.use = true;
+  beginPerception();
+  resolveUses();
+  updateLevers(level);
+  hero.playerInput.intents.use = false;
+  for (let t = 0; t < 60; t++) updateDoors(level);
+  hero.position.x = door.door.boundaryX + 40;
+  updateDoors(level);
+  assert.equal(door.door.closed, true);
+  for (const t of layout.safeDoor.tiles) assert.equal(level.getTile(t.x, t.y).type, TileType.Obstacle, 'barred, drawn as floor');
+  const gates = world.entities.filter((e) => e.gate && !e.removed);
+  assert.equal(gates.length, layout.safeDoor.tiles.length, 'a portcullis on every doorway tile');
+  assert.ok(gates.every((g) => g.gate.dropping && g.gate.lift === 1), 'up in the wall, about to drop');
+  for (let t = 0; t < 30; t++) updateDoors(level);
+  assert.ok(gates.every((g) => g.gate.lift === 0 && !g.gate.dropping && !g.removed), 'down and staying down');
 });

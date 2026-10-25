@@ -3,6 +3,8 @@ import type { Entity, InventoryItem } from '../world';
 import { itemIcon } from './Items';
 import type { SfxName } from '../audio/SoundPlayer';
 import { dice, rollDice } from '../rules/Dice';
+import { nearby, Sense } from '../ai/perception/spatial';
+import type { Level } from '../level/Level';
 import type { Dice } from '../rules/Dice';
 
 /**
@@ -145,17 +147,74 @@ export function spillMoney(x: number, y: number, total: number, maxPieces = MAX_
 /** Things lying on the floor are drawn this big (their longer side), a little above the ground. */
 const ITEM_FIT = 18;
 const ITEM_LIFT = 8;
-/** How far from where it fell out a thing may land. */
-const ITEM_SCATTER = 14;
+/**
+ * Things set down in one place keep this far apart, so each can be seen and picked: on rings round the spot,
+ * nearest first (127 spots on six rings). Past the last ring they pile up.
+ */
+const ITEM_SPACING = 12;
+const ITEM_RINGS = 6;
 
-/** A weapon, shield or suit of armour lying on the floor, picked up by walking over it. */
-export function createItemPickup(x: number, y: number, item: InventoryItem): Entity {
-  const angle = Math.random() * Math.PI * 2;
+/** Where the floor can hold something (the level's passable ground); anywhere, when there is no level to ask. */
+type Floor = Pick<Level, 'canPass'>;
+
+/** The spots round a point, nearest first (worked out once): the point, then 6, 12, 18… on each ring out. */
+function ringSpots(): Array<{ x: number; y: number }> {
+  const spots = [{ x: 0, y: 0 }];
+  for (let ring = 1; ring <= ITEM_RINGS; ring++) {
+    const count = 6 * ring;
+    // Every other ring is turned half a step, so the rings interleave.
+    for (let k = 0; k < count; k++) {
+      const angle = ((k + (ring % 2) / 2) / count) * Math.PI * 2;
+      spots.push({ x: Math.cos(angle) * ring * ITEM_SPACING, y: Math.sin(angle) * ring * ITEM_SPACING });
+    }
+  }
+  return spots;
+}
+const SPOTS = ringSpots();
+const neighbours: Entity[] = [];
+const spot = { x: 0, y: 0 };
+
+/** The nearest free spot to (x, y) on solid floor, with no other thing lying within ITEM_SPACING of it (in `spot`). */
+function freeSpot(x: number, y: number, floor: Floor | undefined): { x: number; y: number } {
+  for (const offset of SPOTS) {
+    const sx = x + offset.x;
+    const sy = y + offset.y;
+    if (floor && !floor.canPass(sx, sy)) continue;
+    if (nearby(sx, sy, ITEM_SPACING - 1, Sense.item, neighbours).length > 0) continue;
+    spot.x = sx;
+    spot.y = sy;
+    return spot;
+  }
+  spot.x = x;
+  spot.y = y;
+  return spot;
+}
+
+/**
+ * A weapon, shield or suit of armour lying on the floor (taken with E), at the free spot nearest (x, y): many set
+ * down in one place spread round it instead of hiding one another.
+ */
+export function createItemPickup(x: number, y: number, item: InventoryItem, floor?: Floor): Entity {
+  const at = freeSpot(x, y, floor);
   return world.add({
-    position: { x: x + Math.cos(angle) * ITEM_SCATTER, y: y + Math.sin(angle) * ITEM_SCATTER },
+    position: { x: at.x, y: at.y },
     item: structuredClone(item),
     visual: { sheet: itemIcon(item), fit: ITEM_FIT },
     yOffset: ITEM_LIFT,
   });
+}
+
+/** Items heroes have put down (the inventory's Drop), waiting for the next tick to be laid where the floor has room. */
+const toSetDown: Array<{ x: number; y: number; item: InventoryItem }> = [];
+
+/** A hero puts an item down at (x, y): it is on the floor from the next tick. */
+export function setDownItem(x: number, y: number, item: InventoryItem): void {
+  toSetDown.push({ x, y, item });
+}
+
+/** Host, each tick: the items put down since the last are laid on the floor, off the walls. */
+export function layDownItems(floor: Floor | undefined): void {
+  for (const { x, y, item } of toSetDown) createItemPickup(x, y, item, floor);
+  toSetDown.length = 0;
 }
 

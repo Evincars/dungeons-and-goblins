@@ -40,7 +40,7 @@ function draw(g: Graphics, halfW: number, halfH: number): void {
 
 /** Half the size of what is drawn of an entity: its sprite, or (a stash, which has none of its own) its body. */
 function halfSize(e: Entity): { w: number; h: number } {
-  if (e.sprite) return { w: e.sprite.width / 2, h: e.sprite.height / 2 };
+  if (e.sprite && !e.sprite.destroyed) return { w: e.sprite.width / 2, h: e.sprite.height / 2 };
   return { w: e.radius?.x ?? ARM, h: e.yOffset ?? e.radius?.y ?? ARM };
 }
 

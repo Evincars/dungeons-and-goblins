@@ -13,7 +13,8 @@ import { sound } from '../audio/SoundPlayer';
 import { music } from '../audio/MusicPlayer';
 import { ambience } from '../audio/AmbiencePlayer';
 import { MENU_SOUNDS, SFX_NAMES } from '../audio/SoundBank';
-import { reportRejection } from '../core/errors';
+import { attempt, report, reportRejection } from '../core/errors';
+import type { GameError } from '../core/errors';
 import { hideLoadingScreen, loadingPart } from '../ui/LoadingScreen';
 import { settings } from './Settings';
 import { exposeForDebugging } from '../core/debugHooks';
@@ -36,6 +37,8 @@ export class Game {
   private readonly app = new Application();
   private manager!: SceneManager;
   private tickDebt = 0;
+  /** The failures of a game step already reported (one that repeats every tick is logged once). */
+  private readonly failures = new Set<string>();
 
   async init(canvas: HTMLCanvasElement): Promise<void> {
     await this.app.init({
@@ -88,12 +91,23 @@ export class Game {
     canvas.style.height = `${Math.floor(GAME_HEIGHT * scale)}px`;
   }
 
-  /** Runs fixed 60Hz steps, so 144Hz displays don't play faster than 60Hz ones. */
+  /**
+   * Runs fixed 60Hz steps, so 144Hz displays don't play faster than 60Hz ones. A step that throws is reported
+   * (once per kind of failure) and the game goes on: an error escaping here would stop the ticker for good, and
+   * the game with it.
+   */
   private tick(): void {
     this.tickDebt = Math.min(this.tickDebt + this.app.ticker.deltaMS, TICK_MS * MAX_CATCH_UP_TICKS);
     while (this.tickDebt >= TICK_MS - TICK_SLACK_MS) {
       this.tickDebt -= TICK_MS;
-      this.manager.update();
+      const stepped = attempt(() => this.manager.update());
+      if (!stepped.ok) this.reportFailedStep(stepped.error);
     }
+  }
+
+  private reportFailedStep(error: GameError): void {
+    if (this.failures.has(error.message)) return;
+    this.failures.add(error.message);
+    report(error, 'A game step failed; the game goes on', 'game');
   }
 }

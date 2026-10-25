@@ -128,7 +128,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - **Flyweight / data-driven config** — shared immutable stats (`SWORD_STATS`, `MOB_CONFIGS`, `PROPS`,
   `CharacterDef`s) referenced by many entities.
 - **Object pool** — reuse hot-path objects (`BoxPool`, the darkness and light sprite pools, scratch vectors).
-- **Spatial partitioning** — rbush R-tree rebuilt once per tick for senses and proximity checks.
+- **Spatial partitioning** — rbush R-trees for senses and proximity checks: what moves is indexed afresh every
+  tick; what stays put (floor items, things to use, nests, torches) has its own tree, rebuilt only when one comes or goes.
 - **Fixed-timestep game loop** — simulation advances in whole ticks; presentation runs once per frame;
   animation is driven by ticks, never by Pixi's shared ticker, so pause and co-op stay in sync.
 - **Command** — input becomes data (`playerInput`, one-shot `intents`) that systems consume; the same

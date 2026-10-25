@@ -73,14 +73,20 @@ export function createSafeDoor(door: DoorData, level: Level): Entity {
 
 /** The portcullis is drawn this far up from the foot of its tile: it reaches a little above the doorway. */
 export const GATE_LIFT = 20;
+/** Raised all the way, a portcullis stands this much higher (up in the wall above the doorway). */
+export const GATE_RISE = 34;
 
-/** A portcullis over one doorway tile, standing on the tile's foot so whoever is in front of it draws over it. */
-function createGate(tx: number, ty: number): Entity {
+/**
+ * A portcullis over one doorway tile, standing on the tile's foot so whoever is in front of it draws over it:
+ * down (the locked door), or — `dropping` — raised, about to fall back down and bar the way again.
+ */
+export function createGate(tx: number, ty: number, dropping = false): Entity {
+  const lift = dropping ? 1 : 0;
   return world.add({
     position: { x: tx * TILE_WIDTH + TILE_WIDTH / 2, y: (ty + 1) * TILE_HEIGHT - 1 },
     visual: { sheet: 'portcullis' },
-    yOffset: GATE_LIFT,
-    gate: { lift: 0 },
+    yOffset: GATE_LIFT + lift * GATE_RISE,
+    gate: dropping ? { lift, dropping } : { lift },
   });
 }
 

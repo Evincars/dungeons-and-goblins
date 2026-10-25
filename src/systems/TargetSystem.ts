@@ -47,9 +47,12 @@ function isInteractable(e: Entity): boolean {
   return closed || !!e.shopNpc || !!e.stash || !!e.item;
 }
 
-/** The thing this screen's player would use this tick, for the corner brackets (null when there is nothing in reach). */
+/**
+ * The thing this screen's player would use this tick, for the corner brackets (null when there is nothing in
+ * reach) — never one used up and taken away since the targeting chose it (an item picked up this tick).
+ */
 export function focusedEntity(): Entity | null {
-  return focus;
+  return focus && !focus.removed && world.id(focus) !== undefined ? focus : null;
 }
 
 /** The living player who pressed "use" (E) on this thing this tick, if any (each press uses one thing). */

@@ -4,13 +4,14 @@ import { text } from '../core/texts';
 import { logLine } from './RollLogSystem';
 import { createTile, TileType, TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
 import { sound } from '../audio/SoundPlayer';
-import { GATE_LIFT } from '../entities/DungeonFactory';
+import { createGate, GATE_LIFT, GATE_RISE } from '../entities/DungeonFactory';
 
 /** Once sealed, players respawn this many tiles past the door, on the dungeon side. */
 const RESPAWN_TILES_PAST_DOOR = 2;
-/** A raised portcullis takes this many ticks to slide up out of sight, rising this far. */
+/** A raised portcullis takes this many ticks to slide up out of sight… */
 const GATE_RISE_TICKS = 45;
-const GATE_RISE = 34;
+/** …and one falling back down to shut the safe room this many, as a portcullis drops. */
+const GATE_DROP_TICKS = 18;
 /** Once open, the gate shuts on the safe room after this long (10 s): whoever is still inside dies. */
 export const GATE_CLOSE_TICKS = 600;
 const TICKS_PER_SECOND = 60;
@@ -30,17 +31,22 @@ function everyoneLeft(boundaryX: number): boolean {
   return anyone;
 }
 
-/** Walls the doorway up (once: the dirty flag rebuilds the terrain only when a tile really changes). */
-function wallUp(level: Level, door: Door): void {
+/**
+ * Bars the doorway again, as it was before the lever: solid, drawn as floor, under its portcullis (once: the
+ * dirty flag rebuilds the terrain only when a tile really changes).
+ */
+function barUp(level: Level, door: Door): void {
   for (const t of door.door.tiles) {
-    if (level.getTile(t.x, t.y)?.type !== TileType.Wall) level.setTile(t.x, t.y, createTile(TileType.Wall, 0));
+    if (level.getTile(t.x, t.y)?.type !== TileType.Obstacle) level.setTile(t.x, t.y, createTile(TileType.Obstacle, 0));
   }
 }
 
+/** The safe room is shut behind the party: the doorway is barred, and its portcullis drops back down over it. */
 function seal(level: Level, door: Door): void {
   const d = door.door;
   d.closingTicks = null;
-  wallUp(level, door);
+  barUp(level, door);
+  for (const t of d.tiles) createGate(t.x, t.y, true);
   // The safe room is now unreachable, so respawn just past the door instead.
   const mid = d.tiles[Math.floor(d.tiles.length / 2)];
   level.setSpawnPoint((mid.x + RESPAWN_TILES_PAST_DOOR) * TILE_WIDTH + TILE_WIDTH / 2, mid.y * TILE_HEIGHT + TILE_HEIGHT / 2);
@@ -67,25 +73,42 @@ export function unlockDoors(level: Level): void {
   for (const gate of gates) if (gate.gate.lift === 0) gate.gate.lift = 1 / GATE_RISE_TICKS;
 }
 
-/** Rising portcullises slide up and fade; risen ones are gone. */
-function raiseGates(): void {
+type Gate = (typeof gates)['entities'][number];
+
+/** A rising portcullis slides up into the wall and fades; risen, it is gone. */
+function raiseGate(gate: Gate): void {
+  const g = gate.gate;
+  g.lift = Math.min(1, g.lift + 1 / GATE_RISE_TICKS);
+  gate.yOffset = GATE_LIFT + g.lift * GATE_RISE;
+  if (gate.sprite) gate.sprite.alpha = 1 - g.lift;
+  if (g.lift >= 1) world.addComponent(gate, 'removed', true);
+}
+
+/** A dropping portcullis slams down out of the wall onto the doorway, and stays there. */
+function dropGate(gate: Gate): void {
+  const g = gate.gate;
+  g.lift = Math.max(0, g.lift - 1 / GATE_DROP_TICKS);
+  gate.yOffset = GATE_LIFT + g.lift * GATE_RISE;
+  if (g.lift === 0) g.dropping = false;
+}
+
+/** Portcullises on the move: rising out of the way, or dropping back down. */
+function moveGates(): void {
   for (const gate of gates) {
-    const g = gate.gate;
-    if (g.lift <= 0 || gate.removed) continue;
-    g.lift = Math.min(1, g.lift + 1 / GATE_RISE_TICKS);
-    gate.yOffset = GATE_LIFT + g.lift * GATE_RISE;
-    if (gate.sprite) gate.sprite.alpha = 1 - g.lift;
-    if (g.lift >= 1) world.addComponent(gate, 'removed', true);
+    if (gate.removed) continue;
+    if (gate.gate.dropping) dropGate(gate);
+    else if (gate.gate.lift > 0) raiseGate(gate);
   }
 }
 
-/** Co-op guest: this copy of the terrain follows the host's door — barred, open, or walled up behind the party. */
+/** Co-op guest: this copy of the terrain follows the host's door — barred, open, or barred again behind the party. */
 export function mirrorSealedDoors(level: Level): void {
   for (const door of doors) {
-    if (door.door.closed) wallUp(level, door);
+    if (door.door.closed) barUp(level, door);
     else if (!door.door.locked) clearWay(level, door);
   }
-  for (const gate of gates) if (gate.sprite) gate.sprite.alpha = 1 - gate.gate.lift;
+  // A rising portcullis fades as it goes; a dropping one is solid all the way down.
+  for (const gate of gates) if (gate.sprite) gate.sprite.alpha = gate.gate.dropping ? 1 : 1 - gate.gate.lift;
 }
 
 /** The gate shut on whoever stayed in the safe room: they die there (unless the console made them a god). */
@@ -111,7 +134,7 @@ export function gateCountdown(): number | null {
  * or when its ten seconds are up, on whoever is still inside.
  */
 export function updateDoors(level: Level): void {
-  raiseGates();
+  moveGates();
   for (const door of doors) {
     const d = door.door;
     if (d.closed || d.locked) continue;

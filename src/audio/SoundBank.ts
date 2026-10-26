@@ -284,6 +284,7 @@ export const SPELL_SOUNDS = {
 export const SPELL_IMPACTS = {
   fire: 'impact_fire',
   acid: 'impact_fire',
+  poison: 'impact_dark',
   cold: 'impact_frost',
   necrotic: 'impact_dark',
   psychic: 'impact_dark',

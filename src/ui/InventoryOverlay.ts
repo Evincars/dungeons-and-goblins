@@ -1,5 +1,5 @@
 import { Container, Graphics, Rectangle, Sprite } from 'pixi.js';
-import type { FederatedPointerEvent } from 'pixi.js';
+import type { FederatedPointerEvent, FederatedWheelEvent } from 'pixi.js';
 import { EQUIP_SLOTS, localPlayer, q } from '../world';
 import type { BagSquare, EquipSlot, InventoryItem, Player } from '../world';
 import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
@@ -11,6 +11,7 @@ import type { TipTopic } from './InfoTooltip';
 import { SheetField } from './SheetField';
 import { armorClassTopic, armorTrainingTopic, damageTopic, hitPointsTopic, statTopic, weaponTrainingTopic } from './SheetTopics';
 import { ProficiencyPanel } from './ProficiencyPanel';
+import { SpellsPanel } from './SpellsPanel';
 import { ABILITY_CELL_H, AbilityGrid } from './AbilityGrid';
 import { SheetInfoPanel } from './SheetInfoPanel';
 import { text } from '../core/texts';
@@ -34,6 +35,9 @@ const BAG_AREA = { x: 78, y: 284, w: 1108, h: 1174 };
 const GEAR_AREA = { x: 1404, y: 320, w: 1264, h: 1138 };
 const TABS = [{ x: 1331, y: 5, w: 378, h: 210 }, { x: 1765, y: 5, w: 378, h: 210 }];
 const TAB_TITLES = [text('inventory.tab_gear'), text('inventory.tab_stats')];
+/** The tabs, in order: the character (equipment and sheet) and the skills (spells). */
+const CHARACTER_TAB = 0;
+const SKILLS_TAB = 1;
 /** The part of a tab inside its iron frame (art pixels in from its edges), which lights up. */
 const TAB_INSET = { side: 44, top: 70, bottom: 6 };
 /** A tab under the pointer brightens; the open one brightens more and is underlined; the others are dimmed. */
@@ -125,10 +129,10 @@ function samePlace(a: ItemPlace, b: ItemPlace): boolean {
 
 
 /**
- * Tab opens it: the bag as a grid of squares on the left; on the right two tabs, Gear (the equipment slots,
+ * Tab opens it: the bag as a grid of squares on the left; on the right two tabs, Character (the equipment slots,
  * each a square of the same kind, the six ability scores and modifiers, and the Armor Class, hit points and
- * weapon damage the rules make of them) and Stats (to come). Items are dragged between squares, and every
- * value is worked out again whenever the gear changes.
+ * weapon damage the rules make of them) and Skills (the spells the hero has learnt, to bind to the quick bar).
+ * Items are dragged between squares, and every value is worked out again whenever the gear changes.
  */
 export class InventoryOverlay {
   readonly container = new Container();
@@ -138,6 +142,7 @@ export class InventoryOverlay {
   private info: SheetInfoPanel | null = null;
   private readonly fields: Field[] = [];
   private proficiencies: ProficiencyPanel | null = null;
+  private spells: SpellsPanel | null = null;
   /** What the rules make of the player's gear, as last drawn (for the tooltips). */
   private sheet: CharacterSheet | null = null;
   private readonly infoTip = new InfoTooltip();
@@ -186,12 +191,14 @@ export class InventoryOverlay {
       this.endCompare();
       this.infoTip.hide();
       this.itemMenu.hide();
+      this.spells?.closeChoice();
     }
   }
 
   update(): void {
     const player = localPlayer();
     if (!this.container.visible || !player) return;
+    if (this.activeTab === SKILLS_TAB) this.spells?.animate();
     const inventory = player.inventory ?? [];
     const equipped = player.equipped ?? {};
     const contents = contentsMark(inventory, equipped);
@@ -224,12 +231,12 @@ export class InventoryOverlay {
     this.root.addChild(title, this.gold, this.weight);
     this.buildBag(designRect(BAG_AREA));
     const gearPage = new Container();
-    const statsPage = new Container();
-    this.root.addChild(gearPage, statsPage);
+    const skillsPage = new Container();
+    this.root.addChild(gearPage, skillsPage);
     this.buildGear(designRect(GEAR_AREA), gearPage);
-    this.buildStatsPage(designRect(GEAR_AREA), statsPage);
-    [gearPage, statsPage].forEach((page, i) => this.addTab(designRect(TABS[i]), TAB_TITLES[i], page));
-    this.showTab(0);
+    this.buildSkillsPage(designRect(GEAR_AREA), skillsPage);
+    [gearPage, skillsPage].forEach((page, i) => this.addTab(designRect(TABS[i]), TAB_TITLES[i], page));
+    this.showTab(CHARACTER_TAB);
     this.ghost.anchor.set(0.5);
     this.ghost.alpha = GHOST_ALPHA;
     this.ghost.visible = false;
@@ -269,6 +276,7 @@ export class InventoryOverlay {
   private showTab(index: number): void {
     this.activeTab = index;
     this.infoTip.hide();
+    this.spells?.closeChoice();
     this.tabs.forEach((tab, i) => {
       tab.page.visible = i === index;
       this.drawTab(tab);
@@ -361,11 +369,10 @@ export class InventoryOverlay {
     return ruleY + 1 + RULE_GAP;
   }
 
-  /** The Stats tab: nothing to show yet but a placeholder line. */
-  private buildStatsPage(area: Rect, page: Container): void {
-    const placeholder = new PixelLabel(text('inventory.stats_tab_placeholder'), { color: THEME.muted, shadow: true });
-    placeholder.position.set(Math.round(area.x + PAD * 2), Math.round(area.y + PAD * 2));
-    page.addChild(placeholder);
+  /** The Skills tab: the spells the hero has learnt, as boxes by spell level (rebuilt when the hero levels up). */
+  private buildSkillsPage(area: Rect, page: Container): void {
+    this.spells = new SpellsPanel(area);
+    page.addChild(this.spells.view);
   }
 
   /**
@@ -417,6 +424,7 @@ export class InventoryOverlay {
     for (const { field, def } of this.fields) field.set(def.value(sheet));
     this.info?.set(sheet);
     this.proficiencies?.set(sheet);
+    this.spells?.set(player);
     this.gold.text = text('inventory.gold', { amount: player.playerStats.gold });
     const kg = carriedWeight(player);
     this.weight.text = text('inventory.weight', { carried: kg.toFixed(1), max: MAX_CARRY_KG });
@@ -432,6 +440,13 @@ export class InventoryOverlay {
     this.root.on('globalpointermove', (e) => this.moveDrag(e));
     this.root.on('pointerup', (e) => this.drop(e));
     this.root.on('pointerupoutside', () => this.endDrag());
+    this.root.on('wheel', (e) => this.wheel(e));
+  }
+
+  /** The wheel scrolls the spell list while the Skills tab is open. */
+  private wheel(e: FederatedWheelEvent): void {
+    if (this.activeTab !== SKILLS_TAB) return;
+    this.spells?.scroll(e.deltaY);
   }
 
   /** The square under the pointer; `forDrop` also counts a gear slot's whole row. */
@@ -500,7 +515,7 @@ export class InventoryOverlay {
   private overGear(e: FederatedPointerEvent): boolean {
     const p = this.root.toLocal(e.global);
     const area = designRect(GEAR_AREA);
-    return this.activeTab === 0 && p.x >= area.x && p.x <= area.x + area.w && p.y >= area.y && p.y <= area.y + area.h;
+    return this.activeTab === CHARACTER_TAB && p.x >= area.x && p.x <= area.x + area.w && p.y >= area.y && p.y <= area.y + area.h;
   }
 
   /** A second press on the same square soon after the first: true when this one completes a double-click. */
@@ -527,6 +542,12 @@ export class InventoryOverlay {
     if (next) requestLoadout(player, next);
   }
 
+  /** A press on the Skills tab goes to the spell list (a spell, or one of its level boxes). */
+  private pressSkills(e: FederatedPointerEvent): boolean {
+    const p = this.root.toLocal(e.global);
+    return this.spells?.press(p.x, p.y) ?? false;
+  }
+
   private startDrag(e: FederatedPointerEvent): void {
     const player = localPlayer();
     // A press on the menu is for its rows; anywhere else closes it.
@@ -537,6 +558,7 @@ export class InventoryOverlay {
       this.openItemMenu(player, e);
       return;
     }
+    if (this.activeTab === SKILLS_TAB && this.pressSkills(e)) return;
     const square = this.squareAt(e);
     if (!player || !square || !this.itemIn(player, square.place)) return;
     if (this.doubleClicked(square.place, e)) {
@@ -557,6 +579,7 @@ export class InventoryOverlay {
     const player = localPlayer();
     const square = this.squareAt(e);
     if (this.comparing) return;
+    if (this.activeTab === SKILLS_TAB) this.spells?.hover(p.x, p.y);
     const item = player && square && !this.dragging && !this.itemMenu.open ? this.itemIn(player, square.place) : undefined;
     if (item) this.tooltip.show(item, p.x, p.y, { w: DESIGN_W, h: DESIGN_H }, this.sheet?.heroClass);
     else this.tooltip.hide();
@@ -565,7 +588,7 @@ export class InventoryOverlay {
 
   /** Over a stat or a sheet field on the Gear page (and nothing held): its full name, what it does and how it adds up. */
   private updateInfoTip(x: number, y: number): void {
-    const topic = this.activeTab === 0 && !this.dragging ? this.topicAt(x, y) : null;
+    const topic = this.dragging ? null : this.activeTab === SKILLS_TAB ? this.spells?.topicAt(x, y) ?? null : this.topicAt(x, y);
     if (topic) this.infoTip.show(topic, x, y, { w: DESIGN_W, h: DESIGN_H });
     else this.infoTip.hide();
   }

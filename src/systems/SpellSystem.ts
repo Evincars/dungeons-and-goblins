@@ -1,4 +1,4 @@
-import { world, q, isTarget } from '../world';
+import { world, q, isTarget, QUICK_SLOTS } from '../world';
 import type { Entity, Player, SpellEffect } from '../world';
 import type { Level } from '../level/Level';
 import { hitMob } from './SwordSystem';
@@ -7,13 +7,17 @@ import { logHeal, logLine, logSave, logSpellDamage } from './RollLogSystem';
 import { recordSpell } from './CombatLogSystem';
 import { characterSheet } from '../rules/CharacterSheet';
 import type { CharacterSheet } from '../rules/CharacterSheet';
-import { hasFeature, heroClass, spellLevelFor } from '../rules/Classes';
-import { SPELLS, TICKS_PER_SECOND } from '../rules/Spells';
+import { heroClass, spellLevelFor } from '../rules/Classes';
+import { bindingFeatureId, featureOn, featureOfClass, hasClassFeature } from '../rules/ClassFeatures';
+import { usedFeature } from './FeatureSystem';
+import { SPELLS, TICKS_PER_SECOND, isSpellId } from '../rules/Spells';
+import { castDef, quickBinding } from '../rules/Spellbook';
+import type { QuickBinding } from '../rules/Spellbook';
 import type { SpellDef } from '../rules/Spells';
 import { MONSTERS } from '../rules/Monsters';
 import { MIN_HIT_DAMAGE } from '../rules/Combat';
 import { TABLETOP_HP_SCALE } from '../rules/HitPoints';
-import { plus, rollCheck, rollDice } from '../rules/Dice';
+import { diceRange, plus, rollCheck, rollDice } from '../rules/Dice';
 import type { Dice } from '../rules/Dice';
 import { spawnFx } from '../entities/FxFactory';
 import { AIM_HEIGHT, createSpellBolt } from '../entities/ProjectileFactory';
@@ -65,10 +69,9 @@ function canCast(caster: Player): boolean {
   return caster.health.current > 0 && caster.respawnTicks === undefined && !caster.swordSwing && !caster.falling && !(caster.castCooldown ?? 0);
 }
 
-/** The spell in the quick-bar square the caster picked (known or not yet), if the square holds one. */
-function chosenSpell(caster: Player): SpellDef | null {
-  const id = heroClass(caster.heroClass).spells[caster.playerInput.spellSlot];
-  return id ? SPELLS[id] : null;
+/** What the caster bound to the quick-bar square they picked (known or not yet), if the square holds anything. */
+function chosenBinding(caster: Player): QuickBinding | null {
+  return quickBinding(caster, caster.playerInput.spellSlot);
 }
 
 /** Each spell's recovery runs down a tick. */
@@ -91,13 +94,41 @@ function refuse(caster: Player, line: string): void {
   caster.castCooldown = FEEDBACK_TICKS;
 }
 
+/** The cast key on a class feature: it is used at once if the hero has it, it is worked and its square has recovered. */
+function startFeature(caster: Player, id: string): void {
+  const slot = caster.playerInput.spellSlot;
+  const def = featureOfClass(heroClass(caster.heroClass).dndClass, id);
+  if (!def || def.kind !== 'active' || !hasClassFeature(caster, id)) {
+    refuse(caster, text('roll.no_spell'));
+    return;
+  }
+  const book = caster.spellbook ?? (caster.spellbook = { recovery: Array.from({ length: QUICK_SLOTS }, () => 0) });
+  const left = book.recovery[slot] ?? 0;
+  if (left > 0) {
+    refuse(caster, text('roll.spell_recovering', { seconds: (left / TICKS_PER_SECOND).toFixed(1) }));
+    return;
+  }
+  if (!usedFeature(caster, id, slot)) {
+    refuse(caster, text('roll.feature_unworked'));
+    return;
+  }
+  book.recovery[slot] = Math.round(def.cooldown * TICKS_PER_SECOND);
+  caster.castCooldown = SPELL_STATS.cooldown;
+}
+
 /** The cast key: the spell picked starts (its recovery runs from now), or the caster says why it can't. */
 function startCast(caster: Player): void {
   if (!caster.playerInput.intents.cast || !canCast(caster)) return;
-  const known = heroClass(caster.heroClass).spells;
-  if (!known.length) return;
-  const def = chosenSpell(caster);
-  if (!def) {
+  const binding = chosenBinding(caster);
+  if (!binding && !heroClass(caster.heroClass).spells.length) return;
+  const featureId = binding ? bindingFeatureId(binding.spell) : null;
+  if (featureId) {
+    startFeature(caster, featureId);
+    return;
+  }
+  // Spells of the wider lists are bound but not worked yet: only those in src/data/spells.json go off.
+  const def = binding && isSpellId(binding.spell) ? castDef(SPELLS[binding.spell], binding.level, caster.playerStats.level) : null;
+  if (!binding || !def) {
     refuse(caster, text('roll.no_spell'));
     return;
   }
@@ -107,7 +138,7 @@ function startCast(caster: Player): void {
     return;
   }
   const slot = caster.playerInput.spellSlot;
-  const book = caster.spellbook ?? (caster.spellbook = { recovery: known.map(() => 0) });
+  const book = caster.spellbook ?? (caster.spellbook = { recovery: Array.from({ length: QUICK_SLOTS }, () => 0) });
   const left = book.recovery[slot] ?? 0;
   if (left > 0) {
     refuse(caster, text('roll.spell_recovering', { seconds: (left / TICKS_PER_SECOND).toFixed(1) }));
@@ -115,7 +146,7 @@ function startCast(caster: Player): void {
   }
   const aim = caster.aimVector ?? { x: 0, y: 1 };
   const target = aimPoint(caster);
-  world.addComponent(caster, 'casting', { ticks: 0, dirX: aim.x, dirY: aim.y, released: false, spell: def.id, targetX: target.x, targetY: target.y });
+  world.addComponent(caster, 'casting', { ticks: 0, dirX: aim.x, dirY: aim.y, released: false, spell: def.id, level: binding.level, targetX: target.x, targetY: target.y });
   book.recovery[slot] = def.recoveryTicks;
   caster.castCooldown = SPELL_STATS.cooldown;
 }
@@ -124,7 +155,7 @@ const impactOf = (def: SpellDef): SpellEffect => ({ shape: def.effect.shape, col
 
 /** Eldritch Blast with Agonizing Blast adds the casting ability to its damage; every other bolt rolls its dice. */
 function boltDamage(caster: Player, def: SpellDef, sheet: CharacterSheet): Dice {
-  const agonizing = def.id === 'eldritch_blast' && hasFeature(sheet.heroClass, 'agonizing_blast', sheet.level);
+  const agonizing = def.id === 'eldritch_blast' && featureOn(caster, 'agonizing_blast');
   return agonizing ? plus(def.damage, sheet.modifiers[sheet.spell.ability]) : def.damage;
 }
 
@@ -189,8 +220,10 @@ const DISCIPLE_OF_LIFE_BASE = 2;
 /** A heal: the dice + the casting ability (+ a Disciple of Life's share), at the game's hit point scale, for the caster. */
 function castHeal(caster: Player, def: SpellDef): void {
   const sheet = characterSheet(caster);
-  const disciple = hasFeature(sheet.heroClass, 'disciple_of_life', sheet.level) ? DISCIPLE_OF_LIFE_BASE + def.level : 0;
-  const amount = TABLETOP_HP_SCALE * Math.max(1, rollDice(def.damage) + sheet.modifiers[sheet.spell.ability] + disciple);
+  const disciple = featureOn(caster, 'disciple_of_life') ? DISCIPLE_OF_LIFE_BASE + def.level : 0;
+  // Supreme Healing: every die of a healing spell counts at its highest.
+  const rolled = featureOn(caster, 'supreme_healing') ? diceRange(def.damage).max : rollDice(def.damage);
+  const amount = TABLETOP_HP_SCALE * Math.max(1, rolled + sheet.modifiers[sheet.spell.ability] + disciple);
   const h = caster.health;
   const healed = Math.min(h.max - h.current, amount);
   h.current += healed;
@@ -201,8 +234,9 @@ function castHeal(caster: Player, def: SpellDef): void {
 
 /** The cast reaches its release frame: the spell goes off, by its kind. */
 function release(caster: Player, cast: NonNullable<Entity['casting']>): void {
-  const def = cast.spell ? SPELLS[cast.spell] : null;
-  if (!def) return;
+  const base = cast.spell ? SPELLS[cast.spell] : null;
+  if (!base) return;
+  const def = castDef(base, cast.level ?? base.level, caster.playerStats.level);
   if (def.kind === 'bolt') castBolt(caster, def, cast.dirX, cast.dirY);
   else if (def.kind === 'missiles') castMissiles(caster, def, cast.dirX, cast.dirY);
   else if (def.kind === 'burst') castBurst(caster, def, cast.targetX ?? caster.position.x, cast.targetY ?? caster.position.y);

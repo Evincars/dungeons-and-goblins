@@ -1,4 +1,4 @@
-import { world, Team } from '../world';
+import { world, Team, QUICK_SLOTS } from '../world';
 import type { Entity } from '../world';
 import { characterComponents } from '../characters/Characters';
 import { createTrail } from '../ai/perception/trail';
@@ -25,7 +25,7 @@ export function createPlayer(x: number, y: number, classId: HeroClassId = DEFAUL
     health: { current: cls.hitPoints, max: cls.hitPoints },
     heroClass: cls.id,
     build: newBuild(cls),
-    spellbook: { recovery: cls.spells.map(() => 0) },
+    spellbook: { recovery: Array.from({ length: QUICK_SLOTS }, () => 0) },
     hurtTime: 0,
     freezeTime: 0,
     bounceWallTime: 0,

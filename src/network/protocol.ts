@@ -11,6 +11,8 @@ import { isHeroClassId } from '../rules/Classes';
 import type { HeroClassId } from '../rules/Classes';
 import { isFiniteNumber, isRecord } from '../core/guards';
 import { isItemBase, isMagicBonus } from '../rules/Equipment';
+import { isCatalogSpell, MAX_SPELL_LEVEL } from '../rules/Spellbook';
+import { bindingFeatureId, isFeatureId } from '../rules/ClassFeatures';
 
 /**
  * What co-op peers say to each other, and the checks every incoming message passes before the game
@@ -51,7 +53,11 @@ export type GuestCommand =
   | { kind: 'fighting_style'; style: FightingStyleId }
   | { kind: 'improve'; improvement: Improvement }
   /** Save the starting choices for good before leaving the first safe room. */
-  | { kind: 'lock_build' };
+  | { kind: 'lock_build' }
+  /** Put a spell, cast at a level, on a quick-bar square (the host checks the hero may). */
+  | { kind: 'bind_spell'; slot: number; spell: string; level: number }
+  /** Switch a passive class feature off or on. */
+  | { kind: 'toggle_feature'; feature: string };
 
 export type Message =
   /** `heroClass`: the class the guest picked (the host checks it). */
@@ -168,6 +174,12 @@ function isItemSquare(value: unknown): value is ItemSquare {
   return typeof value.slot === 'string' && isEquipSlot(value.slot);
 }
 
+/** A spell on the quick bar: one of the lists' spells, at a level from 0 to 9. */
+export function validBinding(spell: unknown, level: unknown): boolean {
+  const named = typeof spell === 'string' && bindingFeatureId(spell) !== null ? isFeatureId(bindingFeatureId(spell)) : isCatalogSpell(spell);
+  return named && Number.isInteger(level) && Number(level) >= 0 && Number(level) <= MAX_SPELL_LEVEL;
+}
+
 export function validCommand(value: unknown): value is GuestCommand {
   if (!isRecord(value)) return false;
   if (value.kind === 'buy') return Number.isInteger(value.index) && Number(value.index) >= 0 && Number(value.index) < MAX_ITEMS;
@@ -181,6 +193,8 @@ export function validCommand(value: unknown): value is GuestCommand {
   if (value.kind === 'fighting_style') return isFightingStyle(value.style);
   if (value.kind === 'improve') return validImprovement(value.improvement);
   if (value.kind === 'lock_build') return true;
+  if (value.kind === 'toggle_feature') return isFeatureId(value.feature);
+  if (value.kind === 'bind_spell') return validBinding(value.spell, value.level) && Number.isInteger(value.slot) && Number(value.slot) >= 0 && Number(value.slot) < QUICK_SLOTS;
   if (value.kind !== 'loadout' || !Array.isArray(value.inventory) || value.inventory.length > MAX_ITEMS) return false;
   return value.inventory.every(isBagSquare) && validEquipped(value.equipped);
 }

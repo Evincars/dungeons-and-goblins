@@ -9,6 +9,7 @@ import type { Build } from './rules/Build';
 import type { WeaponBase } from './rules/WeaponTable';
 import type { AttackProfile } from './rules/Combat';
 import type { SpellId } from './rules/Spells';
+import type { QuickBinding } from './rules/Spellbook';
 import type { EffectColour, EffectShape } from './assets/Effects';
 
 export const enum Team { Neutral = 0, Player = 1 }
@@ -284,6 +285,8 @@ export type Entity = {
   heroClass?: HeroClassId;
   /** What the player decided for their hero: bought ability scores, fighting style, Improvements (src/rules/Build.ts). */
   build?: Build;
+  /** The class features the player switched off (rules/ClassFeatures.ts): a passive stays off until they switch it on again. */
+  featuresOff?: string[];
   /** Ticks until a Protection fighting style protects an ally again (systems/ProtectionSystem.ts). */
   protectCooldown?: number;
   /** The dice rolls shown over the head, oldest first; each fades after a while (systems/RollLogSystem.ts). */
@@ -366,9 +369,12 @@ export type Entity = {
 
   // --- spellcasting ---
   /** A spell being cast: its progress, the way it was aimed and the point it was aimed at, and which spell. */
-  casting?: { ticks: number; dirX: number; dirY: number; released: boolean; spell?: SpellId; targetX?: number; targetY?: number };
-  /** Ticks until each of the hero's spells (in their class's order) can be cast again (0: ready). */
-  spellbook?: { recovery: number[] };
+  casting?: { ticks: number; dirX: number; dirY: number; released: boolean; spell?: SpellId; level?: number; targetX?: number; targetY?: number };
+  /**
+   * Ticks until the spell on each quick-bar square can be cast again (0: ready), and what the player bound to
+   * each square (a missing or empty entry: the class's own spell for that square, see rules/Spellbook.ts).
+   */
+  spellbook?: { recovery: number[]; bound?: (QuickBinding | null)[] };
   castCooldown?: number;
   /**
    * The initiative this fighter rolled when a fight broke out (d20 + DEX), and whether they won it: the

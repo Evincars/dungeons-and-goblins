@@ -8,7 +8,8 @@ import type { WeaponBase, WeaponRule } from './WeaponTable';
 import { plus } from './Dice';
 import type { D20Mode, Dice } from './Dice';
 import { armorRule, isShield, magicBonus, weaponRule } from './Equipment';
-import { armorProficient, hasFeature, heroClass, weaponProficient } from './Classes';
+import { armorProficient, heroClass, weaponProficient } from './Classes';
+import { classHasFeature } from './ClassFeatures';
 import type { HeroClass } from './Classes';
 import { baseScores, featInitiative } from './Build';
 import type { Build } from './Build';
@@ -146,7 +147,7 @@ function attackWith(w: Wielding, modifiers: Modifiers): WeaponAttack {
  * The attack of the weapon in hand; bare-handed it is a punch (1 + STR). Untrained in the weapon, no
  * proficiency bonus; in untrained armour (`armorProficient` false), the d20 is rolled with disadvantage.
  */
-export function weaponAttack(equipped: Equipped, modifiers: Modifiers, level: number, cls: HeroClass | null = null, armorTrained = true, style: FightingStyleId | null = null): WeaponAttack {
+export function weaponAttack(equipped: Equipped, modifiers: Modifiers, level: number, cls: HeroClass | null = null, armorTrained = true, style: FightingStyleId | null = null, off: readonly string[] = []): WeaponAttack {
   const item = weaponInHand(equipped);
   const found = weaponRule(item ?? undefined);
   const base: WeaponBase = found?.base ?? 'unarmed';
@@ -155,7 +156,9 @@ export function weaponAttack(equipped: Equipped, modifiers: Modifiers, level: nu
   const twoHanded = !!rule.versatile && !!item && otherHandFree(equipped, item);
   const mode: D20Mode = armorTrained ? 'normal' : 'disadvantage';
   const attack = attackWith({ item, base, twoHanded, proficiency: trained ? proficiencyBonus(level) : 0, mode }, modifiers);
-  if (cls && hasFeature(cls, 'sneak_attack', level) && sneaky(rule)) attack.extra = sneakAttackDice(level);
+  const has = (id: string): boolean => !!cls && classHasFeature(cls.dndClass, level, id) && !off.includes(id);
+  if (has('sneak_attack') && sneaky(rule)) attack.extra = sneakAttackDice(level);
+  if (has('divine_strike')) attack.extra = divineStrikeDice(level);
   return withFightingStyle(attack, equipped, style);
 }
 
@@ -181,6 +184,10 @@ function withFightingStyle(attack: WeaponAttack, equipped: Equipped, style: Figh
 
 /** Sneak Attack's d6s: one at level 1 and another every two levels (a level-20 rogue rolls ten). */
 const SNEAK_ATTACK_SIDES = 6;
+/** A Divine Strike adds 1d8 radiant damage to a weapon blow, 2d8 from this level. */
+const DIVINE_STRIKE_SIDES = 8;
+const DIVINE_STRIKE_UPGRADE_LEVEL = 14;
+const divineStrikeDice = (level: number): Dice => ({ count: level >= DIVINE_STRIKE_UPGRADE_LEVEL ? 2 : 1, sides: DIVINE_STRIKE_SIDES, bonus: 0 });
 const sneakAttackDice = (level: number): Dice => ({ count: Math.ceil(Math.max(1, level) / 2), sides: SNEAK_ATTACK_SIDES, bonus: 0 });
 /** The weapons that allow Sneak Attack: finesse or ranged. */
 function sneaky(rule: WeaponRule): boolean {
@@ -255,19 +262,22 @@ function spellcasting(cls: HeroClass, modifiers: Modifiers, proficiency: number)
 }
 
 /** Initiative: DEX, plus half the proficiency bonus for a Jack of All Trades, plus what feats add. */
-function initiativeBonus(cls: HeroClass, level: number, build: Build | undefined, dex: number, proficiency: number): number {
-  const jack = hasFeature(cls, 'jack_of_all_trades', level) ? Math.floor(proficiency / 2) : 0;
+function initiativeBonus(cls: HeroClass, level: number, build: Build | undefined, dex: number, proficiency: number, off: readonly string[]): number {
+  const jack = classHasFeature(cls.dndClass, level, 'jack_of_all_trades') && !off.includes('jack_of_all_trades') ? Math.floor(proficiency / 2) : 0;
   return dex + jack + featInitiative(cls, level, build);
 }
 
+const NONE_OFF: readonly string[] = [];
+
 /** Everything the inventory's character sheet shows, from the player's class and what they wear. */
-export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' | 'health' | 'heroClass' | 'build'>): CharacterSheet {
+export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' | 'health' | 'heroClass' | 'build' | 'featuresOff'>): CharacterSheet {
   const equipped = player.equipped ?? {};
   const cls = heroClass(player.heroClass);
   const level = player.playerStats.level;
   const base = baseScores(cls, level, player.build);
   const scores = abilities(equipped, base);
   const style = player.build?.fightingStyle ?? null;
+  const off = player.featuresOff ?? NONE_OFF;
   const ac = armorClass(equipped, scores.modifiers, cls, style);
   const proficiency = proficiencyBonus(level);
   return {
@@ -277,11 +287,11 @@ export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' |
     proficiency,
     baseScores: base,
     armorClass: ac,
-    attack: weaponAttack(equipped, scores.modifiers, level, cls, ac.proficient, style),
+    attack: weaponAttack(equipped, scores.modifiers, level, cls, ac.proficient, style, off),
     hitPoints: { current: player.health.current, max: player.health.max },
     hitDice: { left: player.playerStats.hitDice, total: level },
     experience: { xp: player.playerStats.exp, next: nextLevelXp(level) },
-    initiative: initiativeBonus(cls, level, player.build, scores.modifiers.dexterity, proficiency),
+    initiative: initiativeBonus(cls, level, player.build, scores.modifiers.dexterity, proficiency, off),
     speed: speedIn(ac, scores.scores),
     passivePerception: PASSIVE_BASE + scores.modifiers.wisdom,
     saves: savingThrows(scores.modifiers, cls, proficiency),

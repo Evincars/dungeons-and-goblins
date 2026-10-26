@@ -8,7 +8,7 @@ import { text } from '../core/texts';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { REACH } from '../systems/TargetSystem';
 import { fitsSlot, statTotals } from '../entities/Items';
-import { isEquipSlot } from '../world';
+import { isEquipSlot, QUICK_SLOTS } from '../world';
 import { BASE_SPRINT } from '../entities/PlayerFactory';
 import { queueRestRequest, spendHitDice } from './Rest';
 import { setDownItem } from '../entities/LootFactory';
@@ -16,6 +16,9 @@ import type { TextId } from '../core/texts';
 import { queueAnswer } from './Party';
 import { chooseLoot } from './LootRoll';
 import { applyCustomization } from './Customize';
+import { canBind } from '../rules/Spellbook';
+import { canToggle } from '../rules/ClassFeatures';
+import { heroClass } from '../rules/Classes';
 
 /**
  * What players do from the shop and inventory panels. In a lone game or on the host it happens at once;
@@ -288,6 +291,38 @@ export function requestGive(player: Player, from: ItemPlace, to: PlayerSlot): vo
   else giveItem(player, from, to);
 }
 
+/** Puts a spell, cast at a level, on a quick-bar square if the hero has learnt it and may cast it there. */
+export function bindSpell(player: Player, slot: number, spell: string, level: number): boolean {
+  const cls = heroClass(player.heroClass).dndClass;
+  if (!Number.isInteger(slot) || slot < 0 || slot >= QUICK_SLOTS || !canBind(cls, player.playerStats.level, spell, level)) return false;
+  const book = player.spellbook ?? (player.spellbook = { recovery: Array.from({ length: QUICK_SLOTS }, () => 0) });
+  const bound = Array.from({ length: QUICK_SLOTS }, (_, i) => book.bound?.[i] ?? null);
+  bound[slot] = { spell, level };
+  book.bound = bound;
+  book.recovery[slot] = 0;
+  return true;
+}
+
+/** Switches a passive class feature off or on if the hero has it and the game plays it out. */
+export function toggleFeature(player: Player, feature: string): boolean {
+  if (!canToggle(player, feature)) return false;
+  const off = player.featuresOff ?? [];
+  player.featuresOff = off.includes(feature) ? off.filter((f) => f !== feature) : [...off, feature];
+  return true;
+}
+
+/** The Skills tab's click on a passive: at once here, or asked of the host for a guest. */
+export function requestToggleFeature(player: Player, feature: string): void {
+  if (coop.role === 'guest') coop.sendCommand({ kind: 'toggle_feature', feature });
+  else toggleFeature(player, feature);
+}
+
+/** The quick bar: bound at once here, or asked of the host for a guest (whose copy the host's next update corrects if refused). */
+export function requestBind(player: Player, slot: number, spell: string, level: number): void {
+  if (coop.role === 'guest') coop.sendCommand({ kind: 'bind_spell', slot, spell, level });
+  else bindSpell(player, slot, spell, level);
+}
+
 /** Host: carries out what a guest asked for, if it is allowed for that guest's character. */
 export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): void {
   // Answers to the party count from the fallen too.
@@ -313,6 +348,14 @@ export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): voi
     return;
   }
   if (command.kind === 'rest') return queueRestRequest(slot, command.rest, command.dice);
+  if (command.kind === 'toggle_feature') {
+    toggleFeature(player, command.feature);
+    return;
+  }
+  if (command.kind === 'bind_spell') {
+    bindSpell(player, command.slot, command.spell, command.level);
+    return;
+  }
   if (command.kind === 'give') {
     giveItem(player, command.from, command.to);
     return;

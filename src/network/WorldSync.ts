@@ -11,7 +11,8 @@ import { destroyAttachments } from '../systems/BarSystem';
 import { setVisualFrame } from '../render/AnimatedVisual';
 import { ensure } from '../core/errors';
 import { hasKey, isFiniteNumber, isRecord } from '../core/guards';
-import { isBagSquare, isInventoryItem } from './protocol';
+import { isFeatureId, MAX_FEATURES } from '../rules/ClassFeatures';
+import { isBagSquare, isInventoryItem, validBinding } from './protocol';
 import { isHeroClassId } from '../rules/Classes';
 import { validBuild } from '../rules/Build';
 import { isWeaponBase } from '../rules/WeaponTable';
@@ -115,6 +116,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   stash: { coins: 'number' },
   lootRoll: { id: 'number', item: 'object', ticks: 'number', choices: 'object' },
   inventory: {},
+  featuresOff: {},
   equipped: {},
   rollLog: {},
   combatLog: { seq: 'number', entries: 'object' },
@@ -164,6 +166,8 @@ const isRollLine = (l: unknown) => isRecord(l) && typeof l.text === 'string' && 
 const isIntList = (v: unknown) => Array.isArray(v) && v.every(Number.isInteger);
 /** Ticks until each of the hero's spells recovers (one a spell the game has, at most), none negative. */
 const isRecoveryList = (v: unknown) => isIntList(v) && Array.isArray(v) && v.length <= SPELL_IDS.length && v.every((t) => Number(t) >= 0);
+const isBoundList = (v: unknown) => Array.isArray(v) && v.length <= QUICK_SLOTS
+  && v.every((b) => b === null || (isRecord(b) && validBinding(b.spell, b.level)));
 const isSlotList = (v: unknown) => Array.isArray(v) && v.length <= PLAYER_SLOTS.length && v.every(isPlayerSlot);
 
 /** A rare find being rolled for: a real item, and only known seats answering Need or Pass. */
@@ -197,6 +201,7 @@ function checkDetails(data: EntityState): void {
   ensure(!data.character || (hasCharacter(data.character.def) && isCharacterState(data.character.state)), 'Invalid character');
   ensure(!data.ai || (MOB_STATES.includes(data.ai.state) && TACTIC_ROLES.includes(data.ai.role)), 'Invalid enemy state');
   ensure(!data.item || isItemType(data.item.type), 'Invalid item');
+  ensure(!data.featuresOff || (Array.isArray(data.featuresOff) && data.featuresOff.length <= MAX_FEATURES && data.featuresOff.every(isFeatureId)), 'Invalid switched-off features');
   ensure(!data.inventory || (Array.isArray(data.inventory) && data.inventory.every(isBagSquare)), 'Invalid inventory');
   ensure(!data.item || isInventoryItem(data.item), 'Invalid item');
   ensure(!data.equipped || Object.entries(data.equipped).every(([slot, item]) => isEquipSlot(slot) && isInventoryItem(item)), 'Invalid equipment');
@@ -204,7 +209,7 @@ function checkDetails(data: EntityState): void {
   ensure(!data.door || (Array.isArray(data.door.tiles) && data.door.tiles.length <= MAX_DOOR_TILES && data.door.tiles.every(isTile)), 'Invalid door');
   ensure(!data.swordSwing || isIntList(data.swordSwing.hitIds), 'Invalid sword swing');
   ensure(!data.build || validBuild(data.build), 'Invalid build');
-  ensure(!data.spellbook || isRecoveryList(data.spellbook.recovery), 'Invalid spellbook');
+  ensure(!data.spellbook || (isRecoveryList(data.spellbook.recovery) && (data.spellbook.bound === undefined || isBoundList(data.spellbook.bound))), 'Invalid spellbook');
   ensure(!data.casting?.spell || isSpellId(data.casting.spell), 'Invalid spell');
   ensure(!data.projectile?.spell || isSpellId(data.projectile.spell), 'Invalid spell');
   ensure(!data.party || validParty(data.party), 'Invalid party state');

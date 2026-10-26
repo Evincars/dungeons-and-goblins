@@ -8,6 +8,9 @@ let inventoryOpen = false;
 
 export function isInventoryOpen(): boolean { return inventoryOpen; }
 
+/** Opens or shuts this screen's inventory panel (the quick bar's spell binding shuts it, then brings it back). */
+export function setInventoryOpen(open: boolean): void { inventoryOpen = open; }
+
 const carriers = world.with('position', 'playerInput', 'playerStats', 'inventory', 'health');
 type Carrier = (typeof carriers)['entities'][number];
 const lying = world.with('position', 'item');

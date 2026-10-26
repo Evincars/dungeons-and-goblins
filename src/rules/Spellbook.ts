@@ -1,0 +1,251 @@
+import type { Player } from '../world';
+import { ensure } from '../core/errors';
+import { hasKey, isRecord } from '../core/guards';
+import { isDamageType } from './DamageTypes';
+import type { DamageType } from './DamageTypes';
+import { parseDice } from './Dice';
+import type { Dice } from './Dice';
+import { heroClass } from './Classes';
+import { bindingFeatureId, featureOfClass } from './ClassFeatures';
+import type { DndClass } from './Classes';
+import { SPELLS, TICKS_PER_SECOND, isSpellId } from './Spells';
+import type { SpellDef } from './Spells';
+import spellbook from '../data/spellbook.json';
+
+/**
+ * Every spell of the 5th edition lists (src/data/spellbook.json, made by scripts/scrape-spells.mjs from
+ * dnd5e.wikidot.com): who learns it and at which level, how far it reaches, what it rolls, and its text.
+ * Only the few spells in src/data/spells.json can be cast yet; the rest can be learnt and put on the quick bar.
+ *
+ * There are no spell slots. The slot level a spell is cast at is a choice instead: a higher level does more and
+ * recovers more slowly. A class opens each spell level at the hero level the tabletop rules give it.
+ */
+
+/** The spell levels there are: 0 (cantrips) to 9. */
+export const MAX_SPELL_LEVEL = 9;
+/** Hero levels at which a cantrip's dice multiply: twice at the first, three times at the second, four at the third. */
+export const CANTRIP_TIER_LEVELS = [5, 11, 17] as const;
+/** Every spell recovers this long (seconds) unless src/data/spells.json tunes it. */
+export const BASE_COOLDOWN_SECONDS = 5;
+/** Each level a spell is cast above its own adds this much recovery (seconds). */
+export const UPCAST_COOLDOWN_SECONDS = 2.5;
+/** A warlock's pact slots stop at this spell level; the higher spells it learns are cast only at their own level. */
+const PACT_SLOT_CAP = 5;
+/** Feet in one step of the map's scale: 5 feet are 48 pixels (the data's `px` is already worked out). */
+export const PX_PER_FIVE_FEET = 48;
+
+export type SpellEffectKind = 'damage' | 'heal';
+
+export type CatalogSpell = {
+  id: string;
+  name: string;
+  /** 0 for a cantrip. */
+  level: number;
+  school: string;
+  ritual: boolean;
+  castingTime: string;
+  /** `feet` and `px` are null where the range is not a distance (sight, unlimited). */
+  range: { text: string; feet: number | null; px: number | null };
+  duration: string;
+  concentration: boolean;
+  /** The spell's text as the site gives it, and its "At Higher Levels" paragraph. */
+  description: string;
+  higherLevels: string | null;
+  /** What the spell rolls, if it damages or heals. */
+  effect: {
+    kind: SpellEffectKind;
+    dice: Dice;
+    /** One type, or the several a caster picks from. */
+    damageTypes: readonly DamageType[];
+    /** A cantrip's dice at the hero levels where they grow. */
+    cantripScaling: readonly { level: number; dice: Dice }[];
+    /** Dice added for each level it is cast above its own. */
+    perSlotLevel: Dice | null;
+  } | null;
+  /** The hero level at which each class learns it. */
+  classes: Readonly<Partial<Record<string, number>>>;
+};
+
+/** A spell on the quick bar: which, and the level it is cast at. */
+export type QuickBinding = { spell: string; level: number };
+
+const num = (v: unknown, fallback = 0): number => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
+const str = (v: unknown): string => (typeof v === 'string' ? v : '');
+
+function readDice(id: string, v: unknown): Dice {
+  const parsed = typeof v === 'string' ? parseDice(v) : null;
+  ensure(parsed !== null, `Bad dice in spell ${id}`, { id });
+  return parsed ?? { count: 1, sides: 4, bonus: 0 };
+}
+
+function readEffect(id: string, raw: unknown): CatalogSpell['effect'] {
+  if (!isRecord(raw)) return null;
+  const types = Array.isArray(raw.damageTypes) ? raw.damageTypes : [];
+  ensure(types.every(isDamageType), `Unknown damage type in spell ${id}`, { id });
+  const scaling = Array.isArray(raw.cantripScaling) ? raw.cantripScaling : [];
+  return {
+    kind: raw.kind === 'heal' ? 'heal' : 'damage',
+    dice: readDice(id, raw.dice),
+    damageTypes: types.filter(isDamageType),
+    cantripScaling: scaling.filter(isRecord).map((tier) => ({ level: num(tier.level), dice: readDice(id, tier.dice) })),
+    perSlotLevel: typeof raw.perSlotLevel === 'string' ? readDice(id, raw.perSlotLevel) : null,
+  };
+}
+
+/** One spell from the file, checked: a mistake there stops the game with a clear message instead of half-working. */
+function readSpell(id: string, raw: unknown): CatalogSpell {
+  ensure(isRecord(raw) && isRecord(raw.range) && isRecord(raw.classes), `Bad spell ${id}`, { id });
+  const range = isRecord(raw.range) ? raw.range : {};
+  const classes: Partial<Record<string, number>> = {};
+  for (const [cls, level] of Object.entries(isRecord(raw.classes) ? raw.classes : {})) classes[cls] = num(level, 1);
+  return {
+    id,
+    name: str(raw.name),
+    level: num(raw.level),
+    school: str(raw.school),
+    ritual: raw.ritual === true,
+    castingTime: str(raw.castingTime),
+    range: { text: str(range.text), feet: typeof range.feet === 'number' ? range.feet : null, px: typeof range.px === 'number' ? range.px : null },
+    duration: str(raw.duration),
+    concentration: raw.concentration === true,
+    description: str(raw.description),
+    higherLevels: typeof raw.higherLevels === 'string' ? raw.higherLevels : null,
+    effect: readEffect(id, raw.effect),
+    classes,
+  };
+}
+
+export const CATALOG: Readonly<Record<string, CatalogSpell>> = Object.fromEntries(
+  Object.entries(spellbook.spells).map(([id, raw]) => [id, readSpell(id, raw)]),
+);
+
+export function isCatalogSpell(id: unknown): id is string {
+  return typeof id === 'string' && hasKey(CATALOG, id);
+}
+
+/** For each class, its spells by spell level (0-9), by name. Worked out once. */
+const BY_CLASS = new Map<string, CatalogSpell[][]>();
+
+function classSpells(cls: DndClass): CatalogSpell[][] {
+  const cached = BY_CLASS.get(cls);
+  if (cached) return cached;
+  const levels: CatalogSpell[][] = Array.from({ length: MAX_SPELL_LEVEL + 1 }, () => []);
+  for (const spell of Object.values(CATALOG)) if (hasKey(spell.classes, cls)) levels[spell.level].push(spell);
+  for (const list of levels) list.sort((a, b) => a.name.localeCompare(b.name));
+  BY_CLASS.set(cls, levels);
+  return levels;
+}
+
+/** The hero level a class learns a spell at (undefined: the class never does). */
+export function learnLevel(cls: DndClass, spell: CatalogSpell): number | undefined {
+  return spell.classes[cls];
+}
+
+/** The spells a class has learnt by this hero level, by spell level (index 0: cantrips). */
+export function learntSpells(cls: DndClass, heroLevel: number): CatalogSpell[][] {
+  return classSpells(cls).map((list) => list.filter((spell) => (learnLevel(cls, spell) ?? Infinity) <= heroLevel));
+}
+
+/** The highest spell level a class has slots for at this hero level (0: none yet, or not a caster). */
+export function highestSpellLevel(cls: DndClass, heroLevel: number): number {
+  const kind = hasKey(spellbook.casterKinds, cls) ? spellbook.casterKinds[cls] : null;
+  if (!kind || !hasKey(spellbook.unlockLevels, kind)) return 0;
+  const unlocks: readonly (number | null)[] = spellbook.unlockLevels[kind];
+  const open = unlocks.filter((at) => at !== null && at <= heroLevel).length;
+  return kind === 'pact' ? Math.min(open, PACT_SLOT_CAP) : open;
+}
+
+/** Whether the class has any spells at all. */
+export function isCaster(cls: DndClass): boolean {
+  return classSpells(cls).some((list) => list.length > 0);
+}
+
+/**
+ * The levels a hero can cast a spell at: a cantrip only at its own; a spell with an "At Higher Levels" effect from
+ * its own up to the highest slot the class has; any other spell at its own level alone.
+ */
+export function castLevels(cls: DndClass, heroLevel: number, spell: CatalogSpell): number[] {
+  const top = spell.higherLevels && spell.level > 0 ? highestSpellLevel(cls, heroLevel) : spell.level;
+  const levels: number[] = [];
+  for (let level = spell.level; level <= Math.max(top, spell.level); level++) levels.push(level);
+  return levels;
+}
+
+/** Whether a hero of this class and level may put this spell on the bar at this cast level. */
+export function canBind(cls: DndClass, heroLevel: number, id: unknown, level: unknown): boolean {
+  const feature = typeof id === 'string' ? bindingFeatureId(id) : null;
+  if (feature !== null) {
+    const def = featureOfClass(cls, feature);
+    return level === 0 && !!def && def.kind === 'active' && def.level <= heroLevel;
+  }
+  if (!isCatalogSpell(id) || typeof level !== 'number') return false;
+  const spell = CATALOG[id];
+  return (learnLevel(cls, spell) ?? Infinity) <= heroLevel && castLevels(cls, heroLevel, spell).includes(level);
+}
+
+/** Cantrip dice multiply at 5th, 11th and 17th level: 1, 2, 3 or 4 times the base. */
+export function cantripTier(heroLevel: number): number {
+  return 1 + CANTRIP_TIER_LEVELS.filter((at) => heroLevel >= at).length;
+}
+
+/** Seconds before a spell cast at this level can be cast again. */
+export function cooldownSeconds(id: string, castLevel: number): number {
+  const own = isCatalogSpell(id) ? CATALOG[id].level : castLevel;
+  const base = isSpellId(id) ? SPELLS[id].recoveryTicks / TICKS_PER_SECOND : BASE_COOLDOWN_SECONDS;
+  return base + Math.max(0, castLevel - own) * UPCAST_COOLDOWN_SECONDS;
+}
+
+/** The dice a spell rolls at this cast level and hero level, with extra dice of another size (if the slot adds some). */
+export function spellDice(spell: CatalogSpell, castLevel: number, heroLevel: number): { roll: Dice; extra?: Dice } | null {
+  const effect = spell.effect;
+  if (!effect) return null;
+  const base = effect.dice;
+  if (spell.level === 0) return { roll: { ...base, count: base.count * cantripTier(heroLevel) } };
+  const steps = Math.max(0, castLevel - spell.level);
+  const add = effect.perSlotLevel;
+  if (!add || steps === 0) return { roll: base };
+  if (add.sides === base.sides) return { roll: { ...base, count: base.count + steps * add.count } };
+  return { roll: base, extra: { count: steps * add.count, sides: add.sides, bonus: 0 } };
+}
+
+/** What a hero sees of a spell at one cast level: the numbers that change with it. */
+export type SpellStats = {
+  dice: { roll: Dice; extra?: Dice } | null;
+  rangeFeet: number | null;
+  rangePx: number | null;
+  cooldown: number;
+};
+
+export function spellStats(spell: CatalogSpell, castLevel: number, heroLevel: number): SpellStats {
+  return { dice: spellDice(spell, castLevel, heroLevel), rangeFeet: spell.range.feet, rangePx: spell.range.px, cooldown: cooldownSeconds(spell.id, castLevel) };
+}
+
+/**
+ * A castable spell as it goes off at this cast level and hero level: its dice grown, a missile spell's darts
+ * counted up, and its recovery stretched. The same spell, cast at its own level by a first-level hero, is unchanged.
+ */
+export function castDef(def: SpellDef, castLevel: number, heroLevel: number): SpellDef {
+  const spell = CATALOG[def.id];
+  if (!spell) return def;
+  const steps = Math.max(0, castLevel - def.level);
+  const tier = def.level === 0 ? cantripTier(heroLevel) : 1;
+  const add = spell.effect?.perSlotLevel;
+  const grown = add && add.sides === def.damage.sides ? steps * add.count : 0;
+  const darts = def.kind === 'missiles' ? steps : 0;
+  if (steps === 0 && tier === 1) return def;
+  return {
+    ...def,
+    level: Math.max(def.level, castLevel),
+    damage: { ...def.damage, count: def.damage.count * tier + grown },
+    count: def.count + darts,
+    recoveryTicks: def.recoveryTicks + Math.round(steps * UPCAST_COOLDOWN_SECONDS * TICKS_PER_SECOND),
+  };
+}
+
+/** The spell on a quick-bar square: what the player bound there, else the class's own spell for the square, in order. */
+export function quickBinding(player: Player, slot: number): QuickBinding | null {
+  const bound = player.spellbook?.bound?.[slot];
+  if (bound) return bound;
+  const id = heroClass(player.heroClass).spells[slot];
+  return id ? { spell: id, level: SPELLS[id].level } : null;
+}

@@ -4,6 +4,8 @@ import { ensure } from '../core/errors';
 import { hasKey, isRecord } from '../core/guards';
 import { EFFECT_COLOURS, EFFECT_SHAPES } from '../assets/Effects';
 import type { EffectColour, EffectShape } from '../assets/Effects';
+import { MAGICAL_DAMAGE_TYPES } from './DamageTypes';
+import type { MagicalDamageType } from './DamageTypes';
 import { parseDice } from './Dice';
 import type { Dice } from './Dice';
 import spells from '../data/spells.json';
@@ -27,8 +29,8 @@ export function isSpellId(value: unknown): value is SpellId {
 export const SPELL_KINDS = ['bolt', 'missiles', 'burst', 'heal'] as const;
 export type SpellKind = (typeof SPELL_KINDS)[number];
 
-export const SPELL_DAMAGE_TYPES = ['fire', 'cold', 'lightning', 'force', 'necrotic', 'radiant', 'thunder', 'acid', 'psychic'] as const;
-export type SpellDamageType = (typeof SPELL_DAMAGE_TYPES)[number];
+export const SPELL_DAMAGE_TYPES = MAGICAL_DAMAGE_TYPES;
+export type SpellDamageType = MagicalDamageType;
 
 /** Ticks a second of recovery lasts (the game runs 60 a second). */
 export const TICKS_PER_SECOND = 60;

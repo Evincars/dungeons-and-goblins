@@ -1741,7 +1741,7 @@ test('rests: a short one recovers spells (two before a long one), a long one hea
   hero.playerStats.hitDice = 0;
   const rest = (kind) => { Rest.queueRestRequest('host', kind); tickParty(level); };
   rest('short');
-  assert.deepEqual(hero.spellbook.recovery, [0, 0, 0]);
+  assert.deepEqual(hero.spellbook.recovery, [0, 0, 0, 0, 0], 'one for each quick-bar square');
   assert.equal(Party.currentParty().shortRestsLeft, 1);
   assert.equal(Party.currentParty().notice.notice, 'short_done');
   assert.equal(hero.health.current, 10, 'a short rest heals nothing by itself');
@@ -2495,4 +2495,211 @@ test('the safe room shuts behind the party with its portcullis dropping back dow
   assert.ok(gates.every((g) => g.gate.dropping && g.gate.lift === 1), 'up in the wall, about to drop');
   for (let t = 0; t < 30; t++) updateDoors(level);
   assert.ok(gates.every((g) => g.gate.lift === 0 && !g.gate.dropping && !g.removed), 'down and staying down');
+});
+
+// ── The spell lists, the quick bar's bindings and damage types ───────────────
+
+const Spellbook = await load('rules/Spellbook');
+const DamageTypes = await load('rules/DamageTypes');
+const { bindSpell } = await load('game/PlayerActions');
+
+test('every spell of the lists is read with a range, the classes that learn it and the hero level they do', () => {
+  const spells = Object.values(Spellbook.CATALOG);
+  assert.ok(spells.length > 400, 'the whole of the lists');
+  for (const spell of spells) {
+    assert.ok(Object.keys(spell.classes).length > 0, `${spell.id} is learnt by some class`);
+    assert.ok(Object.values(spell.classes).every((level) => level >= 1 && level <= 20), `${spell.id} is learnt at a real hero level`);
+  }
+  const eldritch = Spellbook.CATALOG.eldritch_blast;
+  assert.deepEqual([eldritch.range.feet, eldritch.range.px], [120, 1152], '5 feet are 48 px');
+  assert.deepEqual(eldritch.classes, { warlock: 1 });
+  assert.equal(Spellbook.CATALOG.cure_wounds.range.px, 48, 'touch is 5 feet');
+  assert.ok(spells.every((s) => s.effect === null || s.effect.damageTypes.every(DamageTypes.isDamageType)));
+  for (const id of Object.keys(SPELLS)) assert.ok(Spellbook.isCatalogSpell(id), `${id} is in the lists`);
+});
+
+test('every kind of damage is named, weapons and spells alike', () => {
+  assert.equal(DamageTypes.DAMAGE_TYPES.length, 13);
+  for (const type of ['bludgeoning', 'piercing', 'slashing', 'acid', 'cold', 'fire', 'force', 'lightning', 'necrotic', 'poison', 'psychic', 'radiant', 'thunder']) {
+    assert.ok(DamageTypes.isDamageType(type), type);
+  }
+  assert.equal(Spellbook.CATALOG.eldritch_blast.effect.damageTypes[0], 'force');
+});
+
+test('a cantrip grows with the hero level; a spell with the level it is cast at, and recovers more slowly', () => {
+  const blast = Spellbook.CATALOG.eldritch_blast;
+  const dice = (level) => Spellbook.spellDice(blast, 0, level).roll.count;
+  assert.deepEqual([1, 4, 5, 10, 11, 16, 17, 20].map(dice), [1, 1, 2, 2, 3, 3, 4, 4], 'dice multiply at 5th, 11th and 17th level');
+  const fireball = Spellbook.CATALOG.fireball;
+  assert.equal(Spellbook.spellDice(fireball, 3, 5).roll.count, 8);
+  assert.equal(Spellbook.spellDice(fireball, 5, 9).roll.count, 10, '1d6 more for each level above the third');
+  assert.equal(Spellbook.cooldownSeconds('fireball', 3), 5, 'five seconds by default');
+  assert.ok(Spellbook.cooldownSeconds('fireball', 5) > Spellbook.cooldownSeconds('fireball', 4));
+});
+
+test('a class opens spell levels as the tabletop rules give them', () => {
+  const open = (cls, levels) => levels.map((level) => Spellbook.highestSpellLevel(cls, level));
+  assert.deepEqual(open('bard', [1, 2, 3, 4, 5, 17]), [1, 1, 2, 2, 3, 9], 'a bard gets level 2 slots at 3 and level 3 slots at 5');
+  assert.deepEqual(open('cleric', [1, 3, 5]), [1, 2, 3]);
+  assert.deepEqual(open('warlock', [1, 3, 9, 20]), [1, 2, 5, 5], 'pact slots stop at 5th level');
+  assert.equal(Spellbook.highestSpellLevel('fighter', 20), 0);
+  const level1 = Spellbook.learntSpells('cleric', 1).map((list) => list.length);
+  assert.ok(level1[0] > 0 && level1[1] > 0, 'a first-level cleric has cantrips and level 1 spells');
+  assert.ok(level1.slice(2).every((n) => n === 0), 'and nothing higher');
+  const bless = Spellbook.CATALOG.bless;
+  assert.deepEqual(Spellbook.castLevels('cleric', 1, bless), [1]);
+  assert.deepEqual(Spellbook.castLevels('cleric', 3, bless), [1, 2], 'a third-level cleric may bind Bless at level 2');
+  assert.deepEqual(Spellbook.castLevels('cleric', 1, Spellbook.CATALOG.sacred_flame), [0], 'a cantrip has one level');
+});
+
+test('a hero binds only spells their class has learnt, at levels they can cast; a bound spell replaces the class order', () => {
+  const cleric = createPlayer(0, 0, 'cleric');
+  assert.deepEqual(Spellbook.quickBinding(cleric, 0), { spell: 'sacred_flame', level: 0 }, 'the class order until something is bound');
+  assert.equal(bindSpell(cleric, 3, 'fireball', 3), false, 'a cleric does not learn Fireball');
+  assert.equal(bindSpell(cleric, 3, 'bless', 2), false, 'no level 2 slots yet');
+  assert.equal(bindSpell(cleric, 3, 'bless', 1), true);
+  assert.deepEqual(Spellbook.quickBinding(cleric, 3), { spell: 'bless', level: 1 });
+  assert.deepEqual(Spellbook.quickBinding(cleric, 0), { spell: 'sacred_flame', level: 0 }, 'the other squares keep theirs');
+  cleric.playerStats.level = 3;
+  assert.equal(bindSpell(cleric, 3, 'bless', 2), true);
+  assert.equal(Spellbook.quickBinding(cleric, 3).level, 2);
+  assert.equal(bindSpell(cleric, 9, 'bless', 1), false, 'there are five squares');
+  assert.ok(validCommand({ kind: 'bind_spell', slot: 3, spell: 'bless', level: 2 }));
+  assert.ok(!validCommand({ kind: 'bind_spell', slot: 3, spell: 'not_a_spell', level: 2 }));
+  assert.ok(!validCommand({ kind: 'bind_spell', slot: 5, spell: 'bless', level: 2 }));
+});
+
+test('a spell cast at a higher level hits harder and recovers more slowly; a bound spell that is not worked yet casts nothing', () => {
+  const level = arena(12, 6);
+  const wizard = casterAt(2, 2, 'wizard', 0);
+  wizard.playerStats.level = 5;
+  assert.equal(bindSpell(wizard, 0, 'burning_hands', 3), true);
+  cast(level, wizard, 1);
+  const stretched = SPELLS.burning_hands.recoveryTicks + 2 * Spellbook.UPCAST_COOLDOWN_SECONDS * 60;
+  assert.equal(wizard.spellbook.recovery[0], stretched, 'two levels above its own, so a longer recovery');
+  assert.equal(wizard.casting.level, 3);
+  const mage = casterAt(2, 4, 'wizard', 1);
+  assert.equal(bindSpell(mage, 1, 'shield', 1), true);
+  cast(level, mage, 90);
+  assert.equal(mage.casting, undefined, 'Shield is bound but only a name for now');
+});
+
+test('a guest\'s synced spellbook is checked: bound spells must be real', () => {
+  arena(8, 6);
+  const hero = playerAt(2, 2, 'cleric');
+  world.addComponent(hero, 'playerSlot', 'host');
+  bindSpell(hero, 3, 'bless', 1);
+  const good = () => JSON.parse(JSON.stringify(captureWorld(false, 7)));
+  assert.doesNotThrow(() => validateNetState(good()));
+  const tampered = (bound) => { const w = good(); w.entities.find((e) => e.data.spellbook).data.spellbook.bound = bound; return w; };
+  assert.throws(() => validateNetState(tampered([null, null, null, { spell: 'made_up', level: 1 }])), ValidationError);
+  assert.throws(() => validateNetState(tampered([null, null, null, { spell: 'bless', level: 12 }])), ValidationError);
+  assert.throws(() => validateNetState(tampered([null, null, null, null, null, null])), ValidationError, 'only five squares');
+});
+
+test('a spell tooltip gives its whole text and the numbers for the level it is cast at', async () => {
+  const { spellTopic } = await load('ui/SpellTopics');
+  const bless = Spellbook.CATALOG.bless;
+  const base = spellTopic(bless, 1, 3);
+  const upgraded = spellTopic(bless, 2, 3);
+  assert.ok(base.body.includes('You bless up to three creatures') && base.body.includes('one additional creature'), 'the site text and its higher levels');
+  assert.ok(base.detail.includes('Range: 30 ft (288 px)') && base.detail.includes('Cooldown: 5.0s'), 'range in feet and px, five seconds');
+  assert.ok(upgraded.detail.includes('Cast at level 2'));
+  assert.ok(upgraded.detail.includes('Cooldown: 7.5s'), 'a higher level recovers more slowly');
+  const blast = Spellbook.CATALOG.eldritch_blast;
+  assert.ok(spellTopic(blast, 0, 1).detail.includes('Damage: 1d10 force'));
+  assert.ok(spellTopic(blast, 0, 5).detail.includes('Damage: 2d10 force'), 'twice the dice at level 5');
+});
+
+test('binding a spell from the inventory: it shuts, a square is chosen, and it comes back where it was', async () => {
+  const Binding = await load('game/SpellBinding');
+  const { isInventoryOpen, setInventoryOpen } = await load('systems/InventorySystem');
+  const cleric = createPlayer(0, 0, 'cleric');
+  cleric.playerStats.level = 3;
+  setInventoryOpen(true);
+  Binding.beginBinding({ spell: 'bless', level: 2 });
+  assert.equal(isInventoryOpen(), false, 'the inventory shuts while a square is chosen');
+  Binding.finishBinding(cleric, 4);
+  assert.deepEqual(Spellbook.quickBinding(cleric, 4), { spell: 'bless', level: 2 });
+  assert.equal(Binding.pendingBinding(), null);
+  assert.equal(isInventoryOpen(), true, 'and comes back');
+  Binding.beginBinding({ spell: 'bless', level: 1 });
+  Binding.cancelBinding();
+  assert.equal(Binding.pendingBinding(), null, 'giving up binds nothing');
+  assert.deepEqual(Spellbook.quickBinding(cleric, 4), { spell: 'bless', level: 2 });
+  assert.equal(isInventoryOpen(), true);
+  setInventoryOpen(false);
+});
+
+// ── Class features ───────────────────────────────────────────────────────────
+
+const Features = await load('rules/ClassFeatures');
+const { toggleFeature } = await load('game/PlayerActions');
+const { usedFeature } = await load('systems/FeatureSystem');
+const { characterSheet: sheetOf } = await load('rules/CharacterSheet');
+
+test('every class lists its features by level, in a file that names real kinds', () => {
+  const at = (cls, level) => Features.featuresAt(cls, level, null).map((f) => f.id);
+  assert.ok(at('fighter', 1).includes('second_wind') && !at('fighter', 1).includes('action_surge'));
+  assert.ok(at('fighter', 2).includes('action_surge'));
+  assert.ok(at('fighter', 20).includes('extra_attack') && !at('fighter', 20).includes('protection'), 'Protection only for the style');
+  assert.ok(Features.featuresAt('fighter', 1, 'protection').some((f) => f.id === 'protection'));
+  assert.ok(at('rogue', 20).includes('stroke_of_luck') && at('cleric', 17).includes('supreme_healing'));
+  for (const cls of ['fighter', 'wizard', 'rogue', 'warlock', 'bard', 'cleric']) {
+    assert.ok(Features.CLASS_FEATURE_LIST[cls].length > 3, cls);
+    for (const f of Features.CLASS_FEATURE_LIST[cls]) assert.ok(f.description.length > 20 && f.level >= 1 && f.level <= 20, f.id);
+  }
+});
+
+test('a passive is switched off and on by its hero, and its effect goes with it', () => {
+  const rogue = createPlayer(0, 0, 'rogue');
+  rogue.equipped = { primary: { ...HAND_WEAPONS.find((w) => w.kind === 'dagger') } };
+  assert.ok(sheetOf(rogue).attack.extra, 'Sneak Attack from level 1 with a finesse weapon');
+  assert.equal(toggleFeature(rogue, 'sneak_attack'), true);
+  assert.deepEqual(rogue.featuresOff, ['sneak_attack']);
+  assert.equal(sheetOf(rogue).attack.extra, undefined, 'switched off, no extra dice');
+  toggleFeature(rogue, 'sneak_attack');
+  assert.ok(sheetOf(rogue).attack.extra);
+  assert.equal(toggleFeature(rogue, 'evasion'), false, 'not had yet (and not played out)');
+  assert.equal(toggleFeature(rogue, 'cunning_action'), false, 'an active is bound, not switched');
+  const bard = createPlayer(0, 0, 'bard');
+  bard.playerStats.level = 2;
+  const before = sheetOf(bard).initiative;
+  toggleFeature(bard, 'jack_of_all_trades');
+  assert.ok(sheetOf(bard).initiative < before);
+  const cleric = createPlayer(0, 0, 'cleric');
+  cleric.playerStats.level = 8;
+  assert.equal(sheetOf(cleric).attack.extra.sides, 8, 'Divine Strike: +1d8');
+  cleric.playerStats.level = 14;
+  assert.equal(sheetOf(cleric).attack.extra.count, 2);
+  assert.ok(validCommand({ kind: 'toggle_feature', feature: 'sneak_attack' }));
+  assert.ok(!validCommand({ kind: 'toggle_feature', feature: 'nonsense' }));
+});
+
+test('actives go on the quick bar and are used with the cast key', () => {
+  const level = arena(10, 6);
+  const fighter = casterAt(2, 2, 'fighter', 0);
+  assert.equal(bindSpell(fighter, 0, 'feature:second_wind', 0), true);
+  assert.equal(bindSpell(fighter, 1, 'feature:action_surge', 0), false, 'level 2');
+  assert.equal(bindSpell(fighter, 1, 'feature:extra_attack', 0), false, 'a passive is not bound');
+  fighter.health.current = 10;
+  useDieRoller(() => 10);
+  cast(level, fighter, 1);
+  useDieRoller(null);
+  assert.equal(fighter.health.current, 10 + 5 * (10 + 1), '1d10 (loaded: 10) + level 1');
+  assert.equal(fighter.spellbook.recovery[0], 30 * 60, 'recovering for its 30 seconds');
+  fighter.playerStats.level = 2;
+  bindSpell(fighter, 1, 'feature:action_surge', 0);
+  fighter.spellbook.recovery[3] = 500;
+  fighter.playerInput.spellSlot = 1;
+  fighter.castCooldown = 0;
+  cast(level, fighter, 1);
+  assert.equal(fighter.spellbook.recovery[3], 0, 'Action Surge readies the rest of the bar');
+  assert.equal(fighter.spellbook.recovery[1], 60 * 60, 'and it recovers for a minute itself');
+  const wizard = casterAt(2, 4, 'wizard', 0);
+  bindSpell(wizard, 0, 'feature:arcane_recovery', 0);
+  wizard.spellbook.recovery[2] = 300;
+  assert.equal(usedFeature(wizard, 'arcane_recovery', 0), true);
+  assert.equal(wizard.spellbook.recovery[2], 0);
+  assert.equal(usedFeature(wizard, 'indomitable', 0), false, 'not played out yet');
 });

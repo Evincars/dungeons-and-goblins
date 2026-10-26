@@ -1,6 +1,7 @@
 import { q, isActivePlayer } from '../world';
 import type { Player } from '../world';
 import { isShield } from '../rules/Equipment';
+import { featureOn } from '../rules/ClassFeatures';
 import { PROTECTION_COOLDOWN_TICKS, PROTECTION_REACH } from '../rules/FightingStyles';
 import { logLine } from './RollLogSystem';
 import { text } from '../core/texts';
@@ -13,7 +14,7 @@ import { text } from '../core/texts';
 
 /** Carrying the style, a shield, and able to act. */
 export function canProtect(hero: Player): boolean {
-  return hero.build?.fightingStyle === 'protection' && isShield(hero.equipped?.secondary) && isActivePlayer(hero);
+  return featureOn(hero, 'protection') && isShield(hero.equipped?.secondary) && isActivePlayer(hero);
 }
 
 /** The ally closest to the hero within reach, if any (every other player is an ally). */

@@ -29,6 +29,7 @@ import { InventoryOverlay } from '../ui/InventoryOverlay';
 import { ShopPanel } from '../ui/ShopPanel';
 import { PauseMenu } from '../ui/PauseMenu';
 import { closeInventory, isInventoryOpen } from '../systems/InventorySystem';
+import { cancelBinding, pendingBinding } from '../game/SpellBinding';
 import { isShopOpen, activeShopItems, closeShop } from '../systems/ShopSystem';
 import { isLevelComplete, resetLevelComplete } from '../systems/ExitSystem';
 import { PixelLabel, makeText } from '../ui/PixelText';
@@ -203,6 +204,10 @@ export class InGameScene implements Scene {
       return;
     }
     if (e.code !== 'Escape') return;
+    if (pendingBinding()) {
+      cancelBinding();
+      return;
+    }
     if (this.manager.hasOverlay) this.manager.escapeOverlay();
     else if (this.result.open || this.hud.closeDialog()) return;
     else if (!this.pause.handleEscape()) this.setPaused(!this.pause.open);

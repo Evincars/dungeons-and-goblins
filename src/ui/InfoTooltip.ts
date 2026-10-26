@@ -9,6 +9,9 @@ const LINE_H = 10;
 const DETAIL_GAP = 4;
 /** The description wraps to this width. */
 const WRAP_W = 150;
+/** A long text (`wide`) starts this wide, and widens by this much until it fits the area it is shown in. */
+const WIDE_W = 260;
+const WIDEN_STEP = 40;
 /** The tooltip sits this far from the pointer. */
 const OFFSET = 10;
 const BG_ALPHA = 0.94;
@@ -41,7 +44,7 @@ export function wrapLines(content: string, maxWidth: number): string[] {
 }
 
 /** What a tooltip tells: a header, a description, and optionally the numbers behind a value. */
-export type TipTopic = { title: string; body: string; detail?: readonly string[] };
+export type TipTopic = { title: string; body: string; detail?: readonly string[]; wide?: boolean };
 
 /**
  * A tooltip for a term on the character sheet (a stat, Armor Class, hit points…): its full name as the
@@ -59,7 +62,7 @@ export class InfoTooltip {
   /** Shows `topic` near (x, y), kept inside a `bounds`-sized area starting at 0, 0. */
   show(topic: TipTopic, x: number, y: number, bounds: { w: number; h: number }): void {
     const key = [topic.title, topic.body, ...(topic.detail ?? [])].join('\n');
-    if (this.shown !== key) this.layout(topic);
+    if (this.shown !== key) this.layout(topic, bounds);
     this.shown = key;
     const w = this.view.width;
     const h = this.view.height;
@@ -73,14 +76,26 @@ export class InfoTooltip {
     this.shown = null;
   }
 
-  private layout(topic: TipTopic): void {
+  /** The lines of a text: at the usual width, or for a `wide` one, widened until the whole tooltip fits `bounds`. */
+  private wrap(topic: TipTopic, bounds: { w: number; h: number }): { lines: string[]; details: string[] } {
+    const detail = topic.detail?.length ? topic.detail.join('\n') : '';
+    let width = topic.wide ? WIDE_W : WRAP_W;
+    for (;;) {
+      const lines = wrapLines(topic.body, width);
+      const details = detail ? wrapLines(detail, width) : [];
+      const height = 2 * PAD + HEADER_H + (lines.length + details.length) * LINE_H + (details.length ? DETAIL_GAP : 0);
+      if (!topic.wide || height <= bounds.h || width + 2 * PAD >= bounds.w) return { lines, details };
+      width += WIDEN_STEP;
+    }
+  }
+
+  private layout(topic: TipTopic, bounds: { w: number; h: number }): void {
     for (const child of this.view.removeChildren()) child.destroy({ children: true });
     const header = new PixelLabel(topic.title, { color: THEME.title, shadow: true });
     header.position.set(PAD, PAD);
-    const lines = wrapLines(topic.body, WRAP_W);
+    const { lines, details } = this.wrap(topic, bounds);
     const body = new PixelLabel(lines.join('\n'), { color: THEME.text, shadow: true });
     body.position.set(PAD, PAD + HEADER_H);
-    const details = topic.detail?.length ? wrapLines(topic.detail.join('\n'), WRAP_W) : [];
     const detail = new PixelLabel(details.join('\n'), { color: DETAIL_COLOR, shadow: true });
     detail.position.set(PAD, PAD + HEADER_H + lines.length * LINE_H + DETAIL_GAP);
     const w = Math.max(header.textWidth, body.textWidth, detail.textWidth) + 2 * PAD;

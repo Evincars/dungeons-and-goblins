@@ -7,8 +7,11 @@ import type { Dice } from './Dice';
  * src/data/weapons.json names one of these; its own magic bonus comes on top.
  */
 
-export const DAMAGE_TYPES = ['bludgeoning', 'piercing', 'slashing'] as const;
-export type DamageType = (typeof DAMAGE_TYPES)[number];
+import { PHYSICAL_DAMAGE_TYPES } from './DamageTypes';
+import type { PhysicalDamageType } from './DamageTypes';
+
+export const DAMAGE_TYPES = PHYSICAL_DAMAGE_TYPES;
+export type DamageType = PhysicalDamageType;
 
 /**
  * finesse: uses STR or DEX, whichever is better. light: fits a second hand. heavy: clumsy for small folk.

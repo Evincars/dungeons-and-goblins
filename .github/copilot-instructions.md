@@ -116,7 +116,10 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   following) in `src/ai/constants.ts`; the D&D rules tables (SRD weapons and armour) in `src/rules/WeaponTable.ts`
   and `src/rules/ArmorTable.ts`; hero classes (abilities, hit points, proficiencies, features) in
   `src/data/classes.json`; enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`;
-  spells (dice, recovery, save, area, effect) in `src/data/spells.json`; sound effects (clips layered, re-pitched
+  castable spells (dice, recovery, save, area, effect) in `src/data/spells.json`; every spell of the D&D lists (who learns it
+  and at which level, range in feet and px, dice, damage types, text) in `src/data/spellbook.json`, made by
+  `scripts/scrape-spells.mjs`; the SRD class features by level (passive, active or info; `worked` says whether the game plays
+  them) in `src/data/features.json`; every damage type, weapon and spell, in `src/rules/DamageTypes.ts`; sound effects (clips layered, re-pitched
   and delayed into recipes; each enemy's cries, each spell's cast and impact), the music tracks and the ambient
   beds in `src/audio/SoundBank.ts` (recordings are `.webm`, the long music `.ogg`).
 - Type such tables with `satisfies Record<Key, Shape>` so a missing or misspelt key is a compile error.
@@ -168,7 +171,14 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `ui/CombatLogPanel.ts`), and spends a won initiative's first strike as advantage (`systems/InitiativeSystem.ts`).
   Spells (`Spells.ts`, from `src/data/spells.json`: bolt, missiles, burst with a save, heal) have no slots but a
   recovery each (`spellbook.recovery`), are picked on the quick bar (`playerInput.spellSlot`) and cast by
-  `systems/SpellSystem.ts` with effects from the library (`assets/Effects.ts`). Experience follows the SRD
+  `systems/SpellSystem.ts` with effects from the library (`assets/Effects.ts`). `Spellbook.ts` reads the whole list: a class opens
+  spell levels as the tabletop does, a cantrip's dice grow at hero levels 5/11/17, and a spell cast above its own level
+  (the Skills tab of the inventory offers a box per level, `ui/SpellsPanel.ts`) rolls more and recovers more slowly. A click binds it
+  to a quick-bar square (`game/SpellBinding.ts`, `spellbook.bound`, the `bind_spell` command); only the spells in `spells.json`
+  go off yet. Class features (`rules/ClassFeatures.ts`) fill the Skills tab above the cantrips: a worked passive is on from its
+  level and a click switches it off and on (`featuresOff`, the `toggle_feature` command; `featureOn` is what effects ask, and the
+  HUD's top left lists the ones on, `ui/PassiveHud.ts`); an active (Second Wind, Action Surge…) is bound to a quick-bar square as
+  `feature:<id>` and used with the cast key (`systems/FeatureSystem.ts`). Experience follows the SRD
   (`game/Progress.ts`, monster `xp`); hit points per level and hit dice are in `rules/HitPoints.ts`.
 - `src/audio/` — Howler: `SoundBank.ts` (the effect recipes, music tracks and ambient beds), `SoundPlayer.ts` (effects,
   faded and panned by distance; `playSound` is relayed to co-op guests, `playLocal` is not), `Deck.ts` (one looping

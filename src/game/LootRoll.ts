@@ -9,6 +9,7 @@ import { sound } from '../audio/SoundPlayer';
 import { text } from '../core/texts';
 import { isAlone, seatOf } from './Party';
 import { addToBag } from './PlayerActions';
+import { isStanding } from './Fallen';
 
 /**
  * Need or Pass, for a rare find in co-op. When a chest or a kill gives up a rare item (a +2 or better), it is
@@ -70,19 +71,25 @@ function rollById(id: number): LootRoll | undefined {
   return undefined;
 }
 
-/** Each choice that came in, for a roll still open, from a player in the game who hasn't chosen yet. */
+/** Whether a seat holds a hero still on their feet (the fallen have no part in a roll: game/Fallen.ts). */
+function standingAt(slot: PlayerSlot): boolean {
+  const player = playerAt(slot);
+  return !!player && isStanding(player);
+}
+
+/** Each choice that came in, for a roll still open, from a hero on their feet who hasn't chosen yet. */
 function takeChoices(): void {
   for (const { slot, roll, need } of choices) {
     const open = rollById(roll);
-    if (open && playerAt(slot) && !open.choices[slot]) open.choices[slot] = need ? 'need' : 'pass';
+    if (open && standingAt(slot) && !open.choices[slot]) open.choices[slot] = need ? 'need' : 'pass';
   }
   choices.length = 0;
 }
 
-/** The seats that picked Need, among the players still in the game. */
+/** The seats that picked Need, among the heroes still on their feet. */
 function needers(roll: LootRoll): Player[] {
   const out: Player[] = [];
-  for (const player of q.players) if (roll.choices[seatOf(player)] === ('need' satisfies LootChoice)) out.push(player);
+  for (const player of q.players) if (isStanding(player) && roll.choices[seatOf(player)] === ('need' satisfies LootChoice)) out.push(player);
   return out;
 }
 
@@ -111,9 +118,9 @@ function award(winner: Player, item: InventoryItem): void {
   sound.playSound('pickup', winner.position.x, winner.position.y);
 }
 
-/** Whether every player in the game has chosen. */
+/** Whether every hero on their feet has chosen. */
 function everyoneChose(roll: LootRoll): boolean {
-  for (const player of q.players) if (!roll.choices[seatOf(player)]) return false;
+  for (const player of q.players) if (isStanding(player) && !roll.choices[seatOf(player)]) return false;
   return true;
 }
 

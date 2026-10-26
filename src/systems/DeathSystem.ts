@@ -16,6 +16,7 @@ import { characterSheet } from '../rules/CharacterSheet';
 import { hitPointsPerLevel } from '../rules/HitPoints';
 import { logLine } from './RollLogSystem';
 import { text } from '../core/texts';
+import { isStanding, leaveBelongings, standingHeroes } from '../game/Fallen';
 
 /** Ticks a dead mob stays on its last death frame before it is cleared away. */
 const CORPSE_LINGER = 60;
@@ -50,26 +51,32 @@ export function grantExperience(player: Earner, points: number): void {
   while (player.playerStats.level < levelForXp(player.playerStats.exp)) levelUp(player);
 }
 
-/** The party shares a kill's experience, as at the table: every hero in the game gets an equal part. */
+/**
+ * The party shares a kill's experience, as at the table: every hero still on their feet gets an equal part (a fallen
+ * hero, down until the party goes deeper, earns nothing meanwhile).
+ */
 function awardExperience(points: number): void {
-  const heroes = earners.entities.length;
+  const heroes = standingHeroes();
   if (points <= 0 || heroes === 0) return;
   const share = Math.floor(points / heroes);
-  for (const player of earners) {
+  for (const player of q.players) {
+    if (!isStanding(player)) continue;
     player.playerStats.kills++;
     grantExperience(player, share);
   }
 }
 
 /**
- * A kill's gold is the party's, as its experience is: every hero in the game gets an equal part (and their own
+ * A kill's gold is the party's, as its experience is: every hero still on their feet gets an equal part (and their own
  * Charisma's share more on top).
  */
 function shareKillGold(total: number): void {
-  const heroes = q.players.entities.length;
+  const heroes = standingHeroes();
   if (heroes === 0) return;
   const share = total / heroes;
-  for (const hero of q.players) pay(hero, Math.round(share * (1 + hero.playerStats.lootBonus)));
+  for (const hero of q.players) {
+    if (isStanding(hero)) pay(hero, Math.round(share * (1 + hero.playerStats.lootBonus)));
+  }
 }
 
 /** Who finds a kill's gear: whoever struck last, or failing that (a fall, a trap) the nearest living hero. */
@@ -133,9 +140,10 @@ export function updateDeath(level: Level): void {
       tickCorpse(entity);
       continue;
     }
-    if (entity.playerInput) {
+    if (isPlayer(entity)) {
       sound.playSound('death');
-      startDying(entity, level);
+      leaveBelongings(entity, level);
+      startDying(entity);
       continue;
     }
     die(entity, entity.position);

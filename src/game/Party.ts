@@ -2,6 +2,7 @@ import { world, q, localPlayer } from '../world';
 import type { Entity, Player, PartyVote, PlayerSlot, RestNotice, VoteKind } from '../world';
 import { coop } from '../network/CoopSession';
 import { text } from '../core/texts';
+import { isStanding, standingHeroes } from './Fallen';
 
 /**
  * What the party decides together in co-op: a rest, or opening the safe room's gate. One player asks, every
@@ -46,9 +47,9 @@ export function notify(state: PartyState, notice: RestNotice, name: string, kind
   state.notice = { notice, name, kind, age: 0 };
 }
 
-/** Whether there is nobody to ask: a lone game, or the host's companions all gone. */
+/** Whether there is nobody to ask: a lone game, the host's companions all gone, or everyone else fallen (game/Fallen.ts). */
 export function isAlone(): boolean {
-  return q.players.entities.length <= 1;
+  return standingHeroes() <= 1;
 }
 
 /** Puts a question to the party, the asker agreeing; false while another vote is open (one at a time). */
@@ -80,11 +81,11 @@ function playerAt(slot: PlayerSlot): Player | undefined {
   return undefined;
 }
 
-/** A player answers the vote: one refusal calls it off. */
+/** A player answers the vote: one refusal calls it off. The fallen have no say. */
 function answer(player: Player, agree: boolean, state: PartyState): void {
   const vote = state.vote;
   const seat = seatOf(player);
-  if (!vote || vote.agreed.includes(seat)) return;
+  if (!vote || vote.agreed.includes(seat) || !isStanding(player)) return;
   if (agree) {
     vote.agreed.push(seat);
     return;
@@ -93,9 +94,9 @@ function answer(player: Player, agree: boolean, state: PartyState): void {
   notify(state, 'declined', nameOf(player), vote.kind);
 }
 
-/** Whether every player in the game has agreed. */
+/** Whether every hero still on their feet has agreed. */
 function everyoneAgreed(agreed: readonly PlayerSlot[]): boolean {
-  for (const player of q.players) if (!agreed.includes(seatOf(player))) return false;
+  for (const player of q.players) if (isStanding(player) && !agreed.includes(seatOf(player))) return false;
   return true;
 }
 

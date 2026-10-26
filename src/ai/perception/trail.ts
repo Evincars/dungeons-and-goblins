@@ -30,12 +30,6 @@ export function recordTrail(level: Level, trail: Trail, x: number, y: number, ti
   trail.count = Math.min(trail.count + 1, TRAIL_LENGTH);
 }
 
-/** Forgets the trail, e.g. after a respawn teleports the player: the old path no longer leads to them. */
-export function clearTrail(trail: Trail): void {
-  trail.count = 0;
-  trail.lastTile = -1;
-}
-
 /** Ring slot of the i-th crumb, oldest first. */
 function slotOf(trail: Trail, i: number): number {
   return (trail.head - trail.count + i + TRAIL_LENGTH) % TRAIL_LENGTH;

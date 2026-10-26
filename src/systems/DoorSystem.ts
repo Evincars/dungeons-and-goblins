@@ -6,14 +6,14 @@ import { createTile, TileType, TILE_WIDTH, TILE_HEIGHT } from '../level/TileType
 import { sound } from '../audio/SoundPlayer';
 import { createGate, GATE_LIFT, GATE_RISE } from '../entities/DungeonFactory';
 
-/** Once sealed, players respawn this many tiles past the door, on the dungeon side. */
-const RESPAWN_TILES_PAST_DOOR = 2;
 /** A raised portcullis takes this many ticks to slide up out of sight… */
 const GATE_RISE_TICKS = 45;
 /** …and one falling back down to shut the safe room this many, as a portcullis drops. */
 const GATE_DROP_TICKS = 18;
 /** Once open, the gate shuts on the safe room after this long (10 s): whoever is still inside dies. */
 export const GATE_CLOSE_TICKS = 600;
+/** The exit room's lever drops its portcullis this long after it is pulled (5 s): whoever is still outside stays out. */
+export const EXIT_CLOSE_TICKS = 300;
 const TICKS_PER_SECOND = 60;
 
 const doors = world.with('door', 'position');
@@ -41,15 +41,12 @@ function barUp(level: Level, door: Door): void {
   }
 }
 
-/** The safe room is shut behind the party: the doorway is barred, and its portcullis drops back down over it. */
+/** The room is shut: the doorway is barred, and its portcullis drops down over it. */
 function seal(level: Level, door: Door): void {
   const d = door.door;
   d.closingTicks = null;
   barUp(level, door);
   for (const t of d.tiles) createGate(t.x, t.y, true);
-  // The safe room is now unreachable, so respawn just past the door instead.
-  const mid = d.tiles[Math.floor(d.tiles.length / 2)];
-  level.setSpawnPoint((mid.x + RESPAWN_TILES_PAST_DOOR) * TILE_WIDTH + TILE_WIDTH / 2, mid.y * TILE_HEIGHT + TILE_HEIGHT / 2);
   d.closed = true;
   sound.playSound('door_open', door.position.x, door.position.y);
 }
@@ -61,7 +58,21 @@ function clearWay(level: Level, door: Door): void {
   }
 }
 
-/** The lever was pulled: the doorway opens, every portcullis starts to rise, and the countdown to shutting it starts. */
+type Gate = (typeof gates)['entities'][number];
+
+/** Whether a portcullis stands over one of this door's tiles. */
+function guards(door: Door, gate: Gate): boolean {
+  const tx = Math.floor(gate.position.x / TILE_WIDTH);
+  const ty = Math.floor(gate.position.y / TILE_HEIGHT);
+  return door.door.tiles.some((t) => t.x === tx && t.y === ty);
+}
+
+/** Every portcullis down over this door starts to rise. */
+function raiseGatesOf(door: Door): void {
+  for (const gate of gates) if (gate.gate.lift === 0 && guards(door, gate)) gate.gate.lift = 1 / GATE_RISE_TICKS;
+}
+
+/** The lever was pulled: the safe room's doorway opens, its portcullis starts to rise, and the countdown to shutting it starts. */
 export function unlockDoors(level: Level): void {
   for (const door of doors) {
     if (!door.door.locked) continue;
@@ -69,11 +80,19 @@ export function unlockDoors(level: Level): void {
     door.door.closingTicks = GATE_CLOSE_TICKS;
     clearWay(level, door);
     sound.playSound('door_open', door.position.x, door.position.y);
+    raiseGatesOf(door);
   }
-  for (const gate of gates) if (gate.gate.lift === 0) gate.gate.lift = 1 / GATE_RISE_TICKS;
 }
 
-type Gate = (typeof gates)['entities'][number];
+/** The exit room's lever was pulled: its door starts counting down to shutting the room for good. */
+export function closeExitDoor(): void {
+  for (const door of doors) {
+    const d = door.door;
+    if (!d.exit || d.closed || d.closingTicks !== null) continue;
+    d.closingTicks = EXIT_CLOSE_TICKS;
+    sound.playSound('door_open', door.position.x, door.position.y);
+  }
+}
 
 /** A rising portcullis slides up into the wall and fades; risen, it is gone. */
 function raiseGate(gate: Gate): void {
@@ -120,23 +139,44 @@ function crushStragglers(boundaryX: number): void {
   }
 }
 
-/** Seconds left until an open gate shuts on the safe room, while one is counting down (for the banner); null otherwise. */
-export function gateCountdown(): number | null {
+/** Seconds left until a door counting down shuts (the safe room's, or the exit room's when `exit`); null when none is. */
+function countdown(exit: boolean): number | null {
   for (const door of doors) {
     const left = door.door.closingTicks;
-    if (left !== null && !door.door.closed) return Math.ceil(left / TICKS_PER_SECOND);
+    if (left !== null && !door.door.closed && !!door.door.exit === exit) return Math.ceil(left / TICKS_PER_SECOND);
   }
   return null;
 }
 
+/** Seconds left until an open gate shuts on the safe room, while one is counting down (for the banner); null otherwise. */
+export function gateCountdown(): number | null {
+  return countdown(false);
+}
+
+/** Seconds left until the exit room's portcullis drops, once its lever is pulled (for the banner); null otherwise. */
+export function exitCountdown(): number | null {
+  return countdown(true);
+}
+
+/** The exit room's door, once its lever is pulled: its seconds run out and it shuts, whoever is inside or not. */
+function updateExitDoor(level: Level, door: Door): void {
+  const d = door.door;
+  if (d.closed || d.closingTicks === null || --d.closingTicks > 0) return;
+  seal(level, door);
+}
+
 /**
- * Raises unlocked gates, and seals each opened door once every living player has crossed into the dungeon —
- * or when its ten seconds are up, on whoever is still inside.
+ * Raises unlocked gates, and seals the safe room's opened door once every living player has crossed into the
+ * dungeon — or when its ten seconds are up, on whoever is still inside; shuts the exit room's when its time is up.
  */
 export function updateDoors(level: Level): void {
   moveGates();
   for (const door of doors) {
     const d = door.door;
+    if (d.exit) {
+      updateExitDoor(level, door);
+      continue;
+    }
     if (d.closed || d.locked) continue;
     if (everyoneLeft(d.boundaryX)) {
       seal(level, door);

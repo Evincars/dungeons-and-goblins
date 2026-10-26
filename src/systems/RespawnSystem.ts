@@ -1,40 +1,29 @@
 import { world } from '../world';
 import type { Entity } from '../world';
-import type { Level } from '../level/Level';
 import { stateDuration } from '../characters/Characters';
-import { respawnPlayer } from './HoleSystem';
+import { partyFallen } from '../game/Fallen';
 import { run } from '../game/Run';
 
-/** Ticks the fallen player lies there after the death clip has finished. */
+/** Ticks the fallen hero lies there after the death clip has finished, before their death counts as played out. */
 const DEATH_LINGER = 45;
 
 const dying = world.with('playerInput', 'respawnTicks');
 
-/** Starts a player's death: plays the death clip out, then {@link updateRespawns} brings them back. */
-export function startDying(player: Entity, level: Level): void {
-  const clipTicks = player.character ? stateDuration(player.character.def, 'death') : 0;
-  if (clipTicks === 0) {
-    respawnPlayer(player, level, 'death');
-    return;
-  }
-  world.addComponent(player, 'respawnTicks', clipTicks + DEATH_LINGER);
+/**
+ * Starts a hero's death: the death clip plays out (`respawnTicks` counts it down), and then they lie where they fell
+ * until the party goes deeper (game/Fallen.ts).
+ */
+export function startDying(player: Entity): void {
+  const clipTicks = player.character ? stateDuration(player.character.def, 'death') + DEATH_LINGER : 0;
+  world.addComponent(player, 'respawnTicks', clipTicks);
   world.removeComponent(player, 'casting');
   world.removeComponent(player, 'swordSwing');
   player.hurtTime = 0;
   player.flashTime = 0;
 }
 
-export function updateRespawns(level: Level, dt: number): void {
-  for (const player of dying) {
-    player.respawnTicks = Math.max(0, player.respawnTicks - dt);
-    if (player.respawnTicks > 0) continue;
-    // Hardcore: the fallen stay down, and the run is over.
-    if (run.hardcore) {
-      run.over = true;
-      continue;
-    }
-    world.removeComponent(player, 'respawnTicks');
-    respawnPlayer(player, level, 'death');
-    player.hurtTime = 0;
-  }
+/** The fallen play their deaths out; once the whole party is down, the run is over. */
+export function updateRespawns(dt: number): void {
+  for (const player of dying) player.respawnTicks = Math.max(0, player.respawnTicks - dt);
+  if (partyFallen()) run.over = true;
 }

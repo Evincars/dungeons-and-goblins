@@ -19,6 +19,7 @@ import { applyCustomization } from './Customize';
 import { canBind } from '../rules/Spellbook';
 import { canToggle } from '../rules/ClassFeatures';
 import { heroClass } from '../rules/Classes';
+import { chooseDeparture } from '../systems/ExitSystem';
 
 /**
  * What players do from the shop and inventory panels. In a lone game or on the host it happens at once;
@@ -325,9 +326,10 @@ export function requestBind(player: Player, slot: number, spell: string, level: 
 
 /** Host: carries out what a guest asked for, if it is allowed for that guest's character. */
 export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): void {
-  // Answers to the party count from the fallen too.
+  // Answers by seat: whether that seat's hero may still answer is looked at where they are counted.
   if (command.kind === 'vote_answer') return queueAnswer(slot, command.agree);
   if (command.kind === 'loot') return chooseLoot(slot, command.roll, command.need);
+  if (command.kind === 'depart') return chooseDeparture(slot, command.choice);
   const player = playerInSlot(slot);
   if (!isPlayer(player) || player.health.current <= 0) return;
   if (command.kind === 'buy') {

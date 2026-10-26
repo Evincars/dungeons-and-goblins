@@ -1,5 +1,5 @@
-import { isEquipSlot, isGearKind, isItemType, isPlayerSlot, isRestKind, isStatName, PLAYER_SLOTS, QUICK_SLOTS, STAT_NAMES } from '../world';
-import type { BagSquare, EquipSlot, InventoryItem, PlayerInput, PlayerSlot, RestKind, StatName } from '../world';
+import { isDepartChoice, isEquipSlot, isGearKind, isItemType, isPlayerSlot, isRestKind, isStatName, PLAYER_SLOTS, QUICK_SLOTS, STAT_NAMES } from '../world';
+import type { BagSquare, DepartChoice, EquipSlot, InventoryItem, PlayerInput, PlayerSlot, RestKind, StatName } from '../world';
 import { validImprovement, validScores } from '../rules/Build';
 import type { Improvement } from '../rules/Build';
 import { isFightingStyle } from '../rules/FightingStyles';
@@ -19,7 +19,8 @@ import { bindingFeatureId, isFeatureId } from '../rules/ClassFeatures';
  * believes it: the other browser is not trusted.
  */
 
-export const PROTOCOL_VERSION = 1;
+/** Bumped whenever messages or the world they describe change, so mismatched browsers are told to reload. */
+export const PROTOCOL_VERSION = 2;
 /** The most guests a room takes: the host plus three others make four players. */
 export const MAX_GUESTS = PLAYER_SLOTS.length - 1;
 
@@ -57,7 +58,9 @@ export type GuestCommand =
   /** Put a spell, cast at a level, on a quick-bar square (the host checks the hero may). */
   | { kind: 'bind_spell'; slot: number; spell: string; level: number }
   /** Switch a passive class feature off or on. */
-  | { kind: 'toggle_feature'; feature: string };
+  | { kind: 'toggle_feature'; feature: string }
+  /** In the exit room, once its button is pressed: on to the next level, or end the run. */
+  | { kind: 'depart'; choice: DepartChoice };
 
 export type Message =
   /** `heroClass`: the class the guest picked (the host checks it). */
@@ -77,8 +80,6 @@ export type Message =
   | { type: 'input'; frame: InputFrame }
   | { type: 'command'; command: GuestCommand }
   | { type: 'sound'; name: SfxName; x?: number; y?: number }
-  /** The exit was pulled: the level is over, the host picks when the next one starts. */
-  | { type: 'complete' }
   | { type: 'ping' };
 
 const BUTTONS = ['up', 'down', 'left', 'right', 'attack', 'use', 'sprint', 'mouseAiming'] as const satisfies readonly (keyof PlayerInput)[];
@@ -87,7 +88,8 @@ const INTENTS = ['use', 'attack', 'cast', 'inventoryOpen', 'swap'] as const sati
 const MAX_AIM = 100000;
 /** More than any bag (MAX_INVENTORY) or shop holds, so honest messages always fit. */
 const MAX_ITEMS = 64;
-const MAX_ITEM_NAME = 40;
+/** The longest name an item may have (every line written about an item has room for it). */
+export const MAX_ITEM_NAME = 40;
 const MAX_ITEM_STAT = 1000;
 const MAX_ITEM_VALUE = 1e6;
 export const MAX_SEED = 2 ** 32;
@@ -194,6 +196,7 @@ export function validCommand(value: unknown): value is GuestCommand {
   if (value.kind === 'improve') return validImprovement(value.improvement);
   if (value.kind === 'lock_build') return true;
   if (value.kind === 'toggle_feature') return isFeatureId(value.feature);
+  if (value.kind === 'depart') return isDepartChoice(value.choice);
   if (value.kind === 'bind_spell') return validBinding(value.spell, value.level) && Number.isInteger(value.slot) && Number(value.slot) >= 0 && Number(value.slot) < QUICK_SLOTS;
   if (value.kind !== 'loadout' || !Array.isArray(value.inventory) || value.inventory.length > MAX_ITEMS) return false;
   return value.inventory.every(isBagSquare) && validEquipped(value.equipped);

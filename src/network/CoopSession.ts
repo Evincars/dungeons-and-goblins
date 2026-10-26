@@ -113,7 +113,6 @@ export class CoopSession {
   onChange: (() => void) | null = null;
   onStart: (() => void) | null = null;
   onState: (() => void) | null = null;
-  onComplete: (() => void) | null = null;
   /** Host only: a guest's connection ended. */
   onLeave: ((slot: PlayerSlot, name: string) => void) | null = null;
   /** Host only: a guest asked for something (a purchase, a change of equipment). */
@@ -285,7 +284,6 @@ export class CoopSession {
       case 'roster': return this.takeRoster(message.players);
       case 'start': return this.started(message.seed, message.depth);
       case 'map': return this.mapArrived(message.seed, message.data);
-      case 'complete': this.onComplete?.(); return;
       case 'sound':
         if (!validSound(message.name, message.x, message.y, isSfxName)) throw new NetworkError('Invalid sound event');
         sound.playSound(message.name, message.x, message.y);
@@ -616,8 +614,6 @@ export class CoopSession {
     this.broadcast({ type: 'sound', name, ...(x === undefined ? {} : { x }), ...(y === undefined ? {} : { y }) });
   }
 
-  sendComplete(): void { this.broadcast({ type: 'complete' }); }
-
   private broadcast(message: Message): void {
     if (this.role !== 'host') return;
     for (const link of this.activeLinks()) this.send(link, message);
@@ -688,7 +684,7 @@ export class CoopSession {
   close(): void {
     clearTimeout(this.timeout);
     this.stopHeartbeat();
-    this.onChange = null; this.onStart = null; this.onState = null; this.onComplete = null;
+    this.onChange = null; this.onStart = null; this.onState = null;
     this.onLeave = null; this.onCommand = null;
     for (const link of this.allLinks()) this.hangUp(link);
     this.links.clear();

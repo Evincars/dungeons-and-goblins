@@ -1424,6 +1424,7 @@ test('a generated level saves to JSON and gzip, and comes back the same; a damag
   assert.deepEqual(back.rooms, layout.rooms, 'the rooms');
   assert.deepEqual(back.props, layout.props, 'the props: the assets every screen draws');
   assert.deepEqual([back.leverPos, back.safeDoor, back.shopPos], [layout.leverPos, layout.safeDoor, layout.shopPos]);
+  assert.deepEqual([back.exitLeverPos, back.exitDoor], [layout.exitLeverPos, layout.exitDoor], "the exit room's lever and door");
   const packed = await packLevelMap(map);
   assert.ok(packed.byteLength < json.length / 2, `gzip shrinks it (${json.length} → ${packed.byteLength} bytes)`);
   const unpacked = await unpackLevelMap(packed);
@@ -2702,4 +2703,281 @@ test('actives go on the quick bar and are used with the cast key', () => {
   assert.equal(usedFeature(wizard, 'arcane_recovery', 0), true);
   assert.equal(wizard.spellbook.recovery[2], 0);
   assert.equal(usedFeature(wizard, 'indomitable', 0), false, 'not played out yet');
+});
+
+// ── Bolts against walls, the guest's view of the floor, long names ───────────
+
+const { createSpellBolt } = await load('entities/ProjectileFactory');
+const { createItemPickup } = await load('entities/LootFactory');
+const { WALL_SINK } = await load('level/Level');
+
+test('a spell flies on over the strip of a wall that feet stand in, and bursts on the wall itself', () => {
+  const level = arena(8, 9);
+  wallRect(level, 1, 6, 6, 6);
+  const wallTop = 6 * TILE_WIDTH;
+  assert.equal(level.blocksPoint(centre(3), wallTop + 10), false, 'where a hero may stand, at the foot of the wall');
+  assert.equal(level.blocksPoint(centre(3), wallTop + WALL_SINK + 1), true, 'the wall itself');
+  level.setTile(5, 2, createTile(TileType.Obstacle));
+  level.blockBoxes.set(level.tileIndex(5, 2), { x0: 4, y0: 20, x1: 28, y1: 30 });
+  assert.equal(level.blocksPoint(5 * TILE_WIDTH + 16, 2 * TILE_WIDTH + 5), false, 'above a prop, clear of its foot');
+  assert.equal(level.blocksPoint(5 * TILE_WIDTH + 16, 2 * TILE_WIDTH + 25), true, 'the foot of the prop');
+
+  const bolt = createSpellBolt(centre(3), centre(2), 0, 1, {});
+  for (let t = 0; t < 120 && !bolt.removed; t++) updateSpells(level);
+  assert.ok(bolt.removed, 'it burst');
+  assert.ok(bolt.position.y > wallTop + WALL_SINK, `not before it reached the wall (burst at ${bolt.position.y})`);
+});
+
+test('a guest draws an item on the floor whole, not the top-left corner of it cut as a frame', () => {
+  seated(1, 1, 'host', 'Ana');
+  createItemPickup(centre(2), centre(2), WEAPONS[0]);
+  const wire = JSON.parse(JSON.stringify(captureWorld(false, 7)));
+  world.clear();
+  const replica = new WorldReplica();
+  replica.localSlot = 'p2';
+  replica.apply(wire);
+  const copy = world.entities.find((e) => e.item);
+  const sprite = { texture: 'the whole icon' };
+  world.addComponent(copy, 'sprite', sprite);
+  replica.apply(wire);
+  assert.equal(sprite.texture, 'the whole icon', 'later updates leave the picture as it was made');
+});
+
+test('a find with a long name keeps the world update valid, so the guest is not dropped from the game', () => {
+  const ana = seated(2, 2, 'host', 'Ana');
+  const longest = WEAPONS.reduce((a, b) => (b.name.length > a.name.length ? b : a));
+  ana.inventory = [];
+  assert.ok(PlayerActions.receiveItem(ana, longest));
+  assert.ok(ana.rollLog.at(-1).text.length > 40, 'a line longer than the old limit');
+  assert.doesNotThrow(() => validateNetState(JSON.parse(JSON.stringify(captureWorld(false, 7)))));
+});
+
+// ── Death in a run, and leaving through the exit room ────────────────────────
+
+const { updateRespawns } = await load('systems/RespawnSystem');
+const { updateFalling, FALL_TICKS } = await load('systems/HoleSystem');
+const { updateExit, inExitRoom, chooseDeparture } = await load('systems/ExitSystem');
+const { exitCountdown, EXIT_CLOSE_TICKS } = await load('systems/DoorSystem');
+const { playerUsing } = await load('systems/TargetSystem');
+const { run } = await load('game/Run');
+const Fallen = await load('game/Fallen');
+
+test('in co-op a hero who dies stays down where they fell, their gear and gold left there; the run ends when all are down', () => {
+  run.over = false;
+  const level = arena(14, 8);
+  const ana = seated(3, 3, 'host', 'Ana');
+  const bo = seated(10, 3, 'p2', 'Bo');
+  ana.inventory = [structuredClone(WEAPONS[0])];
+  ana.equipped = { armor: structuredClone(ARMORS[0]) };
+  ana.playerStats.gold = 40;
+  ana.health.current = 0;
+  updateDeath(level);
+  assert.equal(ana.inventory.length, 0);
+  assert.deepEqual(ana.equipped, {});
+  assert.equal(ana.playerStats.gold, 0);
+  assert.equal(world.entities.filter((e) => e.item).length, 2, 'the sword and the armour lie on the floor');
+  const purse = () => world.entities.filter((e) => e.loot && !e.removed).reduce((sum, e) => sum + e.loot.value, 0);
+  assert.equal(purse(), 40, 'every coin of the purse spilt');
+  for (let t = 0; t < 2000; t++) {
+    updateRespawns(1);
+    updateLoot(level);
+  }
+  assert.equal(ana.health.current, 0, 'nobody gets up again');
+  assert.equal(ana.respawnTicks, 0, 'the death has played out');
+  assert.equal(purse(), 40, 'the coins wait for somebody to come for them');
+  assert.equal(run.over, false, 'Bo is still standing');
+  bo.health.current = 0;
+  updateDeath(level);
+  for (let t = 0; t < 2000; t++) updateRespawns(1);
+  assert.equal(Fallen.partyFallen(), true);
+  assert.equal(run.over, true, 'the whole party is down');
+  run.over = false;
+});
+
+test('a fallen hero gets no share of a kill: its experience and gold go to those still standing', () => {
+  const level = arena(14, 8);
+  const ana = seated(3, 3, 'host', 'Ana');
+  const bo = seated(5, 3, 'p2', 'Bo');
+  bo.health.current = 0;
+  updateDeath(level);
+  const mob = mobAt(level, 'goblin', 9, 3);
+  mob.health.current = 0;
+  updateDeath(level);
+  assert.ok(ana.playerStats.exp > 0 && ana.playerStats.gold > 0);
+  assert.equal(ana.playerStats.kills, 1);
+  assert.deepEqual([bo.playerStats.exp, bo.playerStats.gold, bo.playerStats.kills], [0, 0, 0]);
+});
+
+test('in co-op a hero who falls into a pit stays at its bottom; what they carried is left at its edge', () => {
+  const level = arena(12, 10);
+  for (const [x, y] of [[5, 4], [6, 4], [5, 5], [6, 5]]) level.setTile(x, y, createTile(TileType.Hole));
+  const ana = seated(2, 2, 'host', 'Ana');
+  seated(9, 8, 'p2', 'Bo');
+  ana.position.x = 6 * TILE_WIDTH;
+  ana.position.y = 5 * TILE_WIDTH;
+  ana.inventory = [structuredClone(WEAPONS[0])];
+  ana.playerStats.gold = 10;
+  updateHoles(level);
+  assert.ok(ana.falling);
+  for (let t = 0; t < FALL_TICKS + 30; t++) updateFalling(level);
+  assert.equal(ana.health.current, 0);
+  assert.equal(ana.respawnTicks, 0);
+  assert.deepEqual([ana.position.x, ana.position.y], [6 * TILE_WIDTH, 5 * TILE_WIDTH], 'still down in the pit');
+  const sword = world.entities.find((e) => e.item);
+  assert.ok(level.canHold(sword.position.x, sword.position.y), 'on the floor at the edge, not in the pit');
+  const god = seated(2, 6, 'p3', 'Cy');
+  god.godMode = true;
+  god.position.x = ana.position.x;
+  god.position.y = ana.position.y;
+  updateHoles(level);
+  assert.equal(god.falling, undefined, "the console's god mode walks over pits");
+});
+
+test('going deeper brings the fallen back whole, with their experience but without gear or gold', () => {
+  startRun();
+  const ana = seated(2, 2, 'host', 'Ana');
+  const bo = seated(3, 2, 'p2', 'Bo');
+  ana.health.current = 5;
+  ana.playerStats.gold = 12;
+  ana.inventory = [structuredClone(WEAPONS[0])];
+  Object.assign(bo.playerStats, { exp: 400, level: 2, gold: 30 });
+  bo.inventory = [structuredClone(WEAPONS[0])];
+  bo.equipped = { armor: structuredClone(ARMORS[0]) };
+  bo.health.current = 0;
+  descend();
+  world.clear();
+  const ana2 = seated(2, 2, 'host', 'Ana');
+  const bo2 = seated(3, 2, 'p2', 'Bo');
+  restorePlayer(ana2);
+  restorePlayer(bo2);
+  assert.deepEqual([ana2.health.current, ana2.playerStats.gold, ana2.inventory.length], [5, 12, 1], 'the standing keep everything');
+  assert.deepEqual([bo2.playerStats.exp, bo2.playerStats.level], [400, 2], 'the fallen keep what they learnt');
+  assert.deepEqual([bo2.playerStats.gold, bo2.inventory, bo2.equipped], [0, [], {}], 'but nothing they had');
+  assert.equal(bo2.health.current, bo2.health.max, 'and are whole again');
+  startRun();
+});
+
+test('the fallen have no say: votes go on without them, and no rest brings them back', () => {
+  const ana = seated(2, 2, 'host', 'Ana');
+  const bo = seated(3, 2, 'p2', 'Bo');
+  const cy = seated(4, 2, 'p3', 'Cy');
+  cy.health.current = 0;
+  assert.equal(Party.isAlone(), false);
+  Party.openVote(ana, 'short');
+  Party.queueAnswer('p3', false);
+  Party.updateParty();
+  assert.ok(Party.currentParty().vote, "Cy's refusal does not count");
+  Party.queueAnswer('p2', true);
+  Party.updateParty();
+  assert.ok(Party.takeAgreedVote(['short']), 'everyone still standing agreed');
+  ana.health.current = 1;
+  Rest.takeRest('long');
+  assert.equal(ana.health.current, ana.health.max);
+  assert.equal(cy.health.current, 0, 'a long rest is no revival');
+  bo.health.current = 0;
+  assert.equal(Party.isAlone(), true, 'with the others down, Ana acts alone');
+});
+
+/** A dungeon with three heroes: one by the exit button, one further into the exit room, one back in the safe room. */
+function atTheExit() {
+  const { level, layout } = buildDungeon(777, true);
+  const button = world.entities.find((e) => e.exitButton);
+  const room = layout.rooms.find((r) => r.type === 'exit');
+  const ana = seated(0, 0, 'host', 'Ana');
+  const bo = seated(0, 0, 'p2', 'Bo');
+  const cy = seated(0, 0, 'p3', 'Cy');
+  Object.assign(ana.position, { x: button.position.x + 6, y: button.position.y });
+  Object.assign(bo.position, { x: centre(room.x + 1), y: centre(room.y + 1) });
+  Object.assign(cy.position, layout.playerSpawn);
+  const press = () => {
+    ana.playerInput.intents.use = true;
+    beginPerception();
+    resolveUses();
+    updateExit();
+    ana.playerInput.intents.use = false;
+  };
+  return { level, layout, button, ana, bo, cy, press };
+}
+
+test('the exit button asks only the heroes in the exit room; they go deeper together, and whoever is outside is left behind', () => {
+  const { layout, button, ana, bo, cy, press } = atTheExit();
+  press();
+  assert.equal(button.exitButton.activated, true);
+  assert.deepEqual([inExitRoom(ana), inExitRoom(bo), inExitRoom(cy)], [true, true, false]);
+  chooseDeparture('p3', 'end');
+  updateExit();
+  assert.deepEqual(button.exitButton.choices, {}, 'Cy is not in the room, so she is not asked');
+  chooseDeparture('host', 'next');
+  updateExit();
+  assert.equal(button.exitButton.outcome, null, 'Bo has yet to choose');
+  Object.assign(cy.position, { x: bo.position.x + 12, y: bo.position.y });
+  chooseDeparture('p2', 'next');
+  updateExit();
+  assert.equal(button.exitButton.outcome, null, 'Cy walked in before it was settled: she is asked too');
+  Object.assign(cy.position, layout.playerSpawn);
+  updateExit();
+  assert.equal(button.exitButton.outcome, 'next', 'everyone in the room chose to go deeper');
+  assert.equal(cy.health.current, 0, 'Cy is left behind');
+  assert.ok(cy.rollLog.some((l) => l.text === 'LEFT BEHIND'));
+  assert.ok(ana.health.current > 0 && bo.health.current > 0);
+});
+
+test('anyone in the exit room choosing to end the run ends it; if everyone walks out first, the button can be pressed again', () => {
+  const { layout, button, ana, bo, press } = atTheExit();
+  const anaAt = { ...ana.position };
+  press();
+  Object.assign(ana.position, layout.playerSpawn);
+  Object.assign(bo.position, layout.playerSpawn);
+  updateExit();
+  assert.equal(button.exitButton.activated, false, 'nobody left to ask');
+  assert.equal(button.visual.col, 0, 'the button is back up');
+  Object.assign(ana.position, anaAt);
+  press();
+  assert.equal(button.exitButton.activated, true, 'pressed again');
+  chooseDeparture('host', 'end');
+  updateExit();
+  assert.equal(button.exitButton.outcome, 'end', 'only Ana was in the room');
+  assert.ok(ana.health.current > 0);
+});
+
+test("the exit room's lever drops its portcullis 5 s after one pull, for good; nothing else moves", () => {
+  const { level, layout } = buildDungeon(777, true);
+  const lever = world.entities.find((e) => e.lever?.exit);
+  const door = world.entities.find((e) => e.door?.exit);
+  assert.ok(lever && door && !door.door.locked && !door.door.closed, 'the exit room stands open');
+  for (const t of layout.exitDoor.tiles) assert.equal(level.getTile(t.x, t.y).type, TileType.Floor);
+  assert.ok(level.isWorldPosSafe(lever.position.x, lever.position.y), 'the lever is inside the exit room');
+  const hero = createPlayer(lever.position.x + 6, lever.position.y);
+  hero.playerInput.intents.use = true;
+  beginPerception();
+  resolveUses();
+  updateLevers(level);
+  assert.equal(lever.lever.pulled, true, 'nobody is asked');
+  assert.equal(exitCountdown(), EXIT_CLOSE_TICKS / 60);
+  assert.equal(world.entities.find((e) => e.lever && !e.lever.exit).lever.pulled, false, "the safe room's lever is untouched");
+  for (let t = 0; t < EXIT_CLOSE_TICKS; t++) updateDoors(level);
+  assert.equal(door.door.closed, true);
+  assert.equal(exitCountdown(), null);
+  for (const t of layout.exitDoor.tiles) assert.equal(level.getTile(t.x, t.y).type, TileType.Obstacle, 'barred');
+  assert.equal(world.entities.filter((e) => e.gate?.dropping).length, layout.exitDoor.tiles.length, 'its portcullis drops');
+  assert.ok(world.entities.filter((e) => e.gate && !e.gate.dropping).every((g) => g.gate.lift === 0), "the safe room's stays down");
+  beginPerception();
+  resolveUses();
+  assert.equal(playerUsing(lever), null, 'it cannot be pulled again');
+});
+
+test('a guest may only answer the exit button with a known choice, and its state must hold together', () => {
+  assert.ok(validCommand({ kind: 'depart', choice: 'next' }));
+  assert.ok(!validCommand({ kind: 'depart', choice: 'stay' }));
+  const { button } = atTheExit();
+  button.exitButton.choices = { p2: 'next' };
+  const good = () => JSON.parse(JSON.stringify(captureWorld(false, 7)));
+  assert.doesNotThrow(() => validateNetState(good()));
+  const tamper = (fn) => {
+    const w = good();
+    fn(w.entities.find((e) => e.data.exitButton).data.exitButton);
+    return w;
+  };
+  assert.throws(() => validateNetState(tamper((b) => { b.outcome = 'stay'; })), ValidationError);
+  assert.throws(() => validateNetState(tamper((b) => { b.choices = { p9: 'next' }; })), ValidationError);
 });

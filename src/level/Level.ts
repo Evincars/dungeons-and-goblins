@@ -183,6 +183,31 @@ export class Level {
     return tile === null ? false : tile.passable;
   }
 
+  /** Whether something set down here lies on the floor: open ground that is not a pit (a pit swallows it). */
+  canHold(worldX: number, worldY: number): boolean {
+    const tile = this.getTileAt(worldX, worldY);
+    return !!tile && tile.passable && tile.type !== TileType.Hole;
+  }
+
+  /**
+   * Whether a point on the ground lies inside the same box a body would bump into (`getClipBBs`): the strip of a
+   * wall's tile that feet may sink into, and the part of a prop's tile beside its foot, are open. Spells and arrows
+   * fly by this, so a shot drawn at hand height above the floor is not stopped by a wall it has not reached.
+   */
+  blocksPoint(worldX: number, worldY: number): boolean {
+    const tx = Math.floor(worldX / TILE_WIDTH);
+    const ty = Math.floor(worldY / TILE_HEIGHT);
+    const tile = this.getTile(tx, ty);
+    if (!tile) return true;
+    if (tile.passable) return false;
+    const inX = worldX - tx * TILE_WIDTH;
+    const inY = worldY - ty * TILE_HEIGHT;
+    const part = tile.type === TileType.Obstacle ? this.blockBoxes.get(tx + ty * this.width) : undefined;
+    if (part) return inX >= part.x0 && inX < part.x1 && inY >= part.y0 && inY < part.y1;
+    const sink = isWallType(tile) && this.getTile(tx, ty - 1)?.passable ? WALL_SINK : 0;
+    return inY >= sink;
+  }
+
   /**
    * Collision boxes of the map's edges and of every solid tile around the box centred at (cx, cy). The
    * array and its boxes are reused by the next call: use them at once, never keep them.
@@ -253,15 +278,5 @@ export class Level {
 
   addSpawnPoint(x: number, y: number): void {
     this.spawnPoints.push({ x, y });
-  }
-
-  /** Replaces all respawn points with a single one. */
-  setSpawnPoint(x: number, y: number): void {
-    this.spawnPoints = [{ x, y }];
-  }
-
-  getRandomSpawnPoint(): SpawnPoint | null {
-    if (this.spawnPoints.length === 0) return null;
-    return this.spawnPoints[Math.floor(Math.random() * this.spawnPoints.length)];
   }
 }

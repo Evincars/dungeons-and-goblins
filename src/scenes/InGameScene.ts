@@ -1,7 +1,7 @@
 import { Container, Graphics } from 'pixi.js';
 import type { Application } from 'pixi.js';
 import { world, q, localPlayer } from '../world';
-import type { Player } from '../world';
+import type { DepartChoice, Entity, Player } from '../world';
 import type { Scene, SceneManager } from '../game/SceneManager';
 import { text } from '../core/texts';
 import { buildDungeon, buildSentDungeon, prepareLevel, randomSeed } from '../level/DungeonGenerator';
@@ -31,7 +31,9 @@ import { PauseMenu } from '../ui/PauseMenu';
 import { closeInventory, isInventoryOpen } from '../systems/InventorySystem';
 import { cancelBinding, pendingBinding } from '../game/SpellBinding';
 import { isShopOpen, activeShopItems, closeShop } from '../systems/ShopSystem';
-import { isLevelComplete, resetLevelComplete } from '../systems/ExitSystem';
+import { departure, inExitRoom, requestDeparture } from '../systems/ExitSystem';
+import { partyFallen, isStanding } from '../game/Fallen';
+import { seatOf } from '../game/Party';
 import { PixelLabel, makeText } from '../ui/PixelText';
 import { Crosshair } from '../ui/Crosshair';
 import { sound } from '../audio/SoundPlayer';
@@ -63,6 +65,12 @@ const LOADING_ALPHA = 0.92;
 
 type Mode = 'solo' | 'host' | 'guest';
 type RunTotals = { kills: number; xp: number; gold: number };
+/**
+ * What the exit button puts on this screen: nothing, its question (this hero is in the exit room and hasn't chosen),
+ * a wait for the others there, or — on every screen — the party's decision to end the run.
+ */
+type Prompt = 'none' | 'ask' | 'wait' | 'ended';
+type ExitState = NonNullable<Entity['exitButton']>;
 
 /** Everything the player has earned so far in the run. */
 function totalsOf(stats: NonNullable<Player['playerStats']>): RunTotals {
@@ -72,7 +80,7 @@ function totalsOf(stats: NonNullable<Player['playerStats']>): RunTotals {
 /**
  * One dungeon level. Alone or as the co-op host this screen runs the game; as a guest it draws the host's
  * world (built from the same seed) and sends this player's controls. Escape opens the pause menu, which only
- * stops the game when playing alone. Alone, one death or fall ends the run (hardcore).
+ * stops the game when playing alone. The run is over once the whole party is down (alone, the first death or fall).
  */
 export class InGameScene implements Scene {
   readonly container = new Container();
@@ -97,7 +105,7 @@ export class InGameScene implements Scene {
   private readonly crosshair = new Crosshair();
   private readonly result = new ResultPanel();
   private readonly status: PixelLabel;
-  private complete = false;
+  private prompt: Prompt = 'none';
   /** Whether this screen's hero was alive last tick, to toll their death the moment it comes. */
   private heroAlive = true;
   private gameOverShown = false;
@@ -121,8 +129,6 @@ export class InGameScene implements Scene {
     this.mode = coop.role === 'host' ? 'host' : coop.role === 'guest' ? 'guest' : 'solo';
     // A level starts from an empty world: the previous level's entities (and their sprites, which lived in
     // its layers) are gone, along with any panel left open.
-    run.hardcore = this.mode === 'solo';
-    resetLevelComplete();
     closeInventory();
     closeShop();
     world.clear();
@@ -151,7 +157,7 @@ export class InGameScene implements Scene {
     }));
 
     if (this.mode === 'guest') {
-      this.guest = new GuestGame(() => this.levelComplete(), () => manager.goto('in_game'));
+      this.guest = new GuestGame(() => manager.goto('in_game'));
       coop.sendLoaded(seed);
     } else {
       const me = createPlayer(spawns.playerSpawn.x, spawns.playerSpawn.y, settings.heroClass);
@@ -199,8 +205,8 @@ export class InGameScene implements Scene {
   /** Escape backs out of a sub-screen or the confirmation first, and only then opens or closes the pause menu. */
   private handleKey(e: KeyboardEvent): void {
     if (this.consoleKey(e)) return;
-    if (e.code === 'Enter' && this.complete && this.mode !== 'guest') {
-      this.nextLevel();
+    if (e.code === 'Enter' && this.prompt === 'ask') {
+      requestDeparture('next');
       return;
     }
     if (e.code !== 'Escape') return;
@@ -248,9 +254,9 @@ export class InGameScene implements Scene {
     resetInput();
   }
 
-  /** Whether the world stands still: alone, behind the pause menu, the game over screen or the level summary. */
+  /** Whether the world stands still: alone, behind the pause menu or the game over screen. */
   private get frozen(): boolean {
-    return this.mode === 'solo' && (this.pause.open || this.complete || run.over);
+    return this.mode === 'solo' && (this.pause.open || run.over);
   }
 
   /** Browsers only let a script close a tab it opened, so fall back to the main menu. */
@@ -302,8 +308,10 @@ export class InGameScene implements Scene {
     this.console.update();
     this.updatePanels();
     this.updateStatus(player);
-    if (this.mode !== 'guest' && !this.complete && isLevelComplete()) this.levelComplete();
-    if (run.over && !this.gameOverShown) this.gameOver();
+    this.updateDeparture(player);
+    // A guest's copy of the world tells it too when the whole party is down.
+    const lost = run.over || (this.mode === 'guest' && partyFallen());
+    if (lost && !this.gameOverShown) this.gameOver();
   }
 
   /** Alone or hosting: one tick of the game (unless frozen), and the world out to the guests. */
@@ -395,18 +403,62 @@ export class InGameScene implements Scene {
     if (this.mode !== 'solo' && !coop.connected) line = coop.status;
     else if (this.guest?.hostPaused) line = text('game.host_paused');
     else if (this.mode === 'guest' && !player) line = text('game.joining');
+    else if (this.leavingWithout(player)) line = text('game.departing');
     this.status.text = line;
   }
 
-  /** The exit was pulled: the summary of the level comes up. Alone or hosting, Enter goes deeper; a guest waits for the host. */
-  private levelComplete(): void {
-    if (this.complete) return;
-    this.complete = true;
+  /** Whether the party is choosing to leave at the exit room while this hero, on their feet, is elsewhere: they had better hurry. */
+  private leavingWithout(player: Player | undefined): boolean {
+    const exit = departure();
+    return !!exit?.activated && !exit.outcome && !!player && isStanding(player) && !inExitRoom(player);
+  }
+
+  /**
+   * The exit button (systems/ExitSystem.ts): once pressed, the next level is made ready in the background; once the
+   * party has chosen, alone or hosting this screen goes deeper (the guests follow the host), and alone ending the run
+   * goes back to the title. Meanwhile the question, a wait or the run's end shows as this screen's hero calls for.
+   */
+  private updateDeparture(player: Player | undefined): void {
+    if (this.gameOverShown) return;
+    const exit = departure();
+    const runsGame = this.mode !== 'guest';
+    if (runsGame && exit?.activated && run.nextSeed === null) this.prepareNextLevel();
+    if (runsGame && exit?.outcome === 'next') {
+      this.nextLevel();
+      return;
+    }
+    if (this.mode === 'solo' && exit?.outcome === 'end') {
+      this.manager.goto('title');
+      return;
+    }
+    this.showPrompt(this.promptFor(exit, player));
+  }
+
+  private promptFor(exit: ExitState | undefined, player: Player | undefined): Prompt {
+    if (exit?.outcome === 'end') return 'ended';
+    if (!exit?.activated || exit.outcome || !player || !inExitRoom(player)) return 'none';
+    return exit.choices[seatOf(player)] ? 'wait' : 'ask';
+  }
+
+  private showPrompt(prompt: Prompt): void {
+    if (prompt === this.prompt) return;
+    this.prompt = prompt;
+    if (prompt === 'none') {
+      this.result.hide();
+      this.showPointer(this.pause.open);
+      return;
+    }
+    if (prompt === 'ended') this.runEnded();
+    else this.askToLeave(prompt === 'wait');
+    this.showPointer(true);
+  }
+
+  /** The level's summary, with the choice to go deeper or end the run here (once chosen, a wait for the others in the room). */
+  private askToLeave(chosen: boolean): void {
     holdMusic('rest');
     closeShop();
-    this.host?.levelComplete();
-    if (this.mode !== 'guest') this.prepareNextLevel();
     const gained = this.levelTotals();
+    const choose = (choice: DepartChoice) => () => requestDeparture(choice);
     this.result.show({
       title: text('game.level_complete.title'),
       titleColor: 0xffcc44,
@@ -415,13 +467,44 @@ export class InGameScene implements Scene {
         text('game.level_complete.xp', { count: gained.xp }),
         text('game.level_complete.gold', { count: gained.gold }),
       ],
-      waiting: this.mode === 'guest' ? text('game.level_complete.waiting') : undefined,
+      waiting: chosen ? text('game.level_complete.waiting') : undefined,
       buttons: [
-        { label: text('game.level_complete.next'), action: () => this.nextLevel() },
-        { label: text('game.level_complete.end_run'), action: () => this.manager.goto('title') },
+        { label: text('game.level_complete.next'), action: choose('next') },
+        { label: text('game.level_complete.end_run'), action: choose('end') },
       ],
     });
-    this.showPointer(true);
+  }
+
+  /** Someone in the exit room chose to end the run: every screen shows the run's totals, and the way out. */
+  private runEnded(): void {
+    holdMusic('rest');
+    closeShop();
+    closeInventory();
+    this.result.show({
+      title: text('game.run_ended.title'),
+      titleColor: 0xffcc44,
+      lines: this.runLines(),
+      buttons: this.endButtons(),
+    });
+  }
+
+  /** The run's totals so far, for the game over and the run's end. */
+  private runLines(): string[] {
+    const stats = localPlayer()?.playerStats;
+    const total = stats ? totalsOf(stats) : { kills: 0, xp: 0, gold: 0 };
+    return [
+      text('game.game_over.depth', { depth: this.mode === 'guest' ? coop.level?.depth ?? run.depth : run.depth }),
+      text('game.game_over.kills', { count: total.kills }),
+      text('game.game_over.xp', { count: total.xp }),
+      text('game.game_over.gold', { count: total.gold }),
+    ];
+  }
+
+  /** After the run: a new one (alone or hosting; the guests follow the host into it), or the main menu. */
+  private endButtons(): Array<{ label: string; action: () => void }> {
+    const menu = { label: text('game.game_over.main_menu'), action: () => this.manager.goto('title') };
+    if (this.mode === 'guest') return [menu];
+    return [{ label: text('game.game_over.new_game'), action: () => this.newGame() }, menu];
   }
 
   /** Picks the next level and generates its map in the background, once the summary has drawn. */
@@ -442,28 +525,18 @@ export class InGameScene implements Scene {
     return { kills: now.kills - start.kills, xp: now.xp - start.xp, gold: now.gold - start.gold };
   }
 
-  /** Alone, dying or falling into a pit ends the run: the world stays as it was, with the choice on top. */
+  /** The whole party is down (alone, the first death or fall): the world stays as it was, with the choice on top. */
   private gameOver(): void {
     this.gameOverShown = true;
     holdMusic('lament');
     this.pause.hide();
     closeShop();
     closeInventory();
-    const stats = localPlayer()?.playerStats;
-    const total = stats ? totalsOf(stats) : { kills: 0, xp: 0, gold: 0 };
     this.result.show({
       title: text('game.game_over.title'),
       titleColor: 0xff5544,
-      lines: [
-        text('game.game_over.depth', { depth: run.depth }),
-        text('game.game_over.kills', { count: total.kills }),
-        text('game.game_over.xp', { count: total.xp }),
-        text('game.game_over.gold', { count: total.gold }),
-      ],
-      buttons: [
-        { label: text('game.game_over.new_game'), action: () => this.newGame() },
-        { label: text('game.game_over.main_menu'), action: () => this.manager.goto('title') },
-      ],
+      lines: this.runLines(),
+      buttons: this.endButtons(),
     });
     this.showPointer(true);
   }

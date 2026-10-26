@@ -139,7 +139,7 @@ export function isVoteKind(value: unknown): value is VoteKind {
 }
 
 /** What the screen says about a vote: a rest taken, a vote asked for, turned down or unanswered, or why it can't be now. */
-export const REST_NOTICES = ['short_done', 'long_done', 'asked', 'declined', 'timeout', 'hunted', 'unsafe', 'no_short_left', 'fallen'] as const;
+export const REST_NOTICES = ['short_done', 'long_done', 'asked', 'declined', 'timeout', 'hunted', 'unsafe', 'no_short_left'] as const;
 export type RestNotice = (typeof REST_NOTICES)[number];
 
 export function isRestNotice(value: unknown): value is RestNotice {
@@ -153,6 +153,14 @@ export type PartyNoticeShown = { notice: RestNotice; name: string; kind: VoteKin
 
 /** A Need or Pass on a rare find; a player who hasn't chosen yet has no entry. */
 export type LootChoice = 'need' | 'pass';
+
+/** What a hero in the exit room answers once the exit button is pressed: on to the next level, or end the run here. */
+export const DEPART_CHOICES = ['next', 'end'] as const;
+export type DepartChoice = (typeof DEPART_CHOICES)[number];
+
+export function isDepartChoice(value: unknown): value is DepartChoice {
+  return DEPART_CHOICES.some((choice) => choice === value);
+}
 
 /** Who controls a player character: the host, or one of up to three guests in a co-op room. */
 export const PLAYER_SLOTS = ['host', 'p2', 'p3', 'p4'] as const;
@@ -492,7 +500,11 @@ export type Entity = {
   stepTimer?: number;
   dustTimer?: number;
 
-  // --- respawn ---
+  // --- dying ---
+  /**
+   * Ticks left of a death playing out (the death clip, then a moment lying still); 0 once it has. A fallen hero then
+   * lies there until the party goes deeper (game/Fallen.ts); a dead enemy is cleared away.
+   */
   respawnTicks?: number;
 
   // --- minimap ---
@@ -509,22 +521,27 @@ export type Entity = {
   safeZone?: true;
 
   // --- exit button (players interact to end level) ---
-  exitButton?: { activated: boolean };
+  /**
+   * The exit room's button (systems/ExitSystem.ts): `activated` once pressed, while the heroes in the exit room choose;
+   * what each has chosen so far; and what they decided once everyone there has (null until then).
+   */
+  exitButton?: { activated: boolean; choices: Partial<Record<PlayerSlot, DepartChoice>>; outcome: DepartChoice | null };
 
   // --- shop NPC ---
   shopNpc?: { items: InventoryItem[] };
 
   // --- door (seals the safe room once players leave) ---
   /**
-   * The safe room's door: `locked` until the lever is pulled (its doorway barred by a portcullis), then open,
-   * and `closed` (walled up) once everyone has gone through.
+   * The starting safe room's door: `locked` until the lever is pulled (its doorway barred by a portcullis), then
+   * open, and `closed` (walled up) once everyone has gone through. The exit room's door (`exit`) starts open and
+   * shuts, for good, a few seconds after its own lever is pulled.
    */
   door?: {
     tiles: Array<{ x: number; y: number }>; boundaryX: number; closed: boolean; locked: boolean;
-    /** Ticks until the opened gate shuts on whoever is still inside (null: not counting down). */
+    /** Ticks until the opened gate shuts (null: not counting down). */
     closingTicks: number | null;
+    exit?: true;
   };
-  /** A portcullis over a doorway tile: how far it has risen (0 down, 1 gone). */
   /**
    * A portcullis over a doorway tile: `lift` from 0 (down, barring the way) to 1 (risen out of sight); `dropping`
    * while it falls back down onto the doorway as the safe room is shut.
@@ -532,9 +549,10 @@ export type Entity = {
   gate?: { lift: number; dropping?: boolean };
   /**
    * The lever by the safe room's door: pulled opens the way into the dungeon (in co-op once everyone agrees).
-   * `rest`: ticks before it can be pulled again after the others turned it down.
+   * `rest`: ticks before it can be pulled again after the others turned it down. The exit room's lever (`exit`) shuts
+   * its door instead, once and for all.
    */
-  lever?: { pulled: boolean; rest: number };
+  lever?: { pulled: boolean; rest: number; exit?: true };
   /** Something on the floor worth searching (an urn, a coffin, a bowl): the coins in it, found once. */
   stash?: { coins: number };
   /**

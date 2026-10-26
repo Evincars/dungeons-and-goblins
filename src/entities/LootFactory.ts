@@ -133,13 +133,23 @@ export function stashCoins(): number {
 
 /** Most pieces a sum of money spills as. */
 const MAX_SPILL_PIECES = 12;
-/** A sum spilled as a handful of exact-valued pickups, halving as it goes (Redux's spillMoney). */
-export function spillMoney(x: number, y: number, total: number, maxPieces = MAX_SPILL_PIECES): void {
+/**
+ * A fallen hero's purse lies where it spilled for this long (an hour) instead of blinking out with ordinary coins:
+ * the others must be able to come back for it. A whole number, as everything sent to co-op guests must be.
+ */
+const KEPT_LOOT_LIFE = 60 * 60 * 60;
+
+/**
+ * A sum spilled as a handful of exact-valued pickups, halving as it goes (Redux's spillMoney); `kept` coins stay
+ * until somebody picks them up.
+ */
+export function spillMoney(x: number, y: number, total: number, maxPieces = MAX_SPILL_PIECES, kept = false): void {
   let remaining = Math.floor(total);
   for (let i = 0; remaining > 0 && i < maxPieces; i++) {
     const value = i === maxPieces - 1 ? remaining : Math.max(1, Math.ceil(remaining / 2));
     const angle = Math.random() * Math.PI * 2;
-    createLoot(x, y, Math.cos(angle), Math.sin(angle), value, true);
+    const coin = createLoot(x, y, Math.cos(angle), Math.sin(angle), value, true);
+    if (kept && coin.loot) coin.loot.life = KEPT_LOOT_LIFE;
     remaining -= value;
   }
 }
@@ -154,8 +164,8 @@ const ITEM_LIFT = 8;
 const ITEM_SPACING = 12;
 const ITEM_RINGS = 6;
 
-/** Where the floor can hold something (the level's passable ground); anywhere, when there is no level to ask. */
-type Floor = Pick<Level, 'canPass'>;
+/** Where the floor can hold something (the level's open ground, not its pits); anywhere, when there is no level to ask. */
+export type Floor = Pick<Level, 'canHold'>;
 
 /** The spots round a point, nearest first (worked out once): the point, then 6, 12, 18… on each ring out. */
 function ringSpots(): Array<{ x: number; y: number }> {
@@ -174,12 +184,23 @@ const SPOTS = ringSpots();
 const neighbours: Entity[] = [];
 const spot = { x: 0, y: 0 };
 
+/**
+ * The nearest spot to (x, y), on the rings, where the floor holds things (in `out`): a hero who fell into a pit
+ * leaves what they carried at its edge, not in it. The point itself when nothing near can hold anything.
+ */
+export function groundNear(x: number, y: number, floor: Floor, out: { x: number; y: number }): { x: number; y: number } {
+  const offset = SPOTS.find((s) => floor.canHold(x + s.x, y + s.y));
+  out.x = x + (offset?.x ?? 0);
+  out.y = y + (offset?.y ?? 0);
+  return out;
+}
+
 /** The nearest free spot to (x, y) on solid floor, with no other thing lying within ITEM_SPACING of it (in `spot`). */
 function freeSpot(x: number, y: number, floor: Floor | undefined): { x: number; y: number } {
   for (const offset of SPOTS) {
     const sx = x + offset.x;
     const sy = y + offset.y;
-    if (floor && !floor.canPass(sx, sy)) continue;
+    if (floor && !floor.canHold(sx, sy)) continue;
     if (nearby(sx, sy, ITEM_SPACING - 1, Sense.item, neighbours).length > 0) continue;
     spot.x = sx;
     spot.y = sy;

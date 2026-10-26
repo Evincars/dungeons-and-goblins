@@ -293,7 +293,7 @@ function flyBolt(level: Level, bolt: Bolt): void {
   const pos = bolt.position;
   pos.x += bolt.velocity.x;
   pos.y += bolt.velocity.y;
-  if (--bolt.projectile.life <= 0 || !level.canPass(pos.x, pos.y)) {
+  if (--bolt.projectile.life <= 0 || level.blocksPoint(pos.x, pos.y)) {
     burst(bolt, false);
     return;
   }

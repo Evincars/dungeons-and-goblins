@@ -8,6 +8,7 @@ import { itemIcon } from '../entities/Items';
 import { heroClass } from '../rules/Classes';
 import { LOOT_ROLL_TICKS, requestLootChoice } from '../game/LootRoll';
 import { seatOf } from '../game/Party';
+import { isStanding } from '../game/Fallen';
 import { text } from '../core/texts';
 import { ItemTooltip } from './ItemTooltip';
 import { PixelButton } from './PixelButton';
@@ -117,8 +118,10 @@ export class LootRollPanel {
     if (row.icon.texture === Texture.EMPTY) this.showIcon(row, roll.item);
     const me = localPlayer();
     const choice = me ? roll.choices[seatOf(me)] : undefined;
-    row.need.visible = !choice;
-    row.pass.visible = !choice;
+    // A fallen hero has no part in the roll (game/Fallen.ts).
+    const asked = !choice && !!me && isStanding(me);
+    row.need.visible = asked;
+    row.pass.visible = asked;
     row.chosen.text = choice ? text(choice === 'need' ? 'loot.chose_need' : 'loot.chose_pass') : '';
     const w = Math.round((ROW_W - 2) * Math.max(0, roll.ticks / LOOT_ROLL_TICKS));
     row.bar.clear().rect(1, ROW_H - BAR_H - 1, w, BAR_H).fill({ color: THEME.title });

@@ -63,7 +63,7 @@ export type System = (ctx: FrameContext) => void;
  */
 export const SIMULATION: readonly System[] = [
   () => beginPerception(),
-  ({ level, dt }) => updateRespawns(level, dt),
+  ({ dt }) => updateRespawns(dt),
   () => updateInput(),
   () => updateTargeting(),
   () => resolveUses(),

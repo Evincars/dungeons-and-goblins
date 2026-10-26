@@ -6,7 +6,7 @@ import type { MobType } from '../../world';
 import { TILE_WIDTH, TILE_HEIGHT, TileType } from '../TileType';
 import { createMob } from '../../entities/MobFactory';
 import {
-  createCampfire, createChest, createExitButton, createProp, createRoom, createLever, createSafeDoor, createShopNpc, createStash,
+  createCampfire, createChest, createExitButton, createExitDoor, createProp, createRoom, createLever, createSafeDoor, createShopNpc, createStash,
   createTorch, createTrainingDummy,
 } from '../../entities/DungeonFactory';
 import type { Level } from '../Level';
@@ -82,9 +82,11 @@ export function spawnDecor(layout: DungeonLayout): void {
 
 /** What changes during play, made by whoever runs the game (alone, or the co-op host). */
 export function spawnLiveEntities(layout: DungeonLayout, cfg: DungeonConfig): void {
-  const { level, rooms, exitButtonPos, shopPos, safeDoor, dummyPos, leverPos, props } = layout;
+  const { level, rooms, exitButtonPos, shopPos, safeDoor, dummyPos, leverPos, exitDoor, exitLeverPos, props } = layout;
   createSafeDoor(safeDoor, level);
   createLever(leverPos.x, leverPos.y);
+  createExitDoor(exitDoor);
+  createLever(exitLeverPos.x, exitLeverPos.y, true);
   for (const room of rooms) {
     if (room.type === 'dungeon') populateRoom(level, room, cfg);
   }

@@ -3,7 +3,8 @@ import { localPlayer } from '../world';
 import type { Entity } from '../world';
 import { GAME_WIDTH } from '../render/Camera';
 import { claimPointer } from '../systems/InputSystem';
-import { gateCountdown } from '../systems/DoorSystem';
+import { exitCountdown, gateCountdown } from '../systems/DoorSystem';
+import { isStanding } from '../game/Fallen';
 import { answerVote, currentParty, NOTICE_TICKS, seatOf } from '../game/Party';
 import { text } from '../core/texts';
 import { PixelButton } from './PixelButton';
@@ -27,8 +28,8 @@ const WARNING_COLOR = 0xff7a5a;
 type PartyState = NonNullable<Entity['party']>;
 
 /**
- * What the screen says to the whole party, high in the middle: the gate shutting on the safe room (a
- * countdown), a question someone put to the party — a rest, opening the gate — with Agree and Refuse for
+ * What the screen says to the whole party, high in the middle: the gate shutting on the safe room or the exit
+ * room's portcullis dropping (a countdown), a question someone put to the party — a rest, opening the gate — with Agree and Refuse for
  * everyone who hasn't answered yet, or the last word on one (a rest taken, a refusal, why it can't be).
  */
 export class PartyBanner {
@@ -63,20 +64,23 @@ export class PartyBanner {
   update(): void {
     const state = currentParty();
     const me = localPlayer();
-    const countdown = gateCountdown();
-    if (!me || (countdown === null && !state?.vote && !state?.notice)) {
+    const gate = gateCountdown();
+    const exit = exitCountdown();
+    if (!me || (gate === null && exit === null && !state?.vote && !state?.notice)) {
       this.hide();
       return;
     }
     this.view.visible = true;
-    if (state?.vote) this.showVote(state, state.vote.agreed.includes(seatOf(me)));
-    else if (countdown !== null) this.showCountdown(countdown);
+    // The fallen have no say in the party's questions (game/Fallen.ts).
+    if (state?.vote) this.showVote(state, state.vote.agreed.includes(seatOf(me)) || !isStanding(me));
+    else if (gate !== null) this.showCountdown(text('party.gate_closing', { seconds: gate }));
+    else if (exit !== null) this.showCountdown(text('party.exit_closing', { seconds: exit }));
     else if (state) this.showNotice(state);
   }
 
-  /** The gate is open: everyone still in the safe room has these seconds to get out. */
-  private showCountdown(seconds: number): void {
-    this.setLines(text('party.gate_closing', { seconds }), '', WARNING_COLOR);
+  /** A door is shutting: the safe room's gate on whoever is still inside, or the exit room's on whoever is still out. */
+  private showCountdown(line: string): void {
+    this.setLines(line, '', WARNING_COLOR);
     this.view.alpha = 1;
     this.hideButtons();
   }

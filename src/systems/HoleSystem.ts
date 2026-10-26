@@ -1,27 +1,18 @@
-import { world } from '../world';
+import { world, isPlayer } from '../world';
 import type { Entity } from '../world';
 import type { Level } from '../level/Level';
 import { TileType } from '../level/TileType';
-import { createLoot } from '../entities/LootFactory';
 import { spawnExclamation } from '../entities/FxFactory';
 import { characterDef, headAboveFeet } from '../characters/Characters';
 import { sound } from '../audio/SoundPlayer';
-import { clearTrail } from '../ai/perception/trail';
-import { run } from '../game/Run';
+import { leaveBelongings } from '../game/Fallen';
 
-/** Ticks from stepping off the edge to landing at the spawn; matches the falling cry's length. */
+/** Ticks from stepping off the edge to the bottom of the pit; matches the falling cry's length. */
 export const FALL_TICKS = 60;
 /** How far the sprite sinks into the pit over the fall. */
 export const FALL_DEPTH = 48;
-/** Max health lost per fall, and the least max health a player keeps. */
-const FALL_PENALTY = 5;
-const MIN_MAX_HEALTH = 10;
 /** Half-size of the support box under the feet that must be entirely over a hole to fall. */
 const SUPPORT_HALF = 6;
-/** A fall scatters the purse in at most this many coins. */
-const MAX_SCATTER_COINS = 8;
-/** Players coming back from death can't be hurt for this long. */
-const RESPAWN_GRACE_TICKS = 60;
 
 const grounded = world.with('position', 'health');
 const fallers = world.with('position', 'falling');
@@ -49,10 +40,13 @@ function startFall(player: Entity & { position: { x: number; y: number } }): voi
   spawnExclamation(player, x, y, head, FALL_TICKS);
 }
 
-/** Anything that walks onto a hole falls in: mobs are lost, players drop and respawn. */
+/**
+ * Anything that walks onto a hole falls in: mobs are lost, players drop to their death (game/Fallen.ts). The console's
+ * god mode walks over pits.
+ */
 export function updateHoles(level: Level): void {
   for (const entity of grounded) {
-    if (entity.removed || entity.respawnTicks !== undefined || !overHole(level, entity)) continue;
+    if (entity.removed || entity.respawnTicks !== undefined || entity.godMode || !overHole(level, entity)) continue;
     if (!entity.playerInput) {
       sound.playSound('fall', entity.position.x, entity.position.y);
       world.addComponent(entity, 'removed', true);
@@ -62,60 +56,26 @@ export function updateHoles(level: Level): void {
   }
 }
 
-/** Holds a falling player still while they drop, then lands them at spawn. */
+/**
+ * The bottom of the pit: the hero is dead there, out of sight, and down until the party goes deeper; what they
+ * carried is left at the pit's edge.
+ */
+function hitBottom(player: Entity & { position: { x: number; y: number } }, level: Level): void {
+  sound.playSound('fall', player.position.x, player.position.y);
+  if (player.health) player.health.current = 0;
+  world.addComponent(player, 'respawnTicks', 0);
+  if (isPlayer(player)) leaveBelongings(player, level);
+}
+
+/** Holds a falling player still while they drop; at the bottom they stay (sunk out of sight). */
 export function updateFalling(level: Level): void {
   for (const player of fallers) {
     const fall = player.falling;
-    // Hardcore: the pit is the end of the run; they stay at the bottom.
-    if (run.hardcore && fall.age >= fall.duration) {
-      run.over = true;
-      continue;
-    }
+    if (fall.age >= fall.duration) continue;
     fall.age++;
     player.freezeTime = Math.max(player.freezeTime ?? 0, 2);
     if (player.velocity) player.velocity.x = player.velocity.y = 0;
     if (player.bump) player.bump.x = player.bump.y = 0;
-    if (fall.age < fall.duration) continue;
-    world.removeComponent(player, 'falling');
-    respawnPlayer(player, level, 'fall');
+    if (fall.age >= fall.duration) hitBottom(player, level);
   }
-}
-
-/** Half the purse scatters where they fell, as in Catacomb Snatch. */
-function scatterPurse(player: Entity, x: number, y: number): void {
-  const stats = player.playerStats;
-  if (!stats || stats.gold <= 0) return;
-  let remaining = Math.floor(stats.gold / 2);
-  stats.gold -= remaining;
-  for (let i = 0; remaining > 0 && i < MAX_SCATTER_COINS; i++) {
-    const value = Math.max(1, Math.floor(remaining / 2));
-    const dir = Math.random() * Math.PI * 2;
-    createLoot(x, y, Math.cos(dir), Math.sin(dir), value, true);
-    remaining -= value;
-  }
-}
-
-export function respawnPlayer(player: Entity, level: Level, reason: 'fall' | 'death' = 'fall'): void {
-  const pos = player.position;
-  const health = player.health;
-  if (!pos || !health) return;
-
-  if (reason === 'fall') sound.playSound('fall', pos.x, pos.y);
-  // A fall costs coins and a little max health (not in the console's god mode).
-  if (reason === 'fall' && !player.godMode) {
-    scatterPurse(player, pos.x, pos.y);
-    health.max = Math.max(MIN_MAX_HEALTH, health.max - FALL_PENALTY);
-  }
-
-  const spawn = level.getRandomSpawnPoint();
-  if (spawn) { pos.x = spawn.x; pos.y = spawn.y; }
-  health.current = health.max;
-  // The old trail no longer leads to them.
-  if (player.trail) clearTrail(player.trail);
-
-  if (player.velocity) player.velocity.x = player.velocity.y = 0;
-  if (player.bump) player.bump.x = player.bump.y = 0;
-  player.hurtTime = reason === 'death' ? RESPAWN_GRACE_TICKS : 0;
-  player.freezeTime = 0;
-  if (player.falling) world.removeComponent(player, 'falling');
 }

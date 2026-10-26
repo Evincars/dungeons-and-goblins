@@ -150,7 +150,11 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - `src/world.ts` — Miniplex world, `Entity` component types, shared queries `q`.
 - `src/systems/` — gameplay and presentation systems; `Simulation.ts` orders them. Using things goes through
   `playerUsing` (`TargetSystem.ts`): each press of "use" goes to one thing, the one the corner brackets frame
-  (`MarkerSystem.ts`; `resolveUses` decides it each tick), items on the floor included.
+  (`MarkerSystem.ts`; `resolveUses` decides it each tick), items on the floor included. Spells and arrows stop on the
+  boxes bodies bump into (`Level.blocksPoint`), not on whole wall tiles. Leaving a level goes through the exit room
+  (`ExitSystem.ts`): its button asks only the heroes standing in that room (and whoever walks in before it is settled)
+  whether to go deeper or end the run; deeper needs all of them, and whoever is outside then is left behind, dead. Its
+  lever (`LeverSystem.ts`, `lever.exit`) drops the room's portcullis 5 s after one pull, for good (`DoorSystem.ts`, `door.exit`).
 - `src/ai/` — enemy AI: `perception/` (rbush index, sight, player trails) → `decision/` (Yuka
   `StateMachine` states, squad tactics by Yuka `Think`) → `execution/` (Yuka steering).
 - `src/level/` — `Level` tiles, `TileGraph`/`TileSearch` (Yuka graph search), procedural generation
@@ -182,15 +186,18 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   faded and panned by distance; `playSound` is relayed to co-op guests, `playLocal` is not), `Deck.ts` (one looping
   piece, faded in and out, paused when silent), `MusicPlayer.ts` (one track at a time, crossfaded; menus play `menu`,
   the intro crossfades the film's sound in and out, levels play `explore`, `systems/MusicSystem.ts` switches to
-  `combat` or `boss` while enemies nearby are engaged and holds `rest` / `lament` on the level's summary and the end
-  of a run) and `AmbiencePlayer.ts` (beds by area and nearness, driven by `systems/AmbienceSystem.ts`). Nothing sounds before the
+  `combat` or `boss` while enemies nearby are engaged and holds `rest` / `lament` on the level's summary (the exit
+  button's question) and the end of a run) and `AmbiencePlayer.ts` (beds by area and nearness, driven by `systems/AmbienceSystem.ts`). Nothing sounds before the
   player's first click or key: `AudioUnlock.ts` holds music back until Howler has unlocked the audio on it. Only the art
   and the menus' sounds load behind the loading screen in `index.html` (`ui/LoadingScreen.ts`); audio is otherwise
   lazy: the other effects load in the background once the title is up, a bed when first heard, music streams.
 - `src/entities/` — factories and stat tables. `src/render/` — sheets, camera, terrain layers.
 - `src/core/` — cross-cutting: `errors/`, `log/`, `geometry.ts`, `guards.ts`, `debugHooks.ts`, `compression.ts` (gzip with a size limit).
 - `src/game/` — game loop, `SceneManager`, persisted settings, player actions (item gifts too), the party's votes
-  (`Party.ts`: one synced `party` entity; rests and the lever ask through it, and act once everyone agrees), resting
+  (`Party.ts`: one synced `party` entity; rests and the lever ask through it, and act once everyone agrees), death
+  (`Fallen.ts`: a hero who dies or falls into a pit stays down until the party goes deeper, leaving their gear and gold
+  on the floor; the fallen get no share of experience or gold and no say in votes or loot rolls; the run is over when
+  the whole party is down, and `Run.ts` `descend` brings the fallen back with their experience but nothing else), resting
   (`Rest.ts`: short and long rests; hit dice are spent in a short rest, as many as each hero chooses), payments (`Purse.ts`: kills, chests and stashes pay straight into the
   purse), Need / Pass rolls for rare finds (`LootRoll.ts`) and the ~ console's commands (`Console.ts`). `src/scenes/` — title, settings,
   key bindings, character select, co-op lobby and the level itself. `src/ui/` — buttons, HUD (health bar, round

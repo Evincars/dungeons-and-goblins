@@ -53,7 +53,6 @@ export function createRoom(room: RoomData): Entity {
   return world.add({ room: { id: room.id, type: room.type, bounds: { x: room.x, y: room.y, w: room.w, h: room.h } }, localOnly: true });
 }
 
-/** The door that seals the safe room once every player has left it. */
 /**
  * The safe room's door, locked: its doorway is barred (solid, drawn as floor) under a portcullis on every
  * tile, until the lever beside it is pulled.
@@ -68,6 +67,19 @@ export function createSafeDoor(door: DoorData, level: Level): Entity {
   return world.add({
     position: { x: first.x * TILE_WIDTH + TILE_WIDTH / 2, y: middle.y * TILE_HEIGHT + TILE_HEIGHT / 2 },
     door: { tiles: door.tiles, boundaryX: door.boundaryX, closed: false, locked: true, closingTicks: null },
+  });
+}
+
+/**
+ * The exit room's door, open: nothing bars its doorway until its lever is pulled; a few seconds later its portcullis
+ * drops and shuts the room for good (systems/DoorSystem.ts).
+ */
+export function createExitDoor(door: DoorData): Entity {
+  const first = door.tiles[0];
+  const middle = door.tiles[Math.floor(door.tiles.length / 2)] ?? first;
+  return world.add({
+    position: { x: first.x * TILE_WIDTH + TILE_WIDTH / 2, y: middle.y * TILE_HEIGHT + TILE_HEIGHT / 2 },
+    door: { tiles: door.tiles, boundaryX: door.boundaryX, closed: false, locked: false, closingTicks: null, exit: true },
   });
 }
 
@@ -90,11 +102,11 @@ export function createGate(tx: number, ty: number, dropping = false): Entity {
   });
 }
 
-/** The lever beside the safe room's door; pulling it (E) raises the portcullis. */
-export function createLever(x: number, y: number): Entity {
+/** The lever beside the safe room's door; pulling it (E) raises the portcullis. The exit room's (`exit`) drops its own. */
+export function createLever(x: number, y: number, exit = false): Entity {
   return world.add({
     position: { x, y },
-    lever: { pulled: false, rest: 0 },
+    lever: exit ? { pulled: false, rest: 0, exit } : { pulled: false, rest: 0 },
     visual: { sheet: 'lever', col: 0, row: 0 },
     radius: { x: 8, y: 6 },
     yOffset: 8,
@@ -255,10 +267,11 @@ export function createTrainingDummy(x: number, y: number): Entity {
   });
 }
 
+/** The button in the exit room: pressing it asks the heroes there whether to go deeper (systems/ExitSystem.ts). */
 export function createExitButton(x: number, y: number): Entity {
   return world.add({
     position: { x, y },
-    exitButton: { activated: false },
+    exitButton: { activated: false, choices: {}, outcome: null },
     radius: { x: 14, y: 12 },
     visual: { sheet: 'exit_button', col: 0, row: 0 },
     yOffset: 16,

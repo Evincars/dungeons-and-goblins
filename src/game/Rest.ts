@@ -13,6 +13,7 @@ import { AIM_HEIGHT } from '../entities/ProjectileFactory';
 import { sound } from '../audio/SoundPlayer';
 import { text } from '../core/texts';
 import type { TextId } from '../core/texts';
+import { isStanding } from './Fallen';
 
 /**
  * Resting, as in the tabletop game. A short rest (no enemy hunting the party, two before a long one is
@@ -102,20 +103,20 @@ function playerAt(slot: PlayerSlot): Player | undefined {
 
 /** Why the party can't take this rest now; null when it can. */
 function restBlocked(kind: RestKind, level: Level, state: PartyState): RestNotice | null {
-  for (const player of q.players) if (player.health.current <= 0 || player.respawnTicks !== undefined) return 'fallen';
   if (kind === 'long') return everyoneSafe(level) ? null : 'unsafe';
   if (state.shortRestsLeft <= 0) return 'no_short_left';
   return enemiesHunting() ? 'hunted' : null;
 }
 
+/** Whether every hero on their feet is in a safe room (the fallen lie where they fell, and rest no more). */
 function everyoneSafe(level: Level): boolean {
-  for (const player of q.players) if (!level.isWorldPosSafe(player.position.x, player.position.y)) return false;
+  for (const player of q.players) if (isStanding(player) && !level.isWorldPosSafe(player.position.x, player.position.y)) return false;
   return true;
 }
 
 /** A player asks for a rest: refused with the reason, taken at once alone, or put to the others in co-op. */
 function ask(player: Player, kind: RestKind, level: Level, state: PartyState, dice: number | undefined): void {
-  if (state.vote) return;
+  if (state.vote || !isStanding(player)) return;
   const blocked = restBlocked(kind, level, state);
   if (blocked) {
     notify(state, blocked, nameOf(player), kind);
@@ -148,9 +149,13 @@ function offerHitDice(player: Player): void {
   if (chosen !== undefined) spendHitDice(player, chosen);
 }
 
-/** The party rests: every spell recovered; after a short rest hit dice to spend, after a long one everyone healed. */
+/**
+ * The party rests: every spell recovered; after a short rest hit dice to spend, after a long one everyone healed. A
+ * fallen hero stays down: no rest brings them back (game/Fallen.ts).
+ */
 export function takeRest(kind: RestKind, state: PartyState = partyState()): void {
   for (const player of q.players) {
+    if (!isStanding(player)) continue;
     player.spellbook?.recovery.fill(0);
     if (kind === 'long') wake(player);
     else offerHitDice(player);

@@ -83,10 +83,6 @@ export class HostGame {
     coop.sendState(captureWorld(paused, this.seed));
   }
 
-  levelComplete(): void {
-    coop.sendComplete();
-  }
-
   private applyGuestInput(): void {
     const now = performance.now();
     for (const slot of coop.guestSlots()) {
@@ -133,11 +129,10 @@ export class GuestGame {
 
   private readonly onState = () => this.applyHostState();
 
-  /** `onComplete`: the host's party reached the exit. `onStart`: the host began the next level. */
-  constructor(private readonly onComplete: () => void, private readonly onStart: () => void) {
+  /** `onStart`: the host began the next level. */
+  constructor(private readonly onStart: () => void) {
     this.replica.localSlot = coop.slot;
     coop.onState = this.onState;
-    coop.onComplete = onComplete;
     coop.onStart = onStart;
   }
 
@@ -173,7 +168,6 @@ export class GuestGame {
 
   dispose(): void {
     if (coop.onState === this.onState) coop.onState = null;
-    if (coop.onComplete === this.onComplete) coop.onComplete = null;
     if (coop.onStart === this.onStart) coop.onStart = null;
   }
 }

@@ -1,5 +1,5 @@
 import { q } from '../world';
-import type { Entity, InventoryItem } from '../world';
+import type { Entity, InventoryItem, Player } from '../world';
 import { ARMORS, HAND_WEAPONS, SHIELDS } from '../entities/ItemCatalog';
 import { WEAPON_BASES } from '../rules/WeaponTable';
 import { ARMOR_BASES } from '../rules/ArmorTable';
@@ -25,15 +25,13 @@ export function giveStartingKit(player: Entity): void {
 /** One trip into the dungeon: how deep the party has gone. A new run starts from the title screen. */
 type RunState = {
   depth: number;
-  /** Alone, one death or fall ends the run; the scene sets this when the level starts. */
-  hardcore: boolean;
-  /** The run is lost: dying or falling ended it, and the game over screen is up. */
+  /** The run is lost: the whole party is down (alone, the first death or fall), and the game over screen is up. */
   over: boolean;
   /** Seed of the next level, picked (and its map generated) as soon as the exit is pulled. */
   nextSeed: number | null;
 };
 
-export const run: RunState = { depth: 1, hardcore: false, over: false, nextSeed: null };
+export const run: RunState = { depth: 1, over: false, nextSeed: null };
 
 /**
  * What a player takes down to the next level: their progress, gear and wounds (they heal by resting), not their
@@ -60,19 +58,29 @@ export function startRun(): void {
   carried.clear();
 }
 
-/** The exit was taken: the next level lies one deeper, and everyone's progress comes along. */
+/** What a hero still on their feet takes deeper: everything, wounds included. */
+function carryOf(player: Player): Carry {
+  return {
+    stats: structuredClone(player.playerStats),
+    inventory: structuredClone(player.inventory ?? []),
+    equipped: structuredClone(player.equipped ?? {}),
+    maxHealth: player.health.max,
+    health: player.health.current,
+    build: structuredClone(player.build),
+  };
+}
+
+/**
+ * A fallen hero comes back for the next level (game/Fallen.ts): whole again, with their experience, levels and build,
+ * but without gear or gold — what they had was left where they fell.
+ */
+function revivedCarry(player: Player): Carry {
+  return { ...carryOf(player), stats: { ...structuredClone(player.playerStats), gold: 0 }, inventory: [], equipped: {}, health: player.health.max };
+}
+
+/** The exit was taken: the next level lies one deeper, and everyone's progress comes along (the fallen come back). */
 export function descend(): void {
-  for (const player of q.players) {
-    carried.set(seatOf(player), {
-      stats: structuredClone(player.playerStats),
-      inventory: structuredClone(player.inventory ?? []),
-      equipped: structuredClone(player.equipped ?? {}),
-      maxHealth: player.health.max,
-      // A hero who was down (waiting to get up again) comes back on their feet, as getting up would bring them.
-      health: player.health.current > 0 ? player.health.current : player.health.max,
-      build: structuredClone(player.build),
-    });
-  }
+  for (const player of q.players) carried.set(seatOf(player), player.health.current > 0 ? carryOf(player) : revivedCarry(player));
   run.depth++;
 }
 

@@ -1,5 +1,5 @@
 import {
-  world, isEquipSlot, isItemType, isLogResult, isMobType, isPlayerSlot, isRestNotice, isRollTone, isVoteKind, MOB_STATES, PLAYER_SLOTS,
+  world, isDepartChoice, isEquipSlot, isItemType, isLogResult, isMobType, isPlayerSlot, isRestNotice, isRollTone, isVoteKind, MOB_STATES, PLAYER_SLOTS,
   QUICK_SLOTS, TACTIC_ROLES,
 } from '../world';
 import type { Entity, PlayerSlot } from '../world';
@@ -12,7 +12,7 @@ import { setVisualFrame } from '../render/AnimatedVisual';
 import { ensure } from '../core/errors';
 import { hasKey, isFiniteNumber, isRecord } from '../core/guards';
 import { isFeatureId, MAX_FEATURES } from '../rules/ClassFeatures';
-import { isBagSquare, isInventoryItem, validBinding } from './protocol';
+import { isBagSquare, isInventoryItem, MAX_ITEM_NAME, validBinding } from './protocol';
 import { isHeroClassId } from '../rules/Classes';
 import { validBuild } from '../rules/Build';
 import { isWeaponBase } from '../rules/WeaponTable';
@@ -42,8 +42,11 @@ const LOCAL_AFTER_CREATE: ReadonlySet<string> = new Set(['character', 'animation
 
 const MAX_ENTITIES = 5000;
 const MAX_DOOR_TILES = 16;
-/** Longer than any line the roll log writes. */
-const MAX_ROLL_TEXT = 40;
+/**
+ * Longer than any line the roll log writes: its longest wording ("You've received …") round an item's name, which
+ * may be MAX_ITEM_NAME long. A limit that a long name broke turned an honest host's update away and dropped the guest.
+ */
+const MAX_ROLL_TEXT = 2 * MAX_ITEM_NAME;
 
 export type EntityState = Omit<Entity, UnsentKey>;
 /** `seed` names the level the update belongs to, so a late update from the previous level is ignored. */
@@ -108,7 +111,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   falling: { age: 'number', duration: 'number' },
   ephemeral: { age: 'number', life: 'number', drop: 'number' },
   room: { id: 'number', type: 'string', bounds: 'object' },
-  exitButton: { activated: 'boolean' },
+  exitButton: { activated: 'boolean', choices: 'object' },
   shopNpc: { items: 'object' },
   door: { tiles: 'object', boundaryX: 'number', closed: 'boolean', locked: 'boolean', closingTicks: 'number?' },
   gate: { lift: 'number' },
@@ -186,6 +189,13 @@ function validParty(party: NonNullable<EntityState['party']>): boolean {
   return voteOk && noticeOk;
 }
 
+/** The exit button's question: only known seats choosing, and a known decision (or none yet). */
+function validDeparture(exit: NonNullable<EntityState['exitButton']>): boolean {
+  const choices = Object.entries(exit.choices);
+  return choices.length <= PLAYER_SLOTS.length && choices.every(([slot, choice]) => isPlayerSlot(slot) && isDepartChoice(choice))
+    && (exit.outcome === null || isDepartChoice(exit.outcome));
+}
+
 /** Rules beyond field types: known names and kinds, clean player names, well-formed lists. */
 function checkDetails(data: EntityState): void {
   ensure(data.playerSlot === undefined || isPlayerSlot(data.playerSlot), 'Invalid player slot');
@@ -214,6 +224,8 @@ function checkDetails(data: EntityState): void {
   ensure(!data.projectile?.spell || isSpellId(data.projectile.spell), 'Invalid spell');
   ensure(!data.party || validParty(data.party), 'Invalid party state');
   ensure(!data.lootRoll || validLootRoll(data.lootRoll), 'Invalid loot roll');
+  ensure(!data.exitButton || validDeparture(data.exitButton), 'Invalid exit button');
+  ensure((data.door?.exit ?? true) === true && (data.lever?.exit ?? true) === true, 'Invalid door');
   const slot = data.playerInput?.spellSlot;
   ensure(slot === undefined || (Number.isInteger(slot) && slot >= 0 && slot < QUICK_SLOTS), 'Invalid quick-bar square');
   const intents = data.playerInput?.intents;
@@ -377,7 +389,9 @@ export class WorldReplica {
     this.remap(next);
     this.syncComponents(entity, next);
     this.glideFrom(entity, before);
-    if (entity.sprite && entity.visual && !entity.animation && !entity.character) {
+    // An icon fitted to size (an item on the floor) is a whole picture, not a sheet of frames: cut into one, only
+    // its top-left corner would show.
+    if (entity.sprite && entity.visual && !entity.visual.fit && !entity.animation && !entity.character) {
       setVisualFrame(entity.sprite, entity.visual.sheet, entity.visual.col ?? 0, entity.visual.row ?? 0);
     }
     if (!entity.playerSlot) return;

@@ -12,13 +12,13 @@ import { gunzipJson, gzipText } from '../core/compression';
  * A generated dungeon as plain JSON, so the co-op host can send its clients the very map it built (and a
  * map can be saved): the terrain (tiles, safe rooms, cave ground, wall niches, pits, prop footprints, spawn
  * points), the decor every screen draws for itself (rooms, torches, props, campfires — the level's assets)
- * and where the live pieces stand (shop, exit, training dummy, the safe room's door and lever). Tiles are
+ * and where the live pieces stand (shop, exit, training dummy, the doors and levers of the safe and exit rooms). Tiles are
  * one byte each (type and image variant) in base64; sets of tiles are runs of consecutive indices; props are
  * [kind, tile x, tile y]. Reading a map checks all of it, as anything from outside.
  */
 
 export const MAP_FORMAT = 'dungeons-and-goblins/map';
-export const MAP_VERSION = 2;
+export const MAP_VERSION = 3;
 /** A tile's byte: its type in the high bits, its image variant (0–15) in the low four. */
 const VARIANT_BITS = 4;
 const VARIANT_MASK = (1 << VARIANT_BITS) - 1;
@@ -57,6 +57,8 @@ export type LevelMap = {
   dummy: Pair;
   lever: Pair;
   door: { tiles: Pair[]; boundaryX: number };
+  exitLever: Pair;
+  exitDoor: { tiles: Pair[]; boundaryX: number };
 };
 
 /** Consecutive indices folded into [first, count] runs. */
@@ -110,6 +112,8 @@ export function encodeLevelMap(layout: DungeonLayout): LevelMap {
     dummy: pair(layout.dummyPos),
     lever: pair(layout.leverPos),
     door: { tiles: layout.safeDoor.tiles.map(pair), boundaryX: layout.safeDoor.boundaryX },
+    exitLever: pair(layout.exitLeverPos),
+    exitDoor: { tiles: layout.exitDoor.tiles.map(pair), boundaryX: layout.exitDoor.boundaryX },
   };
 }
 
@@ -121,6 +125,8 @@ const isPropKind = (v: unknown): v is PropKind => typeof v === 'string' && hasKe
 const isRoomRow = (v: unknown): v is RoomRow => Array.isArray(v) && v.length === 9 && ROOM_TYPES.some((t) => t === v[1])
   && [v[0], v[2], v[3], v[4], v[5], v[6], v[7], v[8]].every(isFiniteNumber);
 const isPropRow = (v: unknown) => Array.isArray(v) && v.length === 3 && isPropKind(v[0]) && Number.isInteger(v[1]) && Number.isInteger(v[2]);
+/** A doorway: its tiles, and where its room's side of it begins. */
+const isDoor = (v: unknown) => isRecord(v) && isList(v.tiles, isPair) && isFiniteNumber(v.boundaryX);
 /** A prop footprint: a whole tile index, then four pixel bounds. */
 const isFootprint = (v: unknown): v is number[] => Array.isArray(v) && v.length === 5 && Number.isInteger(v[0]) && v.every(isFiniteNumber);
 
@@ -152,8 +158,8 @@ function checkShape(value: unknown): asserts value is LevelMap {
   ensure(isList(value.wallDecor, (d) => Array.isArray(d) && d.length === 2 && Number.isInteger(d[0]) && isWallDecor(d[1])), 'Bad wall decor');
   ensure(isList(value.blocks, isFootprint), 'Bad prop footprint');
   ensure(isList(value.rooms, isRoomRow) && isList(value.props, isPropRow) && isList(value.campfires, isPair), 'Bad map decor');
-  ensure([value.exitButton, value.shop, value.dummy, value.lever].every(isPair), 'Bad map positions');
-  ensure(isRecord(value.door) && isList(value.door.tiles, isPair) && isFiniteNumber(value.door.boundaryX), 'Bad map door');
+  ensure([value.exitButton, value.shop, value.dummy, value.lever, value.exitLever].every(isPair), 'Bad map positions');
+  ensure(isDoor(value.door) && isDoor(value.exitDoor), 'Bad map door');
 }
 
 function roomOf([id, type, hall, x, y, w, h, centerX, centerY]: RoomRow): RoomData {
@@ -185,6 +191,8 @@ export function decodeLevelMap(value: unknown): DungeonLayout {
     dummyPos: point(value.dummy),
     leverPos: point(value.lever),
     safeDoor: { tiles: value.door.tiles.map(point), boundaryX: value.door.boundaryX },
+    exitDoor: { tiles: value.exitDoor.tiles.map(point), boundaryX: value.exitDoor.boundaryX },
+    exitLeverPos: point(value.exitLever),
   };
 }
 

@@ -123,7 +123,7 @@ export type RoomData = {
 
 export type DoorData = {
   tiles: Array<{ x: number; y: number }>;
-  /** Players past this world-X have left the safe room, so the door seals. */
+  /** The safe room's side of its doorway: players past this world-X have left it (or, for the exit room, not reached it). */
   boundaryX: number;
 };
 
@@ -144,6 +144,9 @@ export type DungeonLayout = {
   safeDoor: DoorData;
   /** Where the lever stands that opens the safe room's door. */
   leverPos: { x: number; y: number };
+  /** The exit room's doorway (open until its lever is pulled), and where that lever stands. */
+  exitDoor: DoorData;
+  exitLeverPos: { x: number; y: number };
 };
 
 function mulberry32(seed: number): () => number {
@@ -228,9 +231,14 @@ export class DungeonBuilder {
     this.corridorFromPoint(exitDoorX, exitDoorY, lastRoom, -1);
 
     const doorTiles: Array<{ x: number; y: number }> = [];
-    for (let i = 0; i < cw; i++) doorTiles.push({ x: doorX, y: doorY + i });
-    // The lever that opens the door stands just inside the safe room, beside the doorway (above it when there is room).
+    const exitDoorTiles: Array<{ x: number; y: number }> = [];
+    for (let i = 0; i < cw; i++) {
+      doorTiles.push({ x: doorX, y: doorY + i });
+      exitDoorTiles.push({ x: exitDoorX, y: exitDoorY + i });
+    }
+    // Each door's lever stands just inside its room, beside the doorway (above it when there is room).
     const leverTile = { x: doorX - 1, y: doorY - 1 >= safe.y ? doorY - 1 : doorY + cw };
+    const exitLeverTile = { x: exit.x, y: exitDoorY - 1 >= exit.y ? exitDoorY - 1 : exitDoorY + cw };
 
     this.removeSlivers();
 
@@ -269,7 +277,7 @@ export class DungeonBuilder {
     const dummyTile = { x: safe.x + 2, y: safe.y + safe.h - 3 };
     this.usedTiles.add(dummyTile.x + dummyTile.y * W);
     // The exit, the spawn and the shop keeper's spot (and the wall behind and floor in front of it) stay clear.
-    for (const t of [exitTile, playerTile, shopTile, leverTile, { x: shopTile.x, y: safe.y }, { x: shopTile.x, y: shopTile.y + 1 }]) {
+    for (const t of [exitTile, playerTile, shopTile, leverTile, exitLeverTile, { x: shopTile.x, y: safe.y }, { x: shopTile.x, y: shopTile.y + 1 }]) {
       this.usedTiles.add(t.x + t.y * W);
     }
     const safeFire = { x: shopTile.x, y: safe.y + Math.floor(safe.h / 2) + 1 };
@@ -293,6 +301,8 @@ export class DungeonBuilder {
       dummyPos: tileCenter(dummyTile.x, dummyTile.y),
       safeDoor: { tiles: doorTiles, boundaryX: (doorX + 1) * TILE_WIDTH + TILE_WIDTH / 2 },
       leverPos: tileCenter(leverTile.x, leverTile.y),
+      exitDoor: { tiles: exitDoorTiles, boundaryX: exit.x * TILE_WIDTH },
+      exitLeverPos: tileCenter(exitLeverTile.x, exitLeverTile.y),
     };
   }
 

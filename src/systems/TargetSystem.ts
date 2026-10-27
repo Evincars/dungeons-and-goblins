@@ -1,7 +1,7 @@
 import { localPlayer, q, world } from '../world';
 import type { Entity, Player } from '../world';
 import { screenToWorld } from '../render/Camera';
-import { pointer, wasClicked, isMouseDown } from './InputSystem';
+import { pointer, pointerFree, wasClicked, isMouseDown } from './InputSystem';
 import { isShopOpen } from './ShopSystem';
 import { isInventoryOpen } from './InventorySystem';
 import { nearby, Sense } from '../ai/perception/spatial';
@@ -134,9 +134,14 @@ function pick(): Entity | null {
   return best;
 }
 
+/** Whether a panel lies over the world (the shop, the inventory): clicks are for it, never for what lies under it. */
+function panelOpen(): boolean {
+  return isShopOpen() || isInventoryOpen();
+}
+
 /** Clicks on an open panel (shop rows, inventory slots) are for the UI, not the world. */
 function filterClicks(intents: { attack: boolean; cast: boolean }): void {
-  if (isShopOpen() || isInventoryOpen()) {
+  if (panelOpen()) {
     intents.attack = false;
     intents.cast = false;
   }
@@ -174,8 +179,9 @@ export function updateTargeting(): void {
   focus = best;
 
   intents.attack = false;
-  // Chests only open with the use key; a click on one does nothing.
-  if (!wasClicked() || best.chest) return;
+  // Chests only open with the use key; a click on one does nothing. A click on a panel or an on-screen control (the
+  // inventory over an item dropped at the hero's feet) is that control's, not a pick-up.
+  if (!wasClicked() || best.chest || panelOpen() || !pointerFree()) return;
   intents.use = true;
   swallowHeldClick = true;
 }

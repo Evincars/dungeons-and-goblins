@@ -43,6 +43,7 @@ import { updateLootRolls } from '../game/LootRoll';
 import { updateStashes } from './StashSystem';
 import { updateMarker } from './MarkerSystem';
 import { updateBuildLock } from '../game/Customize';
+import { updateSafeRooms } from './SafeRoomSystem';
 import { updateProtection } from './ProtectionSystem';
 import { updateMusic } from './MusicSystem';
 import { updateAmbience } from './AmbienceSystem';
@@ -100,6 +101,7 @@ export const SIMULATION: readonly System[] = [
   () => updateShop(),
   ({ level }) => updateRest(level),
   ({ level }) => updateBuildLock(level),
+  ({ level }) => updateSafeRooms(level),
   () => updateProtection(),
   (ctx) => { if (ctx.level.tilesDirty) ctx.rebuildTerrain(); },
 ];

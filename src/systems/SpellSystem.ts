@@ -16,7 +16,6 @@ import type { QuickBinding } from '../rules/Spellbook';
 import type { SpellDef } from '../rules/Spells';
 import { MONSTERS } from '../rules/Monsters';
 import { MIN_HIT_DAMAGE } from '../rules/Combat';
-import { TABLETOP_HP_SCALE } from '../rules/HitPoints';
 import { diceRange, plus, rollCheck, rollDice } from '../rules/Dice';
 import type { Dice } from '../rules/Dice';
 import { spawnFx } from '../entities/FxFactory';
@@ -217,13 +216,13 @@ function castBurst(caster: Player, def: SpellDef, targetX: number, targetY: numb
 /** The extra points a Disciple of Life adds to a healing spell: 2 + the spell's level. */
 const DISCIPLE_OF_LIFE_BASE = 2;
 
-/** A heal: the dice + the casting ability (+ a Disciple of Life's share), at the game's hit point scale, for the caster. */
+/** A heal: the dice + the casting ability (+ a Disciple of Life's share), for the caster. */
 function castHeal(caster: Player, def: SpellDef): void {
   const sheet = characterSheet(caster);
   const disciple = featureOn(caster, 'disciple_of_life') ? DISCIPLE_OF_LIFE_BASE + def.level : 0;
   // Supreme Healing: every die of a healing spell counts at its highest.
   const rolled = featureOn(caster, 'supreme_healing') ? diceRange(def.damage).max : rollDice(def.damage);
-  const amount = TABLETOP_HP_SCALE * Math.max(1, rolled + sheet.modifiers[sheet.spell.ability] + disciple);
+  const amount = Math.max(1, rolled + sheet.modifiers[sheet.spell.ability] + disciple);
   const h = caster.health;
   const healed = Math.min(h.max - h.current, amount);
   h.current += healed;

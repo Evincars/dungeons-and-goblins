@@ -27,7 +27,7 @@ function takeItems(): void {
   }
 }
 
-/** Tab opens and closes this screen's inventory panel; returns the local player's bag, if any. */
+/** Tab opens and closes this screen's inventory panel (a fallen hero's stays shut: they carry nothing); returns the local player's bag, if any. */
 export function updateInventoryToggle(): Carrier | undefined {
   for (const player of carriers) {
     // The inventory is this screen's panel; a remote player opens their own.
@@ -37,6 +37,7 @@ export function updateInventoryToggle(): Carrier | undefined {
       intents.inventoryOpen = false;
       inventoryOpen = !inventoryOpen;
     }
+    if (player.health.current <= 0) inventoryOpen = false;
     return player;
   }
   return undefined;

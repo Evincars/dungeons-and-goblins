@@ -29,6 +29,9 @@ import { InventoryOverlay } from '../ui/InventoryOverlay';
 import { ShopPanel } from '../ui/ShopPanel';
 import { PauseMenu } from '../ui/PauseMenu';
 import { closeInventory, isInventoryOpen } from '../systems/InventorySystem';
+import { isGamePaused, setSeatPaused } from '../game/Pause';
+import { anyoneToWatch, nextWatched, stillWatchable } from '../game/Spectate';
+import { FallenBanner } from '../ui/FallenBanner';
 import { cancelBinding, pendingBinding } from '../game/SpellBinding';
 import { isShopOpen, activeShopItems, closeShop } from '../systems/ShopSystem';
 import { departure, inExitRoom, requestDeparture } from '../systems/ExitSystem';
@@ -42,7 +45,7 @@ import { resetAmbience } from '../systems/AmbienceSystem';
 import type { Level } from '../level/Level';
 import { exposeForDebugging } from '../core/debugHooks';
 import { coop } from '../network/CoopSession';
-import { GuestGame, HostGame } from '../network/CoopGame';
+import { GuestGame, HostGame, pauserName } from '../network/CoopGame';
 import { descend, restorePlayer, run, startRun } from '../game/Run';
 import { ResultPanel } from '../ui/ResultPanel';
 import { attempt, report } from '../core/errors';
@@ -62,6 +65,9 @@ const STATUS_Y = 6;
 const FADE_IN_TICKS = 70;
 /** The loading screen hides the level behind it almost entirely. */
 const LOADING_ALPHA = 0.92;
+/** The mouse buttons a fallen hero picks the next and the previous companion to watch with. */
+const NEXT_BUTTON = 0;
+const PREVIOUS_BUTTON = 2;
 
 type Mode = 'solo' | 'host' | 'guest';
 type RunTotals = { kills: number; xp: number; gold: number };
@@ -79,8 +85,10 @@ function totalsOf(stats: NonNullable<Player['playerStats']>): RunTotals {
 
 /**
  * One dungeon level. Alone or as the co-op host this screen runs the game; as a guest it draws the host's
- * world (built from the same seed) and sends this player's controls. Escape opens the pause menu, which only
- * stops the game when playing alone. The run is over once the whole party is down (alone, the first death or fall).
+ * world (built from the same seed) and sends this player's controls. Escape closes the topmost thing open (a dialog,
+ * then the panel under it) and, with nothing open, brings up the pause menu, which stops the game for everyone (in
+ * co-op until the last player with it open closes theirs). The run is over once the whole party is down (alone, the
+ * first death or fall); in co-op a fallen hero watches their companions meanwhile, picking whom with the mouse buttons.
  */
 export class InGameScene implements Scene {
   readonly container = new Container();
@@ -104,6 +112,10 @@ export class InGameScene implements Scene {
   private shopWasOpen = false;
   private readonly crosshair = new Crosshair();
   private readonly result = new ResultPanel();
+  private readonly fallen = new FallenBanner();
+  /** The companion this screen's fallen hero is watching (null: their own body). */
+  private watched: Player | null = null;
+  private readonly onPointerDown: (e: MouseEvent) => void;
   private readonly status: PixelLabel;
   private prompt: Prompt = 'none';
   /** Whether this screen's hero was alive last tick, to toll their death the moment it comes. */
@@ -172,7 +184,7 @@ export class InGameScene implements Scene {
     this.gameLayer.addChild(this.darkness.container);
     // Light overlay placed in uiLayer so it sits above game but below HUD
     this.lights.init();
-    this.uiLayer.addChild(this.lights.overlay, this.hud.container, this.combatLog.container, this.inv.container, this.shop.container);
+    this.uiLayer.addChild(this.lights.overlay, this.hud.container, this.fallen.view, this.combatLog.container, this.inv.container, this.shop.container);
 
     this.status = makeText('', 0xff8888, 8, 'center');
     this.status.x = GAME_WIDTH / 2;
@@ -198,11 +210,17 @@ export class InGameScene implements Scene {
 
     this.onKeyDown = (e) => this.handleKey(e);
     window.addEventListener('keydown', this.onKeyDown);
+    this.onPointerDown = (e) => this.switchWatched(e);
+    manager.canvas.addEventListener('mousedown', this.onPointerDown);
     level.reveal(Math.floor(spawns.playerSpawn.x / TILE_WIDTH), Math.floor(spawns.playerSpawn.y / TILE_HEIGHT), START_REVEAL_TILES);
     exposeForDebugging({ __world: world, __level: level });
   }
 
-  /** Escape backs out of a sub-screen or the confirmation first, and only then opens or closes the pause menu. */
+  /**
+   * Escape closes one thing a press, the topmost first: a spell waiting for its square, a sub-screen over the pause
+   * menu, the pause menu's confirmation and then the menu itself; with no menu, a dialog inside a panel, the panel (the
+   * inventory, the shop), the HUD's dialogs and drop-downs. Only with nothing open does it bring up the pause menu.
+   */
   private handleKey(e: KeyboardEvent): void {
     if (this.consoleKey(e)) return;
     if (e.code === 'Enter' && this.prompt === 'ask') {
@@ -214,9 +232,29 @@ export class InGameScene implements Scene {
       cancelBinding();
       return;
     }
-    if (this.manager.hasOverlay) this.manager.escapeOverlay();
-    else if (this.result.open || this.hud.closeDialog()) return;
-    else if (!this.pause.handleEscape()) this.setPaused(!this.pause.open);
+    if (this.manager.hasOverlay) {
+      this.manager.escapeOverlay();
+      return;
+    }
+    if (this.pause.open) {
+      if (!this.pause.handleEscape()) this.setPaused(false);
+      return;
+    }
+    if (this.result.open || this.closeTopmost()) return;
+    this.setPaused(true);
+  }
+
+  /** Escape outside the pause menu: closes the topmost panel or dialog; false when none is open. */
+  private closeTopmost(): boolean {
+    if (isInventoryOpen()) {
+      if (!this.inv.handleEscape()) closeInventory();
+      return true;
+    }
+    if (isShopOpen()) {
+      closeShop();
+      return true;
+    }
+    return this.hud.closeDialog();
   }
 
   /** The console key opens or closes it; while it is open every key types into it (Escape closes it). Returns whether the key was its. */
@@ -240,10 +278,15 @@ export class InGameScene implements Scene {
     setInputCaptured(open);
   }
 
-  /** Opens or closes the pause menu. Only alone does that stop the game; in co-op the world goes on behind it. */
+  /**
+   * Opens or closes the pause menu, which stops the game: alone at once; in co-op for everyone, the host keeping who
+   * has it open (a guest tells the host), until the last of them closes it.
+   */
   private setPaused(paused: boolean): void {
     if (paused) this.pause.show(this.mode !== 'solo' && !coop.connected ? coop.status : '');
     else this.pause.hide();
+    if (this.mode === 'host') setSeatPaused('host', paused);
+    if (this.mode === 'guest') coop.sendCommand({ kind: 'pause', paused });
     this.showPointer(paused);
   }
 
@@ -254,9 +297,14 @@ export class InGameScene implements Scene {
     resetInput();
   }
 
-  /** Whether the world stands still: alone, behind the pause menu or the game over screen. */
+  /**
+   * Whether the world stands still: alone, behind the pause menu or the game over screen; in co-op while anyone has
+   * the pause menu open (the host knows who; a guest goes by what the host last said).
+   */
   private get frozen(): boolean {
-    return this.mode === 'solo' && (this.pause.open || run.over);
+    if (this.mode === 'host') return isGamePaused();
+    if (this.guest) return this.guest.hostPaused;
+    return this.pause.open || run.over;
   }
 
   /** Browsers only let a script close a tab it opened, so fall back to the main menu. */
@@ -296,8 +344,10 @@ export class InGameScene implements Scene {
     const player = localPlayer();
     this.baseline ??= player ? totalsOf(player.playerStats) : null;
     if (this.mode !== 'solo') updateNameTags(this.gameLayer, player);
-    if (player) this.follow(player);
     this.noticeDeath(player);
+    const view = this.viewOf(player);
+    if (view) this.follow(view);
+    this.updateFallen(player);
     this.revealAroundPlayers();
     this.gameLayer.x = -camera.x;
     this.gameLayer.y = -camera.y;
@@ -314,13 +364,13 @@ export class InGameScene implements Scene {
     if (lost && !this.gameOverShown) this.gameOver();
   }
 
-  /** Alone or hosting: one tick of the game (unless frozen), and the world out to the guests. */
+  /** Alone or hosting: one tick of the game (unless frozen), and the world out to the guests (with whether it is paused). */
   private simulate(frozen: boolean): void {
-    const lost = this.host?.beforeTick(false) ?? false;
+    const lost = this.host?.beforeTick(frozen) ?? false;
     // Everyone else left: bring up the menu so the host can decide what to do.
     if (lost && !this.pause.open) this.setPaused(true);
     if (!frozen && !lost) runSystems(SIMULATION, this.ctx);
-    this.host?.afterTick(false);
+    this.host?.afterTick(frozen);
   }
 
   /** The camera and listener follow this screen's player. */
@@ -331,11 +381,56 @@ export class InGameScene implements Scene {
     camera.y = Math.max(0, Math.min(this.level.height * TILE_HEIGHT - VIEW_HEIGHT, Math.round(pos.y - VIEW_HEIGHT / 2)));
   }
 
-  /** This screen's hero has just fallen: the toll is for them alone (everyone near hears their death cry). */
+  /**
+   * This screen's hero has just fallen: the toll is for them alone (everyone near hears their death cry), and the
+   * panels and HUD dialogs they had open close (they have nothing left to do).
+   */
   private noticeDeath(player: Player | undefined): void {
     const alive = !player || player.health.current > 0;
-    if (this.heroAlive && !alive) sound.playLocal('you_died');
+    if (this.heroAlive && !alive) this.fall();
     this.heroAlive = alive;
+  }
+
+  private fall(): void {
+    sound.playLocal('you_died');
+    this.watched = null;
+    if (pendingBinding()) cancelBinding();
+    closeInventory();
+    closeShop();
+    while (this.hud.closeDialog());
+  }
+
+  /** Whether this screen's hero is down while the run goes on in co-op: they watch the others. */
+  private spectating(player: Player | undefined): player is Player {
+    return this.mode !== 'solo' && !!player && !isStanding(player) && !this.gameOverShown;
+  }
+
+  /** Whom the camera follows: this screen's hero, or — fallen — the companion they watch (their own body until they pick one). */
+  private viewOf(player: Player | undefined): Player | undefined {
+    if (!this.spectating(player)) return player;
+    // The one being watched fell too, or left: on to the next still standing.
+    if (this.watched && !stillWatchable(this.watched)) this.watched = nextWatched(player, this.watched, 1);
+    return this.watched ?? player;
+  }
+
+  /** A fallen hero's click: the left button watches the next companion, the right one the one before. */
+  private switchWatched(e: MouseEvent): void {
+    const me = localPlayer();
+    if (!this.spectating(me) || this.pause.open || this.result.open || this.manager.hasOverlay) return;
+    if (e.button === NEXT_BUTTON) this.watched = nextWatched(me, this.watched, 1);
+    else if (e.button === PREVIOUS_BUTTON) this.watched = nextWatched(me, this.watched, -1);
+  }
+
+  /** While this screen's hero is down in co-op, their HUD gives way to the banner saying so (and whom they watch). */
+  private updateFallen(player: Player | undefined): void {
+    const down = this.spectating(player);
+    this.hud.container.visible = !down;
+    if (!down) {
+      this.fallen.hide();
+      return;
+    }
+    const watched = this.watched?.playerName ?? null;
+    this.fallen.show(watched, anyoneToWatch(player));
   }
 
   /** The party shares its map: the fog lifts around every player. */
@@ -400,11 +495,18 @@ export class InGameScene implements Scene {
   /** A line at the top of the screen when co-op is not running normally. */
   private updateStatus(player: Player | undefined): void {
     let line = '';
+    const pausedBy = this.pausedBy();
     if (this.mode !== 'solo' && !coop.connected) line = coop.status;
-    else if (this.guest?.hostPaused) line = text('game.host_paused');
+    else if (pausedBy !== null) line = text('game.paused_by', { name: pausedBy });
     else if (this.mode === 'guest' && !player) line = text('game.joining');
     else if (this.leavingWithout(player)) line = text('game.departing');
     this.status.text = line;
+  }
+
+  /** Who has the co-op game paused, when it is someone else's menu that holds it (null: nobody, or only this screen). */
+  private pausedBy(): string | null {
+    if (this.pause.open || !this.frozen || this.mode === 'solo') return null;
+    return this.guest ? this.guest.pausedBy : pauserName();
   }
 
   /** Whether the party is choosing to leave at the exit room while this hero, on their feet, is elsewhere: they had better hurry. */
@@ -529,7 +631,8 @@ export class InGameScene implements Scene {
   private gameOver(): void {
     this.gameOverShown = true;
     holdMusic('lament');
-    this.pause.hide();
+    // Through setPaused, so a co-op host lets go of the game too.
+    if (this.pause.open) this.setPaused(false);
     closeShop();
     closeInventory();
     this.result.show({
@@ -554,6 +657,9 @@ export class InGameScene implements Scene {
 
   destroy(): void {
     window.removeEventListener('keydown', this.onKeyDown);
+    this.manager.canvas.removeEventListener('mousedown', this.onPointerDown);
+    // Leaving with the menu open: the game is this screen's no longer to hold.
+    if (this.mode === 'host' && this.pause.open) setSeatPaused('host', false);
     if (this.console.visible) setInputCaptured(false);
     this.host?.dispose();
     this.guest?.dispose();

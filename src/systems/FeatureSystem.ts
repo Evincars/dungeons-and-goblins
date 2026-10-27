@@ -1,7 +1,6 @@
 import { q, isActivePlayer } from '../world';
 import type { Player } from '../world';
 import { rollDice, dice } from '../rules/Dice';
-import { TABLETOP_HP_SCALE } from '../rules/HitPoints';
 import { playEffect } from '../assets/Effects';
 import { AIM_HEIGHT } from '../entities/ProjectileFactory';
 import { logHeal } from './RollLogSystem';
@@ -33,7 +32,7 @@ function mend(target: Player, amount: number, cap: number): number {
 }
 
 function secondWind(hero: Player): void {
-  mend(hero, TABLETOP_HP_SCALE * (rollDice(dice(1, SECOND_WIND_SIDES)) + hero.playerStats.level), hero.health.max);
+  mend(hero, rollDice(dice(1, SECOND_WIND_SIDES)) + hero.playerStats.level, hero.health.max);
 }
 
 /** Every other square's recovery runs out at once (Action Surge: more to do in the same moment; the two recoveries: the spells). */
@@ -51,7 +50,7 @@ function cunningAction(hero: Player): void {
 
 /** Preserve Life: the pool is shared out among the allies near (the hero included), each taking what they need up to half their health. */
 function preserveLife(hero: Player): void {
-  let pool = PRESERVE_LIFE_PER_LEVEL * hero.playerStats.level * TABLETOP_HP_SCALE;
+  let pool = PRESERVE_LIFE_PER_LEVEL * hero.playerStats.level;
   for (const ally of q.players) {
     if (pool <= 0) return;
     if (!isActivePlayer(ally)) continue;

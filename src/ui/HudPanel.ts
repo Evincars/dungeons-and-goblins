@@ -14,6 +14,8 @@ import { PartyBanner } from './PartyBanner';
 import { LootRollPanel } from './LootRollPanel';
 import { LEVEL_PANEL_H, LEVEL_PANEL_W, LevelPanel } from './LevelPanel';
 import { PassiveHud } from './PassiveHud';
+import { ScrollText } from './ScrollText';
+import type { TipTopic } from './InfoTooltip';
 import { hasChoices } from '../rules/Build';
 import { heroClass } from '../rules/Classes';
 import { heroName } from '../rules/Names';
@@ -47,6 +49,9 @@ const BREATH_SWELL = 0.3;
 const BREATH_FAINT = 0.45;
 /** The open map is redrawn this often (ticks). */
 const MAP_REFRESH_TICKS = 20;
+/** The dialog a quick-bar tooltip's "More info" opens: its text box, in game pixels. */
+const MORE_W = 280;
+const MORE_H = 150;
 
 
 type Bar = { color: number; fill: Graphics; value: PixelLabel; current: (p: Player) => number; max: (p: Player) => number };
@@ -124,6 +129,8 @@ export class HudPanel {
   private readonly minimap = new MinimapView();
   private readonly levelPanel = new LevelPanel();
   private readonly passives = new PassiveHud();
+  /** A spell's whole story, opened from its quick-bar tooltip. */
+  private readonly moreText = new ScrollText(MORE_W, MORE_H);
   /** A mark on the level bubble while the hero has a choice to make. */
   private readonly choiceMark = new PixelLabel('!', { color: THEME.hitPoints, scale: MARK_SCALE, align: 'center', outline: true });
   /** Updates so far, which the choice mark breathes by. */
@@ -142,6 +149,13 @@ export class HudPanel {
     const rest = corners[3];
     this.restMenu = new RestMenu(Math.round(rest.x - BUTTON_R), Math.round(rest.y - BUTTON_R - 2));
     this.container.addChild(this.quickBar.view, this.partyBanner.view, this.lootRolls.view, this.passives.view, this.restMenu.view, this.dialog.container);
+    this.quickBar.onMore = (more) => this.showMore(more);
+  }
+
+  /** "More info" on a quick-bar tooltip: the spell's whole text and numbers, in the HUD's dialog. */
+  private showMore(more: TipTopic): void {
+    this.moreText.set(more);
+    this.dialog.show(more.title, this.moreText.view, MORE_W, MORE_H);
   }
 
   private addBar(spec: Pick<Bar, 'color' | 'current' | 'max'>, i: number): void {
@@ -230,7 +244,6 @@ export class HudPanel {
     this.lootRolls.update();
     this.quickBar.update(player);
     this.passives.update();
-    this.restMenu.update(player);
     if (!player) return;
     if (this.dialog.showing(this.levelPanel.view)) this.levelPanel.update(player);
     this.choiceMark.visible = hasChoices(heroClass(player.heroClass), player.playerStats.level, player.build);
@@ -264,9 +277,12 @@ export class HudPanel {
     bar.value.text = text('hud.bar.value', { current, max });
   }
 
-  /** Closes the HUD's dialog or the rest menu if one is open; returns whether one was (Escape uses this before the pause menu). */
+  /**
+   * Closes the topmost of the HUD's dialog, the rest menu and the hit dice to agree a rest with, if one is open; returns
+   * whether one was (Escape uses this before the pause menu).
+   */
   closeDialog(): boolean {
-    return this.restMenu.hide() || this.dialog.hide();
+    return this.partyBanner.hideMenu() || this.restMenu.hide() || this.dialog.hide();
   }
 
   destroy(): void {

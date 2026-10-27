@@ -237,8 +237,17 @@ export class QuickBar {
     for (const view of this.slots) view.square.scale.set(1 + BREATH_SWELL * phase);
   }
 
-  /** The tooltip of the square under the pointer, above the bar. */
+  /** Where a "More info" on a square's tooltip goes (the HUD opens it in its dialog). */
+  set onMore(handler: ((more: TipTopic) => void) | null) {
+    this.tip.onMore = handler;
+  }
+
+  /**
+   * The tooltip of the square under the pointer, pinned just over it; it stays while the pointer is on it, so its
+   * "More info" can be clicked.
+   */
   private updateTip(player: Player): void {
+    if (this.tip.hovered && !pendingBinding()) return;
     const view = this.slots[this.hovered];
     if (!view || pendingBinding()) {
       this.tip.hide();
@@ -251,9 +260,11 @@ export class QuickBar {
       this.topic = { slot: this.hovered, bound: view.bound, level, tip };
     }
     // Asked for at the bar itself, it is kept inside the area above it: just over the squares.
-    const top = GAME_HEIGHT - MARGIN - SLOT - 2;
-    if (this.topic) this.tip.show(this.topic.tip, this.slotX(this.hovered), top, { w: GAME_WIDTH, h: top });
+    const top = GAME_HEIGHT - MARGIN - SLOT;
+    const square = { x: this.slotX(this.hovered), y: top, w: SLOT, h: SLOT };
+    if (this.topic) this.tip.showAt(this.topic.tip, square, { w: GAME_WIDTH, h: top }, 'above');
   }
+
 
   destroy(): void {
     for (const view of this.slots) view.icon.mask = null;

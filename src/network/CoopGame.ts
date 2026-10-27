@@ -5,6 +5,8 @@ import type { Level } from '../level/Level';
 import { createPlayer } from '../entities/PlayerFactory';
 import { handleGuestCommand, playerInSlot } from '../game/PlayerActions';
 import { restorePlayer } from '../game/Run';
+import { pausingSeat, resetPause, setSeatPaused } from '../game/Pause';
+import { cleanName } from '../game/Settings';
 import { sound } from '../audio/SoundPlayer';
 import type { SfxName } from '../audio/SoundPlayer';
 import { screenToWorld } from '../render/Camera';
@@ -26,6 +28,14 @@ const STALE_INPUT_MS = 500;
 const SEND_EVERY_TICKS = 3;
 const GUEST_MINIMAP_COLOR = 0x40c0ff;
 
+/** The name of whoever has the game paused, as the others see it ('' when nobody has). */
+export function pauserName(): string {
+  const seat = pausingSeat();
+  if (!seat) return '';
+  // Sent as names are: the guests check it like any other.
+  return cleanName(playerInSlot(seat)?.playerName ?? coop.nameOf(seat) ?? '');
+}
+
 /** Names a player's character for the others to see. */
 function setName(entity: Entity, name: string): void {
   if (entity.playerName === undefined) world.addComponent(entity, 'playerName', name);
@@ -42,12 +52,17 @@ export class HostGame {
   private readonly seed: number;
   private wasConnected = coop.connected;
   // The hooks this level installed; the next level's are put in before this one is torn down.
-  private readonly onLeave = (slot: PlayerSlot) => { this.departed.push(slot); };
+  private readonly onLeave = (slot: PlayerSlot) => {
+    this.departed.push(slot);
+    // A guest who leaves with the pause menu open lets go of the game.
+    setSeatPaused(slot, false);
+  };
   private readonly onEffect = (name: SfxName, x?: number, y?: number) => coop.sendSound(name, x, y);
 
   /** `map`: the dungeon just built, sent to every guest so they build the very same one. */
   constructor(host: Entity, spawn: { x: number; y: number }, seed: number, depth: number, map: LevelMap) {
     setName(host, coop.nameOf('host') ?? coop.hostName);
+    resetPause();
     coop.guestSlots().forEach((slot, i) => this.addGuest(slot, spawn, i));
     coop.onLeave = this.onLeave;
     coop.onCommand = handleGuestCommand;
@@ -77,10 +92,10 @@ export class HostGame {
     return lost;
   }
 
-  /** After the simulation: the world goes out to the guests, with whether the host has paused. */
+  /** After the simulation: the world goes out to the guests, with whether the game is paused and by whom. */
   afterTick(paused: boolean): void {
     if (++this.networkTick % SEND_EVERY_TICKS !== 0 || !coop.connected) return;
-    coop.sendState(captureWorld(paused, this.seed));
+    coop.sendState(captureWorld(paused, this.seed, paused ? pauserName() : ''));
   }
 
   private applyGuestInput(): void {
@@ -124,7 +139,9 @@ export class HostGame {
  */
 export class GuestGame {
   readonly replica = new WorldReplica();
+  /** The game stands still for everyone (someone has the pause menu open), and who paused it. */
   hostPaused = false;
+  pausedBy = '';
   private readonly aim = { x: 0, y: 0 };
 
   private readonly onState = () => this.applyHostState();
@@ -141,6 +158,7 @@ export class GuestGame {
     if (!coop.latest || coop.latest.state.seed !== coop.level?.seed) return;
     this.replica.apply(coop.latest.state);
     this.hostPaused = coop.latest.paused;
+    this.pausedBy = coop.latest.state.pausedBy;
   }
 
   /** One tick of the guest's own work; `idle` (paused, disconnected) sends no keys at all. */

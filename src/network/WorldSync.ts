@@ -12,7 +12,7 @@ import { setVisualFrame } from '../render/AnimatedVisual';
 import { ensure } from '../core/errors';
 import { hasKey, isFiniteNumber, isRecord } from '../core/guards';
 import { isFeatureId, MAX_FEATURES } from '../rules/ClassFeatures';
-import { isBagSquare, isInventoryItem, MAX_ITEM_NAME, validBinding } from './protocol';
+import { isBagSquare, isDiceCount, isInventoryItem, MAX_ITEM_NAME, validBinding } from './protocol';
 import { isHeroClassId } from '../rules/Classes';
 import { validBuild } from '../rules/Build';
 import { isWeaponBase } from '../rules/WeaponTable';
@@ -50,7 +50,8 @@ const MAX_ROLL_TEXT = 2 * MAX_ITEM_NAME;
 
 export type EntityState = Omit<Entity, UnsentKey>;
 /** `seed` names the level the update belongs to, so a late update from the previous level is ignored. */
-export type NetState = { version: 1; seed: number; paused: boolean; entities: Array<{ id: number; data: EntityState }> };
+/** `paused`: the game stands still for everyone; `pausedBy`: the name of who paused it ('' when nobody has). */
+export type NetState = { version: 1; seed: number; paused: boolean; pausedBy: string; entities: Array<{ id: number; data: EntityState }> };
 
 function sendable(entity: Entity): EntityState {
   const data: EntityState = {};
@@ -63,14 +64,14 @@ function sendable(entity: Entity): EntityState {
 }
 
 /** The world for the guests: everything but what each browser builds from the seed. */
-export function captureWorld(paused: boolean, seed: number): NetState {
+export function captureWorld(paused: boolean, seed: number, pausedBy = ''): NetState {
   const entities: NetState['entities'] = [];
   for (const entity of world.entities) {
     const id = world.id(entity);
     if (entity.localOnly || entity.removed || id === undefined) continue;
     entities.push({ id, data: sendable(entity) });
   }
-  return { version: 1, seed, paused, entities };
+  return { version: 1, seed, paused, pausedBy, entities };
 }
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -96,7 +97,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   build: { scores: 'object', locked: 'boolean', improvements: 'object' },
   projectile: { life: 'number', team: 'number', attack: 'object' },
   glow: { radius: 'number' },
-  playerStats: { level: 'number', exp: 'number', gold: 'number', swordTier: 'number', hitDice: 'number', restDiceOpen: 'boolean',
+  playerStats: { level: 'number', exp: 'number', gold: 'number', swordTier: 'number', hitDice: 'number',
     sprinting: 'boolean', sprint: 'number', maxSprint: 'number', sprintLocked: 'boolean', kills: 'number', goldEarned: 'number',
     lootBonus: 'number' },
   swordSwing: { delay: 'number', ticks: 'number', dirX: 'number', dirY: 'number', range: 'number', hitIds: 'object' },
@@ -133,7 +134,7 @@ const VALUES: Readonly<Record<string, FieldType>> = {
   facing: 'number', speed: 'number', friction: 'number', walkTime: 'number', limp: 'number',
   chasing: 'boolean', frame: 'number', yOffset: 'number', flashTime: 'number', healthBarOffset: 'number',
   mobType: 'string', castCooldown: 'number', swordCooldown: 'number', arrowCooldown: 'number', spawnedBy: 'number', stepTimer: 'number',
-  dustTimer: 'number', respawnTicks: 'number', minimapColor: 'number', safeZone: 'boolean', playerSlot: 'string',
+  dustTimer: 'number', respawnTicks: 'number', minimapColor: 'number', safeZone: 'boolean', inSafeRoom: 'boolean', playerSlot: 'string',
   playerName: 'string', heroClass: 'string', mobWeapon: 'string', protectCooldown: 'number',
 };
 
@@ -180,10 +181,16 @@ function validLootRoll(roll: NonNullable<EntityState['lootRoll']>): boolean {
     && choices.every(([slot, choice]) => isPlayerSlot(slot) && (choice === 'need' || choice === 'pass'));
 }
 
+/** The hit dice chosen for a short rest: known seats, each a count a hero could have. */
+function validDiceChoices(dice: unknown): boolean {
+  return dice === undefined || (isRecord(dice) && Object.entries(dice).every(([slot, count]) => isPlayerSlot(slot) && isDiceCount(count)));
+}
+
 /** A vote under way and the notice on screen: known kinds, seats and notices, a name as names may be. */
 function validParty(party: NonNullable<EntityState['party']>): boolean {
   const { vote, notice } = party;
-  const voteOk = vote === null || (isRecord(vote) && isVoteKind(vote.kind) && isPlayerSlot(vote.by) && isSlotList(vote.agreed) && isFiniteNumber(vote.ticks));
+  const voteOk = vote === null || (isRecord(vote) && isVoteKind(vote.kind) && isPlayerSlot(vote.by) && isSlotList(vote.agreed)
+    && isFiniteNumber(vote.ticks) && validDiceChoices(vote.dice));
   const noticeOk = notice === null || (isRecord(notice) && isRestNotice(notice.notice) && isVoteKind(notice.kind)
     && typeof notice.name === 'string' && cleanName(notice.name) === notice.name && isFiniteNumber(notice.age));
   return voteOk && noticeOk;
@@ -250,6 +257,7 @@ function checkEntry(entry: unknown, ids: Set<number>): void {
 export function validateNetState(value: unknown): asserts value is NetState {
   ensure(isRecord(value) && value.version === 1 && typeof value.paused === 'boolean' && Number.isInteger(value.seed),
     'Unsupported world update');
+  ensure(typeof value.pausedBy === 'string' && cleanName(value.pausedBy) === value.pausedBy, 'Invalid pause in world update');
   ensure(Array.isArray(value.entities) && value.entities.length <= MAX_ENTITIES, 'Malformed world update');
   const ids = new Set<number>();
   const slots = new Set<PlayerSlot>();

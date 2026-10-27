@@ -51,7 +51,6 @@ export function createPlayer(x: number, y: number, classId: HeroClassId = DEFAUL
       gold: 0,
       swordTier: 1,
       hitDice: 1,
-      restDiceOpen: false,
       sprinting: false,
       sprint: 0,
       maxSprint: BASE_SPRINT,

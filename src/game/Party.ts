@@ -1,5 +1,5 @@
 import { world, q, localPlayer } from '../world';
-import type { Entity, Player, PartyVote, PlayerSlot, RestNotice, VoteKind } from '../world';
+import type { Entity, HitDiceChoices, Player, PartyVote, PlayerSlot, RestNotice, VoteKind } from '../world';
 import { coop } from '../network/CoopSession';
 import { text } from '../core/texts';
 import { isStanding, standingHeroes } from './Fallen';
@@ -23,7 +23,7 @@ const MAX_QUEUED = 16;
 export type PartyState = NonNullable<Entity['party']>;
 
 const parties = world.with('party');
-const answers: Array<{ slot: PlayerSlot; agree: boolean }> = [];
+const answers: Array<{ slot: PlayerSlot; agree: boolean; dice?: number }> = [];
 
 /** The seat a player sits in (a lone game's hero is the host's). */
 export const seatOf = (player: Entity): PlayerSlot => player.playerSlot ?? 'host';
@@ -52,28 +52,31 @@ export function isAlone(): boolean {
   return standingHeroes() <= 1;
 }
 
-/** Puts a question to the party, the asker agreeing; false while another vote is open (one at a time). */
-export function openVote(player: Player, kind: VoteKind, state: PartyState = partyState()): boolean {
+/**
+ * Puts a question to the party, the asker agreeing (for a short rest, with the hit dice they chose in `dice`); false
+ * while another vote is open (one at a time).
+ */
+export function openVote(player: Player, kind: VoteKind, state: PartyState = partyState(), dice: HitDiceChoices = {}): boolean {
   if (state.vote) return false;
   const seat = seatOf(player);
-  state.vote = { kind, by: seat, agreed: [seat], ticks: VOTE_TICKS };
+  state.vote = { kind, by: seat, agreed: [seat], ticks: VOTE_TICKS, dice };
   notify(state, 'asked', nameOf(player), kind);
   return true;
 }
 
-/** Host: an answer from a seat, counted on the next tick. */
-export function queueAnswer(slot: PlayerSlot, agree: boolean): void {
-  if (answers.length < MAX_QUEUED) answers.push({ slot, agree });
+/** Host: an answer from a seat (agreeing to a short rest, with the hit dice to spend in it), counted on the next tick. */
+export function queueAnswer(slot: PlayerSlot, agree: boolean, dice?: number): void {
+  if (answers.length < MAX_QUEUED) answers.push({ slot, agree, dice });
 }
 
 /** The prompt's Agree / Refuse: this screen's player answers, through the host for a guest. */
-export function answerVote(agree: boolean): void {
+export function answerVote(agree: boolean, dice?: number): void {
   if (coop.role === 'guest') {
-    coop.sendCommand({ kind: 'vote_answer', agree });
+    coop.sendCommand({ kind: 'vote_answer', agree, dice });
     return;
   }
   const me = localPlayer();
-  if (me) queueAnswer(seatOf(me), agree);
+  if (me) queueAnswer(seatOf(me), agree, dice);
 }
 
 function playerAt(slot: PlayerSlot): Player | undefined {
@@ -81,13 +84,14 @@ function playerAt(slot: PlayerSlot): Player | undefined {
   return undefined;
 }
 
-/** A player answers the vote: one refusal calls it off. The fallen have no say. */
-function answer(player: Player, agree: boolean, state: PartyState): void {
+/** A player answers the vote: one refusal calls it off (and nobody rests). The fallen have no say. */
+function answer(player: Player, agree: boolean, dice: number | undefined, state: PartyState): void {
   const vote = state.vote;
   const seat = seatOf(player);
   if (!vote || vote.agreed.includes(seat) || !isStanding(player)) return;
   if (agree) {
     vote.agreed.push(seat);
+    if (dice !== undefined && vote.kind === 'short') vote.dice = { ...vote.dice, [seat]: dice };
     return;
   }
   state.vote = null;
@@ -118,9 +122,9 @@ export function updateParty(): void {
     answers.length = 0;
     return;
   }
-  for (const { slot, agree } of answers) {
+  for (const { slot, agree, dice } of answers) {
     const player = playerAt(slot);
-    if (player) answer(player, agree, state);
+    if (player) answer(player, agree, dice, state);
   }
   answers.length = 0;
   const vote = state.vote;

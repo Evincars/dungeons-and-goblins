@@ -8,7 +8,7 @@ import type { CatalogSpell } from '../rules/Spellbook';
 import { featureBinding, featuresAt } from '../rules/ClassFeatures';
 import type { FeatureDef } from '../rules/ClassFeatures';
 import { beginBinding } from '../game/SpellBinding';
-import { requestToggleFeature } from '../game/PlayerActions';
+import { preparesSpells, requestToggleFeature } from '../game/PlayerActions';
 import type { TipTopic } from './InfoTooltip';
 import { PixelLabel } from './PixelText';
 import { featureTopic, spellTopic } from './SpellTopics';
@@ -43,6 +43,8 @@ const BEAD_GAP = 5;
 const BEAD_SIZE = 2;
 const BEAD_SPEED = 0.6;
 const BEAD_COLOURS = [0x4de1ff, 0xff5fd2, 0xffe14d, 0x7dff6a] as const;
+/** The hint at the top turns this colour outside a safe room, where spells can't be prepared. */
+const UNSAFE_HINT = 0xff9a6a;
 
 /**
  * The inventory's Skills tab: first "Class features:" (what the class has given the hero by their level: a passive is
@@ -50,7 +52,8 @@ const BEAD_COLOURS = [0x4de1ff, 0xff5fd2, 0xffe14d, 0x7dff6a] as const;
  * to the quick bar like a spell), then under "Cantrips:" and then "Level 1 spells:", "Level 2 spells:"… (as far as the hero
  * has slots) a small box for every spell the hero's class has learnt by their level. A spell has no picture yet, so
  * it is an empty box that tells about itself under the pointer. Click one to put it on the quick bar: a spell that can
- * be cast at several levels first opens a box for each level, each telling its own numbers.
+ * be cast at several levels first opens a box for each level, each telling its own numbers. Spells are prepared only in
+ * a safe room (game/PlayerActions.ts `mayPrepare`): elsewhere the hint at the top says so and a click on one does nothing.
  */
 export class SpellsPanel {
   readonly view = new Container();
@@ -61,6 +64,9 @@ export class SpellsPanel {
   private readonly scrollbar = new Graphics();
   private readonly beads = new Graphics();
   private player: Player | null = null;
+  /** The line at the top: how to bind, or, outside a safe room, that spells wait for one. */
+  private hint: PixelLabel | null = null;
+  private hintSafe: boolean | null = null;
   private bead = 0;
   private boxes: Box[] = [];
   private choice: Choice | null = null;
@@ -104,10 +110,11 @@ export class SpellsPanel {
     this.content.addChild(...keep);
   }
 
-  private addHeading(label: string, y: number, color: number): void {
+  private addHeading(label: string, y: number, color: number): PixelLabel {
     const heading = new PixelLabel(label, { color, shadow: true });
     heading.position.set(Math.round(this.area.x + PAD), Math.round(y));
     this.content.addChild(heading);
+    return heading;
   }
 
   /** One heading and its boxes in rows; returns where the next section starts. */
@@ -126,7 +133,9 @@ export class SpellsPanel {
   private layout(cls: DndClass, level: number, style: string | null): void {
     this.clearContent();
     let y = this.area.y + PAD;
-    this.addHeading(text('skills.hint'), y, THEME.muted);
+    this.hint = this.addHeading(text('skills.hint'), y, THEME.muted);
+    this.hintSafe = null;
+    this.updateHint();
     y += HEADING_H + SECTION_GAP;
     y = this.addSection(text('skills.features'), featuresAt(cls, level, style).map((feature) => ({ feature })), y);
     if (!isCaster(cls)) {
@@ -203,6 +212,28 @@ export class SpellsPanel {
     g.rect(box.rect.x, box.rect.y, box.rect.width, box.rect.height).stroke({ color: THEME.title, width: 1, alignment: 1 });
   }
 
+  /** The box (or level box) under the pointer, where it is drawn now (scrolled), for a tooltip to sit beside. */
+  anchorAt(x: number, y: number): { x: number; y: number; w: number; h: number } | null {
+    const option = this.optionAt(x, y);
+    if (option) return { x: option.rect.x, y: option.rect.y, w: option.rect.width, h: option.rect.height };
+    const box = this.boxAt(x, y);
+    return box ? { x: box.rect.x, y: box.rect.y - this.scrollY, w: box.rect.width, h: box.rect.height } : null;
+  }
+
+  /** Whether this hero may prepare spells here (in a safe room). */
+  private get preparing(): boolean {
+    return !!this.player && preparesSpells(this.player);
+  }
+
+  /** The top line says how to bind, or (in warning colour) that spells wait for a safe room. */
+  private updateHint(): void {
+    const safe = this.preparing;
+    if (!this.hint || safe === this.hintSafe) return;
+    this.hintSafe = safe;
+    this.hint.text = text(safe ? 'skills.hint' : 'skills.safe_room_only');
+    this.hint.fill = safe ? THEME.muted : UNSAFE_HINT;
+  }
+
   /** What the pointer is over tells about itself: a level box its numbers at that level, a spell box its base ones, a feature its text. */
   topicAt(x: number, y: number): TipTopic | null {
     const option = this.optionAt(x, y);
@@ -227,7 +258,8 @@ export class SpellsPanel {
     const box = this.boxAt(x, y);
     if (!box || !this.cls) return wasOpen;
     if (box.feature) return this.pressFeature(box.feature);
-    if (!box.spell) return true;
+    // Outside a safe room a spell can't be prepared: the hint at the top already says so.
+    if (!box.spell || !this.preparing) return true;
     const levels = castLevels(this.cls, this.heroLevel, box.spell);
     if (levels.length === 1) beginBinding({ spell: box.spell.id, level: levels[0] });
     else this.openChoice(box, levels);
@@ -245,8 +277,9 @@ export class SpellsPanel {
     return true;
   }
 
-  /** Every update: the train of beads runs round each switched-on passive. */
+  /** Every update: the hint follows whether the hero is in a safe room, and the train of beads runs round each switched-on passive. */
   animate(): void {
+    this.updateHint();
     const g = this.beads.clear();
     this.bead = (this.bead + BEAD_SPEED) % (4 * BOX);
     for (const { feature, rect } of this.boxes) {
@@ -321,9 +354,12 @@ export class SpellsPanel {
     for (const child of this.popup.removeChildren()) child.destroy({ children: true });
   }
 
-  closeChoice(): void {
+  /** Closes a spell's level boxes; returns whether they were open. */
+  closeChoice(): boolean {
+    const wasOpen = this.choice !== null;
     this.choice = null;
     this.hoveredLevel = -1;
     this.clearPopup();
+    return wasOpen;
   }
 }

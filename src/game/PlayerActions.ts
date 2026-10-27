@@ -10,14 +10,15 @@ import { REACH } from '../systems/TargetSystem';
 import { fitsSlot, statTotals } from '../entities/Items';
 import { isEquipSlot, QUICK_SLOTS } from '../world';
 import { BASE_SPRINT } from '../entities/PlayerFactory';
-import { queueRestRequest, spendHitDice } from './Rest';
+import { queueRestRequest } from './Rest';
 import { setDownItem } from '../entities/LootFactory';
 import type { TextId } from '../core/texts';
 import { queueAnswer } from './Party';
+import { setSeatPaused } from './Pause';
 import { chooseLoot } from './LootRoll';
 import { applyCustomization } from './Customize';
 import { canBind } from '../rules/Spellbook';
-import { canToggle } from '../rules/ClassFeatures';
+import { bindingFeatureId, canToggle } from '../rules/ClassFeatures';
 import { heroClass } from '../rules/Classes';
 import { chooseDeparture } from '../systems/ExitSystem';
 
@@ -292,10 +293,21 @@ export function requestGive(player: Player, from: ItemPlace, to: PlayerSlot): vo
   else giveItem(player, from, to);
 }
 
-/** Puts a spell, cast at a level, on a quick-bar square if the hero has learnt it and may cast it there. */
+/** Spells are prepared — put on the quick bar — only in a safe room, as a caster prepares them after a rest. */
+export function preparesSpells(player: Player): boolean {
+  return !!player.inSafeRoom;
+}
+
+/** Whether this may go on the quick bar now: a spell only in a safe room, a class feature anywhere. */
+export function mayPrepare(player: Player, spell: string): boolean {
+  return bindingFeatureId(spell) !== null || preparesSpells(player);
+}
+
+/** Puts a spell, cast at a level, on a quick-bar square if the hero has learnt it, may cast it there and is in a safe room. */
 export function bindSpell(player: Player, slot: number, spell: string, level: number): boolean {
   const cls = heroClass(player.heroClass).dndClass;
-  if (!Number.isInteger(slot) || slot < 0 || slot >= QUICK_SLOTS || !canBind(cls, player.playerStats.level, spell, level)) return false;
+  if (!Number.isInteger(slot) || slot < 0 || slot >= QUICK_SLOTS || !mayPrepare(player, spell)) return false;
+  if (!canBind(cls, player.playerStats.level, spell, level)) return false;
   const book = player.spellbook ?? (player.spellbook = { recovery: Array.from({ length: QUICK_SLOTS }, () => 0) });
   const bound = Array.from({ length: QUICK_SLOTS }, (_, i) => book.bound?.[i] ?? null);
   bound[slot] = { spell, level };
@@ -327,7 +339,8 @@ export function requestBind(player: Player, slot: number, spell: string, level: 
 /** Host: carries out what a guest asked for, if it is allowed for that guest's character. */
 export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): void {
   // Answers by seat: whether that seat's hero may still answer is looked at where they are counted.
-  if (command.kind === 'vote_answer') return queueAnswer(slot, command.agree);
+  if (command.kind === 'vote_answer') return queueAnswer(slot, command.agree, command.dice);
+  if (command.kind === 'pause') return setSeatPaused(slot, command.paused);
   if (command.kind === 'loot') return chooseLoot(slot, command.roll, command.need);
   if (command.kind === 'depart') return chooseDeparture(slot, command.choice);
   const player = playerInSlot(slot);
@@ -335,10 +348,6 @@ export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): voi
   if (command.kind === 'buy') {
     const item = keeperNear(player)?.shopNpc?.items[command.index];
     if (item) buy(player, item);
-    return;
-  }
-  if (command.kind === 'rest_dice') {
-    spendHitDice(player, command.count);
     return;
   }
   if (command.kind === 'drop') {

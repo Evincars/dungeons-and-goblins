@@ -146,8 +146,13 @@ export function isRestNotice(value: unknown): value is RestNotice {
   return REST_NOTICES.some((notice) => notice === value);
 }
 
-/** Something asked of the party in co-op: by whom, who has agreed so far (the asker included), and ticks left to answer. */
-export type PartyVote = { kind: VoteKind; by: PlayerSlot; agreed: PlayerSlot[]; ticks: number };
+/** How many hit dice each hero will spend in a short rest, by seat (no entry: none). */
+export type HitDiceChoices = Partial<Record<PlayerSlot, number>>;
+/**
+ * Something asked of the party in co-op: by whom, who has agreed so far (the asker included), and ticks left to answer.
+ * For a short rest, `dice`: the hit dice each who agreed chose to spend in it.
+ */
+export type PartyVote = { kind: VoteKind; by: PlayerSlot; agreed: PlayerSlot[]; ticks: number; dice?: HitDiceChoices };
 /** The notice over the screen: which, about whom and which vote, and the ticks it has shown. */
 export type PartyNoticeShown = { notice: RestNotice; name: string; kind: VoteKind; age: number };
 
@@ -416,8 +421,6 @@ export type Entity = {
     swordTier: number;
     /** Hit dice left to spend on healing (a level's worth at most; a long rest gives half back). */
     hitDice: number;
-    /** A short rest has been taken and the hero has yet to say how many hit dice to spend in it. */
-    restDiceOpen: boolean;
     sprinting: boolean;
     sprint: number;
     maxSprint: number;
@@ -519,6 +522,8 @@ export type Entity = {
 
   // --- safe zone (enemies can't attack inside) ---
   safeZone?: true;
+  /** A hero standing in a safe room (the first one or the exit's), worked out each tick: only there are spells prepared. */
+  inSafeRoom?: boolean;
 
   // --- exit button (players interact to end level) ---
   /**

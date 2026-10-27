@@ -1,7 +1,7 @@
 import { Container, Graphics } from 'pixi.js';
 import { localPlayer } from '../world';
 import type { Entity } from '../world';
-import { GAME_WIDTH } from '../render/Camera';
+import { GAME_HEIGHT, GAME_WIDTH } from '../render/Camera';
 import { claimPointer } from '../systems/InputSystem';
 import { exitCountdown, gateCountdown } from '../systems/DoorSystem';
 import { isStanding } from '../game/Fallen';
@@ -9,6 +9,8 @@ import { answerVote, currentParty, NOTICE_TICKS, seatOf } from '../game/Party';
 import { text } from '../core/texts';
 import { PixelButton } from './PixelButton';
 import { PixelLabel } from './PixelText';
+import { PopupMenu } from './PopupMenu';
+import { hitDiceRows } from './RestMenu';
 
 /** The banner's top edge, the padding round its text and the dark band behind it. */
 const TOP = 34;
@@ -24,13 +26,16 @@ const BUTTON_GAP = 8;
 const NOTICE_COLOR = 0xf2e6c8;
 /** The gate's countdown reads red. */
 const WARNING_COLOR = 0xff7a5a;
+/** The hit dice to spend open this far under the Agree button. */
+const DICE_MENU_GAP = 2;
 
 type PartyState = NonNullable<Entity['party']>;
 
 /**
  * What the screen says to the whole party, high in the middle: the gate shutting on the safe room or the exit
  * room's portcullis dropping (a countdown), a question someone put to the party — a rest, opening the gate — with Agree and Refuse for
- * everyone who hasn't answered yet, or the last word on one (a rest taken, a refusal, why it can't be).
+ * everyone who hasn't answered yet, or the last word on one (a rest taken, a refusal, why it can't be). Agreeing to a short
+ * rest, a hero with hit dice left first says how many to spend in it.
  */
 export class PartyBanner {
   readonly view = new Container();
@@ -38,6 +43,8 @@ export class PartyBanner {
   private readonly line = new PixelLabel('', { color: NOTICE_COLOR, align: 'center', outline: true });
   private readonly sub = new PixelLabel('', { color: NOTICE_COLOR, align: 'center', outline: true });
   private readonly buttons = new Container();
+  /** The hit dice to spend in the short rest being agreed to. */
+  private readonly diceMenu = new PopupMenu();
   private shown = '';
 
   constructor() {
@@ -49,16 +56,38 @@ export class PartyBanner {
     const refuse = this.addButton(text('hud.vote.refuse'), false, BUTTON_GAP / 2);
     this.buttons.addChild(agree, refuse);
     this.buttons.position.set(GAME_WIDTH / 2, TOP + 2 * PAD + LINE);
-    this.view.addChild(this.band, this.line, this.sub, this.buttons);
+    this.view.addChild(this.band, this.line, this.sub, this.buttons, this.diceMenu.view);
   }
 
   private addButton(label: string, agree: boolean, x: number): PixelButton {
     const button = new PixelButton(label, BUTTON_W, BUTTON_H);
     button.position.set(x, 0);
-    button.onPress = () => answerVote(agree);
+    button.onPress = () => (agree ? this.agree(x) : this.refuse());
     button.on('pointerover', () => claimPointer(button, true));
     button.on('pointerout', () => claimPointer(button, false));
     return button;
+  }
+
+  /** Agree: to a short rest, once this hero has said how many hit dice to spend in it (if they have any left). */
+  private agree(x: number): void {
+    const me = localPlayer();
+    if (currentParty()?.vote?.kind !== 'short' || !me || me.playerStats.hitDice <= 0) {
+      answerVote(true);
+      return;
+    }
+    if (this.diceMenu.hide()) return;
+    const top = this.buttons.y + BUTTON_H + DICE_MENU_GAP;
+    this.diceMenu.show(hitDiceRows(me, (count) => answerVote(true, count)), this.buttons.x + x, top, { w: GAME_WIDTH, h: GAME_HEIGHT });
+  }
+
+  private refuse(): void {
+    this.diceMenu.hide();
+    answerVote(false);
+  }
+
+  /** Closes the hit dice to spend if they are open; returns whether they were (Escape uses this before the pause menu). */
+  hideMenu(): boolean {
+    return this.diceMenu.hide();
   }
 
   update(): void {
@@ -122,8 +151,10 @@ export class PartyBanner {
     this.releaseButtons();
   }
 
+  /** The buttons are gone (answered, or nothing is asked): so are the hit dice to choose under them. */
   private releaseButtons(): void {
     for (const button of this.buttons.children) claimPointer(button, false);
+    this.diceMenu.hide();
   }
 
   private hide(): void {
@@ -134,5 +165,6 @@ export class PartyBanner {
 
   destroy(): void {
     this.releaseButtons();
+    this.diceMenu.destroy();
   }
 }

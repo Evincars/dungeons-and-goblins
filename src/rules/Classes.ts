@@ -56,7 +56,7 @@ export type HeroClass = {
   /** The CharacterDef that draws this hero. */
   character: string;
   hitDie: DieSides;
-  /** Hit points at level 1 (the game's scale, see HitPoints.ts). */
+  /** Hit points at level 1 (the hit die at its highest + CON, see HitPoints.ts). */
   hitPoints: number;
   /** The scores a player who changes nothing keeps (the point buy's start, a human's +1 included); the player's own are in their Build (rules/Build.ts). */
   abilities: Readonly<Record<StatName, number>>;

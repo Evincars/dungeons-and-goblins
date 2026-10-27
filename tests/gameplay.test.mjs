@@ -904,8 +904,11 @@ test('guest controls, commands, rosters and level starts are checked before they
   assert.equal(validInput(slotted), false, 'the quick bar has five squares');
   slotted.input.spellSlot = 4;
   assert.equal(validInput(slotted), true);
-  assert.equal(validCommand({ kind: 'rest_dice', count: 2 }), true);
-  assert.equal(validCommand({ kind: 'rest_dice', count: 99 }), false, 'no hero has that many hit dice');
+  assert.equal(validCommand({ kind: 'rest_dice', count: 2 }), false, 'hit dice are chosen when asking or agreeing');
+  assert.equal(validCommand({ kind: 'vote_answer', agree: true, dice: 2 }), true);
+  assert.equal(validCommand({ kind: 'vote_answer', agree: true, dice: 99 }), false, 'no hero has that many hit dice');
+  assert.equal(validCommand({ kind: 'pause', paused: true }), true);
+  assert.equal(validCommand({ kind: 'pause', paused: 'yes' }), false);
   assert.equal(validCommand({ kind: 'rest', rest: 'short', dice: 1 }), true);
   assert.equal(validCommand({ kind: 'drop', from: { bag: 3 } }), true);
   assert.equal(validCommand({ kind: 'drop', from: { bag: -1 } }), false);
@@ -1126,7 +1129,7 @@ test('weapon damage: the dice, plus STR in melee, DEX at range, the better for f
   assert.equal(sheet.heroClass.id, 'fighter2');
   assert.equal(sheet.armorClass.total, 15, 'chain shirt 13 + DEX +2 (the medium cap), no fighting style');
   assert.equal(formatDice(sheet.attack.damage), '1d4 + 4', 'the +1 dagger with STR 16 (+3), better than DEX +2');
-  assert.deepEqual(sheet.hitPoints, { current: 110, max: 110 }, 'a fighter: 10 x d10 + 5 x CON +2');
+  assert.deepEqual(sheet.hitPoints, { current: 12, max: 12 }, 'a fighter: d10 + CON +2, as in the SRD');
 });
 
 test('every catalogue weapon, armour and shield plays as a D&D base, and a guest cannot forge a better one', async () => {
@@ -1166,7 +1169,7 @@ test('the Fighter and the Cleric: both are trained in every armour, the Cleric w
   assert.equal(sheet.armorClass.total, 18, 'plate 18, no Defense style');
   assert.equal(sheet.armorClass.proficient, true);
   assert.equal(sheet.attack.proficient, false, 'a cleric is not trained in martial weapons');
-  assert.equal(cleric.health.max, 90, '10 x d8 + 5 x CON +2');
+  assert.equal(cleric.health.max, 10, 'd8 + CON +2');
 });
 
 test('enemies follow their SRD monster blocks and carry a random low-end weapon', async () => {
@@ -1471,9 +1474,11 @@ test('the five main characters: each with their D&D class, sprite and training',
   const mods = { strength: 2, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 };
   assert.equal(weaponAttack({ primary: { type: 'weapon', name: 'm', value: 1, gear: 'weapon', base: 'mace' } }, mods, 1, CLASSES.rogue).extra, undefined, 'not with a mace');
   const kaelen = createPlayer(centre(2), centre(2), 'fighter');
-  assert.equal(kaelen.health.max, 110);
+  assert.equal(kaelen.health.max, 12);
   const hit = (id) => createPlayer(centre(2), centre(2), id).health.max;
-  assert.deepEqual([hit('wizard'), hit('rogue'), hit('warlock'), hit('bard'), hit('cleric')], [70, 90, 90, 90, 90], '5 x (2 x hit die + CON)');
+  assert.deepEqual([hit('wizard'), hit('rogue'), hit('warlock'), hit('bard'), hit('cleric')], [8, 10, 10, 10, 10], 'hit die + CON, as in the SRD');
+  const die = (id) => CLASSES[id].hitDie;
+  assert.deepEqual([die('fighter'), die('wizard'), die('rogue'), die('warlock'), die('bard'), die('cleric')], [10, 6, 8, 8, 8, 8], "each class's SRD hit die");
 });
 
 test('the safe room opens with its lever: barred until pulled, then the portcullis rises and the way is clear', async () => {
@@ -1570,9 +1575,10 @@ const Party = await load('game/Party');
 const tickParty = (level) => { Party.updateParty(); Rest.updateRest(level); };
 const { levelForXp, nextLevelXp } = await load('game/Progress');
 
-/** A caster aiming east at a point, with the quick-bar square picked. */
+/** A caster aiming east at a point, with the quick-bar square picked (standing where spells may be prepared). */
 function casterAt(tx, ty, heroClass, slot) {
   const caster = playerAt(tx, ty, heroClass);
+  caster.inSafeRoom = true;
   caster.aimVector = { x: 1, y: 0 };
   world.addComponent(caster, 'aimWorld', { x: caster.position.x + 48, y: caster.position.y });
   caster.playerInput.spellSlot = slot;
@@ -1650,10 +1656,11 @@ test('a spell is learnt at its level, and a healing spell mends the caster by th
   assert.equal(wizard.casting, undefined, 'Chromatic Orb is learnt at level 2');
   assert.ok(rollLines(wizard).includes('LEVEL 2'));
   const cleric = casterAt(2, 2, 'cleric', 2);
+  cleric.health.max = 50;
   cleric.health.current = 10;
   cast(level, cleric);
-  // 1d8 (loaded: 8) + WIS +3 + Disciple of Life 2 + the spell's level 1, at five hit points a tabletop point.
-  assert.equal(cleric.health.current, 10 + 5 * (8 + 3 + 3));
+  // 1d8 (loaded: 8) + WIS +3 + Disciple of Life 2 + the spell's level 1, as at the table.
+  assert.equal(cleric.health.current, 10 + 8 + 3 + 3);
   assert.equal(currentLog().entries.at(-1).result, 'heal');
   const empty = casterAt(2, 4, 'fighter', 0);
   cast(level, empty);
@@ -1714,22 +1721,58 @@ test('hit dice are spent in a short rest, as many as the hero chooses: each the 
   world.addComponent(hero, 'playerSlot', 'host');
   hero.playerStats.level = 3;
   hero.playerStats.hitDice = 3;
-  hero.health.current = 20;
-  assert.equal(Rest.spendHitDice(hero, 2), 0, 'not outside a short rest');
+  hero.health.max = 40;
+  hero.health.current = 5;
   Rest.queueRestRequest('host', 'short', 2);
   tickParty(level);
-  // Two of the Fighter's d10 (loaded: 10) + CON +2 each, at five hit points a tabletop point.
-  assert.equal(hero.health.current, Math.min(hero.health.max, 20 + 2 * 5 * 12));
+  // Two of the Fighter's d10 (loaded: 10) + CON +2 each: 24, as at the table.
+  assert.equal(hero.health.current, 5 + 2 * 12);
   assert.equal(hero.playerStats.hitDice, 1, 'one left for the next short rest');
-  assert.ok(rollLines(hero).includes('Hit dice 2d10'));
-  assert.equal(hero.playerStats.restDiceOpen, false, 'the choice is made');
-  hero.health.current = 20;
-  Rest.queueRestRequest('host', 'short');
+  assert.ok(rollLines(hero).includes('Hit dice 2d10+4 = 24'));
+  assert.equal(Rest.hitDiceLabel(hero, 1), '1d10+2');
+  hero.health.current = 35;
+  Rest.queueRestRequest('host', 'short', 5);
   tickParty(level);
-  assert.equal(hero.playerStats.restDiceOpen, true, 'asked without a choice: the hero is asked now');
-  assert.equal(Rest.spendHitDice(hero, 5), 1, 'no more than are left');
-  assert.equal(hero.health.current, 20 + 5 * 12);
-  assert.equal(Rest.spendHitDice(hero, 1), 0, 'once a rest');
+  assert.equal(hero.playerStats.hitDice, 0, 'no more than are left');
+  assert.equal(hero.health.current, 40, 'healing stops at the maximum');
+  hero.health.current = 20;
+  hero.playerStats.hitDice = 2;
+  Rest.takeRest('short');
+  assert.equal(hero.health.current, 20, 'a short rest with no hit dice chosen heals nothing');
+  assert.equal(hero.playerStats.hitDice, 2);
+});
+
+test('in co-op each companion chooses their hit dice as they agree to a short rest; one refusal and nobody heals', () => {
+  const level = arena(12, 6);
+  const host = playerAt(2, 2, 'wizard');
+  const guest = playerAt(4, 2, 'bard');
+  world.addComponent(host, 'playerSlot', 'host');
+  world.addComponent(guest, 'playerSlot', 'p2');
+  for (const hero of [host, guest]) {
+    hero.playerStats.level = 3;
+    hero.playerStats.hitDice = 3;
+    hero.health.max = 40;
+    hero.health.current = 5;
+  }
+  Rest.queueRestRequest('p2', 'short', 2);
+  tickParty(level);
+  assert.equal(Party.currentParty().vote.kind, 'short', 'the guest asked: the host is asked too');
+  assert.equal(guest.health.current, 5, 'nobody heals before everyone agrees');
+  Party.queueAnswer('host', false);
+  tickParty(level);
+  assert.equal(Party.currentParty().vote, null);
+  assert.equal(guest.health.current, 5, 'refused: not even the guest who asked heals');
+  assert.equal(guest.playerStats.hitDice, 3);
+  for (let i = 0; i <= Party.NOTICE_TICKS; i++) tickParty(level);
+  Rest.queueRestRequest('p2', 'short', 2);
+  tickParty(level);
+  Party.queueAnswer('host', true, 1);
+  tickParty(level);
+  // The wizard's d6 and the bard's d8 (loaded to their highest), each + CON: the wizard's +2, the bard's +2.
+  assert.equal(host.health.current, 5 + 6 + 2, 'the host spent the one die they chose');
+  assert.equal(guest.health.current, 5 + 2 * (8 + 2), 'the guest spent the two they asked with');
+  assert.equal(host.playerStats.hitDice, 2);
+  assert.equal(guest.playerStats.hitDice, 1);
 });
 
 test('rests: a short one recovers spells (two before a long one), a long one heals all and needs the safe room', () => {
@@ -1831,7 +1874,7 @@ test('experience by the SRD: kills give their challenge rating\'s XP, and 300 re
   assert.equal(hero.playerStats.level, 2);
   assert.equal(hero.playerStats.hitDice, 2);
   // The Fighter's d10 at its average (6) + CON +2, at five hit points a tabletop point.
-  assert.equal(hero.health.max, maxBefore + 5 * 8);
+  assert.equal(hero.health.max, maxBefore + 8, "a d10's average 6 + CON +2");
   assert.equal(hero.health.current, hero.health.max);
 });
 
@@ -1904,14 +1947,15 @@ test('progression: Tough adds its hit points each level, and for every level alr
   const { CLASSES } = await load('rules/Classes');
   const { hitPointsPerLevel, startingHitPoints } = await load('rules/HitPoints');
   const { readProgression } = await load('rules/Progression');
-  assert.equal(startingHitPoints(10, 15), 110);
-  assert.equal(startingHitPoints(6, 15), 70);
+  assert.equal(startingHitPoints(10, 15), 12);
+  assert.equal(startingHitPoints(6, 15), 8);
+  assert.equal(startingHitPoints(6, 3), 2, 'CON -4 still leaves the die');
   const tough = { ...CLASSES.fighter, progression: readProgression('t', { 4: [{ feat: 'tough' }] }) };
   const plain = hitPointsPerLevel(CLASSES.fighter, 2, 3);
-  assert.equal(plain, 5 * (5 + 1 + 2), 'a d10 at its average 6, plus CON');
+  assert.equal(plain, 5 + 1 + 2, 'a d10 at its average 6, plus CON');
   assert.equal(hitPointsPerLevel(tough, 2, 3), plain, 'before the feat');
-  assert.equal(hitPointsPerLevel(tough, 2, 4), plain + 5 * 2 * 4, 'taken at level 4: 2 for each of the four levels');
-  assert.equal(hitPointsPerLevel(tough, 2, 5), plain + 5 * 2, '2 more every level after');
+  assert.equal(hitPointsPerLevel(tough, 2, 4), plain + 2 * 4, 'taken at level 4: 2 for each of the four levels');
+  assert.equal(hitPointsPerLevel(tough, 2, 5), plain + 2, '2 more every level after');
 });
 
 // ── Character customisation: point buy, fighting styles, Improvements, Protection ─
@@ -1948,7 +1992,7 @@ test('customising: the hero buys scores and picks a fighting style in the first 
   assert.equal(applyCustomization(hero, { kind: 'scores', scores: bought }), true);
   const sheet = characterSheet(hero);
   assert.equal(sheet.scores.constitution, 16, 'bought 15 + the human\'s 1');
-  assert.equal(hero.health.max, 5 * (20 + 3), 'hit points follow the new CON +3');
+  assert.equal(hero.health.max, 10 + 3, 'hit points follow the new CON +3');
   assert.equal(applyCustomization(hero, { kind: 'scores', scores: { ...bought, wisdom: 15 } }), false, 'more than 27 points');
   assert.equal(applyCustomization(hero, { kind: 'fighting_style', style: 'dueling' }), true);
   assert.equal(applyCustomization(hero, { kind: 'fighting_style', style: 'archery' }), true, 'it may be changed while in the room');
@@ -2556,6 +2600,8 @@ test('a class opens spell levels as the tabletop rules give them', () => {
 test('a hero binds only spells their class has learnt, at levels they can cast; a bound spell replaces the class order', () => {
   const cleric = createPlayer(0, 0, 'cleric');
   assert.deepEqual(Spellbook.quickBinding(cleric, 0), { spell: 'sacred_flame', level: 0 }, 'the class order until something is bound');
+  assert.equal(bindSpell(cleric, 3, 'bless', 1), false, 'spells are prepared only in a safe room');
+  cleric.inSafeRoom = true;
   assert.equal(bindSpell(cleric, 3, 'fireball', 3), false, 'a cleric does not learn Fireball');
   assert.equal(bindSpell(cleric, 3, 'bless', 2), false, 'no level 2 slots yet');
   assert.equal(bindSpell(cleric, 3, 'bless', 1), true);
@@ -2598,18 +2644,26 @@ test('a guest\'s synced spellbook is checked: bound spells must be real', () => 
   assert.throws(() => validateNetState(tampered([null, null, null, null, null, null])), ValidationError, 'only five squares');
 });
 
-test('a spell tooltip gives its whole text and the numbers for the level it is cast at', async () => {
-  const { spellTopic } = await load('ui/SpellTopics');
+test('a spell tooltip is short (kind, range, attack, the start of its text); "More info" holds the whole text and numbers', async () => {
+  const { shortText, spellTopic } = await load('ui/SpellTopics');
   const bless = Spellbook.CATALOG.bless;
   const base = spellTopic(bless, 1, 3);
   const upgraded = spellTopic(bless, 2, 3);
-  assert.ok(base.body.includes('You bless up to three creatures') && base.body.includes('one additional creature'), 'the site text and its higher levels');
-  assert.ok(base.detail.includes('Range: 30 ft (288 px)') && base.detail.includes('Cooldown: 5.0s'), 'range in feet and px, five seconds');
+  assert.ok(base.body.startsWith('You bless up to three creatures') && base.body.endsWith('...'), 'the start of the text, cut short');
+  assert.ok(base.body.length <= 110);
+  assert.deepEqual(base.detail, ['Level 1 Enchantment', 'Range: 30 ft (288 px)', 'Attack: no attack roll']);
+  assert.ok(base.more.body.includes('You bless up to three creatures') && base.more.body.includes('one additional creature'), 'the whole text and its higher levels');
+  assert.ok(base.more.detail.includes('Range: 30 ft (288 px)') && base.more.detail.includes('Cooldown: 5.0s'), 'range in feet and px, five seconds');
   assert.ok(upgraded.detail.includes('Cast at level 2'));
-  assert.ok(upgraded.detail.includes('Cooldown: 7.5s'), 'a higher level recovers more slowly');
+  assert.ok(upgraded.more.detail.includes('Cooldown: 7.5s'), 'a higher level recovers more slowly');
   const blast = Spellbook.CATALOG.eldritch_blast;
-  assert.ok(spellTopic(blast, 0, 1).detail.includes('Damage: 1d10 force'));
-  assert.ok(spellTopic(blast, 0, 5).detail.includes('Damage: 2d10 force'), 'twice the dice at level 5');
+  assert.ok(spellTopic(blast, 0, 1).detail.includes('Attack: ranged spell attack, 1d10 force'));
+  assert.ok(spellTopic(blast, 0, 5).detail.includes('Attack: ranged spell attack, 2d10 force'), 'twice the dice at level 5');
+  assert.ok(spellTopic(blast, 0, 5).more.detail.includes('Damage: 2d10 force'));
+  assert.ok(spellTopic(Spellbook.CATALOG.burning_hands, 1, 1).detail.includes('Attack: Dexterity saving throw, 3d6 fire'));
+  assert.ok(spellTopic(Spellbook.CATALOG.magic_missile, 1, 1).detail.some((line) => line.startsWith('Attack: always hits')));
+  assert.equal(shortText('A short one.'), 'A short one.', 'a short text stays whole');
+  assert.equal(shortText('one two three four', 12), 'one two...', 'cut at a word');
 });
 
 test('binding a spell from the inventory: it shuts, a square is chosen, and it comes back where it was', async () => {
@@ -2617,6 +2671,7 @@ test('binding a spell from the inventory: it shuts, a square is chosen, and it c
   const { isInventoryOpen, setInventoryOpen } = await load('systems/InventorySystem');
   const cleric = createPlayer(0, 0, 'cleric');
   cleric.playerStats.level = 3;
+  cleric.inSafeRoom = true;
   setInventoryOpen(true);
   Binding.beginBinding({ spell: 'bless', level: 2 });
   assert.equal(isInventoryOpen(), false, 'the inventory shuts while a square is chosen');
@@ -2680,14 +2735,16 @@ test('a passive is switched off and on by its hero, and its effect goes with it'
 test('actives go on the quick bar and are used with the cast key', () => {
   const level = arena(10, 6);
   const fighter = casterAt(2, 2, 'fighter', 0);
-  assert.equal(bindSpell(fighter, 0, 'feature:second_wind', 0), true);
+  fighter.inSafeRoom = false;
+  assert.equal(bindSpell(fighter, 0, 'feature:second_wind', 0), true, 'a class feature is bound anywhere');
   assert.equal(bindSpell(fighter, 1, 'feature:action_surge', 0), false, 'level 2');
   assert.equal(bindSpell(fighter, 1, 'feature:extra_attack', 0), false, 'a passive is not bound');
+  fighter.health.max = 40;
   fighter.health.current = 10;
   useDieRoller(() => 10);
   cast(level, fighter, 1);
   useDieRoller(null);
-  assert.equal(fighter.health.current, 10 + 5 * (10 + 1), '1d10 (loaded: 10) + level 1');
+  assert.equal(fighter.health.current, 10 + 10 + 1, '1d10 (loaded: 10) + level 1');
   assert.equal(fighter.spellbook.recovery[0], 30 * 60, 'recovering for its 30 seconds');
   fighter.playerStats.level = 2;
   bindSpell(fighter, 1, 'feature:action_surge', 0);
@@ -2776,6 +2833,10 @@ test('in co-op a hero who dies stays down where they fell, their gear and gold l
   assert.deepEqual(ana.equipped, {});
   assert.equal(ana.playerStats.gold, 0);
   assert.equal(world.entities.filter((e) => e.item).length, 2, 'the sword and the armour lie on the floor');
+  for (const item of world.entities.filter((e) => e.item)) {
+    const off = { x: (item.position.x - ana.position.x) / 30, y: (item.position.y - ana.position.y) / 14 };
+    assert.ok(off.x ** 2 + off.y ** 2 >= 1, 'round the body, never on it: the fallen hero stays in sight');
+  }
   const purse = () => world.entities.filter((e) => e.loot && !e.removed).reduce((sum, e) => sum + e.loot.value, 0);
   assert.equal(purse(), 40, 'every coin of the purse spilt');
   for (let t = 0; t < 2000; t++) {
@@ -2980,4 +3041,76 @@ test('a guest may only answer the exit button with a known choice, and its state
   };
   assert.throws(() => validateNetState(tamper((b) => { b.outcome = 'stay'; })), ValidationError);
   assert.throws(() => validateNetState(tamper((b) => { b.choices = { p9: 'next' }; })), ValidationError);
+});
+
+// ── Co-op pause, the fallen watching, preparing spells ────────────────────────
+
+test('in co-op the pause menu stops the game for everyone until the last player with it open closes theirs', async () => {
+  const Pause = await load('game/Pause');
+  Pause.resetPause();
+  assert.equal(Pause.isGamePaused(), false);
+  world.addComponent(playerAt(1, 2), 'playerSlot', 'host');
+  const ana = playerAt(2, 2);
+  world.addComponent(ana, 'playerSlot', 'p2');
+  handleGuestCommand('p2', { kind: 'pause', paused: true });
+  assert.equal(Pause.isGamePaused(), true, 'a guest pausing stops the host too');
+  assert.equal(Pause.pausingSeat(), 'p2');
+  Pause.setSeatPaused('host', true);
+  handleGuestCommand('p2', { kind: 'pause', paused: false });
+  assert.equal(Pause.isGamePaused(), true, 'still the host\'s menu');
+  ana.health.current = 0;
+  handleGuestCommand('p2', { kind: 'pause', paused: true });
+  assert.equal(Pause.pausingSeat(), 'host', 'the host first');
+  Pause.setSeatPaused('host', false);
+  assert.equal(Pause.pausingSeat(), 'p2', 'a fallen hero may pause too');
+  Pause.resetPause();
+  const state = JSON.parse(JSON.stringify(captureWorld(true, 7, 'Ana')));
+  validateNetState(state);
+  assert.equal(state.pausedBy, 'Ana');
+  assert.throws(() => validateNetState({ ...state, pausedBy: '<b>Ana</b>' }), ValidationError, 'a name as names may be');
+  assert.throws(() => validateNetState({ ...state, pausedBy: undefined }), ValidationError);
+});
+
+test('a fallen hero watches their own body, then the companions still standing, round and round both ways', async () => {
+  const { nextWatched, stillWatchable } = await load('game/Spectate');
+  const seated = (tx, slot) => {
+    const hero = playerAt(tx, 2);
+    world.addComponent(hero, 'playerSlot', slot);
+    return hero;
+  };
+  const me = seated(2, 'host');
+  const ana = seated(3, 'p2');
+  const bo = seated(4, 'p3');
+  const cy = seated(5, 'p4');
+  me.health.current = 0;
+  bo.health.current = 0;
+  assert.equal(nextWatched(me, null, 1), ana, 'from the body, the first companion standing');
+  assert.equal(nextWatched(me, null, -1), cy, 'or the last');
+  assert.equal(nextWatched(me, ana, 1), cy, 'the fallen are skipped');
+  assert.equal(nextWatched(me, cy, 1), ana, 'and round again');
+  assert.equal(nextWatched(me, ana, -1), cy);
+  assert.equal(stillWatchable(cy), true);
+  cy.health.current = 0;
+  assert.equal(stillWatchable(cy), false, 'a companion who falls is watched no longer');
+  ana.health.current = 0;
+  assert.equal(nextWatched(me, null, 1), null, 'nobody left standing');
+});
+
+test('heroes know whether they stand in a safe room, and only there are spells prepared (class features anywhere)', async () => {
+  const { updateSafeRooms } = await load('systems/SafeRoomSystem');
+  const { mayPrepare } = await load('game/PlayerActions');
+  const level = arena(10, 6);
+  level.markSafeZone(2, 2);
+  const inside = playerAt(2, 2, 'wizard');
+  const outside = playerAt(6, 3, 'wizard');
+  updateSafeRooms(level);
+  assert.equal(inside.inSafeRoom, true);
+  assert.equal(outside.inSafeRoom, false);
+  assert.equal(mayPrepare(outside, 'fire_bolt'), false);
+  assert.equal(mayPrepare(outside, 'feature:second_wind'), true);
+  assert.equal(bindSpell(outside, 1, 'fire_bolt', 0), false);
+  assert.equal(bindSpell(inside, 1, 'fire_bolt', 0), true);
+  inside.position.x = centre(6);
+  updateSafeRooms(level);
+  assert.equal(inside.inSafeRoom, false, 'worked out again each tick');
 });

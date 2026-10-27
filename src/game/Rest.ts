@@ -1,5 +1,5 @@
 import { q, localPlayer, REST_KINDS, isRestKind } from '../world';
-import type { Player, PlayerSlot, RestKind, RestNotice } from '../world';
+import type { HitDiceChoices, Player, PlayerSlot, RestKind, RestNotice } from '../world';
 import type { Level } from '../level/Level';
 import { coop } from '../network/CoopSession';
 import { currentParty, isAlone, nameOf, notify, openVote, partyState, seatOf, SHORT_RESTS_PER_LONG_REST, takeAgreedVote } from './Party';
@@ -18,10 +18,10 @@ import { isStanding } from './Fallen';
 /**
  * Resting, as in the tabletop game. A short rest (no enemy hunting the party, two before a long one is
  * needed) recovers every spell, and in it each hero may spend hit dice to heal — as many of those they have
- * left as they choose, each the class's die + CON. A long rest (everyone in the safe room) heals all wounds and
- * gives back half the hero's hit dice. Wounds heal no other way (besides spells). In co-op a rest one player
- * asks for is put to the party (game/Party.ts) and taken once everyone agrees; the asker says how many hit dice
- * they will spend as they ask, the others once it is taken.
+ * left as they choose, each the class's die + CON (SRD 5e). A long rest (everyone in the safe room) heals all wounds
+ * and gives back half the hero's hit dice. Wounds heal no other way (besides spells). In co-op a rest one player
+ * asks for is put to the party (game/Party.ts) and taken once everyone agrees: the asker says how many hit dice they
+ * will spend as they ask, each of the others as they agree. One refusal and nobody rests, the asker included.
  */
 
 export { SHORT_RESTS_PER_LONG_REST };
@@ -33,8 +33,6 @@ const HEAL_COLOUR = 'green';
 const HEAL_SCALE = 0.8;
 
 const requests: Array<{ slot: PlayerSlot; kind: RestKind; dice?: number }> = [];
-/** How many hit dice the player who asked for the short rest under vote will spend in it, by seat. */
-const chosenDice = new Map<PlayerSlot, number>();
 
 /** Whether any living enemy is hunting the party (alert to it, fighting it or tracking it). */
 export function enemiesHunting(): boolean {
@@ -44,7 +42,7 @@ export function enemiesHunting(): boolean {
 
 // ── Hit dice ──────────────────────────────────────────────────────────────────
 
-/** Rolls `count` of the hero's hit dice: each the class's die + CON (at the game's hit point scale). */
+/** Rolls `count` of the hero's hit dice: each the class's die + CON (at least 1 a die). */
 function rollHitDice(player: Player, count: number): number {
   const sheet = characterSheet(player);
   let healing = 0;
@@ -52,31 +50,31 @@ function rollHitDice(player: Player, count: number): number {
   return healing;
 }
 
+/** How `count` of the hero's hit dice read: "2d8+4" (each die adds CON). */
+export function hitDiceLabel(player: Player, count: number): string {
+  const sheet = characterSheet(player);
+  const con = count * sheet.modifiers.constitution;
+  return `${count}d${sheet.heroClass.hitDie}${con === 0 ? '' : con > 0 ? `+${con}` : String(con)}`;
+}
+
 /**
- * In the short rest just taken, the hero spends `count` hit dice (no more than they have; 0: none) and heals what
- * they roll, shown over their head. Once a rest: the choice is then made. Returns how many were spent.
+ * In the short rest being taken, the hero spends `count` hit dice (no more than they have; 0: none) and heals what
+ * they roll, up to their maximum: the roll and the healing show over their head. Returns how many were spent.
  */
 export function spendHitDice(player: Player, count: number): number {
   const stats = player.playerStats;
-  if (!stats.restDiceOpen) return 0;
-  stats.restDiceOpen = false;
   const dice = Math.min(Math.max(0, Math.floor(count)), stats.hitDice);
   if (dice === 0 || player.health.current <= 0) return 0;
-  const healed = Math.min(player.health.max - player.health.current, rollHitDice(player, dice));
+  const rolled = rollHitDice(player, dice);
+  const healed = Math.min(player.health.max - player.health.current, rolled);
   stats.hitDice -= dice;
   player.health.current += healed;
-  logLine(player, text('roll.hit_dice', { dice: `${dice}d${characterSheet(player).heroClass.hitDie}` }), 'hit');
+  logLine(player, text('roll.hit_dice', { dice: hitDiceLabel(player, dice), total: rolled }), 'hit');
   logHeal(player, healed);
   const { x, y } = player.position;
   playEffect(HEAL_EFFECT, HEAL_COLOUR, x, y, AIM_HEIGHT, HEAL_SCALE);
   sound.playSound('drink', x, y);
   return dice;
-}
-
-/** The short rest's choice of hit dice: made at once here, or sent to the host for a guest. */
-export function requestRestDice(player: Player, count: number): void {
-  if (coop.role === 'guest') coop.sendCommand({ kind: 'rest_dice', count });
-  else spendHitDice(player, count);
 }
 
 // ── Asking ────────────────────────────────────────────────────────────────────
@@ -122,10 +120,9 @@ function ask(player: Player, kind: RestKind, level: Level, state: PartyState, di
     notify(state, blocked, nameOf(player), kind);
     return;
   }
-  chosenDice.clear();
-  if (dice !== undefined) chosenDice.set(seatOf(player), dice);
-  if (isAlone()) takeRest(kind, state);
-  else openVote(player, kind, state);
+  const choices: HitDiceChoices = dice === undefined ? {} : { [seatOf(player)]: dice };
+  if (isAlone()) takeRest(kind, state, choices);
+  else openVote(player, kind, state, choices);
 }
 
 // ── Resting ───────────────────────────────────────────────────────────────────
@@ -133,34 +130,23 @@ function ask(player: Player, kind: RestKind, level: Level, state: PartyState, di
 /** A long rest: every wound healed and half the hero's hit dice (at least one) back. */
 function wake(player: Player): void {
   const stats = player.playerStats;
-  stats.restDiceOpen = false;
   player.health.current = player.health.max;
   stats.hitDice = Math.min(stats.level, stats.hitDice + hitDiceRegained(stats.level));
   playEffect(HEAL_EFFECT, HEAL_COLOUR, player.position.x, player.position.y, AIM_HEIGHT, HEAL_SCALE);
 }
 
 /**
- * A short rest's hit dice: the hero who asked for it spends what they chose; everyone else with dice left is asked
- * now, on their own screen.
+ * The party rests: every spell recovered; in a short rest each hero spends the hit dice they chose (`dice`, by seat:
+ * none for one who chose none), after a long one everyone is healed. A fallen hero stays down: no rest brings them
+ * back (game/Fallen.ts).
  */
-function offerHitDice(player: Player): void {
-  player.playerStats.restDiceOpen = player.playerStats.hitDice > 0;
-  const chosen = chosenDice.get(seatOf(player));
-  if (chosen !== undefined) spendHitDice(player, chosen);
-}
-
-/**
- * The party rests: every spell recovered; after a short rest hit dice to spend, after a long one everyone healed. A
- * fallen hero stays down: no rest brings them back (game/Fallen.ts).
- */
-export function takeRest(kind: RestKind, state: PartyState = partyState()): void {
+export function takeRest(kind: RestKind, state: PartyState = partyState(), dice: HitDiceChoices = {}): void {
   for (const player of q.players) {
     if (!isStanding(player)) continue;
     player.spellbook?.recovery.fill(0);
     if (kind === 'long') wake(player);
-    else offerHitDice(player);
+    else spendHitDice(player, dice[seatOf(player)] ?? 0);
   }
-  chosenDice.clear();
   state.shortRestsLeft = kind === 'long' ? SHORT_RESTS_PER_LONG_REST : state.shortRestsLeft - 1;
   notify(state, kind === 'long' ? 'long_done' : 'short_done', '', kind);
   sound.playSound('rest');
@@ -179,5 +165,5 @@ export function updateRest(level: Level): void {
   if (!agreed || !isRestKind(agreed.kind)) return;
   const blocked = restBlocked(agreed.kind, level, state);
   if (blocked) notify(state, blocked, '', agreed.kind);
-  else takeRest(agreed.kind, state);
+  else takeRest(agreed.kind, state, agreed.dice ?? {});
 }

@@ -20,7 +20,7 @@ import { bindingFeatureId, isFeatureId } from '../rules/ClassFeatures';
  */
 
 /** Bumped whenever messages or the world they describe change, so mismatched browsers are told to reload. */
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 /** The most guests a room takes: the host plus three others make four players. */
 export const MAX_GUESTS = PLAYER_SLOTS.length - 1;
 
@@ -35,14 +35,14 @@ export type ItemSquare = { bag: number } | { slot: EquipSlot };
 export type GuestCommand =
   | { kind: 'buy'; index: number }
   | { kind: 'loadout'; inventory: BagSquare[]; equipped: Partial<Record<EquipSlot, InventoryItem>> }
-  /** During a short rest: spend this many hit dice on healing (0: none). */
-  | { kind: 'rest_dice'; count: number }
   /**
    * Ask the party for a rest (with, for a short one, how many hit dice the asker will spend in it), or answer what
-   * someone else asked the party (a rest, opening the gate).
+   * someone else asked the party (a rest — agreeing to a short one says how many hit dice to spend — or opening the gate).
    */
   | { kind: 'rest'; rest: RestKind; dice?: number }
-  | { kind: 'vote_answer'; agree: boolean }
+  | { kind: 'vote_answer'; agree: boolean; dice?: number }
+  /** The guest opened (or closed) the pause menu: the game stops for everyone while anyone has it open. */
+  | { kind: 'pause'; paused: boolean }
   /** Hand the item on a square of the inventory to another player. */
   | { kind: 'give'; from: ItemSquare; to: PlayerSlot }
   /** Drop the item on a square of the inventory at the hero's feet. */
@@ -168,7 +168,7 @@ function validEquipped(value: unknown): value is Partial<Record<EquipSlot, Inven
 
 /** A hero has at most one hit die a level (20). */
 const MAX_HIT_DICE = 20;
-const isDiceCount = (value: unknown) => Number.isInteger(value) && Number(value) >= 0 && Number(value) <= MAX_HIT_DICE;
+export const isDiceCount = (value: unknown): boolean => Number.isInteger(value) && Number(value) >= 0 && Number(value) <= MAX_HIT_DICE;
 
 function isItemSquare(value: unknown): value is ItemSquare {
   if (!isRecord(value)) return false;
@@ -185,9 +185,9 @@ export function validBinding(spell: unknown, level: unknown): boolean {
 export function validCommand(value: unknown): value is GuestCommand {
   if (!isRecord(value)) return false;
   if (value.kind === 'buy') return Number.isInteger(value.index) && Number(value.index) >= 0 && Number(value.index) < MAX_ITEMS;
-  if (value.kind === 'rest_dice') return isDiceCount(value.count);
   if (value.kind === 'rest') return isRestKind(value.rest) && (value.dice === undefined || isDiceCount(value.dice));
-  if (value.kind === 'vote_answer') return typeof value.agree === 'boolean';
+  if (value.kind === 'vote_answer') return typeof value.agree === 'boolean' && (value.dice === undefined || isDiceCount(value.dice));
+  if (value.kind === 'pause') return typeof value.paused === 'boolean';
   if (value.kind === 'give') return isItemSquare(value.from) && isPlayerSlot(value.to);
   if (value.kind === 'drop') return isItemSquare(value.from);
   if (value.kind === 'loot') return Number.isSafeInteger(value.roll) && Number(value.roll) >= 0 && typeof value.need === 'boolean';

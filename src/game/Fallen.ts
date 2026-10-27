@@ -1,7 +1,7 @@
 import { q } from '../world';
 import type { Player } from '../world';
 import { createItemPickup, groundNear, spillMoney } from '../entities/LootFactory';
-import type { Floor } from '../entities/LootFactory';
+import type { ClearArea, Floor } from '../entities/LootFactory';
 import { applyLoadout, bagItems } from './PlayerActions';
 
 /**
@@ -14,6 +14,8 @@ import { applyLoadout, bagItems } from './PlayerActions';
 
 /** A fallen hero's purse spills in at most this many coins. */
 const PURSE_PIECES = 8;
+/** What a fallen hero leaves is laid round their body, never on it: the ground this far round it (px) stays clear, so the body is seen. */
+const BODY_CLEAR: ClearArea = { x: 30, y: 14 };
 const drop = { x: 0, y: 0 };
 
 /** Whether a hero is still in the game: on their feet, not down until the party goes deeper. */
@@ -42,13 +44,14 @@ export function partyFallen(): boolean {
 }
 
 /**
- * A hero falls: every item in their bag and on their body is set down where they fell (at the pit's edge, for a fall
- * into one), and their gold spills there as coins that stay until somebody picks them up.
+ * A hero falls: every item in their bag and on their body is set down round where they fell (at the pit's edge, for a
+ * fall into one), leaving the body itself in sight, and their gold spills there as coins that stay until somebody
+ * picks them up.
  */
 export function leaveBelongings(player: Player, floor: Floor): void {
   const at = groundNear(player.position.x, player.position.y, floor, drop);
-  for (const item of bagItems(player.inventory ?? [])) createItemPickup(at.x, at.y, item, floor);
-  for (const item of Object.values(player.equipped ?? {})) if (item) createItemPickup(at.x, at.y, item, floor);
+  for (const item of bagItems(player.inventory ?? [])) createItemPickup(at.x, at.y, item, floor, BODY_CLEAR);
+  for (const item of Object.values(player.equipped ?? {})) if (item) createItemPickup(at.x, at.y, item, floor, BODY_CLEAR);
   applyLoadout(player, { inventory: [], equipped: {} });
   const gold = player.playerStats.gold;
   player.playerStats.gold = 0;

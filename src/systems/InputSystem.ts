@@ -28,6 +28,11 @@ export function claimPointer(owner: object, over: boolean): void {
   else pointerOwners.delete(owner);
 }
 
+/** Whether no on-screen control (or panel laid over the screen) has the pointer: a click there is for the world. */
+export function pointerFree(): boolean {
+  return pointerOwners.size === 0;
+}
+
 export function setInputCaptured(on: boolean): void {
   captured = on;
   keys.clear();
@@ -147,7 +152,7 @@ export function updateInput(): void {
     pi.left  = isActionDown('left');
     pi.right = isActionDown('right');
     pi.sprint = isActionDown('sprint');
-    const mouseFree = pointerOwners.size === 0;
+    const mouseFree = pointerFree();
     pi.attack = !captured && ((mouseDown && mouseFree) || isActionDown('attack'));
     pi.use    = !captured && isActionDown('use');
     pi.mouseX = mouse.x;

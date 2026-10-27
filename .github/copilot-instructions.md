@@ -183,7 +183,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   level and a click switches it off and on (`featuresOff`, the `toggle_feature` command; `featureOn` is what effects ask, and the
   HUD's top left lists the ones on, `ui/PassiveHud.ts`); an active (Second Wind, Action Surge…) is bound to a quick-bar square as
   `feature:<id>` and used with the cast key (`systems/FeatureSystem.ts`). Experience follows the SRD
-  (`game/Progress.ts`, monster `xp`); hit points per level and hit dice are in `rules/HitPoints.ts`.
+  (`game/Progress.ts`, monster `xp`); hit points (SRD, unscaled: hit die + CON at level 1) and hit dice are in `rules/HitPoints.ts`.
+  Spells go on the quick bar only in a safe room (`player.inSafeRoom`, `systems/SafeRoomSystem.ts`); class features anywhere.
 - `src/audio/` — Howler: `SoundBank.ts` (the effect recipes, music tracks and ambient beds), `SoundPlayer.ts` (effects,
   faded and panned by distance; `playSound` is relayed to co-op guests, `playLocal` is not), `Deck.ts` (one looping
   piece, faded in and out, paused when silent), `MusicPlayer.ts` (one track at a time, crossfaded; menus play `menu`,
@@ -199,8 +200,10 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   (`Party.ts`: one synced `party` entity; rests and the lever ask through it, and act once everyone agrees), death
   (`Fallen.ts`: a hero who dies or falls into a pit stays down until the party goes deeper, leaving their gear and gold
   on the floor; the fallen get no share of experience or gold and no say in votes or loot rolls; the run is over when
-  the whole party is down, and `Run.ts` `descend` brings the fallen back with their experience but nothing else), resting
-  (`Rest.ts`: short and long rests; hit dice are spent in a short rest, as many as each hero chooses), payments (`Purse.ts`: kills, chests and stashes pay straight into the
+  the whole party is down, and `Run.ts` `descend` brings the fallen back with their experience but nothing else; in co-op
+  the fallen watch their companions, `Spectate.ts`), resting (`Rest.ts`: short and long rests; in a short rest each hero
+  spends the hit dice they chose as they asked or agreed, and one refusal means nobody rests), pausing (`Pause.ts`: in
+  co-op the game stops for everyone while anyone has the pause menu open), payments (`Purse.ts`: kills, chests and stashes pay straight into the
   purse), Need / Pass rolls for rare finds (`LootRoll.ts`) and the ~ console's commands (`Console.ts`). `src/scenes/` — title, settings,
   key bindings, character select, co-op lobby and the level itself. `src/ui/` — buttons, HUD (health bar, round
   buttons, `HudDialog`, `MinimapView`, `QuickBar`, `RestMenu`, `PartyBanner`, `LootRollPanel`), `PopupMenu`, `HeroPicker`,

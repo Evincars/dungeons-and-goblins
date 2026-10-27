@@ -195,12 +195,22 @@ export function groundNear(x: number, y: number, floor: Floor, out: { x: number;
   return out;
 }
 
-/** The nearest free spot to (x, y) on solid floor, with no other thing lying within ITEM_SPACING of it (in `spot`). */
-function freeSpot(x: number, y: number, floor: Floor | undefined): { x: number; y: number } {
+/** Half the width and height of the ground kept clear round a spot (a fallen hero's body), as an ellipse. */
+export type ClearArea = { x: number; y: number };
+
+function inside(offset: { x: number; y: number }, clear: ClearArea | undefined): boolean {
+  return !!clear && (offset.x / clear.x) ** 2 + (offset.y / clear.y) ** 2 < 1;
+}
+
+/**
+ * The nearest free spot to (x, y) on solid floor, with no other thing lying within ITEM_SPACING of it and outside the
+ * `clear` area round (x, y) (in `spot`).
+ */
+function freeSpot(x: number, y: number, floor: Floor | undefined, clear?: ClearArea): { x: number; y: number } {
   for (const offset of SPOTS) {
     const sx = x + offset.x;
     const sy = y + offset.y;
-    if (floor && !floor.canHold(sx, sy)) continue;
+    if (inside(offset, clear) || (floor && !floor.canHold(sx, sy))) continue;
     if (nearby(sx, sy, ITEM_SPACING - 1, Sense.item, neighbours).length > 0) continue;
     spot.x = sx;
     spot.y = sy;
@@ -213,10 +223,10 @@ function freeSpot(x: number, y: number, floor: Floor | undefined): { x: number; 
 
 /**
  * A weapon, shield or suit of armour lying on the floor (taken with E), at the free spot nearest (x, y): many set
- * down in one place spread round it instead of hiding one another.
+ * down in one place spread round it instead of hiding one another (and round the `clear` area, if given).
  */
-export function createItemPickup(x: number, y: number, item: InventoryItem, floor?: Floor): Entity {
-  const at = freeSpot(x, y, floor);
+export function createItemPickup(x: number, y: number, item: InventoryItem, floor?: Floor, clear?: ClearArea): Entity {
+  const at = freeSpot(x, y, floor, clear);
   return world.add({
     position: { x: at.x, y: at.y },
     item: structuredClone(item),

@@ -16,6 +16,8 @@ const LINES = 8;
 const PAD = 4;
 const HEADER_H = 11;
 const MARGIN = 8;
+/** How much of the bottom edge the log takes from the right, its margin included (the quick bar keeps clear of it). */
+export const COMBAT_LOG_SPAN = W + MARGIN;
 const BG_ALPHA = 0.55;
 /** The log's text is the pixel font at three quarters of its size (the screen draws it sharp at any scale). */
 const TEXT_SCALE = 0.75;

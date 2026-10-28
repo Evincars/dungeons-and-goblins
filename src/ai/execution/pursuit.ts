@@ -4,11 +4,12 @@ import { isMob, world } from '../../world';
 import type { Mob, Player, Trail } from '../../world';
 import {
   ASSIST_RADIUS, FLANK_DETOUR_SLACK, FLANK_DISTANCE, FLANK_MAX_DETOUR, FLANK_SNAP_TILES, LOOKAHEAD_TILES,
-  REPATH_TICKS, SENSE_TICKS, SPLIT_DETOUR_SLACK, SPLIT_MAX_DETOUR, STRIKE_RANGE, TRAIL_LOOKAHEAD,
+  REPATH_TICKS, RING_ARRIVED, SENSE_TICKS, SPLIT_DETOUR_SLACK, SPLIT_MAX_DETOUR, STRIKE_RANGE, SURROUND_RANGE, TRAIL_LOOKAHEAD,
 } from '../constants';
 import { clearLine, mobRoute, nearestStandable, standable } from '../perception/navigation';
 import { crumbAfter, crumbCount, crumbTick, crumbX, crumbY } from '../perception/trail';
 import { squadOf } from '../decision/squads';
+import { ringAngle } from '../decision/surround';
 import type { Squad } from '../decision/squads';
 import { driveRoute, driveTo } from './driving';
 
@@ -28,6 +29,8 @@ const LANE_DIRS = [[0, 0], [0, -1], [1, 0], [0, 1], [-1, 0]] as const;
 type Point = { x: number; y: number };
 /** Where a flanker believes its target is, reused every tick. */
 const flankTarget: Point = { x: 0, y: 0 };
+/** An enemy's place in the ring round its target, reused every tick. */
+const ringSpot: Point = { x: 0, y: 0 };
 
 function dist(a: Point, b: Point): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
@@ -156,9 +159,34 @@ function knownTargetY(mob: Mob, target: Player, tick: number): number {
   return tick - mob.ai.lastSeenTick <= SENSE_TICKS ? target.position.y : mob.ai.lastSeenY;
 }
 
-/** Straight at the player: the lead attacker's role, and how everyone fights once close. */
+/**
+ * The enemy's place in the ring round the target (decision/surround.ts), into `ringSpot`, just within reach of the
+ * target's body: false when it has none, is still too far off to take it, or the place is on ground it cannot stand
+ * on or walk straight to (a player against a wall has no places on the wall's side).
+ */
+function placeInRing(level: Level, mob: Mob, target: Player, x: number, y: number, tick: number): boolean {
+  const angle = ringAngle(mob, tick);
+  if (angle === undefined || Math.hypot(mob.position.x - x, mob.position.y - y) > SURROUND_RANGE) return false;
+  const reach = (target.radius?.x ?? 0) + mob.radius.x;
+  ringSpot.x = x + Math.cos(angle) * reach;
+  ringSpot.y = y + Math.sin(angle) * reach;
+  return standable(level, level.tileIndexAt(ringSpot.x, ringSpot.y)) && clearLine(level, mob.position.x, mob.position.y, ringSpot.x, ringSpot.y);
+}
+
+/**
+ * At the player: the lead attacker's role, and how everyone fights once close. From a little way off each enemy
+ * goes for its own place round the player, so the pack spreads out and all of it gets to strike; once there (or
+ * when it has no place to take) it presses straight in.
+ */
 export function strike(level: Level, mob: Mob, target: Player, tick: number): void {
-  walkToPoint(level, mob, knownTargetX(mob, target, tick), knownTargetY(mob, target, tick));
+  const x = knownTargetX(mob, target, tick);
+  const y = knownTargetY(mob, target, tick);
+  if (!placeInRing(level, mob, target, x, y, tick) || dist(mob.position, ringSpot) <= RING_ARRIVED) {
+    walkToPoint(level, mob, x, y);
+    return;
+  }
+  resetRoute(mob);
+  driveTo(level, mob, ringSpot.x, ringSpot.y);
 }
 
 // ── Flanking ──────────────────────────────────────────────────────────────────

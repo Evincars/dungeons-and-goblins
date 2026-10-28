@@ -1,3 +1,4 @@
+import { QUICK_ROW } from '../world';
 import type { Player } from '../world';
 import { ensure } from '../core/errors';
 import { hasKey, isRecord } from '../core/guards';
@@ -6,10 +7,11 @@ import type { DamageType } from './DamageTypes';
 import { parseDice } from './Dice';
 import type { Dice } from './Dice';
 import { heroClass } from './Classes';
-import { bindingFeatureId, featureOfClass } from './ClassFeatures';
+import { bindingFeatureId, featureBinding, featureOfClass, nthActiveFeature } from './ClassFeatures';
+import type { FeatureDef } from './ClassFeatures';
 import type { DndClass } from './Classes';
 import { SPELLS, TICKS_PER_SECOND, isSpellId } from './Spells';
-import type { SpellDef } from './Spells';
+import type { SpellDef, SpellId } from './Spells';
 import spellbook from '../data/spellbook.json';
 
 /**
@@ -242,10 +244,38 @@ export function castDef(def: SpellDef, castLevel: number, heroLevel: number): Sp
   };
 }
 
-/** The spell on a quick-bar square: what the player bound there, else the class's own spell for the square, in order. */
+/**
+ * The bindings a square holds until the player binds something there, one per spell (keyed by its id) and one per
+ * feature (keyed by its def): they are asked for every tick, so each is made once.
+ */
+const DEFAULT_SPELLS = new Map<string, QuickBinding>();
+const DEFAULT_FEATURES = new Map<object, QuickBinding>();
+
+function defaultSpell(id: SpellId): QuickBinding {
+  let binding = DEFAULT_SPELLS.get(id);
+  if (!binding) DEFAULT_SPELLS.set(id, (binding = { spell: id, level: SPELLS[id].level }));
+  return binding;
+}
+
+/** Class features are bound at level 0 (see `canBind`). */
+function defaultFeature(def: FeatureDef): QuickBinding {
+  let binding = DEFAULT_FEATURES.get(def);
+  if (!binding) DEFAULT_FEATURES.set(def, (binding = { spell: featureBinding(def.id), level: 0 }));
+  return binding;
+}
+
+/**
+ * The spell on a quick-bar square: what the player bound there, else the class's own: its spells in order along the
+ * first row, and the active class features the hero has, in level order, along the second (Shift) row.
+ */
 export function quickBinding(player: Player, slot: number): QuickBinding | null {
   const bound = player.spellbook?.bound?.[slot];
   if (bound) return bound;
-  const id = heroClass(player.heroClass).spells[slot];
-  return id ? { spell: id, level: SPELLS[id].level } : null;
+  const cls = heroClass(player.heroClass);
+  if (slot >= QUICK_ROW) {
+    const feature = nthActiveFeature(cls.dndClass, player.playerStats.level, player.build?.fightingStyle ?? null, slot - QUICK_ROW);
+    return feature ? defaultFeature(feature) : null;
+  }
+  const id = cls.spells[slot];
+  return id ? defaultSpell(id) : null;
 }

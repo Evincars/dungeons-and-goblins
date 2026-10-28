@@ -1,6 +1,6 @@
-import { q } from '../world';
+import { q, QUICK_ROW, QUICK_SLOTS } from '../world';
 import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
-import { bindingFor } from '../game/Settings';
+import { bindingFor, QUICK_KEYS } from '../game/Settings';
 import type { ActionName } from '../game/Settings';
 
 const LEFT_BUTTON = 0;
@@ -60,18 +60,25 @@ function isActionDown(action: ActionName): boolean {
   return keys.has(bindingFor(action));
 }
 
-/** The quick bar's keys: 1 to 5 along the number row. */
-const QUICK_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'] as const;
-
 /**
  * The quick-bar square this screen's player has picked. It is kept here, not only on the player: a guest's
  * copy of its character is overwritten by every update from the host.
  */
 let chosenSlot = 0;
 
-/** Which quick-bar square's key went down this tick (0 for "1"), or -1. */
+/** Shift (either one) held: the quick bar's keys reach its second row, and the bar shows that row. */
+function shiftHeld(): boolean {
+  return keys.has('ShiftLeft') || keys.has('ShiftRight');
+}
+
+/** The quick-bar row the keys reach now: 0, or 1 while Shift is held. */
+export function quickRow(): number {
+  return !captured && shiftHeld() ? 1 : 0;
+}
+
+/** Which quick-bar square's key went down this tick (with Shift, the square in the second row), or -1. */
 function quickSlotPressed(): number {
-  for (let i = 0; i < QUICK_KEYS.length; i++) if (pressed.has(QUICK_KEYS[i])) return i;
+  for (let i = 0; i < QUICK_KEYS.length; i++) if (pressed.has(QUICK_KEYS[i])) return i + quickRow() * QUICK_ROW;
   return -1;
 }
 
@@ -80,9 +87,9 @@ export function chosenQuickSlot(): number {
   return chosenSlot;
 }
 
-/** Picks a quick-bar square (a click on it); its key does the same. */
+/** Picks a quick-bar square (a click on it); its key does the same and casts it too. */
 export function chooseQuickSlot(slot: number): void {
-  if (Number.isInteger(slot) && slot >= 0 && slot < QUICK_KEYS.length) chosenSlot = slot;
+  if (Number.isInteger(slot) && slot >= 0 && slot < QUICK_SLOTS) chosenSlot = slot;
 }
 
 function wasActionPressed(action: ActionName): boolean {
@@ -141,7 +148,9 @@ export function updateInput(): void {
   pending.clear();
   clicked = clickPending && !captured;
   clickPending = false;
-  if (!captured) chooseQuickSlot(quickSlotPressed());
+  // A quick-bar key picks its square and casts it at once (a click on a square only picks it).
+  const quickCast = captured ? -1 : quickSlotPressed();
+  chooseQuickSlot(quickCast);
 
   for (const entity of q.players) {
     // Remote players are driven by their own browser's input frames.
@@ -162,7 +171,7 @@ export function updateInput(): void {
 
     const it = pi.intents;
     it.attack       = !captured && (wasActionPressed('attack') || (mouseDown && mouseFree));
-    it.cast         = !captured && (wasActionPressed('cast') || (rightDown && mouseFree));
+    it.cast         = !captured && (wasActionPressed('cast') || quickCast >= 0 || (rightDown && mouseFree));
     it.use          = wasActionPressed('use');
     it.inventoryOpen = wasActionPressed('inventory');
     it.swap         = !captured && wasActionPressed('swap');

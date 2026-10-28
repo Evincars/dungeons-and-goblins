@@ -30,7 +30,7 @@ import { screenToWorld } from '../render/Camera';
 import { text } from '../core/texts';
 
 /**
- * Spells (src/data/spells.json): right click / R casts the one picked on the quick bar (keys 1–5). There are
+ * Spells (src/data/spells.json): a quick-bar key casts its square's spell; right click and the cast key cast the one last picked. There are
  * no spell slots — each spell recovers for a while after it is cast. A bolt flies and is rolled to hit; a
  * magic missile's darts always hit; a burst makes everyone in it save against the caster's spell DC (half
  * damage on a success); a heal mends the caster. Each strikes with its effect from the effects library.

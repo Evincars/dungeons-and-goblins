@@ -3,6 +3,7 @@ import type { Mob } from '../world';
 import type { Level } from '../level/Level';
 import { formSquads, droppedThisTick } from '../ai/decision/squads';
 import { assignRoles } from '../ai/decision/tactics';
+import { surround } from '../ai/decision/surround';
 import { agentOf } from '../ai/decision/states';
 import { limping } from '../ai/execution/locomotion';
 
@@ -14,13 +15,14 @@ function canAct(mob: Mob): boolean {
 
 /**
  * Enemy AI, in three steps: squads form around the players being fought (sharing what they see),
- * squad tactics hand out roles (Yuka Think), then every enemy runs a tick of its state machine
- * (Yuka StateMachine), which senses, decides and steers (Yuka Vehicle).
+ * squad tactics hand out roles (Yuka Think) and places in the ring round the target, then every enemy runs a
+ * tick of its state machine (Yuka StateMachine), which senses, decides and steers (Yuka Vehicle).
  */
 export function updateAI(level: Level, tick: number): void {
   const squads = formSquads();
   for (const mob of droppedThisTick()) agentOf(mob).go('idle');
   assignRoles(squads, tick);
+  for (const squad of squads.values()) surround(squad, tick);
   for (const mob of q.walkingMobs) {
     if (!canAct(mob)) continue;
     agentOf(mob).think(level, tick);

@@ -24,13 +24,23 @@ const DEFAULT_BINDINGS = {
   right: 'KeyD',
   sprint: 'ShiftLeft',
   attack: 'Space',
-  cast: 'KeyR',
-  swap: 'KeyQ',
+  cast: 'KeyF',
+  swap: 'KeyG',
   use: 'KeyE',
   inventory: 'Tab',
   // The classic ~ key.
   console: 'Backquote',
 } as const satisfies Record<ActionName, string>;
+
+/**
+ * The quick bar's keys, its squares left to right (world.ts QUICK_ROW of them); with Shift they reach the second row.
+ * They are the bar's own: no action can be bound to one.
+ */
+export const QUICK_KEYS = ['KeyQ', 'KeyR', 'KeyT', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'KeyX', 'KeyC'] as const;
+
+export function isQuickKey(code: string): boolean {
+  return QUICK_KEYS.some((key) => key === code);
+}
 
 export type Settings = {
   bindings: Record<ActionName, string>;
@@ -75,11 +85,13 @@ function readBindings(value: unknown): Partial<Record<ActionName, string>> {
 
 /**
  * Stored bindings over the defaults. An action added since they were saved takes its default key, and an older
- * action still on that key moves to its own new default (Q became weapon swap; the spell moved to R).
+ * action still on that key moves to its own new default. An action saved on one of the quick bar's keys goes back
+ * to its default too (weapon swap was on Q and the spell on R before those keys cast the quick bar).
  */
 export function mergeBindings(stored: Partial<Record<ActionName, string>>): Record<ActionName, string> {
   const merged: Record<ActionName, string> = { ...DEFAULT_BINDINGS, ...stored };
   for (const added of ACTIONS) if (stored[added] === undefined) giveDefaultKey(merged, added);
+  for (const action of ACTIONS) if (isQuickKey(merged[action])) takeDefaultKey(merged, action);
   return merged;
 }
 
@@ -87,6 +99,12 @@ export function mergeBindings(stored: Partial<Record<ActionName, string>>): Reco
 function giveDefaultKey(bindings: Record<ActionName, string>, action: ActionName): void {
   const key = DEFAULT_BINDINGS[action];
   for (const other of ACTIONS) if (other !== action && bindings[other] === key) bindings[other] = DEFAULT_BINDINGS[other];
+}
+
+/** `action` moves back to its default key, which any other action holding it gives up. */
+function takeDefaultKey(bindings: Record<ActionName, string>, action: ActionName): void {
+  bindings[action] = DEFAULT_BINDINGS[action];
+  giveDefaultKey(bindings, action);
 }
 
 /** Takes what is valid from stored settings, keeping the default for anything missing or damaged. */
@@ -131,11 +149,16 @@ export function bindingFor(action: ActionName): string {
   return settings.bindings[action];
 }
 
-/** Binds a key to an action, clearing it from any other action so bindings stay unique. */
-export function bind(action: ActionName, code: string): void {
+/**
+ * Binds a key to an action, clearing it from any other action so bindings stay unique. The quick bar's keys are
+ * refused (returns false).
+ */
+export function bind(action: ActionName, code: string): boolean {
+  if (isQuickKey(code)) return false;
   for (const other of ACTIONS) if (other !== action && settings.bindings[other] === code) settings.bindings[other] = '';
   settings.bindings[action] = code;
   saveSettings();
+  return true;
 }
 
 /** Human-readable form of a KeyboardEvent.code, for menus and prompts. */

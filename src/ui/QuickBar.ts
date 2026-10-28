@@ -1,11 +1,12 @@
 import { Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
-import { QUICK_SLOTS } from '../world';
+import { QUICK_ROW } from '../world';
 import type { Player } from '../world';
 import { GAME_HEIGHT, GAME_WIDTH } from '../render/Camera';
 import { frameTexture } from '../render/Sheets';
 import { requestArt } from '../assets/LazyArt';
 import { EFFECT_COLOURS, EFFECT_SHAPES, effectSheetKey } from '../assets/Effects';
-import { chooseQuickSlot, chosenQuickSlot, claimPointer } from '../systems/InputSystem';
+import { chooseQuickSlot, chosenQuickSlot, claimPointer, quickRow } from '../systems/InputSystem';
+import { codeLabel, QUICK_KEYS } from '../game/Settings';
 import { isInventoryOpen } from '../systems/InventorySystem';
 import { heroClass, spellLevelFor } from '../rules/Classes';
 import { SPELLS, TICKS_PER_SECOND, isSpellId } from '../rules/Spells';
@@ -23,7 +24,7 @@ import { PixelLabel } from './PixelText';
 import { featureTopic, spellTopic } from './SpellTopics';
 import { THEME } from './Theme';
 
-/** The squares: this big, this far apart, this far up from the bottom edge. */
+/** The squares: this big, this far apart, this far up from the bottom edge (the bar shrinks when the screen is too narrow). */
 const SLOT = 22;
 const SLOT_GAP = 3;
 const MARGIN = 8;
@@ -43,6 +44,8 @@ const BREATH_PERIOD = 60;
 const BREATH_SWELL = 0.25;
 /** The prompt while a spell waits for a square sits this far above the squares. */
 const PROMPT_GAP = 14;
+/** A square of the second row names its key with this before it ("sQ": Shift and Q). */
+const SHIFT_MARK = 's';
 
 type SlotView = {
   square: Container;
@@ -52,6 +55,8 @@ type SlotView = {
   /** The initials of a spell that has no effect to show, and the level it is cast at (when above its own). */
   initials: PixelLabel;
   levelTag: PixelLabel;
+  /** The key that casts it ("Q", or "sQ" in the second row). */
+  keyTag: PixelLabel;
   /** What it was last drawn as, so it is drawn again only when that changes. */
   bound: string | null;
   active: boolean;
@@ -97,15 +102,23 @@ function slotTopic(binding: QuickBinding | null, heroLevel: number, castWith: Pl
 }
 
 /**
- * The quick bar, bottom middle: five squares holding the spells the hero bound there (until they bind some, their
- * class's own in order), picked with keys 1–5 or a click. Each shows its spell's effect; a spell recovering is
- * shaded by the time it has left, one not learnt yet is dimmed. The picked square is edged in gold; under the
- * pointer a square says what its spell does. While a spell from the inventory waits for a square, they all swell
- * and shrink, and a click on one binds it there.
+ * The quick bar, bottom middle: a row of squares on the keys Q R T 1–5 X C holding the spells the hero bound there
+ * (until they bind some, their class's own in order); a key casts its square at once, a click only picks it for right
+ * click. While Shift is held the bar shows its second row, which the same keys with Shift cast (its squares default
+ * to the hero's active class features). Each square shows its spell's effect; a spell recovering is shaded by the time
+ * it has left, one not learnt yet is dimmed. The picked square is edged in gold; under the pointer a square says what
+ * its spell does. While a spell from the inventory waits for a square, they all swell and shrink, and a click on one
+ * binds it there (hold Shift to bind into the second row).
  */
 export class QuickBar {
   readonly view = new Container();
+  /** The squares, laid out at full size and scaled down as one when the space between the HUD's corners is too narrow. */
+  private readonly row = new Container();
   private readonly slots: SlotView[] = [];
+  /** The row shown (0, or 1 while Shift is held), so the key tags are rewritten only when it changes. */
+  private shownRow = -1;
+  private readonly left: number;
+  private readonly scale: number;
   private readonly tip = new InfoTooltip();
   private readonly prompt = new PixelLabel('', { color: THEME.title, align: 'center', outline: true });
   private hovered = -1;
@@ -115,25 +128,45 @@ export class QuickBar {
   /** Updates spent waiting for a square, which the breathing goes by. */
   private breath = 0;
 
-  constructor() {
+  /**
+   * `freeLeft`, `freeRight`: the stretch of the bottom edge the bar may use (between the bars and buttons on the left
+   * and the combat log on the right). It sits in the middle of the screen when it fits there.
+   */
+  constructor(freeLeft = 0, freeRight = GAME_WIDTH) {
     this.view.eventMode = 'passive';
-    for (let i = 0; i < QUICK_SLOTS; i++) this.addSlot(i);
-    this.prompt.position.set(Math.round(GAME_WIDTH / 2), GAME_HEIGHT - MARGIN - SLOT - PROMPT_GAP);
+    this.row.eventMode = 'passive';
+    const full = QUICK_ROW * SLOT + (QUICK_ROW - 1) * SLOT_GAP;
+    this.scale = Math.min(1, (freeRight - freeLeft) / full);
+    const width = full * this.scale;
+    this.left = Math.round(Math.min(Math.max(freeLeft, (GAME_WIDTH - width) / 2), freeRight - width));
+    this.row.scale.set(this.scale);
+    this.row.position.set(this.left, this.top);
+    for (let i = 0; i < QUICK_ROW; i++) this.addSlot(i);
+    this.prompt.position.set(Math.round(this.left + width / 2), this.top - PROMPT_GAP);
     this.prompt.visible = false;
-    this.view.addChild(this.prompt, this.tip.view);
+    this.view.addChild(this.row, this.prompt, this.tip.view);
   }
 
+  /** The squares' top edge on screen. */
+  private get top(): number {
+    return Math.round(GAME_HEIGHT - MARGIN - SLOT * this.scale);
+  }
+
+  /** A square's left edge within the row. */
   private slotX(i: number): number {
-    const total = QUICK_SLOTS * SLOT + (QUICK_SLOTS - 1) * SLOT_GAP;
-    return Math.round((GAME_WIDTH - total) / 2) + i * (SLOT + SLOT_GAP);
+    return i * (SLOT + SLOT_GAP);
+  }
+
+  /** The quick-bar square (counting both rows) that the `i`th square on screen stands for now. */
+  private slotAt(i: number): number {
+    return Math.max(0, this.shownRow) * QUICK_ROW + i;
   }
 
   private addSlot(i: number): void {
-    const y = GAME_HEIGHT - MARGIN - SLOT;
     const square = new Container();
     // Scaled about its middle when the squares breathe.
     square.pivot.set(SLOT / 2, SLOT / 2);
-    square.position.set(this.slotX(i) + SLOT / 2, y + SLOT / 2);
+    square.position.set(this.slotX(i) + SLOT / 2, SLOT / 2);
     const frame = new Graphics();
     const icon = new Sprite();
     icon.anchor.set(0.5);
@@ -146,24 +179,25 @@ export class QuickBar {
     initials.position.set(SLOT / 2, SLOT / 2 - 4);
     const levelTag = new PixelLabel('', { color: THEME.title, outline: true });
     levelTag.position.set(2, 2);
-    const number = new PixelLabel(String(i + 1), { color: THEME.buttonText, align: 'right', outline: true });
-    number.position.set(SLOT - 1, SLOT - 9);
-    square.addChild(frame, mask, icon, initials, shade, levelTag, number);
+    const keyTag = new PixelLabel(codeLabel(QUICK_KEYS[i]), { color: THEME.buttonText, align: 'right', outline: true });
+    keyTag.position.set(SLOT - 1, SLOT - 9);
+    square.addChild(frame, mask, icon, initials, shade, levelTag, keyTag);
     square.eventMode = 'static';
     square.cursor = 'pointer';
     square.hitArea = new Rectangle(0, 0, SLOT, SLOT);
     square.on('pointerover', () => { this.hovered = i; claimPointer(square, true); setOverQuickSquare(true); });
     square.on('pointerout', () => { if (this.hovered === i) this.hovered = -1; claimPointer(square, false); setOverQuickSquare(false); });
     square.on('pointertap', () => this.pick(i));
-    this.slots.push({ square, frame, icon, shade, initials, levelTag, bound: null, active: false, locked: false, shadeH: -1 });
-    this.view.addChild(square);
+    this.slots.push({ square, frame, icon, shade, initials, levelTag, keyTag, bound: null, active: false, locked: false, shadeH: -1 });
+    this.row.addChild(square);
     this.drawFrame(this.slots[i]);
   }
 
-  /** A click on a square: it binds the spell waiting for one, or else picks the square. */
+  /** A click on a square: it binds the spell waiting for one, or else picks the square (in the row shown). */
   private pick(i: number): void {
-    if (pendingBinding() && this.player) finishBinding(this.player, i);
-    else chooseQuickSlot(i);
+    const slot = this.slotAt(i);
+    if (pendingBinding() && this.player) finishBinding(this.player, slot);
+    else chooseQuickSlot(slot);
   }
 
   /** A dark well; the picked one edged in gold. */
@@ -184,10 +218,10 @@ export class QuickBar {
   }
 
   /** One square for the player's spell in it: its picture, whether it is picked, learnt and recovering. */
-  private updateSlot(view: SlotView, i: number, player: Player): void {
-    const binding = quickBinding(player, i);
+  private updateSlot(view: SlotView, slot: number, player: Player): void {
+    const binding = quickBinding(player, slot);
     if (view.bound !== bindingKey(binding)) this.showBinding(view, binding, player.heroClass);
-    const active = chosenQuickSlot() === i;
+    const active = chosenQuickSlot() === slot;
     if (view.active !== active) {
       view.active = active;
       this.drawFrame(view);
@@ -197,7 +231,7 @@ export class QuickBar {
       view.locked = locked;
       view.icon.alpha = locked ? LOCKED_ALPHA : 1;
     }
-    this.updateShade(view, binding, player.spellbook?.recovery[i] ?? 0, player);
+    this.updateShade(view, binding, player.spellbook?.recovery[slot] ?? 0, player);
   }
 
   /** The shade over a spell recovering, by the share of its recovery left. */
@@ -215,9 +249,19 @@ export class QuickBar {
   update(player: Player | undefined): void {
     this.player = player;
     if (!player) return;
-    this.slots.forEach((view, i) => this.updateSlot(view, i, player));
+    this.updateRow();
+    for (let i = 0; i < this.slots.length; i++) this.updateSlot(this.slots[i], this.slotAt(i), player);
     this.updateBinding();
     this.updateTip(player);
+  }
+
+  /** Shift held or let go: the squares show the other row, their key tags saying so ("sQ"). */
+  private updateRow(): void {
+    const row = quickRow();
+    if (row === this.shownRow) return;
+    this.shownRow = row;
+    const mark = row > 0 ? SHIFT_MARK : '';
+    this.slots.forEach((view, i) => { view.keyTag.text = mark + codeLabel(QUICK_KEYS[i]); });
   }
 
   /** While a spell waits for a square the squares breathe and a line says what to do; the inventory coming back ends the wait. */
@@ -254,14 +298,16 @@ export class QuickBar {
       return;
     }
     const level = player.playerStats.level;
+    const slot = this.slotAt(this.hovered);
     const shown = this.topic;
-    if (!shown || shown.slot !== this.hovered || shown.bound !== view.bound || shown.level !== level) {
-      const tip = slotTopic(quickBinding(player, this.hovered), level, player.heroClass);
-      this.topic = { slot: this.hovered, bound: view.bound, level, tip };
+    if (!shown || shown.slot !== slot || shown.bound !== view.bound || shown.level !== level) {
+      const tip = slotTopic(quickBinding(player, slot), level, player.heroClass);
+      this.topic = { slot, bound: view.bound, level, tip };
     }
     // Asked for at the bar itself, it is kept inside the area above it: just over the squares.
-    const top = GAME_HEIGHT - MARGIN - SLOT;
-    const square = { x: this.slotX(this.hovered), y: top, w: SLOT, h: SLOT };
+    const top = this.top;
+    const size = SLOT * this.scale;
+    const square = { x: this.left + this.slotX(this.hovered) * this.scale, y: top, w: size, h: size };
     if (this.topic) this.tip.showAt(this.topic.tip, square, { w: GAME_WIDTH, h: top }, 'above');
   }
 

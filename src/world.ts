@@ -119,8 +119,14 @@ export type CombatLogEntry = {
   seq: number; actor: 'player' | 'mob'; name: string; total: number; result: LogResult; damage: number; spell?: SpellId; item?: string;
 };
 
-/** The quick bar's squares (keys 1–5): the spells a hero casts with right click / R. */
-export const QUICK_SLOTS = 5;
+/**
+ * The quick bar: a row of squares on its keys (Q R T 1–5 X C, game/Settings.ts `QUICK_KEYS`), each key casting
+ * its square at once, and a second row behind it reached with Shift and the same keys. Squares are numbered row by
+ * row: the second row's first square is QUICK_ROW.
+ */
+export const QUICK_ROW = 10;
+export const QUICK_ROWS = 2;
+export const QUICK_SLOTS = QUICK_ROW * QUICK_ROWS;
 
 /** A short rest (spells recovered, out of the enemies' sight) or a long one (all healed, in the safe room). */
 export const REST_KINDS = ['short', 'long'] as const;
@@ -372,7 +378,7 @@ export type Entity = {
     mouseY: number;
     mouseAiming: boolean;
     keyAim: { x: number; y: number } | null;
-    /** The quick-bar square picked (keys 1–5): the spell right click / R casts. */
+    /** The quick-bar square last picked (its key, or a click): the spell right click and the cast key cast. */
     spellSlot: number;
     /** One-tick commands raised by key presses; `swap` trades the 1st and 2nd weapon. */
     intents: { use: boolean; attack: boolean; cast: boolean; inventoryOpen: boolean; swap: boolean };

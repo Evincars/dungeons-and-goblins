@@ -76,6 +76,16 @@ export function featuresAt(cls: DndClass, level: number, style: string | null): 
   return CLASS_FEATURE_LIST[cls].filter((f) => f.level <= level && (f.needs === null || f.needs === style));
 }
 
+/** The `n`th active feature (0: the first) a hero of this class, level and fighting style has, in level order. */
+export function nthActiveFeature(cls: DndClass, level: number, style: string | null, n: number): FeatureDef | undefined {
+  let left = n;
+  for (const f of CLASS_FEATURE_LIST[cls]) {
+    if (f.kind !== 'active' || f.level > level || (f.needs !== null && f.needs !== style)) continue;
+    if (left-- === 0) return f;
+  }
+  return undefined;
+}
+
 type Bearer = Pick<Player, 'heroClass' | 'playerStats' | 'featuresOff' | 'build'>;
 
 /** Whether a class has the feature at this level (and fighting style). */

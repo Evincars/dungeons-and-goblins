@@ -156,7 +156,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   whether to go deeper or end the run; deeper needs all of them, and whoever is outside then is left behind, dead. Its
   lever (`LeverSystem.ts`, `lever.exit`) drops the room's portcullis 5 s after one pull, for good (`DoorSystem.ts`, `door.exit`).
 - `src/ai/` — enemy AI: `perception/` (rbush index, sight, player trails) → `decision/` (Yuka
-  `StateMachine` states, squad tactics by Yuka `Think`) → `execution/` (Yuka steering).
+  `StateMachine` states, squad tactics by Yuka `Think`, each squad member's place in a ring round its target,
+  `surround.ts`) → `execution/` (Yuka steering).
 - `src/level/` — `Level` tiles, `TileGraph`/`TileSearch` (Yuka graph search), procedural generation
   (`generators/`), terrain autotiling and rendering, soft edges between kinds of ground (`GroundBlend.ts`, baked
   into one atlas by `render/BlendAtlas.ts`), fog of war (`FogRenderer.ts`: per-corner fading buffer, blurred, with
@@ -172,7 +173,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   drawn by `RollTextSystem.ts`) and into the level's combat log (`CombatLogSystem.ts`, one synced entity, shown by
   `ui/CombatLogPanel.ts`), and spends a won initiative's first strike as advantage (`systems/InitiativeSystem.ts`).
   Spells (`Spells.ts`, from `src/data/spells.json`: bolt, missiles, burst with a save, heal) have no slots but a
-  recovery each (`spellbook.recovery`), are picked on the quick bar (`playerInput.spellSlot`) and cast by
+  recovery each (`spellbook.recovery`), sit on the quick bar (two rows of ten: Q R T 1–5 X C cast the first row's squares,
+  Shift with them the second, whose squares hold the active class features until bound; `playerInput.spellSlot`) and are cast by
   `systems/SpellSystem.ts` with effects from the library (`assets/Effects.ts`). `Spellbook.ts` reads the whole list: a class opens
   spell levels as the tabletop does, a cantrip's dice grow at hero levels 5/11/17, and a spell cast above its own level
   (the Skills tab of the inventory offers a box per level, `ui/SpellsPanel.ts`) rolls more and recovers more slowly. A click binds it

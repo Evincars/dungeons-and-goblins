@@ -31,8 +31,9 @@ Pushing a version tag publishes the game: `git tag v1.2.0 && git push origin v1.
 `/dungeons-and-goblins/`, set by `VITE_BASE_URL`), deploys it to GitHub Pages and makes a GitHub release for the
 tag with generated notes. In the repository's Settings → Pages, the source must be "GitHub Actions".
 
-Controls: WASD to move, the mouse to aim, left click (or Space) to attack, Q to swap the 1st and 2nd weapon,
-right click / R to cast the spell picked on the quick bar (1–5, or click a square), E to use (shop, chests, the
+Controls: WASD to move, the mouse to aim, left click (or Space) to attack, G to swap the 1st and 2nd weapon,
+Q R T 1–5 X C to cast the quick bar's squares (with Shift: its second row, the class features at first; holding
+Shift shows that row), right click / F to cast the square last picked (or clicked), E to use (shop, chests, the
 exit, the lever, a stash), Shift to sprint, Tab for the inventory, ~ for the console, Esc to pause. Keys can be
 rebound in Settings → Key bindings. What E would use is framed by white corner brackets.
 

@@ -47,6 +47,13 @@ export const FLANK_DETOUR_SLACK = 4;
 export const STRIKE_RANGE = 1.5 * TILE_WIDTH;
 /** Enemies within this range of their target are in the fight; everyone that close simply attacks. */
 export const MELEE_RANGE = 2.5 * TILE_WIDTH;
+/**
+ * Within this range of its target an enemy heads for its own place in the ring round it (decision/surround.ts)
+ * rather than straight at it, so a pack closes in from every side and every one of them gets within reach.
+ */
+export const SURROUND_RANGE = 4 * TILE_WIDTH;
+/** An enemy this close to its place in the ring (pixels) has taken it, and presses straight in at the target. */
+export const RING_ARRIVED = 4;
 /** An ally below this share of its health, or fighting alone, gets help. */
 export const SUPPORT_HEALTH = 0.6;
 /** Supporters head for allies no farther than this. */

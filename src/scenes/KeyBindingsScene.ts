@@ -57,7 +57,8 @@ export class KeyBindingsScene implements Scene {
     this.onKeyDown = (e: KeyboardEvent) => {
       if (!this.capturing) return;
       e.preventDefault();
-      if (e.code !== 'Escape') bind(this.capturing, e.code);
+      // The quick bar's keys are its own: keep waiting for another.
+      if (e.code !== 'Escape' && !bind(this.capturing, e.code)) return;
       this.capturing = null;
       this.refresh();
     };

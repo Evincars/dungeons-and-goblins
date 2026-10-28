@@ -25,6 +25,8 @@ const living = world.with('health');
 const playerBox = new Rectangle();
 const mobBox = new Rectangle();
 const touching: Entity[] = [];
+/** Enemies whose swing was looked at this tick, so one touching two heroes swings once. */
+const swung = new Set<Entity>();
 
 function tickDown(entity: Entity): void {
   if (entity.hurtTime !== undefined && entity.hurtTime > 0) entity.hurtTime--;
@@ -45,23 +47,29 @@ export function updateCombatTimers(): void {
   }
 }
 
-/** Whether a player can take a hit from touching an enemy right now (never inside a safe room). */
+/**
+ * Whether enemies touching a player can strike them right now (never inside a safe room). A hero still reeling from
+ * a blow can be struck again: each enemy at them makes its own attacks, as at the table.
+ */
 function vulnerable(level: Level, player: Player): boolean {
-  if (!isActivePlayer(player) || (player.hurtTime ?? 0) > 0 || !player.radius) return false;
+  if (!isActivePlayer(player) || !player.radius) return false;
   return !level.isWorldPosSafe(player.position.x, player.position.y);
 }
 
-/** The first live enemy whose body overlaps the player's, from the spatial index. */
-function enemyTouching(player: Player): Entity | null {
+/** Every live enemy whose body overlaps the player's, from the spatial index (into the shared `touching` list). */
+function enemiesTouching(player: Player): readonly Entity[] {
+  touching.length = 0;
   const r = player.radius;
-  if (!r) return null;
+  if (!r) return touching;
   const pb = boxAround(player.position.x, player.position.y, r.x + CONTACT_REACH, r.y + CONTACT_REACH, playerBox);
   const reach = Math.hypot(r.x + MAX_MOB_RADIUS + CONTACT_REACH, r.y + MAX_MOB_RADIUS + CONTACT_REACH);
+  let kept = 0;
   for (const mob of nearby(player.position.x, player.position.y, reach, Sense.mob, touching)) {
     if (!isMob(mob) || mob.health.current <= 0) continue;
-    if (pb.intersects(boxAround(mob.position.x, mob.position.y, mob.radius.x, mob.radius.y, mobBox))) return mob;
+    if (pb.intersects(boxAround(mob.position.x, mob.position.y, mob.radius.x, mob.radius.y, mobBox))) touching[kept++] = mob;
   }
-  return null;
+  touching.length = kept;
+  return touching;
 }
 
 /**
@@ -101,12 +109,23 @@ function mobStrike(mob: Entity, player: Player): void {
   else sound.playSound(turnedAside(player), player.position.x, player.position.y);
 }
 
-/** Enemies strike players they touch, except inside safe zones. */
+/**
+ * Enemies strike players they touch, except inside safe zones: every one of them in its own time (each winds up
+ * and its blow lands on its own impact frame), so none waits behind another that got there first.
+ */
 export function updateContactDamage(level: Level): void {
+  swung.clear();
   for (const player of q.players) {
-    if (!vulnerable(level, player)) continue;
-    const mob = enemyTouching(player);
-    if (mob && strikeLands(mob)) mobStrike(mob, player);
+    if (vulnerable(level, player)) swingAt(player);
+  }
+}
+
+/** Every enemy touching the player swings (one touching two heroes only once), each blow landing in its own time. */
+function swingAt(player: Player): void {
+  for (const mob of enemiesTouching(player)) {
+    if (swung.has(mob)) continue;
+    swung.add(mob);
+    if (strikeLands(mob)) mobStrike(mob, player);
   }
 }
 
@@ -122,6 +141,17 @@ function knockBack(player: Entity, source: Entity): void {
   player.bump.y = (dy / dist) * PLAYER_KNOCKBACK;
 }
 
+/**
+ * A blow staggers the hero (a short freeze and a shove away from it) unless they are still reeling from the last
+ * one, so a crowd of enemies wounds them blow by blow without pinning them in place.
+ */
+function stagger(player: Entity, source: Entity): void {
+  if ((player.hurtTime ?? 0) > 0) return;
+  player.hurtTime = PLAYER_HURT_TIME;
+  player.freezeTime = PLAYER_FREEZE_TIME;
+  knockBack(player, source);
+}
+
 /** A blow that got past the player's Armor Class: all of its damage counts (armour already did its job by turning misses). */
 export function hurtPlayer(player: Entity, source: Entity, damage: number): void {
   const h = player.health;
@@ -130,10 +160,8 @@ export function hurtPlayer(player: Entity, source: Entity, damage: number): void
 
   const finalDamage = Math.max(MIN_HIT_DAMAGE, Math.round(damage));
 
-  player.hurtTime = PLAYER_HURT_TIME;
-  player.freezeTime = PLAYER_FREEZE_TIME;
   h.current = Math.max(0, h.current - finalDamage);
-  knockBack(player, source);
+  stagger(player, source);
 
   if (player.position) sound.playSound('hurt', player.position.x, player.position.y);
 }

@@ -18,7 +18,7 @@ import { validBuild } from '../rules/Build';
 import { isWeaponBase } from '../rules/WeaponTable';
 import { MAX_ROLL_LINES } from '../systems/RollLogSystem';
 import { MAX_LOG_ENTRIES, MAX_LOG_ITEM } from '../systems/CombatLogSystem';
-import { isSpellId, SPELL_IDS } from '../rules/Spells';
+import { isSpellId } from '../rules/Spells';
 
 /**
  * The live world as the co-op host sends it: every entity that is not rebuilt locally from the level
@@ -168,8 +168,8 @@ const isLogEntry = (e: unknown) => isRecord(e) && Number.isInteger(e.seq) && Num
   && ((e.actor === 'mob' && typeof e.name === 'string' && isMobType(e.name)) || (e.actor === 'player' && typeof e.name === 'string' && cleanName(e.name) === e.name));
 const isRollLine = (l: unknown) => isRecord(l) && typeof l.text === 'string' && l.text.length <= MAX_ROLL_TEXT && isRollTone(l.tone) && isFiniteNumber(l.age);
 const isIntList = (v: unknown) => Array.isArray(v) && v.every(Number.isInteger);
-/** Ticks until each of the hero's spells recovers (one a spell the game has, at most), none negative. */
-const isRecoveryList = (v: unknown) => isIntList(v) && Array.isArray(v) && v.length <= SPELL_IDS.length && v.every((t) => Number(t) >= 0);
+/** Ticks until each quick-bar square's spell recovers (one a square, at most), none negative. */
+const isRecoveryList = (v: unknown) => isIntList(v) && Array.isArray(v) && v.length <= QUICK_SLOTS && v.every((t) => Number(t) >= 0);
 const isBoundList = (v: unknown) => Array.isArray(v) && v.length <= QUICK_SLOTS
   && v.every((b) => b === null || (isRecord(b) && validBinding(b.spell, b.level)));
 const isSlotList = (v: unknown) => Array.isArray(v) && v.length <= PLAYER_SLOTS.length && v.every(isPlayerSlot);

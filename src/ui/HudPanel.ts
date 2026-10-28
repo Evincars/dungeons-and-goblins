@@ -1,7 +1,7 @@
-import { Circle, Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Polygon } from 'pixi.js';
 import { localPlayer } from '../world';
 import type { Player } from '../world';
-import { GAME_HEIGHT } from '../render/Camera';
+import { GAME_HEIGHT, GAME_WIDTH } from '../render/Camera';
 import { claimPointer } from '../systems/InputSystem';
 import { text } from '../core/texts';
 import { THEME } from './Theme';
@@ -9,6 +9,7 @@ import { PixelLabel } from './PixelText';
 import { HudDialog } from './HudDialog';
 import { MinimapView } from './MinimapView';
 import { QuickBar } from './QuickBar';
+import { COMBAT_LOG_SPAN } from './CombatLogPanel';
 import { RestMenu } from './RestMenu';
 import { PartyBanner } from './PartyBanner';
 import { LootRollPanel } from './LootRollPanel';
@@ -35,13 +36,17 @@ const GOLD = 0x8a6a2c;
 const GOLD_DARK = 0x4a3818;
 const WELL = 0x0c0a08;
 /**
- * The buttons: circles of this radius standing on the corners of two equilateral triangles side by side over
- * the health bar (two below, two on top), this far apart edge to edge and this far above the bar.
+ * The buttons: diamonds this far from their centre to a point, in a column climbing from beside the health bar's
+ * right end, each this much higher than the one below and stepping in and out by this much, so they nest in a zigzag.
  */
-const BUTTON_R = 11;
-const BUTTON_GAP = 4;
-const BUTTON_LIFT = 4;
+const BUTTON_R = 12;
+const BUTTON_STEP_Y = 19;
+const BUTTON_ZIG = 9;
+/** The lowest diamond's left point sits this far right of the bar. */
+const BUTTON_GAP = 1;
 const HOVER_ALPHA = 0.14;
+/** The quick bar keeps this far clear of the buttons and of the combat log. */
+const QUICK_BAR_CLEARANCE = 6;
 /** The mark on the level bubble: how big it is drawn, and how it breathes (updates for a full breath, how much it swells and how faint it gets). */
 const MARK_SCALE = 2;
 const BREATH_PERIOD = 100;
@@ -63,7 +68,7 @@ const BARS: ReadonlyArray<Pick<Bar, 'color' | 'current' | 'max'>> = [
 /** Which dialog a HUD button opens. */
 export type HudButtonId = 'character' | 'level' | 'map' | 'rest';
 
-/** A HUD button: a dark circle in its own colour with a small picture, opening its dialog. */
+/** A HUD button: a dark diamond in its own colour with a small picture, opening its dialog. */
 type ButtonDef = { id: HudButtonId; title: string; color: number; icon: (g: Graphics) => void };
 
 /** A sword, drawn about the button's centre. */
@@ -88,40 +93,45 @@ function moonIcon(g: Graphics): void {
 }
 
 /**
- * The corners: the character on top, the hero's level (its number on it) and the map below, and rest on top
- * beside the character (its drop-down offers a short or a long rest).
+ * The column, top down: the character, the hero's level (its number on it) and rest (its drop-down offers a short or
+ * a long rest). The map button is left out of the HUD for now; its dialog (MinimapView) still works, so putting the
+ * line back brings it again.
  */
 const BUTTONS: readonly ButtonDef[] = [
   { id: 'character', title: text('hud.button.character'), color: 0x4a1414, icon: swordIcon },
   { id: 'level', title: text('hud.button.level'), color: 0x1c1824, icon: () => undefined },
-  { id: 'map', title: text('hud.button.map'), color: 0x14284c, icon: globeIcon },
+  // { id: 'map', title: text('hud.button.map'), color: 0x14284c, icon: globeIcon },
   { id: 'rest', title: text('hud.button.rest'), color: 0x1a2a20, icon: moonIcon },
 ];
 
 /**
- * Centres of four circles on the corners of two equilateral triangles side by side over the bar: side = two
- * radii plus the gap, height = side·√3/2. Index 0 is the top left corner, then bottom left, bottom right and
- * top right.
+ * Centres of the diamonds, top down like BUTTONS: the lowest stands beside the bar's right end, level with it, and
+ * each one above steps up and in or out, so the column zigzags as it climbs.
  */
 function buttonPoints(barX: number, barY: number): Array<{ x: number; y: number }> {
-  const side = 2 * BUTTON_R + BUTTON_GAP;
-  const cx = barX + BAR_W / 2;
-  const bottom = barY - BUTTON_LIFT - BUTTON_R;
-  const top = bottom - (side * Math.sqrt(3)) / 2;
-  return [{ x: cx, y: top }, { x: cx - side / 2, y: bottom }, { x: cx + side / 2, y: bottom }, { x: cx + side, y: top }];
+  const x = barX + BAR_W + BUTTON_GAP + BUTTON_R;
+  const y = barY + BAR_H / 2;
+  const last = BUTTONS.length - 1;
+  return BUTTONS.map((_, i) => ({ x: x - ((last - i) % 2) * BUTTON_ZIG, y: y - (last - i) * BUTTON_STEP_Y }));
 }
 
+/** The right-most point of the button column, which the quick bar keeps clear of. */
+const BUTTONS_RIGHT = MARGIN + BAR_W + BUTTON_GAP + 2 * BUTTON_R;
+
+/** A diamond (a square on its corner) this far from its centre to a point. */
+const diamond = (g: Graphics, r: number): Graphics => g.poly([0, -r, r, 0, 0, r, -r, 0]);
+
 /**
- * What stays on screen during play. Bottom left: the health bar (dark gold frame, the value on it) and four
- * round buttons over it — the character, the hero's level, the map (which shows what has been explored) and
- * rest (a short or a long rest). Bottom middle: the quick bar of the hero's spells (ui/QuickBar.ts). High in
- * the middle: what the party is asked, or how it went, and the gate's countdown (ui/PartyBanner.ts).
+ * What stays on screen during play. Bottom left: the health bar (dark gold frame, the value on it) and a zigzag
+ * column of diamond buttons climbing beside its right end — the character, the hero's level and rest (a short or a
+ * long rest). Bottom middle: the quick bar of the hero's spells (ui/QuickBar.ts). High in the middle: what the party
+ * is asked, or how it went, and the gate's countdown (ui/PartyBanner.ts).
  */
 export class HudPanel {
   readonly container = new Container();
   readonly dialog = new HudDialog();
   private readonly bars: Bar[] = [];
-  private readonly quickBar = new QuickBar();
+  private readonly quickBar = new QuickBar(BUTTONS_RIGHT + QUICK_BAR_CLEARANCE, GAME_WIDTH - COMBAT_LOG_SPAN - QUICK_BAR_CLEARANCE);
   private readonly partyBanner = new PartyBanner();
   private readonly lootRolls = new LootRollPanel();
   private readonly restMenu: RestMenu;
@@ -144,10 +154,11 @@ export class HudPanel {
     // Only the buttons and the dialog listen; nothing else here may catch the pointer.
     this.container.eventMode = 'passive';
     BARS.forEach((spec, i) => this.addBar(spec, i));
-    const corners = buttonPoints(MARGIN, GAME_HEIGHT - MARGIN - BARS.length * BAR_H - (BARS.length - 1) * BAR_GAP);
-    BUTTONS.forEach((def, i) => this.addButton(def, corners[i]));
-    const rest = corners[3];
-    this.restMenu = new RestMenu(Math.round(rest.x - BUTTON_R), Math.round(rest.y - BUTTON_R - 2));
+    const points = buttonPoints(MARGIN, GAME_HEIGHT - MARGIN - BAR_H);
+    BUTTONS.forEach((def, i) => this.addButton(def, points[i]));
+    // The rest menu opens upwards from beside the rest button, clear of the column.
+    const rest = points[BUTTONS.findIndex((def) => def.id === 'rest')];
+    this.restMenu = new RestMenu(Math.round(rest.x + BUTTON_R + 2), Math.round(rest.y + BUTTON_R));
     this.container.addChild(this.quickBar.view, this.partyBanner.view, this.lootRolls.view, this.passives.view, this.restMenu.view, this.dialog.container);
     this.quickBar.onMore = (more) => this.showMore(more);
   }
@@ -175,31 +186,33 @@ export class HudPanel {
     this.container.addChild(frame, fill, value);
   }
 
-  /** A round button: dark gold rim, its colour inside, its picture; it lights up under the pointer and opens its dialog. */
+  /** A diamond button: dark gold rim, its colour inside, its picture; it lights up under the pointer and opens its dialog. */
   private addButton(def: ButtonDef, at: { x: number; y: number }): void {
     const button = new Container();
     button.position.set(Math.round(at.x), Math.round(at.y));
     const r = BUTTON_R;
-    const art = new Graphics()
-      .circle(0, 0, r).fill({ color: GOLD })
-      .circle(0, 0, r - 2).fill({ color: def.color })
-      .circle(0, 0, r - 4).stroke({ color: 0xffffff, alpha: 0.08, width: 1 });
+    const art = new Graphics();
+    diamond(art, r).fill({ color: GOLD });
+    diamond(art, r - 1).stroke({ color: GOLD_DARK, width: 1 });
+    diamond(art, r - 2).fill({ color: def.color });
+    diamond(art, r - 4).stroke({ color: 0xffffff, alpha: 0.08, width: 1 });
     const icon = new Graphics();
     def.icon(icon);
-    const glow = new Graphics().circle(0, 0, r - 2).fill({ color: 0xffffff, alpha: HOVER_ALPHA });
+    const glow = diamond(new Graphics(), r - 2).fill({ color: 0xffffff, alpha: HOVER_ALPHA });
     glow.visible = false;
     button.addChild(art, icon, glow);
     if (def.id === 'level') {
       this.level.position.set(0, -4);
       this.choiceMark.pivot.set(0, this.choiceMark.textHeight / 2);
-      this.choiceMark.position.set(r - 1, -r + 3);
+      // On its left point: the column steps out to the right above it.
+      this.choiceMark.position.set(-r + 1, -r + 5);
       this.choiceMark.visible = false;
       this.choiceMark.eventMode = 'none';
       button.addChild(this.level, this.choiceMark);
     }
     button.eventMode = 'static';
     button.cursor = 'pointer';
-    button.hitArea = new Circle(0, 0, r);
+    button.hitArea = new Polygon([0, -r, r, 0, 0, r, -r, 0]);
     button.on('pointerover', () => { glow.visible = true; claimPointer(button, true); });
     button.on('pointerout', () => { glow.visible = false; claimPointer(button, false); });
     button.on('pointertap', () => this.open(def));

@@ -900,9 +900,9 @@ test('guest controls, commands, rosters and level starts are checked before they
   assert.equal(validInput({ ...inputFrame(), aim: { x: Infinity, y: 0 } }), false);
 
   const slotted = inputFrame();
-  slotted.input.spellSlot = 5;
-  assert.equal(validInput(slotted), false, 'the quick bar has five squares');
-  slotted.input.spellSlot = 4;
+  slotted.input.spellSlot = 20;
+  assert.equal(validInput(slotted), false, 'the quick bar has two rows of ten squares');
+  slotted.input.spellSlot = 19;
   assert.equal(validInput(slotted), true);
   assert.equal(validCommand({ kind: 'rest_dice', count: 2 }), false, 'hit dice are chosen when asking or agreeing');
   assert.equal(validCommand({ kind: 'vote_answer', agree: true, dice: 2 }), true);
@@ -1229,6 +1229,24 @@ test('every blow is rolled and shown over the attacker: hits hurt, misses do not
   assert.deepEqual([player.rollLog.at(-1).text, player.rollLog.at(-1).tone], ['4 dmg', 'damage']);
 });
 
+test('a pack spreads round the player instead of piling up on one side, and every one of them strikes', async () => {
+  const { updateCombatTimers } = await load('systems/CombatSystem');
+  const level = arena(16, 12);
+  const player = playerAt(9, 6);
+  player.godMode = true;
+  const pack = [[3, 5], [3, 6], [3, 7], [2, 6], [4, 6]].map(([x, y]) => mobAt(level, 'goblin_grunt', x, y));
+  for (const mob of pack) engage(mob, player, 0);
+  for (let tick = 1; tick <= 600; tick++) {
+    tickWorld(level, tick);
+    for (const mob of pack) mob.ai.lastSeenTick = tick;
+    updateCombatTimers();
+    updateContactDamage(level);
+  }
+  pack.forEach((mob, i) => assert.ok(mob.rollLog?.length, `goblin ${i} got to strike`));
+  const quarter = (m) => (((Math.round(Math.atan2(m.position.y - player.position.y, m.position.x - player.position.x) / (Math.PI / 2))) % 4) + 4) % 4;
+  assert.ok(new Set(pack.map(quarter)).size >= 3, 'they came at the player from three sides or more');
+});
+
 test('an enemy that touches the player rolls against their Armor Class, and the roll shows over its head', () => {
   const level = arena(12, 6);
   const player = playerAt(6, 3);
@@ -1255,7 +1273,7 @@ test('the roll log is a queue: newest at the bottom, the top line fades first, a
   assert.equal(player.rollLog.length, 0);
 });
 
-test('Q swaps the 1st and 2nd weapon; a shield in the second hand stays put', async () => {
+test('the swap key trades the 1st and 2nd weapon; a shield in the second hand stays put', async () => {
   const { swapWeapons } = PlayerActions;
   const player = playerAt(2, 2);
   const sword = SHOP_ITEMS.find((i) => i.name === 'Short Sword');
@@ -1292,13 +1310,17 @@ test('enemies cannot walk or be knocked into a safe room', () => {
   assert.ok(!level.isWorldPosSafe(mob.position.x, mob.position.y), 'nor shoved in');
 });
 
-test('saved key bindings from before weapon swap: Q goes to the swap, the spell moves to R', async () => {
-  const { mergeBindings } = await load('game/Settings');
+test('saved key bindings on the quick bar\'s keys move off them; no action can be bound to one', async () => {
+  const { mergeBindings, bind, settings, resetBindings } = await load('game/Settings');
   const old = { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', sprint: 'ShiftLeft', attack: 'Space', cast: 'KeyQ', use: 'KeyE', inventory: 'Tab' };
   const merged = mergeBindings(old);
-  assert.equal(merged.swap, 'KeyQ');
-  assert.equal(merged.cast, 'KeyR');
-  assert.equal(mergeBindings({ ...old, cast: 'KeyF', swap: 'KeyG' }).cast, 'KeyF', 'chosen keys are kept');
+  assert.equal(merged.swap, 'KeyG', 'weapon swap leaves Q');
+  assert.equal(merged.cast, 'KeyF', 'the spell leaves Q (and R)');
+  assert.equal(mergeBindings({ ...old, cast: 'KeyR', swap: 'KeyQ' }).swap, 'KeyG', 'the last defaults moved too');
+  assert.equal(mergeBindings({ ...old, cast: 'KeyV', swap: 'KeyB' }).cast, 'KeyV', 'chosen keys are kept');
+  assert.equal(bind('use', 'Digit3'), false, 'quick-bar keys are refused');
+  assert.equal(settings.bindings.use, 'KeyE');
+  resetBindings();
 });
 
 test('hero class, enemy weapon and roll log reach guests, and bad ones are refused', () => {
@@ -1785,7 +1807,7 @@ test('rests: a short one recovers spells (two before a long one), a long one hea
   hero.playerStats.hitDice = 0;
   const rest = (kind) => { Rest.queueRestRequest('host', kind); tickParty(level); };
   rest('short');
-  assert.deepEqual(hero.spellbook.recovery, [0, 0, 0, 0, 0], 'one for each quick-bar square');
+  assert.deepEqual(hero.spellbook.recovery, Array(20).fill(0), 'one for each quick-bar square');
   assert.equal(Party.currentParty().shortRestsLeft, 1);
   assert.equal(Party.currentParty().notice.notice, 'short_done');
   assert.equal(hero.health.current, 10, 'a short rest heals nothing by itself');
@@ -1850,9 +1872,10 @@ test('in co-op a rest waits for every companion to agree; one refusal calls it o
   assert.equal(tamper((es) => { es.find((e) => e.data.party).data.party.vote = { kind: 'nap', by: 'host', agreed: [], ticks: 1 }; }), false);
   assert.equal(tamper((es) => { es.find((e) => e.data.party).data.party.notice.name = '<b>'; }), false);
   assert.equal(tamper((es) => { es.find((e) => e.data.playerSlot === 'p2').data.spellbook.recovery = [-1]; }), false);
-  assert.equal(tamper((es) => { es.find((e) => e.data.playerSlot === 'p2').data.spellbook.recovery = Array(8).fill(0); }), true,
-    'a hero may know more spells than the quick bar holds');
-  assert.equal(tamper((es) => { es.find((e) => e.data.playerSlot === 'p2').data.playerInput.spellSlot = 9; }), false);
+  assert.equal(tamper((es) => { es.find((e) => e.data.playerSlot === 'p2').data.spellbook.recovery = Array(20).fill(0); }), true,
+    'one recovery a quick-bar square');
+  assert.equal(tamper((es) => { es.find((e) => e.data.playerSlot === 'p2').data.spellbook.recovery = Array(21).fill(0); }), false);
+  assert.equal(tamper((es) => { es.find((e) => e.data.playerSlot === 'p2').data.playerInput.spellSlot = 20; }), false);
   assert.equal(tamper((es) => { es.find((e) => e.data.playerSlot === 'p2').data.casting = { ticks: 1, dirX: 1, dirY: 0, released: false, spell: 'wish' }; }), false);
 });
 
@@ -2610,10 +2633,19 @@ test('a hero binds only spells their class has learnt, at levels they can cast; 
   cleric.playerStats.level = 3;
   assert.equal(bindSpell(cleric, 3, 'bless', 2), true);
   assert.equal(Spellbook.quickBinding(cleric, 3).level, 2);
-  assert.equal(bindSpell(cleric, 9, 'bless', 1), false, 'there are five squares');
+  assert.equal(bindSpell(cleric, 13, 'bless', 1), true, 'the second row takes spells too');
+  assert.equal(bindSpell(cleric, 20, 'bless', 1), false, 'there are twenty squares');
   assert.ok(validCommand({ kind: 'bind_spell', slot: 3, spell: 'bless', level: 2 }));
   assert.ok(!validCommand({ kind: 'bind_spell', slot: 3, spell: 'not_a_spell', level: 2 }));
-  assert.ok(!validCommand({ kind: 'bind_spell', slot: 5, spell: 'bless', level: 2 }));
+  assert.ok(!validCommand({ kind: 'bind_spell', slot: 20, spell: 'bless', level: 2 }));
+});
+
+test('the quick bar\'s second row holds the hero\'s active class features until something else is bound there', () => {
+  const fighter = createPlayer(0, 0, 'fighter');
+  assert.deepEqual(Spellbook.quickBinding(fighter, 10), { spell: 'feature:second_wind', level: 0 });
+  assert.equal(Spellbook.quickBinding(fighter, 11), null, 'Action Surge comes at level 2');
+  fighter.playerStats.level = 2;
+  assert.deepEqual(Spellbook.quickBinding(fighter, 11), { spell: 'feature:action_surge', level: 0 });
 });
 
 test('a spell cast at a higher level hits harder and recovers more slowly; a bound spell that is not worked yet casts nothing', () => {
@@ -2641,7 +2673,7 @@ test('a guest\'s synced spellbook is checked: bound spells must be real', () => 
   const tampered = (bound) => { const w = good(); w.entities.find((e) => e.data.spellbook).data.spellbook.bound = bound; return w; };
   assert.throws(() => validateNetState(tampered([null, null, null, { spell: 'made_up', level: 1 }])), ValidationError);
   assert.throws(() => validateNetState(tampered([null, null, null, { spell: 'bless', level: 12 }])), ValidationError);
-  assert.throws(() => validateNetState(tampered([null, null, null, null, null, null])), ValidationError, 'only five squares');
+  assert.throws(() => validateNetState(tampered(Array(21).fill(null))), ValidationError, 'only twenty squares');
 });
 
 test('a spell tooltip is short (kind, range, attack, the start of its text); "More info" holds the whole text and numbers', async () => {

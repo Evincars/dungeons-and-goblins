@@ -1,5 +1,5 @@
 import {
-  world, isDepartChoice, isEquipSlot, isItemType, isLogResult, isMobType, isPlayerSlot, isRestNotice, isRollTone, isVoteKind, MOB_STATES, PLAYER_SLOTS,
+  world, isDepartChoice, isEquipSlot, isItemType, isLogEvent, isLogResult, isMobType, isPlayerSlot, isRestNotice, isRollTone, isVoteKind, MOB_STATES, PLAYER_SLOTS,
   QUICK_SLOTS, TACTIC_ROLES,
 } from '../world';
 import type { Entity, PlayerSlot } from '../world';
@@ -131,7 +131,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
 
 /** Components that are plain values. */
 const VALUES: Readonly<Record<string, FieldType>> = {
-  blocking: 'boolean', physicsSlide: 'boolean', team: 'number', hurtTime: 'number', attackTime: 'number', freezeTime: 'number',
+  blocking: 'boolean', physicsSlide: 'boolean', team: 'number', hurtTime: 'number', attackTime: 'number', attackCooldown: 'number', freezeTime: 'number',
   bounceWallTime: 'number', deathPoints: 'number',
   facing: 'number', speed: 'number', friction: 'number', walkTime: 'number', limp: 'number',
   chasing: 'boolean', frame: 'number', yOffset: 'number', flashTime: 'number', healthBarOffset: 'number',
@@ -166,7 +166,7 @@ function checkComponent(key: string, value: unknown): void {
 const isTile = (t: unknown) => isRecord(t) && Number.isInteger(t.x) && Number.isInteger(t.y);
 /** A combat log entry: a player named as names may be, or a known enemy, and whole, sane numbers. */
 const isLogEntry = (e: unknown) => isRecord(e) && Number.isInteger(e.seq) && Number.isInteger(e.total) && Number.isInteger(e.damage)
-  && Number(e.damage) >= 0 && isLogResult(e.result) && (e.spell === undefined || isSpellId(e.spell))
+  && Number(e.damage) >= 0 && isLogResult(e.result) && (e.spell === undefined || isSpellId(e.spell)) && (e.event === undefined || isLogEvent(e.event))
   && (e.item === undefined || (typeof e.item === 'string' && e.item.length <= MAX_LOG_ITEM))
   && ((e.actor === 'mob' && typeof e.name === 'string' && isMobType(e.name)) || (e.actor === 'player' && typeof e.name === 'string' && cleanName(e.name) === e.name));
 const isRollLine = (l: unknown) => isRecord(l) && typeof l.text === 'string' && l.text.length <= MAX_ROLL_TEXT && isRollTone(l.tone) && isFiniteNumber(l.age);

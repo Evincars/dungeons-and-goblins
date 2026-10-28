@@ -4,13 +4,19 @@
  * rules (the weapon's dice, src/rules/WeaponTable.ts); these are the feel of it: reach, timing, speed.
  */
 
+/**
+ * Ticks (60 to the second) between one attack and the next, for everyone: spam the key as you like, a hero's swing, shot
+ * or volley and an enemy's blow come once a second. Extra Attack and the off-hand weapon fit their blows inside it.
+ */
+export const ATTACK_PERIOD = 60;
+
 export type SwordStats = {
   /** Ticks the swing's hitbox stays live. */
   swingTicks: number;
   /** Reach of a tier-0 swing in pixels, and how much each tier adds. */
   rangeBase: number;
   rangePerTier: number;
-  /** Ticks between swings. */
+  /** Ticks between swings (the whole chain of blows is over within them). */
   cooldown: number;
   /** Cosine of half the swing's arc: ±60° either side of the aim. */
   arcCos: number;
@@ -22,7 +28,7 @@ export const SWORD_STATS = {
   swingTicks: 8,
   rangeBase: 19,
   rangePerTier: 3,
-  cooldown: 30,
+  cooldown: ATTACK_PERIOD,
   arcCos: 0.5,
   knockback: 4,
 } as const satisfies SwordStats;
@@ -68,11 +74,9 @@ export type ArrowStats = {
   /** Pixels an arrow flies per tick, and ticks before it drops. */
   speed: number;
   life: number;
-  /** Ticks between shots, and how long the archer holds the release pose. */
+  /** Ticks between volleys, and how long the archer holds the release pose. */
   cooldown: number;
   drawTicks: number;
-  /** Ticks between the arrows of one volley (Extra Attack shoots several in a row). */
-  volleyGap: number;
   /** Arrows leave this far out from the archer's feet. */
   spawnOffset: number;
 };
@@ -80,9 +84,8 @@ export type ArrowStats = {
 export const ARROW_STATS = {
   speed: 6,
   life: 70,
-  cooldown: 22,
+  cooldown: ATTACK_PERIOD,
   drawTicks: 12,
-  volleyGap: 8,
   spawnOffset: 10,
 } as const satisfies ArrowStats;
 

@@ -12,6 +12,7 @@ import { ATTACK_RECOVERY } from '../characters/StateTriggers';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 import { characterSheet, monsterAttack } from '../rules/CharacterSheet';
 import { MIN_HIT_DAMAGE } from '../rules/Combat';
+import { ATTACK_PERIOD } from '../entities/WeaponStats';
 import { strike } from './Strike';
 import { protectFrom } from './ProtectionSystem';
 import { parried, riposted } from './Reactions';
@@ -32,6 +33,7 @@ const swung = new Set<Entity>();
 function tickDown(entity: Entity): void {
   if (entity.hurtTime !== undefined && entity.hurtTime > 0) entity.hurtTime--;
   if (entity.attackTime !== undefined && entity.attackTime > 0) entity.attackTime--;
+  if (entity.attackCooldown !== undefined && entity.attackCooldown > 0) entity.attackCooldown--;
   if (entity.freezeTime !== undefined && entity.freezeTime > 0) entity.freezeTime--;
   if (entity.bounceWallTime !== undefined && entity.bounceWallTime > 0) entity.bounceWallTime--;
   if (entity.flashTime !== undefined && entity.flashTime > 0) entity.flashTime--;
@@ -73,14 +75,27 @@ function enemiesTouching(player: Player): readonly Entity[] {
   return touching;
 }
 
+/** An enemy starts an attack: the next may begin a second from now, even if a hit cuts this one short. */
+function beginAttack(mob: Entity): void {
+  mob.attackCooldown = ATTACK_PERIOD;
+}
+
 /**
- * A mob in reach starts its swing, and the blow lands when the clip reaches its impact frame, so the
- * damage and the animation coincide. Mobs without an attack clip hit at once.
+ * A mob in reach starts its swing (once a second at most), and the blow lands when the clip reaches its impact
+ * frame, so the damage and the animation coincide. Mobs without an attack clip hit at once.
  */
 function strikeLands(mob: Entity): boolean {
-  if (!mob.character) return true;
+  if (!mob.character) {
+    if ((mob.attackCooldown ?? 0) > 0) return false;
+    beginAttack(mob);
+    return true;
+  }
   const swing = stateDuration(mob.character.def, 'attack');
-  if (!(mob.attackTime ?? 0)) windUp(mob, swing + ATTACK_RECOVERY);
+  if (!(mob.attackTime ?? 0)) {
+    if ((mob.attackCooldown ?? 0) > 0) return false;
+    beginAttack(mob);
+    windUp(mob, swing + ATTACK_RECOVERY);
+  }
   return mob.attackTime === swing + ATTACK_RECOVERY - stateImpact(mob.character.def, 'attack');
 }
 
@@ -173,6 +188,7 @@ export function hurtPlayer(player: Entity, source: Entity, damage: number): void
   if (!h || player.godMode || player.falling || player.respawnTicks !== undefined || h.current <= 0) return;
 
   const finalDamage = Math.max(MIN_HIT_DAMAGE, Math.round(damage));
+  player.lastHitBy = world.id(source);
   const absorbed = Math.min(player.tempHealth ?? 0, finalDamage);
   if (absorbed > 0) player.tempHealth = (player.tempHealth ?? 0) - absorbed;
 

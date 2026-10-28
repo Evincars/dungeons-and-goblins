@@ -8,6 +8,7 @@ import { characterSheet } from '../rules/CharacterSheet';
 import { hitDiceRegained, hitDieHealing } from '../rules/HitPoints';
 import { rollDie } from '../rules/Dice';
 import { logHeal, logLine } from '../systems/RollLogSystem';
+import { recordEvent } from '../systems/CombatLogSystem';
 import { playEffect } from '../assets/Effects';
 import { AIM_HEIGHT } from '../entities/ProjectileFactory';
 import { sound } from '../audio/SoundPlayer';
@@ -136,6 +137,16 @@ function wake(player: Player): void {
   playEffect(HEAL_EFFECT, HEAL_COLOUR, player.position.x, player.position.y, AIM_HEIGHT, HEAL_SCALE);
 }
 
+/** One hero's rest, written to the combat log with the hit dice they spent and the hit points it gave back. */
+function restHero(player: Player, kind: RestKind, dice: number): void {
+  const before = player.health.current;
+  player.spellbook?.recovery.fill(0);
+  restoreDice(player);
+  const spent = kind === 'long' ? 0 : spendHitDice(player, dice);
+  if (kind === 'long') wake(player);
+  recordEvent(player, kind === 'long' ? 'long_rest' : 'short_rest', { total: spent, amount: player.health.current - before });
+}
+
 /**
  * The party rests: every spell recovered; in a short rest each hero spends the hit dice they chose (`dice`, by seat:
  * none for one who chose none), after a long one everyone is healed. A fallen hero stays down: no rest brings them
@@ -143,11 +154,7 @@ function wake(player: Player): void {
  */
 export function takeRest(kind: RestKind, state: PartyState = partyState(), dice: HitDiceChoices = {}): void {
   for (const player of q.players) {
-    if (!isStanding(player)) continue;
-    player.spellbook?.recovery.fill(0);
-    restoreDice(player);
-    if (kind === 'long') wake(player);
-    else spendHitDice(player, dice[seatOf(player)] ?? 0);
+    if (isStanding(player)) restHero(player, kind, dice[seatOf(player)] ?? 0);
   }
   state.shortRestsLeft = kind === 'long' ? SHORT_RESTS_PER_LONG_REST : state.shortRestsLeft - 1;
   notify(state, kind === 'long' ? 'long_done' : 'short_done', '', kind);

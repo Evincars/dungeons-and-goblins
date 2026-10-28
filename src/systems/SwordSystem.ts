@@ -6,11 +6,12 @@ import { characterSheet, weaponInHand } from '../rules/CharacterSheet';
 import { weaponRule } from '../rules/Equipment';
 import { LUNGE_REACH } from '../rules/Maneuvers';
 import { createSwordSwingFx } from '../entities/FxFactory';
-import { SWORD_STATS, swingRange } from '../entities/WeaponStats';
+import { ATTACK_PERIOD, SWORD_STATS, swingRange } from '../entities/WeaponStats';
 import { strike } from './Strike';
+import type { AttackProfile } from '../rules/Combat';
 import { hitMob } from './Hits';
 import { lungeReady } from './ManeuverSystem';
-import { characterDef, clipImpactTicks, stateDuration } from '../characters/Characters';
+import { characterDef, clipImpactTicks } from '../characters/Characters';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 
@@ -21,11 +22,13 @@ const struck: Entity[] = [];
 export { hitMob };
 
 /**
- * A swing is a chain of blows: one, or several with Extra Attack, and the off-hand weapon's blow last when a light
- * weapon is held in each hand. The blows come one after another, each at least this many ticks long (its wind-up and
- * its live hitbox), and the swing's cooldown covers the whole chain.
+ * A swing is a chain of blows: one, or several with Extra Attack. The blows come one after another and the whole chain is
+ * over within the attack period (a second), which is also the swing's cooldown. With a melee weapon in each hand the first
+ * blow is made with both at once: one swing on the screen, an attack (a d20 and a damage roll) from each weapon.
  */
-const BLOW_MIN_TICKS = 12;
+
+/** The chain's last blow ends this many ticks before the period does, so the next swing never cuts it short. */
+const CHAIN_MARGIN = 1;
 
 /** A heavy or two-handed weapon swings with a heavier grunt. */
 function swingSound(player: Player): SfxName {
@@ -43,27 +46,34 @@ function canSwing(player: Player): boolean {
     && !player.casting && !player.falling;
 }
 
-/** Ticks a blow winds up before it lands: the attack clip's impact frame, and long enough for blows to follow each other. */
-function windUp(player: Player, followingBlow: boolean): number {
+/** Ticks the first blow winds up before it lands: the attack clip's impact frame (none for characters without one). */
+function firstWindUp(player: Player): number {
   const def = player.character?.def;
-  const impact = def ? clipImpactTicks(def, 'attack') : 0;
-  return followingBlow ? Math.max(impact, BLOW_MIN_TICKS - SWORD_STATS.swingTicks) : impact;
+  return def ? clipImpactTicks(def, 'attack') : 0;
+}
+
+/**
+ * Ticks each following blow of a chain of `blows` winds up: what is left of the period after the first blow, shared out
+ * between the blows that follow, so the chain of any length lands within the second.
+ */
+function followWindUp(player: Player, blows: number): number {
+  if (blows < 2) return 0;
+  const room = ATTACK_PERIOD - firstWindUp(player) - SWORD_STATS.swingTicks - CHAIN_MARGIN;
+  return Math.max(0, Math.floor(room / (blows - 1)) - SWORD_STATS.swingTicks);
 }
 
 /**
  * A swing starts: its first blow lands on the attack clip's impact frame (at once for characters without one), the
- * others follow it, and the next swing can't start before the clip and the whole chain have played (or the usual
- * cooldown, if longer).
+ * others follow it within the second, and the next swing starts a second after this one, not before.
  */
 function startSwing(player: Player): void {
   player.playerInput.intents.attack = false;
   const aim = player.aimVector ?? { x: 0, y: 1 };
-  const def = player.character?.def;
   const sheet = characterSheet(player);
-  const blows = sheet.attacks + (sheet.offHand ? 1 : 0);
+  const blows = sheet.attacks;
   const reach = swingRange(player.playerStats.swordTier) + (lungeReady(player) ? LUNGE_REACH : 0);
   const swing: Swing = {
-    delay: windUp(player, false),
+    delay: firstWindUp(player),
     ticks: SWORD_STATS.swingTicks,
     dirX: aim.x,
     dirY: aim.y,
@@ -74,8 +84,7 @@ function startSwing(player: Player): void {
     offHand: !!sheet.offHand,
   };
   world.addComponent(player, 'swordSwing', swing);
-  const chain = blows * (windUp(player, true) + SWORD_STATS.swingTicks);
-  player.swordCooldown = Math.max(SWORD_STATS.cooldown, def ? stateDuration(def, 'attack') : 0, chain);
+  player.swordCooldown = SWORD_STATS.cooldown;
   if (swing.delay === 0) swingLands(player, swing);
 }
 
@@ -109,19 +118,22 @@ function inArc(player: Player, swing: Swing, mob: Entity, mobId: number): boolea
   return (dx * swing.dirX + dy * swing.dirY) / (dist || 1) >= SWORD_STATS.arcCos;
 }
 
-/** Whether this blow of the chain is the off-hand weapon's. */
-const isOffHandBlow = (swing: Swing): boolean => swing.offHand && swing.blow === swing.blows - 1;
 
 /**
  * The swing meets a target: the attack is rolled against its Armor Class (shown over the player's head), and
- * only a hit hurts it. The off-hand blow is made with the weapon in the second hand.
+ * only a hit hurts it. With a weapon in each hand the first blow strikes with both.
  */
 function swingAt(player: Player, target: Entity, swing: Swing): void {
   const sheet = characterSheet(player);
-  const attack = isOffHandBlow(swing) && sheet.offHand ? sheet.offHand : sheet.attack;
+  strikeWith(player, target, sheet.attack, false);
+  if (swing.offHand && swing.blow === 0 && sheet.offHand && (target.health?.current ?? 0) > 0) strikeWith(player, target, sheet.offHand, true);
+}
+
+/** One attack of the blow: rolled against the target's Armor Class, and a hit lands even on a target that the other weapon just struck. */
+function strikeWith(player: Player, target: Entity, attack: AttackProfile, alongside: boolean): void {
   const outcome = strike(target, attack, player);
   if (target.position) sound.playSound(outcome.hit ? 'sword_hit' : 'sword_miss', target.position.x, target.position.y);
-  if (outcome.hit) hitMob(target, player, outcome.damage);
+  if (outcome.hit) hitMob(target, player, outcome.damage, alongside);
 }
 
 /** Every enemy (and the training dummy) inside the live blow's arc is swung at, each once per blow. */
@@ -153,7 +165,7 @@ function endBlow(player: Player, swing: Swing): void {
   }
   const aim = player.aimVector ?? { x: swing.dirX, y: swing.dirY };
   swing.blow++;
-  swing.delay = windUp(player, true);
+  swing.delay = followWindUp(player, swing.blows);
   swing.ticks = SWORD_STATS.swingTicks;
   swing.dirX = aim.x;
   swing.dirY = aim.y;

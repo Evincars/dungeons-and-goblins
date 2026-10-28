@@ -3,13 +3,15 @@ import type { Player } from '../world';
 import type { Level } from '../level/Level';
 import { rollDice, dice } from '../rules/Dice';
 import { characterSheet } from '../rules/CharacterSheet';
-import { featureOn } from '../rules/ClassFeatures';
+import { featureOn, featureOfClass } from '../rules/ClassFeatures';
 import { readyManeuver } from './ManeuverSystem';
 import { isManeuver } from '../rules/Maneuvers';
 import { playEffect } from '../assets/Effects';
 import { AIM_HEIGHT } from '../entities/ProjectileFactory';
 import { overHole } from './HoleSystem';
 import { logHeal } from './RollLogSystem';
+import { recordEvent } from './CombatLogSystem';
+import { heroClass } from '../rules/Classes';
 
 /**
  * The active class features (rules/ClassFeatures.ts), used from the quick bar with the cast key. Each does its work
@@ -37,19 +39,25 @@ const SURVIVOR_BASE = 5;
 /** What using a feature came to: done, or why it was not. */
 export type FeatureResult = 'ok' | 'unworked' | 'no_dice' | 'no_ally';
 
-/** Mends `target` by `amount` hit points (at most to `cap`) with the healing effect and the number over their head. */
-function mend(target: Player, amount: number, cap: number): number {
+/** What a hero's feature is called (its id if the class does not list it). */
+function nameOfFeature(hero: Player, id: string): string {
+  return featureOfClass(heroClass(hero.heroClass).dndClass, id)?.name ?? id;
+}
+
+/** Mends `target` by `amount` hit points (at most to `cap`) with the healing effect and the number over their head; `source` names where it came from. */
+function mend(target: Player, amount: number, cap: number, source: string): number {
   const h = target.health;
   const healed = Math.max(0, Math.min(cap - h.current, amount));
   if (healed <= 0) return 0;
   h.current += healed;
   playEffect(HEAL_EFFECT.shape, HEAL_EFFECT.colour, target.position.x, target.position.y, AIM_HEIGHT, HEAL_EFFECT.scale);
   logHeal(target, healed);
+  recordEvent(target, 'regain', { amount: healed, item: source });
   return healed;
 }
 
 function secondWind(hero: Player): void {
-  mend(hero, rollDice(dice(1, SECOND_WIND_SIDES)) + hero.playerStats.level, hero.health.max);
+  mend(hero, rollDice(dice(1, SECOND_WIND_SIDES)) + hero.playerStats.level, hero.health.max, nameOfFeature(hero, 'second_wind'));
 }
 
 /** Every other square's recovery runs out at once (Action Surge: more to do in the same moment; the two recoveries: the spells). */
@@ -72,7 +80,7 @@ function preserveLife(hero: Player): void {
     if (pool <= 0) return;
     if (!isActivePlayer(ally)) continue;
     if (Math.hypot(ally.position.x - hero.position.x, ally.position.y - hero.position.y) > PRESERVE_LIFE_REACH) continue;
-    pool -= mend(ally, pool, Math.floor(ally.health.max / 2));
+    pool -= mend(ally, pool, Math.floor(ally.health.max / 2), nameOfFeature(hero, 'channel_divinity'));
   }
 }
 
@@ -107,16 +115,22 @@ function arcaneCharge(hero: Player, level: Level): void {
  * yet or a maneuver that can't be readied (nothing is spent then). `slot` is the quick-bar square it was used from.
  */
 export function usedFeature(hero: Player, id: string, slot: number, level: Level): FeatureResult {
+  const used = (): void => recordEvent(hero, 'feature', { item: nameOfFeature(hero, id) });
   if (id === 'second_wind') {
+    used();
     secondWind(hero);
   } else if (id === 'action_surge') {
+    used();
     readyTheBar(hero, slot);
     if (featureOn(hero, 'arcane_charge')) arcaneCharge(hero, level);
   } else if (id === 'arcane_recovery' || id === 'eldritch_master') {
+    used();
     readyTheBar(hero, slot);
   } else if (id === 'cunning_action') {
+    used();
     cunningAction(hero);
   } else if (id === 'channel_divinity') {
+    used();
     preserveLife(hero);
   } else if (isManeuver(id)) {
     const result = readyManeuver(hero, id);
@@ -140,7 +154,7 @@ export function updateSurvivor(): void {
     const h = hero.health;
     if (h.current <= 0 || h.current * 2 > h.max || !isActivePlayer(hero) || !featureOn(hero, 'survivor')) continue;
     const amount = Math.max(1, SURVIVOR_BASE + characterSheet(hero).modifiers.constitution);
-    mend(hero, amount, h.max);
+    mend(hero, amount, h.max, nameOfFeature(hero, 'survivor'));
     hero.survivorCooldown = SURVIVOR_TICKS;
   }
 }

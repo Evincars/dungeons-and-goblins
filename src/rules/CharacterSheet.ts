@@ -186,21 +186,21 @@ export function attacksPerAction(cls: HeroClass | null, level: number, off: read
   return 1;
 }
 
-/** Whether the item is a light melee weapon, the kind that fits a hand beside another. */
-function lightMelee(item: InventoryItem | undefined): boolean {
+/** Whether the item is a melee weapon that one hand can hold beside another (a two-handed weapon needs both). */
+function handWeapon(item: InventoryItem | undefined): boolean {
   const found = weaponRule(item);
-  return !!found && found.rule.range === 'melee' && found.rule.properties.includes('light');
+  return !!found && found.rule.range === 'melee' && !found.rule.properties.includes('two_handed');
 }
 
 /**
- * Two-weapon fighting: a light melee weapon in each hand lands a second blow with the one in the second hand. It adds
- * no ability modifier to its damage (unless that is a penalty) — except for a hero with the Two-Weapon Fighting style.
- * Null when the hero does not hold a light weapon in both hands.
+ * Fighting with a weapon in each hand: one click makes a second attack with the one in the second hand, rolled on its own
+ * (its own d20 and its own damage). It adds no ability modifier to its damage (unless that is a penalty) — except for a
+ * hero with the Two-Weapon Fighting style. Null when the hero does not hold a melee weapon in both hands.
  */
 export function offHandAttack(equipped: Equipped, modifiers: Modifiers, level: number, cls: HeroClass | null = null, armorTrained = true, styles: Styles | null = null): WeaponAttack | null {
   const item = equipped.secondary;
   const found = weaponRule(item);
-  if (!item || !found || !lightMelee(equipped.primary) || !lightMelee(item)) return null;
+  if (!item || !found || !handWeapon(equipped.primary) || !handWeapon(item)) return null;
   const trained = !cls || weaponProficient(cls, found.base);
   const attack = attackWith({ item, base: found.base, twoHanded: false, proficiency: trained ? proficiencyBonus(level) : 0, mode: armorTrained ? 'normal' : 'disadvantage' }, modifiers);
   if (!hasStyle(styles, 'two_weapon_fighting') && attack.abilityModifier > 0) attack.damage = plus(attack.damage, -attack.abilityModifier);
@@ -267,7 +267,7 @@ export type CharacterSheet = Abilities & {
   baseScores: Readonly<Record<StatName, number>>;
   armorClass: ArmorClass;
   attack: WeaponAttack;
-  /** The off-hand blow of two-weapon fighting (null: not holding a light weapon in each hand). */
+  /** The off-hand attack of fighting with a weapon in each hand (null: not holding a melee weapon in both). */
   offHand: WeaponAttack | null;
   /** Weapon attacks in one swing: one, more with Extra Attack (the off-hand blow comes on top). */
   attacks: number;

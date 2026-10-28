@@ -102,9 +102,9 @@ export function isBlowResult(value: unknown): value is BlowResult {
 
 /**
  * What the combat log writes besides blows: coins a hero was paid (`gold`, the sum in `damage`), a roll of
- * need for a rare find (`need`, the d20 in `total`) and who won it (`won`).
+ * need for a rare find (`need`, the d20 in `total`), who won it (`won`), and an `event` of the run (see LOG_EVENTS).
  */
-export const LOG_RESULTS = [...BLOW_RESULTS, 'gold', 'need', 'won'] as const;
+export const LOG_RESULTS = [...BLOW_RESULTS, 'gold', 'need', 'won', 'event'] as const;
 export type LogResult = (typeof LOG_RESULTS)[number];
 
 export function isLogResult(value: unknown): value is LogResult {
@@ -112,11 +112,28 @@ export function isLogResult(value: unknown): value is LogResult {
 }
 
 /**
+ * The things that happen in a run besides blows, each written to the combat log: rests (hit dice spent in `total`, hit
+ * points regained in `damage`), hit points regained, a kill or a death (`item`: who), a level reached (`total`), and
+ * the choices of the level panel (`item`: the feat, the improved abilities, the style, archetype or what was learnt).
+ */
+export const LOG_EVENTS = [
+  'short_rest', 'long_rest', 'regain', 'slain', 'died', 'level_up', 'feat', 'improve', 'build', 'style', 'archetype',
+  'learns', 'feature', 'parry', 'riposte',
+] as const;
+export type LogEvent = (typeof LOG_EVENTS)[number];
+
+export function isLogEvent(value: unknown): value is LogEvent {
+  return LOG_EVENTS.some((event) => event === value);
+}
+
+/**
  * One line of the combat log: who (a player by name, an enemy by kind), what they rolled, how it went and the
- * damage (or coins); `spell` and `item` name what it was about. `seq` counts up, so a screen shows each once.
+ * damage (or coins); `spell` and `item` name what it was about, `event` which event it records. `seq` counts up, so a
+ * screen shows each once.
  */
 export type CombatLogEntry = {
   seq: number; actor: 'player' | 'mob'; name: string; total: number; result: LogResult; damage: number; spell?: SpellId; item?: string;
+  event?: LogEvent;
 };
 
 /**
@@ -265,6 +282,8 @@ export type Entity = {
   hurtTime?: number;
   /** Ticks left on a mob's attack animation, started when it lands a hit. */
   attackTime?: number;
+  /** Ticks until an enemy may start its next attack (a second from the last one's start, however it went). */
+  attackCooldown?: number;
   freezeTime?: number;
   bounceWallTime?: number;
   deathPoints?: number;
@@ -471,10 +490,10 @@ export type Entity = {
     range: number;
     /** Entities this blow already hit (a list: a swing meets a handful at most, and it travels as JSON). */
     hitIds: number[];
-    /** A swing is a chain of blows (Extra Attack, and the off-hand weapon's blow last): this is blow `blow` (from 0) of `blows`. */
+    /** A swing is a chain of blows (Extra Attack): this is blow `blow` (from 0) of `blows`. */
     blow: number;
     blows: number;
-    /** The chain's last blow is the off-hand weapon's. */
+    /** The first blow is made with the off-hand weapon as well (a melee weapon in each hand). */
     offHand: boolean;
   };
   swordCooldown?: number;

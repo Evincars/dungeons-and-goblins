@@ -33,6 +33,8 @@ const PLAYER_COLOR = 0xf2d27a;
 const MOB_COLOR = 0xff8a7a;
 /** Coins and finds read pale gold. */
 const LOOT_COLOR = 0xffe08a;
+/** Rests, kills, levels and choices read pale blue. */
+const EVENT_COLOR = 0x9ad7ff;
 /** Entries kept for scrolling back. */
 const HISTORY = 60;
 
@@ -44,6 +46,8 @@ function describe(entry: CombatLogEntry): Line {
   const name = isMobType(kind) ? text(`mob.${kind}` as const) : entry.name;
   const vars = { name, total: entry.total, damage: entry.damage, spell: entry.spell ? spellName(entry.spell) : '', item: entry.item ?? '' };
   const result = entry.result;
+  if (result === 'event' && entry.event) return { text: text(`combat_log.event.${entry.event}` as const, vars), color: EVENT_COLOR };
+  if (result === 'event') return { text: '', color: EVENT_COLOR };
   if (result === 'gold' || result === 'need' || result === 'won') return { text: text(`combat_log.${result}`, vars), color: LOOT_COLOR };
   const line = entry.spell ? text(`combat_log.spell.${result}`, vars) : text(`combat_log.${result}`, vars);
   return { text: line, color: entry.actor === 'mob' ? MOB_COLOR : PLAYER_COLOR };

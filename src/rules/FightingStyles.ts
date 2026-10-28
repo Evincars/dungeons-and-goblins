@@ -8,7 +8,7 @@
  *   new roll stands (the weapon must be two-handed or versatile).
  * protection: while carrying a shield, an enemy's attack on an ally beside you is rolled with disadvantage; a
  *   passive that needs a few seconds to recover (systems/ProtectionSystem.ts).
- * two_weapon_fighting: the off-hand blow of a light weapon in each hand adds the ability modifier to its damage
+ * two_weapon_fighting: the off-hand attack of a weapon in each hand adds the ability modifier to its damage
  *   (without the style it deals the dice and the magic bonus alone).
  */
 export const FIGHTING_STYLES = ['archery', 'defense', 'dueling', 'great_weapon_fighting', 'protection', 'two_weapon_fighting'] as const;

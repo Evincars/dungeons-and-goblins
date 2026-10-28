@@ -127,8 +127,8 @@ that breathes marks the button, and the tab, while a choice is waiting:
   (+1 AC in armour), Dueling (+2 damage with a one-handed melee weapon and no other weapon), Great Weapon Fighting
   (damage dice showing 1 or 2 are rolled again with a two-handed or versatile melee weapon held in both hands),
   Protection (a passive: with a shield, an enemy's attack on the closest ally within 5 feet is rolled with
-  disadvantage, then 5 s to recover; shown top left) or Two-Weapon Fighting (a light melee weapon in each hand lands
-  a second blow with the one in the second hand; the style adds the ability modifier to its damage).
+  disadvantage, then 5 s to recover; shown top left) or Two-Weapon Fighting (a melee weapon in each hand lands
+  a second attack with the one in the second hand; the style adds the ability modifier to its damage).
 - Both can be changed until the hero presses **Save** (a fighter must have picked a style) or leaves the first safe
   room; then they are final (a fighter who never chose gets Defense). The chosen style stays explained on the page.
 - **Martial Archetype, Fighter level 3** (`rules/Archetypes.ts`): the Champion (Improved and Superior Critical,
@@ -228,7 +228,12 @@ Every blow — sword, arrow, spell or an enemy's — rolls a d20 + attack bonus 
 against the target's Armor Class. A natural 20 always hits and doubles the damage dice; a natural 1 always
 misses. A hit rolls the weapon's dice + the same modifier. The rolls show over the attacker's head for a
 moment ("21 to hit", then "7 dmg" or "MISS"), and each blow goes into the combat log ("Evincars 21 to hit,
-7 dmg", "Orc 12 to hit, miss").
+7 dmg", "Orc 12 to hit, miss"). The log also writes what else happens: rests (hit dice spent, hit points regained), healing,
+kills and deaths, levels reached, and the feats, ability improvements, styles, archetypes, maneuvers and spells chosen.
+
+**Attack speed.** Whoever attacks, a hero's swing or volley and an enemy's blow, comes once a second: spamming the key
+changes nothing. Extra Attack fits its blows inside that second (2 at level 5, 3 at 11, 4 at 20), and a melee weapon in
+each hand strikes with both at once on the first blow: one swing on the screen, two attacks, each rolled and dealt on its own.
 
 ### Maps as JSON
 

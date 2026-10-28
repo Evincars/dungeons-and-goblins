@@ -1,4 +1,4 @@
-import { q } from '../world';
+import { q, STAT_NAMES } from '../world';
 import type { Player, StatName } from '../world';
 import { coop } from '../network/CoopSession';
 import type { GuestCommand } from '../network/protocol';
@@ -8,6 +8,11 @@ import type { Improvement, LevelPicks } from '../rules/Build';
 import type { ArchetypeId } from '../rules/Archetypes';
 import type { FightingStyleId } from '../rules/FightingStyles';
 import { startingHitPoints } from '../rules/HitPoints';
+import { archetypeName, featName, fightingStyleName, spellName } from '../rules/Names';
+import { isSpellId } from '../rules/Spells';
+import { featureOfClass } from '../rules/ClassFeatures';
+import { recordEvent } from '../systems/CombatLogSystem';
+import { text } from '../core/texts';
 import type { Level } from '../level/Level';
 import { run } from './Run';
 
@@ -27,6 +32,12 @@ export function isCustomizeCommand(command: GuestCommand): command is CustomizeC
 
 /** Host or alone: carries a customisation out for this player, if it is allowed. Returns whether it was. */
 export function applyCustomization(player: Player, command: CustomizeCommand): boolean {
+  if (!carryOut(player, command)) return false;
+  logChoice(player, command);
+  return true;
+}
+
+function carryOut(player: Player, command: CustomizeCommand): boolean {
   const cls = heroClass(player.heroClass);
   const level = player.playerStats.level;
   const build = player.build ?? (player.build = newBuild(cls));
@@ -39,6 +50,38 @@ export function applyCustomization(player: Player, command: CustomizeCommand): b
   if (!setScores(build, level, command.scores)) return false;
   fitHitPoints(player);
   return true;
+}
+
+/** "STR +2" or "STR +1, DEX +1": the abilities an Improvement raised. */
+function improvedAbilities(stats: Partial<Record<StatName, number>>): string {
+  return STAT_NAMES.filter((stat) => (stats[stat] ?? 0) > 0).map((stat) => `${text(`stat.${stat}.short` as const)} +${stats[stat]}`).join(', ');
+}
+
+/** What a maneuver or a spell is called in the log. */
+function learntName(player: Player, id: string): string {
+  if (isSpellId(id)) return spellName(id);
+  return featureOfClass(heroClass(player.heroClass).dndClass, id)?.name ?? id;
+}
+
+/** Writes a choice the player has just made to the combat log (the point buy is only logged once it is saved). */
+function logChoice(player: Player, command: CustomizeCommand): void {
+  if (command.kind === 'extra_style') recordEvent(player, 'style', { item: fightingStyleName(command.style) });
+  else if (command.kind === 'archetype') recordEvent(player, 'archetype', { item: archetypeName(command.archetype) });
+  else if (command.kind === 'lock_build') logBuildSaved(player);
+  else if (command.kind === 'pick') for (const id of [...(command.maneuvers ?? []), ...(command.spells ?? [])]) recordEvent(player, 'learns', { item: learntName(player, id) });
+  else if (command.kind === 'improve') logImprovement(player, command.improvement);
+}
+
+function logImprovement(player: Player, improvement: Improvement): void {
+  if ('feat' in improvement) recordEvent(player, 'feat', { item: featName(improvement.feat) });
+  else recordEvent(player, 'improve', { item: improvedAbilities(improvement.stats) });
+}
+
+/** The first safe room's choices become final: the abilities, and the fighting style if the class has one. */
+function logBuildSaved(player: Player): void {
+  recordEvent(player, 'build');
+  const style = player.build?.fightingStyle;
+  if (style) recordEvent(player, 'style', { item: fightingStyleName(style) });
 }
 
 /** New Constitution at level 1 changes the hit points the hero starts with (only then: nothing has been gained yet). */
@@ -97,5 +140,6 @@ export function updateBuildLock(level: Level): void {
     const away = run.depth > 1 || !level.isWorldPosSafe(player.position.x, player.position.y);
     if (!away) continue;
     lockBuild(heroClass(player.heroClass), build, player.playerStats.level);
+    logBuildSaved(player);
   }
 }

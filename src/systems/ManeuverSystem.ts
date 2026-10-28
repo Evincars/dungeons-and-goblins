@@ -17,6 +17,7 @@ import { nearby, Sense } from '../ai/perception/spatial';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 import { hitMob } from './Hits';
 import { logLine } from './RollLogSystem';
+import { recordEvent } from './CombatLogSystem';
 
 /**
  * The Battle Master's maneuvers and the marks heroes leave on foes. A maneuver is readied from the quick bar (the
@@ -104,6 +105,7 @@ export function readyManeuver(hero: Player, id: string): ReadyResult {
   else if (kind !== 'ally') setManeuver(hero, ready(id));
   const name = featureOfClass(heroClass(hero.heroClass).dndClass, id)?.name ?? id;
   logLine(hero, name, 'crit');
+  recordEvent(hero, 'feature', { item: name });
   return 'ok';
 }
 

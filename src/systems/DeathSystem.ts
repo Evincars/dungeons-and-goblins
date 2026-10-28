@@ -15,6 +15,7 @@ import { MONSTERS } from '../rules/Monsters';
 import { characterSheet } from '../rules/CharacterSheet';
 import { hitPointsPerLevel } from '../rules/HitPoints';
 import { logLine } from './RollLogSystem';
+import { recordEvent } from './CombatLogSystem';
 import { text } from '../core/texts';
 import { isStanding, leaveBelongings, standingHeroes } from '../game/Fallen';
 
@@ -42,6 +43,7 @@ function levelUp(player: Earner): void {
   player.health.max += gained;
   player.health.current += gained;
   logLine(player, text('roll.level_up', { level: stats.level }), 'crit');
+  recordEvent(player, 'level_up', { total: stats.level });
   sound.playSound('level_up');
 }
 
@@ -94,6 +96,14 @@ function killerOf(entity: Entity, pos: { x: number; y: number }): Player | undef
   return nearest;
 }
 
+/** A kill is written to the combat log: who struck last (an arrow's or a spell's caster, not the missile), or that it died alone. */
+function logDeath(entity: Entity): void {
+  const name = entity.mobType ? text(`mob.${entity.mobType}` as const) : (isPlayer(entity) && entity.playerName) || text('combat_log.default_hero');
+  const struck = entity.lastHitBy === undefined ? undefined : world.entity(entity.lastHitBy);
+  if (struck && struck !== entity && (struck.mobType || isPlayer(struck))) recordEvent(struck, 'slain', { item: name });
+  else recordEvent(entity, 'died');
+}
+
 /** What dying leaves behind, by kind of entity: sound, smoke, experience and loot. */
 function die(entity: Entity, pos: { x: number; y: number }): void {
   const deathPts = entity.deathPoints ?? 0;
@@ -105,6 +115,7 @@ function die(entity: Entity, pos: { x: number; y: number }): void {
     sound.playSound('chest_open', pos.x, pos.y);
     createDeathFx(pos.x, pos.y);
   } else if (entity.ai) {
+    logDeath(entity);
     if (entity.mobType) sound.playSound(MOB_CRIES[entity.mobType].die, pos.x, pos.y);
     if (entity.mobType && BOSS_FOES.has(entity.mobType)) sound.playSound('foe_felled');
     createDeathFx(pos.x, pos.y);
@@ -142,6 +153,7 @@ export function updateDeath(level: Level): void {
     }
     if (isPlayer(entity)) {
       sound.playSound('death');
+      logDeath(entity);
       leaveBelongings(entity, level);
       startDying(entity);
       continue;

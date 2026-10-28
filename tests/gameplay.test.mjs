@@ -1363,6 +1363,84 @@ test('the fog redraws only when something new has been seen', () => {
   assert.equal(level.seenRevision, after, 'seeing the same tiles again changes nothing');
 });
 
+test('the combat log writes rests, healing, kills, deaths, levels and the choices of the level panel', async () => {
+  const { currentLog, MAX_LOG_ENTRIES } = await load('systems/CombatLogSystem');
+  const { takeRest } = await load('game/Rest');
+  const { applyCustomization } = await load('game/Customize');
+  const { grantExperience } = await load('systems/DeathSystem');
+  const { usedFeature } = await load('systems/FeatureSystem');
+  startRun();
+  world.clear();
+  const level = arena(12, 6);
+  const hero = playerAt(3, 3, 'fighter');
+  world.addComponent(hero, 'playerName', 'Evincars');
+  world.addComponent(hero, 'playerSlot', 'host');
+  const seen = [];
+  let last = currentLog()?.seq ?? 0;
+  const news = () => {
+    const entries = (currentLog()?.entries ?? []).filter((e) => e.seq > last && e.result === 'event');
+    last = currentLog()?.seq ?? last;
+    seen.push(...entries);
+    return entries.map((e) => [e.event, e.item ?? '', e.total, e.damage]);
+  };
+  news();
+
+  hero.health.current = hero.health.max - 10;
+  hero.playerStats.hitDice = 1;
+  takeRest('short', undefined, { host: 1 });
+  const [short] = news();
+  assert.deepEqual([short[0], short[2]], ['short_rest', 1], 'a short rest names the hit dice spent');
+  assert.ok(short[3] > 0 && short[3] <= 10, 'and the hit points they gave back');
+  hero.health.current = hero.health.max - 7;
+  takeRest('long');
+  assert.deepEqual(news()[0], ['long_rest', '', 0, 7], 'a long rest heals every wound');
+
+  hero.health.current = 1;
+  usedFeature(hero, 'second_wind', 0, level);
+  const [used, regained] = news();
+  assert.deepEqual([used[0], used[1]], ['feature', 'Second Wind']);
+  assert.deepEqual([regained[0], regained[1]], ['regain', 'Second Wind']);
+  assert.ok(regained[3] >= 2, 'with the hit points it gave');
+
+  grantExperience(hero, 300);
+  assert.deepEqual(news()[0], ['level_up', '', 2, 0]);
+
+  hero.playerStats.level = 4;
+  hero.build.locked = true;
+  hero.build.fightingStyle = 'dueling';
+  hero.build.archetype = 'champion';
+  assert.equal(applyCustomization(hero, { kind: 'improve', improvement: { stats: { strength: 1, dexterity: 1 } } }), true);
+  assert.deepEqual(news()[0], ['improve', 'STR +1, DEX +1', 0, 0]);
+  hero.playerStats.level = 6;
+  assert.equal(applyCustomization(hero, { kind: 'improve', improvement: { feat: 'tough' } }), true);
+  assert.deepEqual(news()[0], ['feat', 'Tough', 0, 0]);
+  assert.equal(applyCustomization(hero, { kind: 'improve', improvement: { feat: 'tough' } }), false);
+  assert.deepEqual(news(), [], 'a refused choice is not written');
+  const caster = playerAt(5, 3, 'fighter');
+  caster.playerStats.level = 3;
+  assert.equal(applyCustomization(caster, { kind: 'archetype', archetype: 'battle_master' }), true);
+  assert.equal(news()[0][0], 'archetype');
+
+  const goblin = mobAt(level, 'goblin', 8, 3);
+  goblin.lastHitBy = world.id(hero);
+  goblin.health.current = 0;
+  updateDeath(level);
+  const [slain] = news();
+  assert.deepEqual([slain[0], slain[1]], ['slain', 'Goblin'], 'the kill is the hero\'s');
+  const hunter = mobAt(level, 'orc', 9, 3);
+  hero.lastHitBy = world.id(hunter);
+  hero.health.current = 0;
+  updateDeath(level);
+  assert.deepEqual(news()[0].slice(0, 2), ['slain', 'Evincars'], 'and so is the hero\'s fall to the orc');
+  assert.ok(seen.some((e) => e.actor === 'mob' && e.name === 'orc'), 'written under the orc');
+
+  const state = JSON.parse(JSON.stringify(captureWorld(false, 3)));
+  validateNetState(state);
+  assert.ok(currentLog().entries.length <= MAX_LOG_ENTRIES);
+  state.entities.find((e) => e.data.combatLog).data.combatLog.entries.find((e) => e.event).event = 'cheat';
+  assert.equal(attempt(() => validateNetState(state)).ok, false, 'an unknown event is refused');
+});
+
 test('the combat log names who struck and how it went, and reaches guests checked', async () => {
   const { currentLog, MAX_LOG_ENTRIES } = await load('systems/CombatLogSystem');
   const level = arena(12, 6);
@@ -3177,7 +3255,7 @@ const rollerOf = (d20, other = 4) => {
   return (sides) => (sides === 20 ? (queue.length ? queue.shift() : 1) : other);
 };
 
-test('two-weapon fighting: a light weapon in each hand lands a second blow, with the ability modifier only for the style', async () => {
+test('two-weapon fighting: a weapon in each hand lands a second attack, with the ability modifier only for the style', async () => {
   const { offHandAttack, characterSheet } = await load('rules/CharacterSheet');
   const { CLASSES } = await load('rules/Classes');
   const mods = { strength: 3, dexterity: 1, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 };
@@ -3188,8 +3266,10 @@ test('two-weapon fighting: a light weapon in each hand lands a second blow, with
   const magic = { primary: weaponItem('shortsword'), secondary: weaponItem('dagger', 1) };
   assert.equal(offHandAttack(magic, mods, 1, CLASSES.fighter, true, null).damage.bonus, 1, 'the magic bonus stays');
   assert.equal(offHandAttack(both, { ...mods, strength: -1, dexterity: -1 }, 1, CLASSES.fighter, true, null).damage.bonus, -1, 'a penalty always counts');
-  assert.equal(offHandAttack({ primary: weaponItem('longsword'), secondary: weaponItem('dagger') }, mods, 1, CLASSES.fighter), null, 'the first weapon must be light');
-  assert.equal(offHandAttack({ primary: weaponItem('dagger'), secondary: weaponItem('rapier') }, mods, 1, CLASSES.fighter), null, 'so must the second');
+  assert.equal(offHandAttack({ primary: weaponItem('longsword'), secondary: weaponItem('dagger') }, mods, 1, CLASSES.fighter).base, 'dagger', 'any melee weapon in the first hand');
+  assert.equal(offHandAttack({ primary: weaponItem('dagger'), secondary: weaponItem('rapier') }, mods, 1, CLASSES.fighter).base, 'rapier', 'and in the second');
+  assert.equal(offHandAttack({ primary: weaponItem('greatsword'), secondary: weaponItem('dagger') }, mods, 1, CLASSES.fighter), null, 'a two-handed weapon needs both hands');
+  assert.equal(offHandAttack({ primary: weaponItem('dagger'), secondary: weaponItem('greatsword') }, mods, 1, CLASSES.fighter), null, 'either way round');
   assert.equal(offHandAttack({ primary: weaponItem('dagger'), secondary: { type: 'shield', name: 's', value: 1, gear: 'offhand', base: 'shield' } }, mods, 1, CLASSES.fighter), null, 'a shield is no weapon');
   assert.equal(offHandAttack({ primary: weaponItem('hand_crossbow'), secondary: weaponItem('dagger') }, mods, 1, CLASSES.fighter), null, 'melee only');
   const hero = playerAt(2, 2, 'fighter');
@@ -3220,7 +3300,7 @@ test('two-weapon fighting is one of six styles, and a hero cannot take the same 
   assert.equal(Build.validBuild({ ...hero.build, extraStyle: 'dueling' }), false, 'a build may not name one style twice');
 });
 
-test('Extra Attack: a swing strikes two, three and four times as the fighter levels, and an off-hand blow comes last', async () => {
+test('Extra Attack: a swing strikes two, three and four times as the fighter levels', async () => {
   const { attacksPerAction } = await load('rules/CharacterSheet');
   const { CLASSES } = await load('rules/Classes');
   const { updateCombatTimers } = await load('systems/CombatSystem');
@@ -3255,8 +3335,8 @@ test('Extra Attack: a swing strikes two, three and four times as the fighter lev
   hero.playerInput.intents.attack = true;
   beginPerception();
   updateSword();
-  assert.deepEqual([hero.swordSwing.blows, hero.swordSwing.offHand], [3, true], 'two blows and the one from the second hand');
-  assert.ok(hero.swordCooldown >= 3 * 12 - 1, 'the cooldown covers the whole chain');
+  assert.deepEqual([hero.swordSwing.blows, hero.swordSwing.offHand], [2, true], 'two blows, the first made with both weapons');
+  assert.equal(hero.swordCooldown, 60, 'the whole chain fits in the second');
 });
 
 test('Extra Attack: a bow looses a volley, one arrow after another', () => {
@@ -3269,15 +3349,109 @@ test('Extra Attack: a bow looses a volley, one arrow after another', () => {
   const arrows = () => world.entities.filter((e) => e.projectile?.arrow).length;
   assert.equal(arrows(), 1);
   assert.equal(hero.volley, 1, 'one more is to follow');
-  for (let t = 0; t < 8; t++) updateArrows();
-  assert.equal(arrows(), 2, 'the second arrow follows a few ticks later');
+  for (let t = 0; t < 29; t++) updateArrows();
+  assert.equal(arrows(), 1, 'the second arrow waits for its half of the second');
+  updateArrows();
+  assert.equal(arrows(), 2, 'and follows 30 ticks after the first');
   assert.equal(hero.volley, 0);
+  assert.ok(hero.arrowCooldown > 0, 'the next volley is still a second off');
   hero.arrowCooldown = 0;
   hero.playerStats.level = 1;
   hero.playerInput.intents.attack = true;
   updateArrows();
   assert.equal(arrows(), 3);
   assert.equal(hero.volley, 0, 'a level-1 fighter shoots a single arrow');
+});
+
+test('attacks come once a second however hard the key is spammed, and Extra Attack fits its blows inside that second', async () => {
+  const { updateCombatTimers } = await load('systems/CombatSystem');
+  const run = (hero, ticks) => {
+    const dummy = createTrainingDummy(centre(4.7), centre(2));
+    hero.position.x = centre(4);
+    hero.position.y = centre(2);
+    const starts = [];
+    const lands = [];
+    let seen = currentLog()?.seq ?? 0;
+    for (let t = 0; t < ticks; t++) {
+      hero.playerInput.intents.attack = true;
+      beginPerception();
+      updateSword();
+      updateCombatTimers();
+      if (hero.swordCooldown === 60) starts.push(t);
+      const seq = currentLog()?.seq ?? 0;
+      for (; seen < seq; seen++) lands.push(t);
+    }
+    world.remove(dummy);
+    return { starts, lands };
+  };
+  for (const [level, blows] of [[1, 1], [5, 2], [11, 3], [20, 4]]) {
+    const hero = heroWith('champion', level);
+    const { starts, lands } = run(hero, 125);
+    assert.deepEqual(starts, [0, 60, 120], `level ${level}: a swing every 60 ticks`);
+    assert.equal(lands.filter((t) => t < 60).length, blows, `level ${level}: ${blows} attacks within the first second`);
+    assert.equal(lands.filter((t) => t >= 60 && t < 120).length, blows, `level ${level}: and within the next`);
+    assert.ok(Math.max(...lands.filter((t) => t < 60)) < 60 && Math.min(...lands.filter((t) => t >= 60)) >= 60, 'none spills over into the next second');
+    world.remove(hero);
+  }
+});
+
+test('with a melee weapon in each hand one click makes an attack with each, rolled and dealt on their own', async () => {
+  const { updateCombatTimers } = await load('systems/CombatSystem');
+  const { characterSheet } = await load('rules/CharacterSheet');
+  const hero = heroWith('champion', 1);
+  hero.equipped = { primary: weaponItem('longsword'), secondary: weaponItem('dagger') };
+  const dummy = createTrainingDummy(centre(4.7), centre(2));
+  hero.position.x = centre(4);
+  hero.position.y = centre(2);
+  const rolled = [];
+  useDieRoller((sides) => {
+    rolled.push(sides);
+    return sides === 20 ? 15 : Math.min(sides, 3);
+  });
+  const sheet = characterSheet(hero);
+  assert.equal(sheet.attacks + (sheet.offHand ? 1 : 0), 2, 'two attacks at level 1');
+  const before = currentLog()?.seq ?? 0;
+  hero.playerInput.intents.attack = true;
+  for (let t = 0; t < 60; t++) {
+    beginPerception();
+    updateSword();
+    updateCombatTimers();
+  }
+  const entries = currentLog().entries.filter((e) => e.seq > before);
+  assert.equal(entries.length, 2, 'both weapons swing for the one click');
+  assert.equal(hero.rollLog.length, 4, 'and both show over the hero head: a roll to hit and a result each');
+  assert.equal(entries.map((e) => e.result).join(), 'hit,hit', 'the second hits although the first just struck');
+  assert.equal(dummy.health.current, dummy.health.max - entries[0].damage - entries[1].damage, 'and both damage rolls count');
+  assert.ok(rolled.filter((sides) => sides === 20).length >= 2, 'each rolls its own d20');
+  assert.ok(rolled.includes(8) && rolled.includes(4), 'the longsword rolls its d8 and the dagger its d4');
+  assert.deepEqual(entries.map((e) => e.damage), [3 + sheet.attack.damage.bonus, 3 + sheet.offHand.damage.bonus], 'each deals its own damage');
+  world.remove(dummy);
+  world.remove(hero);
+});
+
+test('an enemy attacks once a second, and a hit that interrupts its swing does not shorten the wait', async () => {
+  const { updateCombatTimers } = await load('systems/CombatSystem');
+  const { hitMob } = await load('systems/Hits');
+  const level = arena(12, 6);
+  const player = playerAt(6, 3);
+  player.godMode = true;
+  const orc = mobAt(level, 'orc', 5.4, 3);
+  useDieRoller(() => 1);
+  const lands = [];
+  let seen = currentLog()?.seq ?? 0;
+  for (let t = 0; t < 200; t++) {
+    beginPerception();
+    updateCombatTimers();
+    updateContactDamage(level);
+    const seq = currentLog()?.seq ?? 0;
+    for (; seen < seq; seen++) lands.push(t);
+    if (t === 70) hitMob(orc, player, 1);
+  }
+  assert.ok(lands.length >= 2, 'it keeps swinging');
+  for (let i = 1; i < lands.length; i++) assert.ok(lands[i] - lands[i - 1] >= 60, 'never twice within a second');
+  assert.equal(lands[1] - lands[0], 60, 'exactly a second apart');
+  world.remove(orc);
+  world.remove(player);
 });
 
 test('critical hits: a d20 of the critical range always hits and doubles the dice; a Champion widens the range', async () => {

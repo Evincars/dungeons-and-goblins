@@ -174,7 +174,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   Items name their rules entry with `base` and their magic with `bonus` (+0…+3) in `src/data/*.json`. Every blow
   in play goes through `systems/Strike.ts`, which logs the roll over the attacker's head (`RollLogSystem.ts`,
   drawn by `RollTextSystem.ts`) and into the level's combat log (`CombatLogSystem.ts`, one synced entity, shown by
-  `ui/CombatLogPanel.ts`), and spends a won initiative's first strike as advantage (`systems/InitiativeSystem.ts`).
+  `ui/CombatLogPanel.ts`; `recordEvent` also writes rests, healing, kills, levels and level-panel choices, `LOG_EVENTS` in `world.ts`), and spends a won initiative's first strike as advantage (`systems/InitiativeSystem.ts`).
   Spells (`Spells.ts`, from `src/data/spells.json`: bolt, missiles, burst with a save, heal) have no slots but a
   recovery each (`spellbook.recovery`), sit on the quick bar (two rows of ten: Q R T 1–5 X C cast the first row's squares,
   Shift with them the second, whose squares hold the active class features until bound; `playerInput.spellSlot`) and are cast by
@@ -186,8 +186,9 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   level and a click switches it off and on (`featuresOff`, the `toggle_feature` command; `featureOn` is what effects ask, and the
   HUD's top left lists the ones on, `ui/PassiveHud.ts`); an active (Second Wind, Action Surge…) is bound to a quick-bar square as
   `feature:<id>` and used with the cast key (`systems/FeatureSystem.ts`; an active with several uses recovers in its share, `featureCooldown`).
-  A swing is a chain of blows (`swordSwing.blow`/`blows`: Extra Attack, then the off-hand weapon's, `systems/SwordSystem.ts`); a bow looses a
-  volley (`volley`, `ArrowSystem.ts`). The Fighter's Martial Archetype (`rules/Archetypes.ts`, taken at level 3 in the level panel,
+  A swing is a chain of blows (`swordSwing.blow`/`blows`: Extra Attack; the first blow also strikes with the off-hand weapon, `systems/SwordSystem.ts`); a bow looses a
+  volley (`volley`, `ArrowSystem.ts`). Every attack, the heroes' (`swordCooldown`, `arrowCooldown`) and the enemies' (`attackCooldown`),
+  comes once an `ATTACK_PERIOD` (60 ticks, `entities/WeaponStats.ts`), with the blows of a chain or volley spread inside it. The Fighter's Martial Archetype (`rules/Archetypes.ts`, taken at level 3 in the level panel,
   `ui/LevelChoices.ts`) gates features by `needs` in `features.json`: the Champion's critical range and Survivor, the Battle Master's
   superiority dice and maneuvers (`rules/Maneuvers.ts`, `systems/ManeuverSystem.ts`: a maneuver is readied from the quick bar and
   spends a die on the blow or the enemy blow it waits for, `Reactions.ts` for Parry and Riposte; marks on foes are the `status` component),

@@ -5,6 +5,7 @@ import { characterSheet } from '../rules/CharacterSheet';
 import { superioritySides } from '../rules/Maneuvers';
 import { diceLeft, spendDie } from './ManeuverSystem';
 import { logLine } from './RollLogSystem';
+import { recordEvent } from './CombatLogSystem';
 import { strike } from './Strike';
 import { hitMob } from './Hits';
 
@@ -26,6 +27,7 @@ export function parried(hero: Player, damage: number): number {
   const reduction = spendDie(hero) + characterSheet(hero).modifiers.dexterity;
   world.removeComponent(hero, 'maneuver');
   logLine(hero, text('roll.parry', { amount: Math.max(0, reduction) }), 'hit');
+  recordEvent(hero, 'parry', { amount: Math.min(damage, Math.max(0, reduction)) });
   return Math.max(0, damage - Math.max(0, reduction));
 }
 
@@ -36,6 +38,7 @@ export function riposted(hero: Player, foe: Entity): void {
   spendDie(hero);
   world.removeComponent(hero, 'maneuver');
   logLine(hero, text('roll.riposte'), 'crit');
+  recordEvent(hero, 'riposte');
   const attack = characterSheet(hero).attack;
   const outcome = strike(foe, attack.extra ? attack : { ...attack, extra: { count: 1, sides, bonus: 0 } }, hero);
   if (outcome.hit) hitMob(foe, hero, outcome.damage);

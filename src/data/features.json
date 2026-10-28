@@ -13,7 +13,7 @@
       { "id": "great_weapon_fighting", "name": "Great Weapon Fighting", "level": 1, "kind": "info", "worked": true, "needs": "great_weapon_fighting",
         "description": "Your fighting style: when you roll a 1 or a 2 on a damage die with a melee weapon held in two hands (a two-handed or versatile weapon), you roll that die again and must use the new roll." },
       { "id": "two_weapon_fighting", "name": "Two-Weapon Fighting", "level": 1, "kind": "info", "worked": true, "needs": "two_weapon_fighting",
-        "description": "Your fighting style: when you fight with a light melee weapon in each hand, you add your ability modifier to the damage of the second attack." },
+        "description": "Your fighting style: when you fight with a weapon in each hand, you add your ability modifier to the damage of the second attack." },
       { "id": "protection", "name": "Protection", "level": 1, "kind": "passive", "worked": true, "needs": "protection",
         "description": "While you carry a shield, an enemy's attack on an ally within 5 feet of you is rolled with disadvantage. It needs 5 seconds to recover." },
       { "id": "second_wind", "name": "Second Wind", "level": 1, "kind": "active", "worked": true, "cooldown": 30,

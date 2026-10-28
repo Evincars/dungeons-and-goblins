@@ -16,9 +16,9 @@ import type { TextId } from '../core/texts';
 import { queueAnswer } from './Party';
 import { setSeatPaused } from './Pause';
 import { chooseLoot } from './LootRoll';
-import { applyCustomization } from './Customize';
-import { canBind } from '../rules/Spellbook';
-import { bindingFeatureId, canToggle } from '../rules/ClassFeatures';
+import { applyCustomization, isCustomizeCommand } from './Customize';
+import { canBind, spellListOf } from '../rules/Spellbook';
+import { bindingFeatureId, canToggle, hasClassFeature } from '../rules/ClassFeatures';
 import { heroClass } from '../rules/Classes';
 import { chooseDeparture } from '../systems/ExitSystem';
 
@@ -305,9 +305,11 @@ export function mayPrepare(player: Player, spell: string): boolean {
 
 /** Puts a spell, cast at a level, on a quick-bar square if the hero has learnt it, may cast it there and is in a safe room. */
 export function bindSpell(player: Player, slot: number, spell: string, level: number): boolean {
-  const cls = heroClass(player.heroClass).dndClass;
+  const list = spellListOf(heroClass(player.heroClass).dndClass, player.build);
   if (!Number.isInteger(slot) || slot < 0 || slot >= QUICK_SLOTS || !mayPrepare(player, spell)) return false;
-  if (!canBind(cls, player.playerStats.level, spell, level)) return false;
+  if (!canBind(list, player.playerStats.level, spell, level, player.build?.spells)) return false;
+  const feature = bindingFeatureId(spell);
+  if (feature !== null && !hasClassFeature(player, feature)) return false;
   const book = player.spellbook ?? (player.spellbook = { recovery: Array.from({ length: QUICK_SLOTS }, () => 0) });
   const bound = Array.from({ length: QUICK_SLOTS }, (_, i) => book.bound?.[i] ?? null);
   bound[slot] = { spell, level };
@@ -354,7 +356,7 @@ export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): voi
     dropItem(player, command.from);
     return;
   }
-  if (command.kind === 'scores' || command.kind === 'fighting_style' || command.kind === 'improve' || command.kind === 'lock_build') {
+  if (isCustomizeCommand(command)) {
     applyCustomization(player, command);
     return;
   }

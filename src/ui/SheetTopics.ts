@@ -2,7 +2,7 @@ import type { StatName } from '../world';
 import { text } from '../core/texts';
 import { statDescription, statName, statShort } from '../entities/Items';
 import type { CharacterSheet } from '../rules/CharacterSheet';
-import { formatDamage, formatDice, formatModifier } from '../rules/Dice';
+import { NATURAL_CRIT, formatDamage, formatDice, formatModifier } from '../rules/Dice';
 import { armorName, damageTypeName, dndClassName, featureName, fightingStyleName, trainingName, weaponName } from '../rules/Names';
 import { BASE_SPEED_FT } from '../rules/CharacterSheet';
 import type { TipTopic } from './InfoTooltip';
@@ -50,7 +50,19 @@ export function damageTopic(sheet: CharacterSheet): TipTopic {
   detail.push(text('sheet.dmg.total', { dice: formatDamage(attack.damage, attack.extra) }));
   detail.push(text('sheet.dmg.to_hit', { bonus: formatModifier(attack.attackBonus), proficiency: formatModifier(attack.proficiency) }));
   if (attack.mode === 'disadvantage') detail.push(text('sheet.dmg.disadvantage'));
+  if (attack.critFrom < NATURAL_CRIT) detail.push(text('sheet.dmg.crit', { from: attack.critFrom }));
+  if (sheet.attacks > 1) detail.push(text('sheet.dmg.attacks', { count: sheet.attacks }));
+  detail.push(...offHandLines(sheet));
+  if (sheet.battleMaster) detail.push(text('sheet.dmg.maneuver_dc', { dc: sheet.maneuverDc }));
   return { title: text('sheet.dmg.name'), body: text('sheet.dmg.description'), detail };
+}
+
+/** The second hand's blow of two-weapon fighting: its weapon, damage and to-hit. */
+function offHandLines(sheet: CharacterSheet): string[] {
+  const off = sheet.offHand;
+  if (!off) return [];
+  const name = off.item?.name ?? weaponName(off.base);
+  return [text('sheet.dmg.off_hand', { name, dice: formatDamage(off.damage, off.extra) }), text('sheet.dmg.off_hand_hit', { bonus: formatModifier(off.attackBonus) })];
 }
 
 /** Armour training: what it means, and whether what is worn now is covered. */

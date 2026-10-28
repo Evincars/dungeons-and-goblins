@@ -1,3 +1,5 @@
+import { DND_CLASSES } from './DndClasses';
+import type { DndClass } from './DndClasses';
 import { isSpellId } from './Spells';
 import type { SpellId } from './Spells';
 import { STAT_NAMES, isStatName } from '../world';
@@ -31,8 +33,8 @@ export const HERO_CLASSES = ['fighter', 'wizard', 'rogue', 'warlock', 'bard', 'f
 export type HeroClassId = (typeof HERO_CLASSES)[number];
 
 /** The D&D classes the heroes belong to. */
-export const DND_CLASSES = ['fighter', 'wizard', 'rogue', 'warlock', 'bard', 'cleric'] as const;
-export type DndClass = (typeof DND_CLASSES)[number];
+export { DND_CLASSES };
+export type { DndClass };
 const isDndClass = (v: unknown): v is DndClass => DND_CLASSES.some((c) => c === v);
 
 export function isHeroClassId(value: unknown): value is HeroClassId {

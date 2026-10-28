@@ -4,6 +4,7 @@ import { formatDamage } from '../rules/Dice';
 import { damageTypeName } from '../rules/Names';
 import { spellStats } from '../rules/Spellbook';
 import { SPELLS, isSpellId } from '../rules/Spells';
+import { featureCooldown, featureUses } from '../rules/ClassFeatures';
 import type { FeatureDef } from '../rules/ClassFeatures';
 import type { CatalogSpell } from '../rules/Spellbook';
 
@@ -105,12 +106,17 @@ export function spellTopic(spell: CatalogSpell, castLevel: number, heroLevel: nu
   return { title: spell.name, body: shortText(spell.description), detail, more };
 }
 
-/** The tooltip of a class feature: what it is, when it came, and what a click does with it. */
-export function featureTopic(feature: FeatureDef, switchedOff: boolean): TipTopic {
+/** Seconds as the tooltip writes them: whole when they are, else a tenth. */
+const seconds = (value: number): string => (Number.isInteger(value) ? String(value) : value.toFixed(1));
+
+/** The tooltip of a class feature at the hero's level: what it is, when it came, and what a click does with it. */
+export function featureTopic(feature: FeatureDef, switchedOff: boolean, heroLevel: number): TipTopic {
   const detail = [text('feature.tip.level', { level: feature.level })];
+  const uses = featureUses(feature, heroLevel);
   if (feature.kind === 'passive' && feature.worked) detail.push(text(switchedOff ? 'feature.tip.passive_off' : 'feature.tip.passive_on'));
-  else if (feature.kind === 'active') detail.push(text('feature.tip.active', { seconds: feature.cooldown }));
+  else if (feature.kind === 'active') detail.push(text('feature.tip.active', { seconds: seconds(featureCooldown(feature, heroLevel)) }));
   else if (feature.kind === 'info') detail.push(text('feature.tip.info'));
+  if (uses > 1) detail.push(text('feature.tip.uses', { uses }));
   if (feature.kind !== 'info' && !feature.worked) detail.push(text('feature.tip.unworked'));
   return { title: feature.name, body: feature.description, detail, wide: true };
 }

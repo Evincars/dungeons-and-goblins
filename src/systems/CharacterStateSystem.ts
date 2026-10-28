@@ -3,7 +3,7 @@ import type { Entity } from '../world';
 import { characterDef, stateClip } from '../characters/Characters';
 import type { CharacterComponent } from '../characters/Characters';
 import type { CharacterDef, CharacterState } from '../characters/CharacterDef';
-import { STATE_PRIORITY, TRIGGERS, sameSwing, stillTriggered } from '../characters/StateTriggers';
+import { STATE_PRIORITY, TRIGGERS, isSwing, sameSwing, stillTriggered } from '../characters/StateTriggers';
 
 const rank = (state: CharacterState): number => STATE_PRIORITY.indexOf(state);
 
@@ -22,11 +22,29 @@ function wantedState(def: CharacterDef, c: CharacterComponent, entity: Entity): 
   return 'idle';
 }
 
+/** Each blow of a chain starts the swing clip over (Extra Attack, the off-hand blow). */
+function restartOnNewBlow(c: CharacterComponent, entity: Entity): void {
+  const blow = entity.swordSwing?.blow;
+  if (blow === c.blow) return;
+  c.blow = blow;
+  if (blow !== undefined && isSwing(c.state)) restartClip(c);
+}
+
+/** The clip plays again from its first frame. */
+function restartClip(c: CharacterComponent): void {
+  c.frame = 0;
+  c.timer = 0;
+  c.finished = false;
+  c.spent = undefined;
+}
+
 /** Picks each character's animation state from what the rest of the simulation says it is doing. */
 export function updateCharacterState(): void {
   for (const entity of q.characters) {
     const c = entity.character;
     const def = characterDef(c.def);
+
+    restartOnNewBlow(c, entity);
 
     // A one-shot that already played out stays off until its trigger lets go, so it can't replay.
     if (c.spent && !stillTriggered(c.spent, entity)) c.spent = undefined;

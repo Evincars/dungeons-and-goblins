@@ -1,14 +1,16 @@
 import { world, q, isTarget, QUICK_SLOTS } from '../world';
 import type { Entity, Player, SpellEffect } from '../world';
 import type { Level } from '../level/Level';
-import { hitMob } from './SwordSystem';
+import { bonusSwing, hitMob } from './SwordSystem';
+import { bonusShot, holdsBow } from './ArrowSystem';
+import { spellSaveMode } from './ManeuverSystem';
 import { strike } from './Strike';
 import { logHeal, logLine, logSave, logSpellDamage } from './RollLogSystem';
 import { recordSpell } from './CombatLogSystem';
 import { characterSheet } from '../rules/CharacterSheet';
 import type { CharacterSheet } from '../rules/CharacterSheet';
 import { heroClass, spellLevelFor } from '../rules/Classes';
-import { bindingFeatureId, featureOn, featureOfClass, hasClassFeature } from '../rules/ClassFeatures';
+import { bindingFeatureId, featureCooldown, featureOn, featureOfClass, hasClassFeature } from '../rules/ClassFeatures';
 import { usedFeature } from './FeatureSystem';
 import { SPELLS, TICKS_PER_SECOND, isSpellId } from '../rules/Spells';
 import { castDef, quickBinding } from '../rules/Spellbook';
@@ -93,8 +95,11 @@ function refuse(caster: Player, line: string): void {
   caster.castCooldown = FEEDBACK_TICKS;
 }
 
+/** What is said when a feature can't be used. */
+const FEATURE_REFUSALS = { unworked: 'roll.feature_unworked', no_dice: 'roll.no_dice_left', no_ally: 'roll.no_ally' } as const;
+
 /** The cast key on a class feature: it is used at once if the hero has it, it is worked and its square has recovered. */
-function startFeature(caster: Player, id: string): void {
+function startFeature(caster: Player, id: string, level: Level): void {
   const slot = caster.playerInput.spellSlot;
   const def = featureOfClass(heroClass(caster.heroClass).dndClass, id);
   if (!def || def.kind !== 'active' || !hasClassFeature(caster, id)) {
@@ -107,22 +112,23 @@ function startFeature(caster: Player, id: string): void {
     refuse(caster, text('roll.spell_recovering', { seconds: (left / TICKS_PER_SECOND).toFixed(1) }));
     return;
   }
-  if (!usedFeature(caster, id, slot)) {
-    refuse(caster, text('roll.feature_unworked'));
+  const result = usedFeature(caster, id, slot, level);
+  if (result !== 'ok') {
+    refuse(caster, text(FEATURE_REFUSALS[result]));
     return;
   }
-  book.recovery[slot] = Math.round(def.cooldown * TICKS_PER_SECOND);
+  book.recovery[slot] = Math.round(featureCooldown(def, caster.playerStats.level) * TICKS_PER_SECOND);
   caster.castCooldown = SPELL_STATS.cooldown;
 }
 
 /** The cast key: the spell picked starts (its recovery runs from now), or the caster says why it can't. */
-function startCast(caster: Player): void {
+function startCast(caster: Player, level: Level): void {
   if (!caster.playerInput.intents.cast || !canCast(caster)) return;
   const binding = chosenBinding(caster);
   if (!binding && !heroClass(caster.heroClass).spells.length) return;
   const featureId = binding ? bindingFeatureId(binding.spell) : null;
   if (featureId) {
-    startFeature(caster, featureId);
+    startFeature(caster, featureId, level);
     return;
   }
   // Spells of the wider lists are bound but not worked yet: only those in src/data/spells.json go off.
@@ -191,7 +197,7 @@ function burstCentre(caster: Player, def: SpellDef, targetX: number, targetY: nu
 /** One foe caught in a burst saves against the spell DC: a failure takes all the damage, a success half. */
 function burstHits(caster: Player, def: SpellDef, foe: Entity, dc: number): void {
   const modifier = foe.mobType ? MONSTERS[foe.mobType].modifiers[def.save] : 0;
-  const save = rollCheck(modifier, dc);
+  const save = rollCheck(modifier, dc, spellSaveMode(foe));
   const rolled = Math.max(MIN_HIT_DAMAGE, rollDice(def.damage));
   const damage = save.success ? Math.floor(rolled / 2) : rolled;
   logSave(foe, save.total, save.success);
@@ -231,6 +237,13 @@ function castHeal(caster: Player, def: SpellDef): void {
   recordSpell(caster, def.id, 'heal', healed);
 }
 
+/** War Magic (a cantrip) and Improved War Magic (any spell): a weapon attack follows the cast at once. */
+function warMagic(caster: Player, spell: SpellDef): void {
+  if (!featureOn(caster, 'improved_war_magic') && !(spell.level === 0 && featureOn(caster, 'war_magic'))) return;
+  if (holdsBow(caster)) bonusShot(caster);
+  else bonusSwing(caster);
+}
+
 /** The cast reaches its release frame: the spell goes off, by its kind. */
 function release(caster: Player, cast: NonNullable<Entity['casting']>): void {
   const base = cast.spell ? SPELLS[cast.spell] : null;
@@ -241,15 +254,16 @@ function release(caster: Player, cast: NonNullable<Entity['casting']>): void {
   else if (def.kind === 'burst') castBurst(caster, def, cast.targetX ?? caster.position.x, cast.targetY ?? caster.position.y);
   else castHeal(caster, def);
   sound.playSound(SPELL_SOUNDS[def.id], caster.position.x, caster.position.y);
+  warMagic(caster, base);
 }
 
 /** Starts a cast toward the crosshair, or plays the one under way and lets it go on its release frame. */
-function updateCaster(caster: Player): void {
+function updateCaster(caster: Player, level: Level): void {
   if ((caster.castCooldown ?? 0) > 0) caster.castCooldown = (caster.castCooldown ?? 0) - 1;
   recover(caster);
   const cast = caster.casting;
   if (!cast) {
-    startCast(caster);
+    startCast(caster, level);
     return;
   }
   cast.ticks++;
@@ -303,7 +317,7 @@ function flyBolt(level: Level, bolt: Bolt): void {
 /** Casting (right mouse / R) toward the crosshair, and flying spell bolts and arrows. */
 export function updateSpells(level: Level): void {
   for (const caster of q.players) {
-    updateCaster(caster);
+    updateCaster(caster, level);
   }
   for (const bolt of bolts) {
     if (!bolt.removed) flyBolt(level, bolt);

@@ -14,6 +14,7 @@ import { characterSheet, monsterAttack } from '../rules/CharacterSheet';
 import { MIN_HIT_DAMAGE } from '../rules/Combat';
 import { strike } from './Strike';
 import { protectFrom } from './ProtectionSystem';
+import { parried, riposted } from './Reactions';
 
 const PLAYER_HURT_TIME = 25;
 const PLAYER_FREEZE_TIME = 15;
@@ -105,8 +106,21 @@ function mobStrike(mob: Entity, player: Player): void {
   }
   const attack = monsterAttack(mob.mobType, mob.mobWeapon);
   const outcome = strike(player, protectFrom(player) ? { ...attack, mode: 'disadvantage' } : attack, mob);
-  if (outcome.hit) hurtPlayer(player, mob, outcome.damage);
+  if (outcome.hit) landBlow(player, mob, outcome.damage);
+  else missBlow(player, mob);
+}
+
+/** The blow got past the Armor Class: a readied Parry may take some of it off. */
+function landBlow(player: Player, mob: Entity, damage: number): void {
+  const dealt = parried(player, damage);
+  if (dealt > 0) hurtPlayer(player, mob, dealt);
   else sound.playSound(turnedAside(player), player.position.x, player.position.y);
+}
+
+/** The blow was turned aside: a readied Riposte answers it. */
+function missBlow(player: Player, mob: Entity): void {
+  sound.playSound(turnedAside(player), player.position.x, player.position.y);
+  riposted(player, mob);
 }
 
 /**
@@ -159,8 +173,10 @@ export function hurtPlayer(player: Entity, source: Entity, damage: number): void
   if (!h || player.godMode || player.falling || player.respawnTicks !== undefined || h.current <= 0) return;
 
   const finalDamage = Math.max(MIN_HIT_DAMAGE, Math.round(damage));
+  const absorbed = Math.min(player.tempHealth ?? 0, finalDamage);
+  if (absorbed > 0) player.tempHealth = (player.tempHealth ?? 0) - absorbed;
 
-  h.current = Math.max(0, h.current - finalDamage);
+  h.current = Math.max(0, h.current - (finalDamage - absorbed));
   stagger(player, source);
 
   if (player.position) sound.playSound('hurt', player.position.x, player.position.y);

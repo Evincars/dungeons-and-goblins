@@ -100,7 +100,9 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   playerStats: { level: 'number', exp: 'number', gold: 'number', swordTier: 'number', hitDice: 'number',
     sprinting: 'boolean', sprint: 'number', maxSprint: 'number', sprintLocked: 'boolean', kills: 'number', goldEarned: 'number',
     lootBonus: 'number' },
-  swordSwing: { delay: 'number', ticks: 'number', dirX: 'number', dirY: 'number', range: 'number', hitIds: 'object' },
+  swordSwing: { delay: 'number', ticks: 'number', dirX: 'number', dirY: 'number', range: 'number', hitIds: 'object', blow: 'number', blows: 'number', offHand: 'boolean' },
+  maneuver: { id: 'string', ticks: 'number', bonus: 'number' },
+  status: { prone: 'number', frightened: 'number', goaded: 'number', distracted: 'number', eldritch: 'number', by: 'number' },
   loot: { value: 'number', kind: 'number', velX: 'number', velY: 'number', suckRadius: 'number', glide: 'number', age: 'number', life: 'number' },
   item: { type: 'string', name: 'string', value: 'number' },
   chest: { opened: 'boolean', disappearTicks: 'number', drops: 'string' },
@@ -135,7 +137,8 @@ const VALUES: Readonly<Record<string, FieldType>> = {
   chasing: 'boolean', frame: 'number', yOffset: 'number', flashTime: 'number', healthBarOffset: 'number',
   mobType: 'string', castCooldown: 'number', swordCooldown: 'number', arrowCooldown: 'number', spawnedBy: 'number', stepTimer: 'number',
   dustTimer: 'number', respawnTicks: 'number', minimapColor: 'number', safeZone: 'boolean', inSafeRoom: 'boolean', playerSlot: 'string',
-  playerName: 'string', heroClass: 'string', mobWeapon: 'string', protectCooldown: 'number',
+  playerName: 'string', heroClass: 'string', mobWeapon: 'string', protectCooldown: 'number', survivorCooldown: 'number',
+  superiorityLeft: 'number', tempHealth: 'number', volley: 'number',
 };
 
 function hasType(v: unknown, type: FieldType): boolean {
@@ -226,6 +229,7 @@ function checkDetails(data: EntityState): void {
   ensure(!data.door || (Array.isArray(data.door.tiles) && data.door.tiles.length <= MAX_DOOR_TILES && data.door.tiles.every(isTile)), 'Invalid door');
   ensure(!data.swordSwing || isIntList(data.swordSwing.hitIds), 'Invalid sword swing');
   ensure(!data.build || validBuild(data.build), 'Invalid build');
+  ensure(!data.maneuver || isFeatureId(data.maneuver.id), 'Invalid maneuver');
   ensure(!data.spellbook || (isRecoveryList(data.spellbook.recovery) && (data.spellbook.bound === undefined || isBoundList(data.spellbook.bound))), 'Invalid spellbook');
   ensure(!data.casting?.spell || isSpellId(data.casting.spell), 'Invalid spell');
   ensure(!data.projectile?.spell || isSpellId(data.projectile.spell), 'Invalid spell');

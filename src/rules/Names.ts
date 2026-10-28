@@ -4,6 +4,7 @@ import type { WeaponBase, WeaponProperty, WeaponRule } from './WeaponTable';
 import type { DamageType } from './DamageTypes';
 import type { FightingStyleId } from './FightingStyles';
 import type { FeatId } from './Feats';
+import type { ArchetypeId } from './Archetypes';
 import type { ArmorTraining, ClassFeature, DndClass, HeroClassId, WeaponTraining } from './Classes';
 import type { SpellId } from './Spells';
 
@@ -57,6 +58,15 @@ export function fightingStyleName(style: FightingStyleId): string {
 
 export function fightingStyleDescription(style: FightingStyleId): string {
   return text(`style.${style}.description` as const);
+}
+
+/** A Fighter's Martial Archetype as the game calls it. */
+export function archetypeName(id: ArchetypeId): string {
+  return text(`archetype.${id}.name` as const);
+}
+
+export function archetypeDescription(id: ArchetypeId): string {
+  return text(`archetype.${id}.description` as const);
 }
 
 export function featName(feat: FeatId): string {

@@ -3,8 +3,9 @@ import type { Player, StatName } from '../world';
 import { coop } from '../network/CoopSession';
 import type { GuestCommand } from '../network/protocol';
 import { heroClass } from '../rules/Classes';
-import { baseScores, chooseFightingStyle, lockBuild, newBuild, saveBuild, setScores, takeImprovement } from '../rules/Build';
-import type { Improvement } from '../rules/Build';
+import { baseScores, chooseFightingStyle, lockBuild, newBuild, saveBuild, setScores, takeArchetype, takeExtraStyle, takeImprovement, takePicks } from '../rules/Build';
+import type { Improvement, LevelPicks } from '../rules/Build';
+import type { ArchetypeId } from '../rules/Archetypes';
 import type { FightingStyleId } from '../rules/FightingStyles';
 import { startingHitPoints } from '../rules/HitPoints';
 import type { Level } from '../level/Level';
@@ -16,7 +17,13 @@ import { run } from './Run';
  * a guest's screen only asks, and the host checks the request (the same pattern as the shop and rests).
  */
 
-export type CustomizeCommand = Extract<GuestCommand, { kind: 'scores' | 'fighting_style' | 'improve' | 'lock_build' }>;
+export const CUSTOMIZE_KINDS = ['scores', 'fighting_style', 'extra_style', 'archetype', 'pick', 'improve', 'lock_build'] as const;
+export type CustomizeCommand = Extract<GuestCommand, { kind: (typeof CUSTOMIZE_KINDS)[number] }>;
+
+/** Whether a guest's command is one of the choices of the level panel. */
+export function isCustomizeCommand(command: GuestCommand): command is CustomizeCommand {
+  return CUSTOMIZE_KINDS.some((kind) => kind === command.kind);
+}
 
 /** Host or alone: carries a customisation out for this player, if it is allowed. Returns whether it was. */
 export function applyCustomization(player: Player, command: CustomizeCommand): boolean {
@@ -24,6 +31,9 @@ export function applyCustomization(player: Player, command: CustomizeCommand): b
   const level = player.playerStats.level;
   const build = player.build ?? (player.build = newBuild(cls));
   if (command.kind === 'fighting_style') return chooseFightingStyle(cls, build, level, command.style);
+  if (command.kind === 'extra_style') return takeExtraStyle(cls, build, level, command.style);
+  if (command.kind === 'archetype') return takeArchetype(cls, build, level, command.archetype);
+  if (command.kind === 'pick') return command.level <= level && takePicks(cls, build, command.level, { maneuvers: command.maneuvers, spells: command.spells });
   if (command.kind === 'improve') return takeImprovement(cls, build, level, command.improvement);
   if (command.kind === 'lock_build') return saveBuild(cls, build, level);
   if (!setScores(build, level, command.scores)) return false;
@@ -51,6 +61,20 @@ export function requestScores(player: Player, scores: Record<StatName, number>):
 
 export function requestFightingStyle(player: Player, style: FightingStyleId): void {
   send(player, { kind: 'fighting_style', style });
+}
+
+/** A Champion's second fighting style, from the tab of the level that offers it. */
+export function requestExtraStyle(player: Player, style: FightingStyleId): void {
+  send(player, { kind: 'extra_style', style });
+}
+
+export function requestArchetype(player: Player, archetype: ArchetypeId): void {
+  send(player, { kind: 'archetype', archetype });
+}
+
+/** What the tab of `level` teaches: maneuvers, or an Eldritch Knight's cantrips and spells. */
+export function requestPicks(player: Player, level: number, picks: LevelPicks): void {
+  send(player, { kind: 'pick', level, ...picks });
 }
 
 /** The Save button: the starting choices become final. */

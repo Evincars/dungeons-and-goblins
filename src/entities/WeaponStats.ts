@@ -71,6 +71,8 @@ export type ArrowStats = {
   /** Ticks between shots, and how long the archer holds the release pose. */
   cooldown: number;
   drawTicks: number;
+  /** Ticks between the arrows of one volley (Extra Attack shoots several in a row). */
+  volleyGap: number;
   /** Arrows leave this far out from the archer's feet. */
   spawnOffset: number;
 };
@@ -80,6 +82,7 @@ export const ARROW_STATS = {
   life: 70,
   cooldown: 22,
   drawTicks: 12,
+  volleyGap: 8,
   spawnOffset: 10,
 } as const satisfies ArrowStats;
 

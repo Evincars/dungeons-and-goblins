@@ -1,14 +1,20 @@
 import { q, isActivePlayer } from '../world';
 import type { Player } from '../world';
+import type { Level } from '../level/Level';
 import { rollDice, dice } from '../rules/Dice';
+import { characterSheet } from '../rules/CharacterSheet';
+import { featureOn } from '../rules/ClassFeatures';
+import { readyManeuver } from './ManeuverSystem';
+import { isManeuver } from '../rules/Maneuvers';
 import { playEffect } from '../assets/Effects';
 import { AIM_HEIGHT } from '../entities/ProjectileFactory';
+import { overHole } from './HoleSystem';
 import { logHeal } from './RollLogSystem';
 
 /**
  * The active class features (rules/ClassFeatures.ts), used from the quick bar with the cast key. Each does its work
  * at once; the spell system spends the square's recovery. Only the features marked `worked` in src/data/features.json
- * come here.
+ * come here. The passive Survivor is kept up here too.
  */
 
 /** Second Wind heals 1d10 + the fighter's level. */
@@ -19,6 +25,17 @@ const PRESERVE_LIFE_PER_LEVEL = 5;
 const PRESERVE_LIFE_REACH = 288;
 /** Heals show this effect. */
 const HEAL_EFFECT = { shape: 'sparkle_ring', colour: 'green', scale: 1 } as const;
+/** Arcane Charge teleports up to 30 feet, in steps this long (px). */
+const ARCANE_CHARGE_REACH = 288;
+const ARCANE_CHARGE_STEP = 12;
+const ARCANE_CHARGE_EFFECT = { shape: 'sparkle_ring', colour: 'azure', scale: 1 } as const;
+/** Survivor mends the hero at the start of each of their turns: every 6 seconds. */
+const SURVIVOR_TICKS = 360;
+/** Survivor adds this much to the hero's Constitution modifier, in tabletop hit points. */
+const SURVIVOR_BASE = 5;
+
+/** What using a feature came to: done, or why it was not. */
+export type FeatureResult = 'ok' | 'unworked' | 'no_dice' | 'no_ally';
 
 /** Mends `target` by `amount` hit points (at most to `cap`) with the healing effect and the number over their head. */
 function mend(target: Player, amount: number, cap: number): number {
@@ -59,15 +76,71 @@ function preserveLife(hero: Player): void {
   }
 }
 
+/** A place a body can stand: not inside a wall at its feet, and not over a pit. */
+function standable(level: Level, hero: Player, x: number, y: number): boolean {
+  const rx = hero.radius?.x ?? 0;
+  if (level.blocksPoint(x, y) || level.blocksPoint(x - rx, y) || level.blocksPoint(x + rx, y)) return false;
+  return !overHole(level, { position: { x, y }, radius: hero.radius });
+}
+
 /**
- * The hero uses a feature: its effect happens now. Returns false for one the game does not play out yet (nothing
- * happens and nothing is spent). `slot` is the quick-bar square it was used from.
+ * Arcane Charge: with Action Surge the hero steps through the air up to 30 feet toward where they aim, as far as the
+ * way stays open (walls stop them short).
  */
-export function usedFeature(hero: Player, id: string, slot: number): boolean {
-  if (id === 'second_wind') secondWind(hero);
-  else if (id === 'action_surge' || id === 'arcane_recovery' || id === 'eldritch_master') readyTheBar(hero, slot);
-  else if (id === 'cunning_action') cunningAction(hero);
-  else if (id === 'channel_divinity') preserveLife(hero);
-  else return false;
-  return true;
+function arcaneCharge(hero: Player, level: Level): void {
+  const aim = hero.aimVector ?? { x: 0, y: 1 };
+  const from = { x: hero.position.x, y: hero.position.y };
+  let reached = 0;
+  for (let d = ARCANE_CHARGE_STEP; d <= ARCANE_CHARGE_REACH; d += ARCANE_CHARGE_STEP) {
+    if (level.blocksPoint(from.x + aim.x * d, from.y + aim.y * d)) break;
+    if (standable(level, hero, from.x + aim.x * d, from.y + aim.y * d)) reached = d;
+  }
+  if (reached === 0) return;
+  playEffect(ARCANE_CHARGE_EFFECT.shape, ARCANE_CHARGE_EFFECT.colour, from.x, from.y, AIM_HEIGHT, ARCANE_CHARGE_EFFECT.scale);
+  hero.position.x = from.x + aim.x * reached;
+  hero.position.y = from.y + aim.y * reached;
+  playEffect(ARCANE_CHARGE_EFFECT.shape, ARCANE_CHARGE_EFFECT.colour, hero.position.x, hero.position.y, AIM_HEIGHT, ARCANE_CHARGE_EFFECT.scale);
+}
+
+/**
+ * The hero uses a feature: its effect happens now. Returns why nothing happened for one the game does not play out
+ * yet or a maneuver that can't be readied (nothing is spent then). `slot` is the quick-bar square it was used from.
+ */
+export function usedFeature(hero: Player, id: string, slot: number, level: Level): FeatureResult {
+  if (id === 'second_wind') {
+    secondWind(hero);
+  } else if (id === 'action_surge') {
+    readyTheBar(hero, slot);
+    if (featureOn(hero, 'arcane_charge')) arcaneCharge(hero, level);
+  } else if (id === 'arcane_recovery' || id === 'eldritch_master') {
+    readyTheBar(hero, slot);
+  } else if (id === 'cunning_action') {
+    cunningAction(hero);
+  } else if (id === 'channel_divinity') {
+    preserveLife(hero);
+  } else if (isManeuver(id)) {
+    const result = readyManeuver(hero, id);
+    return result === 'unknown' ? 'unworked' : result;
+  } else {
+    return 'unworked';
+  }
+  return 'ok';
+}
+
+/**
+ * A Champion's Survivor: every 6 seconds a hero at half their hit points or fewer (but not down) mends 5 + their
+ * Constitution modifier.
+ */
+export function updateSurvivor(): void {
+  for (const hero of q.players) {
+    if ((hero.survivorCooldown ?? 0) > 0) {
+      hero.survivorCooldown = (hero.survivorCooldown ?? 0) - 1;
+      continue;
+    }
+    const h = hero.health;
+    if (h.current <= 0 || h.current * 2 > h.max || !isActivePlayer(hero) || !featureOn(hero, 'survivor')) continue;
+    const amount = Math.max(1, SURVIVOR_BASE + characterSheet(hero).modifiers.constitution);
+    mend(hero, amount, h.max);
+    hero.survivorCooldown = SURVIVOR_TICKS;
+  }
 }

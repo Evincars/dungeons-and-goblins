@@ -93,7 +93,7 @@ function bindingName(binding: QuickBinding, castWith: Player['heroClass']): stri
 function slotTopic(binding: QuickBinding | null, heroLevel: number, castWith: Player['heroClass']): TipTopic {
   if (!binding) return { title: text('hud.slot.empty'), body: text('hud.slot.empty_body') };
   const feature = featureOfBinding(binding, castWith);
-  if (feature) return featureTopic(feature, false);
+  if (feature) return featureTopic(feature, false, heroLevel);
   const spell: CatalogSpell = CATALOG[binding.spell];
   const cls = heroClass(castWith);
   const learntAt = isSpellId(binding.spell) ? spellLevelFor(cls, binding.spell) : undefined;

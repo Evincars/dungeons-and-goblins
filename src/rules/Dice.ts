@@ -110,16 +110,19 @@ export function rollD20(mode: D20Mode = 'normal', die: DieRoller = rollDie): num
 }
 
 /** A natural 20 on an attack always hits, and critically; a natural 1 always misses. */
-const NATURAL_CRIT = 20;
+export const NATURAL_CRIT = 20;
 const NATURAL_FUMBLE = 1;
 
 export type AttackRoll = { natural: number; total: number; hit: boolean; critical: boolean };
 
-/** An attack: d20 + `attackBonus` against the target's Armor Class (meeting it is enough). */
-export function rollAttack(attackBonus: number, targetAC: number, mode: D20Mode = 'normal', die: DieRoller = rollDie): AttackRoll {
+/**
+ * An attack: d20 + `attackBonus` against the target's Armor Class (meeting it is enough). A d20 of `critFrom` or more
+ * is a critical hit that always lands (a Champion's weapon attacks are critical from a 19, then an 18).
+ */
+export function rollAttack(attackBonus: number, targetAC: number, mode: D20Mode = 'normal', die: DieRoller = rollDie, critFrom = NATURAL_CRIT): AttackRoll {
   const natural = rollD20(mode, die);
   const total = natural + attackBonus;
-  const critical = natural === NATURAL_CRIT;
+  const critical = natural >= critFrom;
   const hit = critical || (natural !== NATURAL_FUMBLE && total >= targetAC);
   return { natural, total, hit, critical };
 }

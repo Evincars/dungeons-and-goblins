@@ -167,7 +167,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - `src/rules/` — the tabletop rules: dice (`Dice.ts`: d4–d20 rolls, attacks, checks; tests load the dice with
   `useDieRoller`), ability modifiers and proficiency (`Abilities.ts`), the SRD weapon and armour tables, classes
   (`Classes.ts`) and monsters (`Monsters.ts`) read from `src/data/`, `CharacterSheet.ts` (Armor Class, weapon
-  damage and to-hit, proficiency, for heroes and enemies) and `Combat.ts` (one blow: d20 vs AC, then damage).
+  damage and to-hit, the critical range, the attacks a swing makes and the off-hand blow of two-weapon fighting,
+  proficiency, for heroes and enemies) and `Combat.ts` (one blow: d20 vs AC, then damage).
   Items name their rules entry with `base` and their magic with `bonus` (+0…+3) in `src/data/*.json`. Every blow
   in play goes through `systems/Strike.ts`, which logs the roll over the attacker's head (`RollLogSystem.ts`,
   drawn by `RollTextSystem.ts`) and into the level's combat log (`CombatLogSystem.ts`, one synced entity, shown by
@@ -182,7 +183,14 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   go off yet. Class features (`rules/ClassFeatures.ts`) fill the Skills tab above the cantrips: a worked passive is on from its
   level and a click switches it off and on (`featuresOff`, the `toggle_feature` command; `featureOn` is what effects ask, and the
   HUD's top left lists the ones on, `ui/PassiveHud.ts`); an active (Second Wind, Action Surge…) is bound to a quick-bar square as
-  `feature:<id>` and used with the cast key (`systems/FeatureSystem.ts`). Experience follows the SRD
+  `feature:<id>` and used with the cast key (`systems/FeatureSystem.ts`; an active with several uses recovers in its share, `featureCooldown`).
+  A swing is a chain of blows (`swordSwing.blow`/`blows`: Extra Attack, then the off-hand weapon's, `systems/SwordSystem.ts`); a bow looses a
+  volley (`volley`, `ArrowSystem.ts`). The Fighter's Martial Archetype (`rules/Archetypes.ts`, taken at level 3 in the level panel,
+  `ui/LevelChoices.ts`) gates features by `needs` in `features.json`: the Champion's critical range and Survivor, the Battle Master's
+  superiority dice and maneuvers (`rules/Maneuvers.ts`, `systems/ManeuverSystem.ts`: a maneuver is readied from the quick bar and
+  spends a die on the blow or the enemy blow it waits for, `Reactions.ts` for Parry and Riposte; marks on foes are the `status` component),
+  and the Eldritch Knight's wizard spells (`rules/KnightSpells.ts`, a spell list of its own in `Spellbook.ts`, War Magic after a cast).
+  Experience follows the SRD
   (`game/Progress.ts`, monster `xp`); hit points (SRD, unscaled: hit die + CON at level 1) and hit dice are in `rules/HitPoints.ts`.
   Spells go on the quick bar only in a safe room (`player.inSafeRoom`, `systems/SafeRoomSystem.ts`); class features anywhere.
 - `src/audio/` — Howler: `SoundBank.ts` (the effect recipes, music tracks and ambient beds), `SoundPlayer.ts` (effects,

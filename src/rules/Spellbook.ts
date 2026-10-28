@@ -10,6 +10,8 @@ import { heroClass } from './Classes';
 import { bindingFeatureId, featureBinding, featureOfClass, nthActiveFeature } from './ClassFeatures';
 import type { FeatureDef } from './ClassFeatures';
 import type { DndClass } from './Classes';
+import { KNIGHT_LIST, KNIGHT_SCHOOLS, KNIGHT_SLOT_LEVELS, knightSlotLevel } from './KnightSpells';
+import type { Picks } from './Archetypes';
 import { SPELLS, TICKS_PER_SECOND, isSpellId } from './Spells';
 import type { SpellDef, SpellId } from './Spells';
 import spellbook from '../data/spellbook.json';
@@ -44,6 +46,8 @@ export type CatalogSpell = {
   /** 0 for a cantrip. */
   level: number;
   school: string;
+  /** The book it comes from (an Eldritch Knight learns from the Player's Handbook only). */
+  source: string;
   ritual: boolean;
   castingTime: string;
   /** `feet` and `px` are null where the range is not a distance (sight, unlimited). */
@@ -105,6 +109,7 @@ function readSpell(id: string, raw: unknown): CatalogSpell {
     name: str(raw.name),
     level: num(raw.level),
     school: str(raw.school),
+    source: str(raw.source),
     ritual: raw.ritual === true,
     castingTime: str(raw.castingTime),
     range: { text: str(range.text), feet: typeof range.feet === 'number' ? range.feet : null, px: typeof range.px === 'number' ? range.px : null },
@@ -125,31 +130,70 @@ export function isCatalogSpell(id: unknown): id is string {
   return typeof id === 'string' && hasKey(CATALOG, id);
 }
 
-/** For each class, its spells by spell level (0-9), by name. Worked out once. */
+/** A spell list: a class's, or the Eldritch Knight's (the wizard's, as a third of a caster casts it). */
+export type SpellList = DndClass | typeof KNIGHT_LIST;
+
+/** The list a hero casts from: an Eldritch Knight's own, else their class's. */
+export function spellListOf(cls: DndClass, picks: Picks | undefined): SpellList {
+  return cls === 'fighter' && picks?.archetype === 'eldritch_knight' ? KNIGHT_LIST : cls;
+}
+
+/** The highest spell level an Eldritch Knight can learn from the wizard list: 4th. */
+const KNIGHT_TOP_LEVEL = KNIGHT_SLOT_LEVELS.length;
+
+/** Whether the Eldritch Knight's list holds the spell: a Player's Handbook wizard spell, a cantrip to a 4th-level spell. */
+export function knightListed(id: unknown): id is string {
+  if (!isCatalogSpell(id)) return false;
+  const spell = CATALOG[id];
+  return hasKey(spell.classes, 'wizard') && spell.source === "Player's Handbook" && spell.level <= KNIGHT_TOP_LEVEL;
+}
+
+/** Whether an Eldritch Knight of this fighter level has slots for the spell (a cantrip needs none) and the list holds it. */
+export function knightCanLearn(id: string, heroLevel: number): boolean {
+  return knightListed(id) && CATALOG[id].level <= knightSlotLevel(heroLevel);
+}
+
+/** A spell outside the schools an Eldritch Knight learns from (abjuration and evocation). */
+export function knightOutsideSchools(id: string): boolean {
+  return isCatalogSpell(id) && !KNIGHT_SCHOOLS.some((school) => school === CATALOG[id].school);
+}
+
+export function isCantripId(id: string): boolean {
+  return isCatalogSpell(id) && CATALOG[id].level === 0;
+}
+
+/** For each list, its spells by spell level (0-9), by name. Worked out once. */
 const BY_CLASS = new Map<string, CatalogSpell[][]>();
 
-function classSpells(cls: DndClass): CatalogSpell[][] {
-  const cached = BY_CLASS.get(cls);
+function classSpells(list: SpellList): CatalogSpell[][] {
+  const cached = BY_CLASS.get(list);
   if (cached) return cached;
   const levels: CatalogSpell[][] = Array.from({ length: MAX_SPELL_LEVEL + 1 }, () => []);
-  for (const spell of Object.values(CATALOG)) if (hasKey(spell.classes, cls)) levels[spell.level].push(spell);
-  for (const list of levels) list.sort((a, b) => a.name.localeCompare(b.name));
-  BY_CLASS.set(cls, levels);
+  for (const spell of Object.values(CATALOG)) if (learnLevel(list, spell) !== undefined) levels[spell.level].push(spell);
+  for (const spells of levels) spells.sort((a, b) => a.name.localeCompare(b.name));
+  BY_CLASS.set(list, levels);
   return levels;
 }
 
-/** The hero level a class learns a spell at (undefined: the class never does). */
-export function learnLevel(cls: DndClass, spell: CatalogSpell): number | undefined {
-  return spell.classes[cls];
+/** The hero level a list learns a spell at (undefined: it never does). An Eldritch Knight's: when its slots reach the spell's level. */
+export function learnLevel(list: SpellList, spell: CatalogSpell): number | undefined {
+  if (list !== KNIGHT_LIST) return spell.classes[list];
+  if (!knightListed(spell.id)) return undefined;
+  return spell.level === 0 ? KNIGHT_SLOT_LEVELS[0] : KNIGHT_SLOT_LEVELS[spell.level - 1];
 }
 
-/** The spells a class has learnt by this hero level, by spell level (index 0: cantrips). */
-export function learntSpells(cls: DndClass, heroLevel: number): CatalogSpell[][] {
-  return classSpells(cls).map((list) => list.filter((spell) => (learnLevel(cls, spell) ?? Infinity) <= heroLevel));
+/**
+ * The spells a hero has learnt by this hero level, by spell level (index 0: cantrips). An Eldritch Knight has only the
+ * ones they picked (`known`); anyone else every spell their class opens.
+ */
+export function learntSpells(list: SpellList, heroLevel: number, known?: readonly string[]): CatalogSpell[][] {
+  const mine = (spell: CatalogSpell): boolean => list !== KNIGHT_LIST || !!known?.includes(spell.id);
+  return classSpells(list).map((spells) => spells.filter((spell) => mine(spell) && (learnLevel(list, spell) ?? Infinity) <= heroLevel));
 }
 
-/** The highest spell level a class has slots for at this hero level (0: none yet, or not a caster). */
-export function highestSpellLevel(cls: DndClass, heroLevel: number): number {
+/** The highest spell level a hero has slots for at this hero level (0: none yet, or not a caster). */
+export function highestSpellLevel(cls: SpellList, heroLevel: number): number {
+  if (cls === KNIGHT_LIST) return knightSlotLevel(heroLevel);
   const kind = hasKey(spellbook.casterKinds, cls) ? spellbook.casterKinds[cls] : null;
   if (!kind || !hasKey(spellbook.unlockLevels, kind)) return 0;
   const unlocks: readonly (number | null)[] = spellbook.unlockLevels[kind];
@@ -157,8 +201,8 @@ export function highestSpellLevel(cls: DndClass, heroLevel: number): number {
   return kind === 'pact' ? Math.min(open, PACT_SLOT_CAP) : open;
 }
 
-/** Whether the class has any spells at all. */
-export function isCaster(cls: DndClass): boolean {
+/** Whether the list has any spells at all. */
+export function isCaster(cls: SpellList): boolean {
   return classSpells(cls).some((list) => list.length > 0);
 }
 
@@ -166,22 +210,23 @@ export function isCaster(cls: DndClass): boolean {
  * The levels a hero can cast a spell at: a cantrip only at its own; a spell with an "At Higher Levels" effect from
  * its own up to the highest slot the class has; any other spell at its own level alone.
  */
-export function castLevels(cls: DndClass, heroLevel: number, spell: CatalogSpell): number[] {
+export function castLevels(cls: SpellList, heroLevel: number, spell: CatalogSpell): number[] {
   const top = spell.higherLevels && spell.level > 0 ? highestSpellLevel(cls, heroLevel) : spell.level;
   const levels: number[] = [];
   for (let level = spell.level; level <= Math.max(top, spell.level); level++) levels.push(level);
   return levels;
 }
 
-/** Whether a hero of this class and level may put this spell on the bar at this cast level. */
-export function canBind(cls: DndClass, heroLevel: number, id: unknown, level: unknown): boolean {
+/** Whether a hero of this list and level (who knows these spells, if they pick them) may put this spell on the bar at this cast level. */
+export function canBind(cls: SpellList, heroLevel: number, id: unknown, level: unknown, known?: readonly string[]): boolean {
   const feature = typeof id === 'string' ? bindingFeatureId(id) : null;
   if (feature !== null) {
-    const def = featureOfClass(cls, feature);
+    const def = featureOfClass(cls === KNIGHT_LIST ? 'fighter' : cls, feature);
     return level === 0 && !!def && def.kind === 'active' && def.level <= heroLevel;
   }
   if (!isCatalogSpell(id) || typeof level !== 'number') return false;
   const spell = CATALOG[id];
+  if (cls === KNIGHT_LIST && !known?.includes(id)) return false;
   return (learnLevel(cls, spell) ?? Infinity) <= heroLevel && castLevels(cls, heroLevel, spell).includes(level);
 }
 

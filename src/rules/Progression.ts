@@ -24,7 +24,7 @@ export type Reward =
   | { feature: ClassFeature }
   | { spell: SpellId }
   | { asi: true }
-  | { choice: 'fighting_style' }
+  | { choice: 'fighting_style' | 'archetype' }
   | { ability: StatName; amount: number }
   | { feat: FeatId };
 
@@ -39,8 +39,10 @@ export type Gains = {
   feats: readonly FeatId[];
   /** Ability Score Improvements (or feats in their place) on offer so far. */
   improvements: number;
-  /** Whether a fighting style is on offer. */
-  fightingStyle: boolean;
+  /** Fighting styles on offer so far (a Champion's second comes at level 10). */
+  fightingStyles: number;
+  /** Whether a Martial Archetype is on offer. */
+  archetype: boolean;
 };
 
 export type Progression = {
@@ -59,7 +61,7 @@ function readReward(where: string, raw: unknown): Reward {
   if (isSpellId(raw.spell)) return { spell: raw.spell };
   if (isFeatId(raw.feat)) return { feat: raw.feat };
   if (raw.asi === true) return { asi: true };
-  if (raw.choice === 'fighting_style') return { choice: 'fighting_style' };
+  if (raw.choice === 'fighting_style' || raw.choice === 'archetype') return { choice: raw.choice };
   ensure(isStatName(raw.ability) && isFiniteNumber(raw.amount), `Unknown reward in ${where}`, { where });
   return { ability: isStatName(raw.ability) ? raw.ability : 'strength', amount: isFiniteNumber(raw.amount) ? raw.amount : 0 };
 }
@@ -83,7 +85,8 @@ type Running = {
   spells: SpellId[];
   feats: FeatId[];
   improvements: number;
-  fightingStyle: boolean;
+  fightingStyles: number;
+  archetype: boolean;
 };
 
 /** Folds one reward into what the hero has so far. */
@@ -91,7 +94,10 @@ function apply(reward: Reward, now: Running, level: number, learnt: Partial<Reco
   if ('feature' in reward) now.features.push(reward.feature);
   else if ('feat' in reward) now.feats.push(reward.feat);
   else if ('asi' in reward) now.improvements++;
-  else if ('choice' in reward) now.fightingStyle = true;
+  else if ('choice' in reward) {
+    if (reward.choice === 'archetype') now.archetype = true;
+    else now.fightingStyles++;
+  }
   else if ('ability' in reward) now.bonus[reward.ability] += reward.amount;
   else if (!now.spells.includes(reward.spell)) {
     now.spells.push(reward.spell);
@@ -106,14 +112,14 @@ function zeroBonus(): Record<StatName, number> {
 /** A class's progression: the gains at every level. */
 export function readProgression(id: string, raw: unknown): Progression {
   const levels = readLevels(id, raw);
-  const now: Running = { bonus: zeroBonus(), features: [], spells: [], feats: [], improvements: 0, fightingStyle: false };
+  const now: Running = { bonus: zeroBonus(), features: [], spells: [], feats: [], improvements: 0, fightingStyles: 0, archetype: false };
   const learnt: Partial<Record<SpellId, number>> = {};
   const gains: Gains[] = [];
   levels.forEach((rewards, index) => {
     for (const reward of rewards) apply(reward, now, index + 1, learnt);
     gains.push({
       abilityBonus: { ...now.bonus }, features: [...now.features], spells: [...now.spells], feats: [...now.feats],
-      improvements: now.improvements, fightingStyle: now.fightingStyle,
+      improvements: now.improvements, fightingStyles: now.fightingStyles, archetype: now.archetype,
     });
   });
   return { rewards: levels, gains, spellLevel: learnt };

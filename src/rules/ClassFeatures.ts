@@ -1,8 +1,11 @@
 import type { Player } from '../world';
 import { ensure } from '../core/errors';
 import { hasKey, isRecord } from '../core/guards';
-import { DND_CLASSES, heroClass } from './Classes';
-import type { DndClass } from './Classes';
+import { heroClass } from './Classes';
+import { DND_CLASSES } from './DndClasses';
+import type { DndClass } from './DndClasses';
+import { hasPick } from './Archetypes';
+import type { Picks } from './Archetypes';
 import features from '../data/features.json';
 
 /**
@@ -27,14 +30,31 @@ export type FeatureDef = {
   kind: FeatureKind;
   /** Whether the game plays the feature out. */
   worked: boolean;
-  /** An active's recovery, in seconds. */
+  /** An active's recovery, in seconds (shared out among its uses). */
   cooldown: number;
-  /** Only for a hero who took this fighting style. */
-  needs: 'protection' | null;
+  /** The hero levels at which an active has more uses (Action Surge: 2 uses at level 17); sorted, the first is its starting level. */
+  uses: readonly { level: number; uses: number }[];
+  /** Only for a hero who chose this fighting style, archetype or maneuver. */
+  needs: string | null;
+  /** Off the list once this choice is made (the entry that asks for a style or an archetype goes when it is picked). */
+  unless: string | null;
+  /** The feature this one takes the place of from the level it comes (Superior Critical for Improved Critical). */
+  replaces: string | null;
+  /** The feature that takes this one's place, found when the file is read. */
+  supersededBy: FeatureDef | null;
   description: string;
 };
 
 const isKind = (v: unknown): v is FeatureKind => FEATURE_KINDS.some((k) => k === v);
+
+/** An active's uses by level, as `{ "2": 1, "17": 2 }` in the file. */
+function readUses(cls: string, raw: unknown): { level: number; uses: number }[] {
+  if (raw === undefined) return [];
+  ensure(isRecord(raw), `Bad uses in class ${cls}`, { cls });
+  const entries = Object.entries(isRecord(raw) ? raw : {}).map(([level, uses]) => ({ level: Number(level), uses: Number(uses) }));
+  ensure(entries.every((e) => Number.isInteger(e.level) && Number.isInteger(e.uses) && e.uses >= 1), `Bad uses in class ${cls}`, { cls });
+  return entries.sort((a, b) => a.level - b.level);
+}
 
 function readFeature(cls: string, raw: unknown): FeatureDef {
   ensure(isRecord(raw) && typeof raw.id === 'string' && typeof raw.name === 'string' && isKind(raw.kind), `Bad feature in class ${cls}`, { cls });
@@ -46,14 +66,24 @@ function readFeature(cls: string, raw: unknown): FeatureDef {
     kind: isKind(r.kind) ? r.kind : 'info',
     worked: r.worked === true,
     cooldown: typeof r.cooldown === 'number' ? r.cooldown : 0,
-    needs: r.needs === 'protection' ? 'protection' : null,
+    needs: typeof r.needs === 'string' ? r.needs : null,
+    unless: typeof r.unless === 'string' ? r.unless : null,
+    replaces: typeof r.replaces === 'string' ? r.replaces : null,
+    supersededBy: null,
+    uses: readUses(cls, r.uses),
     description: String(r.description ?? ''),
   };
 }
 
 function listOf(cls: DndClass): FeatureDef[] {
   const raw: unknown = hasKey(features.classes, cls) ? features.classes[cls] : [];
-  return (Array.isArray(raw) ? raw : []).map((entry) => readFeature(cls, entry));
+  const list = (Array.isArray(raw) ? raw : []).map((entry) => readFeature(cls, entry));
+  for (const feature of list) {
+    const old = feature.replaces === null ? undefined : list.find((f) => f.id === feature.replaces);
+    ensure(feature.replaces === null || !!old, `Feature ${feature.id} replaces an unknown feature in class ${cls}`, { cls });
+    if (old) old.supersededBy = feature;
+  }
+  return list;
 }
 
 /** The features of each D&D class in play, by level. */
@@ -71,9 +101,28 @@ export function featureOfClass(cls: DndClass, id: string): FeatureDef | undefine
   return CLASS_FEATURE_LIST[cls].find((f) => f.id === id);
 }
 
-/** What a hero of this class, level and fighting style has been given, in level order. */
-export function featuresAt(cls: DndClass, level: number, style: string | null): FeatureDef[] {
-  return CLASS_FEATURE_LIST[cls].filter((f) => f.level <= level && (f.needs === null || f.needs === style));
+const chosen = (f: FeatureDef, level: number, picks: Picks | null): boolean =>
+  f.level <= level && (f.needs === null || hasPick(picks, f.needs)) && (f.unless === null || !hasPick(picks, f.unless));
+
+/** The hero has the feature: it has come, they chose what it asks for, and a better one has not taken its place. */
+const given = (f: FeatureDef, level: number, picks: Picks | null): boolean =>
+  chosen(f, level, picks) && !(f.supersededBy && chosen(f.supersededBy, level, picks));
+
+/** What a hero of this class, level and choices (styles, archetype, maneuvers) has been given, in level order. */
+export function featuresAt(cls: DndClass, level: number, picks: Picks | null): FeatureDef[] {
+  return CLASS_FEATURE_LIST[cls].filter((f) => given(f, level, picks));
+}
+
+/** How many times an active can be used in a row at this hero level (its recovery is shared among them). */
+export function featureUses(def: FeatureDef, level: number): number {
+  let uses = 1;
+  for (const step of def.uses) if (level >= step.level) uses = step.uses;
+  return uses;
+}
+
+/** An active's recovery, in seconds, at this hero level: each use recovers in its share of the whole. */
+export function featureCooldown(def: FeatureDef, level: number): number {
+  return def.cooldown / featureUses(def, level);
 }
 
 /** The `n`th active feature (0: the first) a hero of this class, level and fighting style has, in level order. */
@@ -88,15 +137,15 @@ export function nthActiveFeature(cls: DndClass, level: number, style: string | n
 
 type Bearer = Pick<Player, 'heroClass' | 'playerStats' | 'featuresOff' | 'build'>;
 
-/** Whether a class has the feature at this level (and fighting style). */
-export function classHasFeature(cls: DndClass, level: number, id: string, style: string | null = null): boolean {
+/** Whether a class has the feature at this level (and choices). */
+export function classHasFeature(cls: DndClass, level: number, id: string, picks: Picks | null = null): boolean {
   const def = featureOfClass(cls, id);
-  return !!def && def.level <= level && (def.needs === null || def.needs === style);
+  return !!def && given(def, level, picks);
 }
 
-/** Whether a hero has the feature at their level (and fighting style), switched on or not. */
+/** Whether a hero has the feature at their level (and choices), switched on or not. */
 export function hasClassFeature(player: Bearer, id: string): boolean {
-  return classHasFeature(heroClass(player.heroClass).dndClass, player.playerStats.level, id, player.build?.fightingStyle ?? null);
+  return classHasFeature(heroClass(player.heroClass).dndClass, player.playerStats.level, id, player.build ?? null);
 }
 
 /** The hero has the feature and has not switched it off: its effect applies. */

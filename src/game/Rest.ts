@@ -14,6 +14,7 @@ import { sound } from '../audio/SoundPlayer';
 import { text } from '../core/texts';
 import type { TextId } from '../core/texts';
 import { isStanding } from './Fallen';
+import { restoreDice } from '../systems/ManeuverSystem';
 
 /**
  * Resting, as in the tabletop game. A short rest (no enemy hunting the party, two before a long one is
@@ -144,6 +145,7 @@ export function takeRest(kind: RestKind, state: PartyState = partyState(), dice:
   for (const player of q.players) {
     if (!isStanding(player)) continue;
     player.spellbook?.recovery.fill(0);
+    restoreDice(player);
     if (kind === 'long') wake(player);
     else spendHitDice(player, dice[seatOf(player)] ?? 0);
   }

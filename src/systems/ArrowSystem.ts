@@ -21,25 +21,46 @@ function canShoot(player: Player): boolean {
   return !(player.arrowCooldown ?? 0) && player.health.current > 0 && !player.casting && !player.falling && !player.swordSwing;
 }
 
-function shoot(player: Player): void {
+/** Looses one arrow at the crosshair; the next may follow it at once (a volley) or after the usual recovery. */
+export function shoot(player: Player, followedBy = 0): void {
   const aim = player.aimVector ?? { x: 0, y: 1 };
   createArrow(player.position.x, player.position.y, aim.x, aim.y, characterSheet(player).attack, world.id(player));
-  player.arrowCooldown = ARROW_STATS.cooldown;
+  player.volley = followedBy;
+  player.arrowCooldown = followedBy > 0 ? ARROW_STATS.volleyGap : ARROW_STATS.cooldown;
   // Hold the release pose for a moment (the attack clip plays while attackTime is above the recovery).
   player.attackTime = ATTACK_RECOVERY + ARROW_STATS.drawTicks;
   sound.playSound('bow_shot', player.position.x, player.position.y);
 }
 
+/** A shot that comes free of the attack key (War Magic, after a spell): one volley, if the hero is not shooting already. */
+export function bonusShot(player: Player): boolean {
+  if (!holdsBow(player) || !canShoot(player)) return false;
+  shoot(player, characterSheet(player).attacks - 1);
+  return true;
+}
+
+/** The rest of a volley: the next arrow follows when the gap has run out, unless the bow has been put away or the archer has fallen. */
+function followVolley(player: Player): void {
+  const left = player.volley ?? 0;
+  if (left <= 0 || (player.arrowCooldown ?? 0) > 0) return;
+  if (!holdsBow(player) || player.health.current <= 0) {
+    player.volley = 0;
+    return;
+  }
+  shoot(player, left - 1);
+}
+
 /**
  * Runs before the sword: with a bow in hand, attacking means shooting — the attack is used up even
- * while the bow is still drawing, so no swing slips in between shots.
+ * while the bow is still drawing, so no swing slips in between shots. Extra Attack shoots a volley.
  */
 export function updateArrows(): void {
   for (const player of q.players) {
     if ((player.arrowCooldown ?? 0) > 0) player.arrowCooldown = (player.arrowCooldown ?? 0) - 1;
+    followVolley(player);
     const intents = player.playerInput.intents;
     if (!intents.attack || !holdsBow(player)) continue;
     intents.attack = false;
-    if (canShoot(player)) shoot(player);
+    if (canShoot(player)) shoot(player, characterSheet(player).attacks - 1);
   }
 }

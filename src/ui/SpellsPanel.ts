@@ -3,8 +3,9 @@ import type { Player } from '../world';
 import { text } from '../core/texts';
 import { heroClass } from '../rules/Classes';
 import type { DndClass } from '../rules/Classes';
-import { castLevels, isCaster, learnLevel, learntSpells } from '../rules/Spellbook';
-import type { CatalogSpell } from '../rules/Spellbook';
+import { castLevels, isCaster, learnLevel, learntSpells, spellListOf } from '../rules/Spellbook';
+import type { CatalogSpell, SpellList } from '../rules/Spellbook';
+import type { Build } from '../rules/Build';
 import { featureBinding, featuresAt } from '../rules/ClassFeatures';
 import type { FeatureDef } from '../rules/ClassFeatures';
 import { beginBinding } from '../game/SpellBinding';
@@ -72,7 +73,7 @@ export class SpellsPanel {
   private choice: Choice | null = null;
   private hovered: Box | null = null;
   private hoveredLevel = -1;
-  private cls: DndClass | null = null;
+  private list: SpellList | null = null;
   private heroLevel = 0;
   private scrollY = 0;
   private contentH = 0;
@@ -90,13 +91,14 @@ export class SpellsPanel {
     this.player = player;
     const cls = heroClass(player.heroClass).dndClass;
     const level = player.playerStats.level;
-    const key = `${cls}/${level}/${player.build?.fightingStyle ?? ''}`;
+    const b = player.build;
+    const key = JSON.stringify([cls, level, b?.fightingStyle, b?.extraStyle, b?.archetype, b?.maneuvers, b?.spells]);
     if (key === this.key) return;
     this.key = key;
-    this.cls = cls;
+    this.list = spellListOf(cls, b);
     this.heroLevel = level;
     this.closeChoice();
-    this.layout(cls, level, player.build?.fightingStyle ?? null);
+    this.layout(cls, level, b);
   }
 
   private clearContent(): void {
@@ -130,19 +132,20 @@ export class SpellsPanel {
     return first + rows * (BOX + GAP) + SECTION_GAP;
   }
 
-  private layout(cls: DndClass, level: number, style: string | null): void {
+  private layout(cls: DndClass, level: number, build: Build | undefined): void {
+    const list = spellListOf(cls, build);
     this.clearContent();
     let y = this.area.y + PAD;
     this.hint = this.addHeading(text('skills.hint'), y, THEME.muted);
     this.hintSafe = null;
     this.updateHint();
     y += HEADING_H + SECTION_GAP;
-    y = this.addSection(text('skills.features'), featuresAt(cls, level, style).map((feature) => ({ feature })), y);
-    if (!isCaster(cls)) {
+    y = this.addSection(text('skills.features'), featuresAt(cls, level, build ?? null).map((feature) => ({ feature })), y);
+    if (!isCaster(list)) {
       this.addHeading(text('skills.none'), y, THEME.muted);
       y += HEADING_H;
     }
-    learntSpells(cls, level).forEach((spells, spellLevel) => {
+    learntSpells(list, level, build?.spells).forEach((spells, spellLevel) => {
       if (!spells.length) return;
       const label = spellLevel === 0 ? text('skills.cantrips') : text('skills.level', { level: spellLevel });
       y = this.addSection(label, spells.map((spell) => ({ spell })), y);
@@ -239,9 +242,9 @@ export class SpellsPanel {
     const option = this.optionAt(x, y);
     if (option && this.choice) return spellTopic(this.choice.spell, option.level, this.heroLevel);
     const box = this.boxAt(x, y);
-    if (!box || !this.cls) return null;
-    if (box.feature) return featureTopic(box.feature, this.isOff(box.feature));
-    return box.spell ? spellTopic(box.spell, box.spell.level, this.heroLevel, learnLevel(this.cls, box.spell)) : null;
+    if (!box || !this.list) return null;
+    if (box.feature) return featureTopic(box.feature, this.isOff(box.feature), this.heroLevel);
+    return box.spell ? spellTopic(box.spell, box.spell.level, this.heroLevel, learnLevel(this.list, box.spell)) : null;
   }
 
   /** A press on the tab: a level box binds that level; a spell box binds it, or opens its level boxes. Returns whether it was used. */
@@ -256,11 +259,11 @@ export class SpellsPanel {
     const wasOpen = this.choice !== null;
     this.closeChoice();
     const box = this.boxAt(x, y);
-    if (!box || !this.cls) return wasOpen;
+    if (!box || !this.list) return wasOpen;
     if (box.feature) return this.pressFeature(box.feature);
     // Outside a safe room a spell can't be prepared: the hint at the top already says so.
     if (!box.spell || !this.preparing) return true;
-    const levels = castLevels(this.cls, this.heroLevel, box.spell);
+    const levels = castLevels(this.list, this.heroLevel, box.spell);
     if (levels.length === 1) beginBinding({ spell: box.spell.id, level: levels[0] });
     else this.openChoice(box, levels);
     return true;

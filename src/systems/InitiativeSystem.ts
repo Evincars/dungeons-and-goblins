@@ -5,6 +5,8 @@ import { characterSheet } from '../rules/CharacterSheet';
 import { MONSTERS } from '../rules/Monsters';
 import { rollD20 } from '../rules/Dice';
 import { logLine } from './RollLogSystem';
+import { featureOn } from '../rules/ClassFeatures';
+import { diceLeft, regainDie } from './ManeuverSystem';
 import { text } from '../core/texts';
 
 /**
@@ -27,6 +29,8 @@ function heroRoll(player: Player): { total: number; fresh: boolean } {
   const total = rollD20() + characterSheet(player).initiative;
   world.addComponent(player, 'initiative', { total, firstStrike: false, ticks: FIGHT_TICKS });
   logLine(player, text('roll.initiative', { total }), 'hit');
+  // Relentless: a Battle Master who rolls initiative with no superiority dice left gets one back.
+  if (diceLeft(player) <= 0 && featureOn(player, 'relentless')) regainDie(player);
   return { total, fresh: true };
 }
 

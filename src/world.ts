@@ -308,6 +308,23 @@ export type Entity = {
   featuresOff?: string[];
   /** Ticks until a Protection fighting style protects an ally again (systems/ProtectionSystem.ts). */
   protectCooldown?: number;
+  /** Ticks until a Champion's Survivor mends the hero again (systems/FeatureSystem.ts). */
+  survivorCooldown?: number;
+  /** The Battle Master's superiority dice left (none set: all of them; a rest restores them, systems/ManeuverSystem.ts). */
+  superiorityLeft?: number;
+  /**
+   * The maneuver the hero has readied (a feature id, src/rules/Maneuvers.ts), the ticks it waits for its moment, and the
+   * die rolled for it when that die is rolled up front (Evasive Footwork's Armor Class, a commanded ally's damage, Rally's hit points).
+   */
+  maneuver?: { id: string; ticks: number; bonus: number };
+  /** Hit points the hero loses before their own (Rally's temporary hit points). */
+  tempHealth?: number;
+  /**
+   * What a hero's maneuvers or spells have done to a foe, as ticks left of each: tripped, frightened, goaded (disadvantage
+   * against anyone but `by`, the entity id of whoever did it), distracted (the next attacker of someone else has advantage)
+   * and eldritch (its next saving throw against a spell is at disadvantage).
+   */
+  status?: { prone: number; frightened: number; goaded: number; distracted: number; eldritch: number; by: number };
   /** The dice rolls shown over the head, oldest first; each fades after a while (systems/RollLogSystem.ts). */
   rollLog?: RollLine[];
   /** The level's combat log (one entity holds it): the latest blows, newest last (systems/CombatLogSystem.ts). */
@@ -340,6 +357,8 @@ export type Entity = {
     finished: boolean;
     /** A one-shot state that has played out while its trigger still holds; it can't replay until the trigger lets go. */
     spent?: CharacterState;
+    /** The blow of a swing chain whose clip is playing (a new blow restarts the swing clip). */
+    blow?: number;
     flipX: boolean;
   };
 
@@ -450,12 +469,19 @@ export type Entity = {
     dirX: number;
     dirY: number;
     range: number;
-    /** Entities this swing already hit (a list: a swing meets a handful at most, and it travels as JSON). */
+    /** Entities this blow already hit (a list: a swing meets a handful at most, and it travels as JSON). */
     hitIds: number[];
+    /** A swing is a chain of blows (Extra Attack, and the off-hand weapon's blow last): this is blow `blow` (from 0) of `blows`. */
+    blow: number;
+    blows: number;
+    /** The chain's last blow is the off-hand weapon's. */
+    offHand: boolean;
   };
   swordCooldown?: number;
   /** Ticks until the next arrow can be loosed. */
   arrowCooldown?: number;
+  /** Arrows still to follow the one just loosed (Extra Attack shoots several in a row). */
+  volley?: number;
 
   // --- loot ---
   loot?: {

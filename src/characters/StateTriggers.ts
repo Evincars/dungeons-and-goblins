@@ -13,6 +13,11 @@ export const ATTACK_RECOVERY = 10;
 /** The swing clips: one blow played standing, walking or running. */
 const SWINGS: ReadonlySet<CharacterState> = new Set(['attack', 'walkAttack', 'runAttack']);
 
+/** Whether the state is one of the swing clips. */
+export function isSwing(state: CharacterState): boolean {
+  return SWINGS.has(state);
+}
+
 /** Whether both states are the same blow, so a swing in progress isn't restarted as the feet start or stop. */
 export function sameSwing(a: CharacterState, b: CharacterState): boolean {
   return SWINGS.has(a) && SWINGS.has(b);

@@ -45,6 +45,8 @@ import { updateMarker } from './MarkerSystem';
 import { updateBuildLock } from '../game/Customize';
 import { updateSafeRooms } from './SafeRoomSystem';
 import { updateProtection } from './ProtectionSystem';
+import { updateManeuvers } from './ManeuverSystem';
+import { updateSurvivor } from './FeatureSystem';
 import { updateMusic } from './MusicSystem';
 import { updateAmbience } from './AmbienceSystem';
 
@@ -103,6 +105,8 @@ export const SIMULATION: readonly System[] = [
   ({ level }) => updateBuildLock(level),
   ({ level }) => updateSafeRooms(level),
   () => updateProtection(),
+  () => updateManeuvers(),
+  () => updateSurvivor(),
   (ctx) => { if (ctx.level.tilesDirty) ctx.rebuildTerrain(); },
 ];
 

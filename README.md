@@ -109,7 +109,7 @@ in `public/main-characters/<name>` (`character` below). The file has two parts.
   hit and to their save DC (`null`: not a caster),
 - `progression` — per level 1–20 a list of rewards: `{ "feature": id }` (`sneak_attack`,
   `jack_of_all_trades`, `disciple_of_life`, `agonizing_blast`), `{ "spell": id }` (the quick bar lists spells in the
-  order learnt), `{ "asi": true }` (an Ability Score Improvement the player takes, see below), `{ "choice": "fighting_style" }`,
+  order learnt), `{ "asi": true }` (an Ability Score Improvement the player takes, see below), `{ "choice": "fighting_style" }` (a Champion's second one comes at level 10), `{ "choice": "archetype" }` (the Fighter's Martial Archetype, level 3),
   `{ "ability": stat, "amount": n }` or `{ "feat": id }` (`alert`, `tough`, from [`feats.json`](src/data/feats.json)). A new feature needs an id in `rules/Features.ts`, its texts and a hook where
   the rule applies; the file's `$comment` lists the SRD features not in play yet.
 
@@ -125,11 +125,18 @@ that breathes marks the button, and the tab, while a choice is waiting:
 - **Ability scores, level 1**: point buy as in the SRD (27 points, 8–15, `rules/PointBuy.ts`) plus the human's +1.
 - **Fighting style, Fighter level 1** (`rules/FightingStyles.ts`): Archery (+2 to hit with ranged weapons), Defense
   (+1 AC in armour), Dueling (+2 damage with a one-handed melee weapon and no other weapon), Great Weapon Fighting
-  (damage dice showing 1 or 2 are rolled again with a two-handed or versatile melee weapon held in both hands) or
+  (damage dice showing 1 or 2 are rolled again with a two-handed or versatile melee weapon held in both hands),
   Protection (a passive: with a shield, an enemy's attack on the closest ally within 5 feet is rolled with
-  disadvantage, then 5 s to recover; shown top left).
+  disadvantage, then 5 s to recover; shown top left) or Two-Weapon Fighting (a light melee weapon in each hand lands
+  a second blow with the one in the second hand; the style adds the ability modifier to its damage).
 - Both can be changed until the hero presses **Save** (a fighter must have picked a style) or leaves the first safe
   room; then they are final (a fighter who never chose gets Defense). The chosen style stays explained on the page.
+- **Martial Archetype, Fighter level 3** (`rules/Archetypes.ts`): the Champion (Improved and Superior Critical,
+  Remarkable Athlete, a second fighting style at level 10, Survivor), the Battle Master (superiority dice and 16
+  maneuvers, `rules/Maneuvers.ts`, picked 3 at level 3 and more at 7, 10 and 15) or the Eldritch Knight (wizard
+  spells from the Player's Handbook, abjuration and evocation but for a few, `rules/KnightSpells.ts`: cantrips and
+  spells picked at levels 3, 4, 7, 8, 10, 11, 13, 14, 16, 19 and 20; War Magic, Eldritch Strike, Arcane Charge). Each
+  pick is final once confirmed; an archetype's features are in `features.json`, marked `needs` its id.
 - **Ability Score Improvement** at the levels a class offers it (`{ "asi": true }`): +2 to one ability or +1 to two
   (none above 20), or a feat from `feats.json` instead; final once taken.
 

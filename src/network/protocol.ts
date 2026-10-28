@@ -3,6 +3,10 @@ import type { BagSquare, DepartChoice, EquipSlot, InventoryItem, PlayerInput, Pl
 import { validImprovement, validScores } from '../rules/Build';
 import type { Improvement } from '../rules/Build';
 import { isFightingStyle } from '../rules/FightingStyles';
+import { isArchetype } from '../rules/Archetypes';
+import type { ArchetypeId } from '../rules/Archetypes';
+import { isManeuver } from '../rules/Maneuvers';
+import { MAX_LEVEL } from '../game/Progress';
 import type { FightingStyleId } from '../rules/FightingStyles';
 import type { SfxName } from '../audio/SoundPlayer';
 import { cleanName } from '../game/Settings';
@@ -11,7 +15,7 @@ import { isHeroClassId } from '../rules/Classes';
 import type { HeroClassId } from '../rules/Classes';
 import { isFiniteNumber, isRecord } from '../core/guards';
 import { isItemBase, isMagicBonus } from '../rules/Equipment';
-import { isCatalogSpell, MAX_SPELL_LEVEL } from '../rules/Spellbook';
+import { isCatalogSpell, knightListed, MAX_SPELL_LEVEL } from '../rules/Spellbook';
 import { bindingFeatureId, isFeatureId } from '../rules/ClassFeatures';
 
 /**
@@ -20,7 +24,7 @@ import { bindingFeatureId, isFeatureId } from '../rules/ClassFeatures';
  */
 
 /** Bumped whenever messages or the world they describe change, so mismatched browsers are told to reload. */
-export const PROTOCOL_VERSION = 4;
+export const PROTOCOL_VERSION = 5;
 /** The most guests a room takes: the host plus three others make four players. */
 export const MAX_GUESTS = PLAYER_SLOTS.length - 1;
 
@@ -52,6 +56,10 @@ export type GuestCommand =
   /** The hero's bought ability scores, their fighting style, an Ability Score Improvement or a feat (rules/Build.ts). */
   | { kind: 'scores'; scores: Record<StatName, number> }
   | { kind: 'fighting_style'; style: FightingStyleId }
+  /** A Champion's second fighting style (level 10), a Martial Archetype (level 3) and what an archetype's level teaches: maneuvers, or an Eldritch Knight's spells. */
+  | { kind: 'extra_style'; style: FightingStyleId }
+  | { kind: 'archetype'; archetype: ArchetypeId }
+  | { kind: 'pick'; level: number; maneuvers?: string[]; spells?: string[] }
   | { kind: 'improve'; improvement: Improvement }
   /** Save the starting choices for good before leaving the first safe room. */
   | { kind: 'lock_build' }
@@ -182,6 +190,16 @@ export function validBinding(spell: unknown, level: unknown): boolean {
   return named && Number.isInteger(level) && Number(level) >= 0 && Number(level) <= MAX_SPELL_LEVEL;
 }
 
+/** The most maneuvers or spells a hero picks at once. */
+const MAX_PICK_BATCH = 8;
+
+/** A pick of what a level teaches: a real level, and only known maneuvers or spells, a handful at most. */
+function validPick(value: Record<string, unknown>): boolean {
+  const { level, maneuvers, spells } = value;
+  const listOk = (list: unknown, valid: (id: unknown) => boolean): boolean => list === undefined || (Array.isArray(list) && list.length <= MAX_PICK_BATCH && list.every(valid));
+  return Number.isInteger(level) && Number(level) >= 1 && Number(level) <= MAX_LEVEL && listOk(maneuvers, isManeuver) && listOk(spells, knightListed);
+}
+
 export function validCommand(value: unknown): value is GuestCommand {
   if (!isRecord(value)) return false;
   if (value.kind === 'buy') return Number.isInteger(value.index) && Number(value.index) >= 0 && Number(value.index) < MAX_ITEMS;
@@ -192,7 +210,9 @@ export function validCommand(value: unknown): value is GuestCommand {
   if (value.kind === 'drop') return isItemSquare(value.from);
   if (value.kind === 'loot') return Number.isSafeInteger(value.roll) && Number(value.roll) >= 0 && typeof value.need === 'boolean';
   if (value.kind === 'scores') return validScores(value.scores);
-  if (value.kind === 'fighting_style') return isFightingStyle(value.style);
+  if (value.kind === 'fighting_style' || value.kind === 'extra_style') return isFightingStyle(value.style);
+  if (value.kind === 'archetype') return isArchetype(value.archetype);
+  if (value.kind === 'pick') return validPick(value);
   if (value.kind === 'improve') return validImprovement(value.improvement);
   if (value.kind === 'lock_build') return true;
   if (value.kind === 'toggle_feature') return isFeatureId(value.feature);

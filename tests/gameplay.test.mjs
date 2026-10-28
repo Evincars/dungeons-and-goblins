@@ -1712,6 +1712,22 @@ test('a bolt spell is rolled to hit and strikes with its effect; the spell then 
   assert.equal(vesper.spellbook.recovery[0], 0, 'recovered in its own time');
 });
 
+test('magic missile\'s darts fly the aimed line one after another, not fanned out', () => {
+  const level = arena(16, 6);
+  const caster = casterAt(2, 3, 'wizard', 2);
+  const volley = () => [...world.with('projectile')].filter((e) => e.projectile.spell === 'magic_missile');
+  cast(level, caster, 1);
+  for (let t = 0; t < 120 && volley().length === 0; t++) updateSpells(level);
+  const darts = volley();
+  assert.equal(darts.length, 3);
+  for (const dart of darts) assert.deepEqual([Math.sign(dart.velocity.x), dart.velocity.y], [1, 0], 'every dart along the aim');
+  for (let t = 0; t < 12; t++) updateSpells(level);
+  // In launch order: the first away has the least life left.
+  const xs = [...darts].sort((a, b) => a.projectile.life - b.projectile.life).map((d) => d.position.x);
+  assert.ok(xs[0] > xs[1] && xs[1] > xs[2], 'each dart behind the one before it');
+  assert.ok(darts.every((d) => d.position.y === darts[0].position.y), 'in single file');
+});
+
 test('magic missile always hits with its three darts; cast again too soon, it says how long it still needs', () => {
   const level = arena(12, 6);
   const vesper = casterAt(2, 2, 'wizard', 2);
@@ -2660,9 +2676,22 @@ const Spellbook = await load('rules/Spellbook');
 const DamageTypes = await load('rules/DamageTypes');
 const { bindSpell } = await load('game/PlayerActions');
 
+test('the game uses only the spells in its list, and every spell a class learns or casts is in it', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { CLASSES } = await load('rules/Classes');
+  const list = JSON.parse(readFileSync(new URL('../src/data/spell-list.json', import.meta.url), 'utf8'));
+  assert.deepEqual(Object.keys(Spellbook.CATALOG).sort(), Object.keys(list.spells).sort());
+  assert.equal(Spellbook.CATALOG.find_familiar, undefined, 'summons are left out');
+  assert.equal(Spellbook.CATALOG.arms_of_hadar, undefined, 'and lasting tentacles');
+  const { SPELL_IDS } = await load('rules/Spells');
+  for (const id of SPELL_IDS) assert.ok(Spellbook.CATALOG[id], `${id} can be cast, so it is in the list`);
+  for (const cls of Object.values(CLASSES)) for (const id of cls.spells) assert.ok(Spellbook.CATALOG[id], `${cls.id} learns ${id}`);
+  assert.equal(Spellbook.spellIconKey('fire_bolt'), null, 'no icon until scripts/spell-icons.sh makes one');
+});
+
 test('every spell of the lists is read with a range, the classes that learn it and the hero level they do', () => {
   const spells = Object.values(Spellbook.CATALOG);
-  assert.ok(spells.length > 400, 'the whole of the lists');
+  assert.ok(spells.length >= 40 && spells.length < 100, 'the game\'s own list (src/data/spell-list.json)');
   for (const spell of spells) {
     assert.ok(Object.keys(spell.classes).length > 0, `${spell.id} is learnt by some class`);
     assert.ok(Object.values(spell.classes).every((level) => level >= 1 && level <= 20), `${spell.id} is learnt at a real hero level`);
@@ -2703,30 +2732,30 @@ test('a class opens spell levels as the tabletop rules give them', () => {
   const level1 = Spellbook.learntSpells('cleric', 1).map((list) => list.length);
   assert.ok(level1[0] > 0 && level1[1] > 0, 'a first-level cleric has cantrips and level 1 spells');
   assert.ok(level1.slice(2).every((n) => n === 0), 'and nothing higher');
-  const bless = Spellbook.CATALOG.bless;
-  assert.deepEqual(Spellbook.castLevels('cleric', 1, bless), [1]);
-  assert.deepEqual(Spellbook.castLevels('cleric', 3, bless), [1, 2], 'a third-level cleric may bind Bless at level 2');
+  const cure = Spellbook.CATALOG.cure_wounds;
+  assert.deepEqual(Spellbook.castLevels('cleric', 1, cure), [1]);
+  assert.deepEqual(Spellbook.castLevels('cleric', 3, cure), [1, 2], 'a third-level cleric may bind Cure Wounds at level 2');
   assert.deepEqual(Spellbook.castLevels('cleric', 1, Spellbook.CATALOG.sacred_flame), [0], 'a cantrip has one level');
 });
 
 test('a hero binds only spells their class has learnt, at levels they can cast; a bound spell replaces the class order', () => {
   const cleric = createPlayer(0, 0, 'cleric');
   assert.deepEqual(Spellbook.quickBinding(cleric, 0), { spell: 'sacred_flame', level: 0 }, 'the class order until something is bound');
-  assert.equal(bindSpell(cleric, 3, 'bless', 1), false, 'spells are prepared only in a safe room');
+  assert.equal(bindSpell(cleric, 3, 'cure_wounds', 1), false, 'spells are prepared only in a safe room');
   cleric.inSafeRoom = true;
   assert.equal(bindSpell(cleric, 3, 'fireball', 3), false, 'a cleric does not learn Fireball');
-  assert.equal(bindSpell(cleric, 3, 'bless', 2), false, 'no level 2 slots yet');
-  assert.equal(bindSpell(cleric, 3, 'bless', 1), true);
-  assert.deepEqual(Spellbook.quickBinding(cleric, 3), { spell: 'bless', level: 1 });
+  assert.equal(bindSpell(cleric, 3, 'cure_wounds', 2), false, 'no level 2 slots yet');
+  assert.equal(bindSpell(cleric, 3, 'cure_wounds', 1), true);
+  assert.deepEqual(Spellbook.quickBinding(cleric, 3), { spell: 'cure_wounds', level: 1 });
   assert.deepEqual(Spellbook.quickBinding(cleric, 0), { spell: 'sacred_flame', level: 0 }, 'the other squares keep theirs');
   cleric.playerStats.level = 3;
-  assert.equal(bindSpell(cleric, 3, 'bless', 2), true);
+  assert.equal(bindSpell(cleric, 3, 'cure_wounds', 2), true);
   assert.equal(Spellbook.quickBinding(cleric, 3).level, 2);
-  assert.equal(bindSpell(cleric, 13, 'bless', 1), true, 'the second row takes spells too');
-  assert.equal(bindSpell(cleric, 20, 'bless', 1), false, 'there are twenty squares');
-  assert.ok(validCommand({ kind: 'bind_spell', slot: 3, spell: 'bless', level: 2 }));
+  assert.equal(bindSpell(cleric, 13, 'cure_wounds', 1), true, 'the second row takes spells too');
+  assert.equal(bindSpell(cleric, 20, 'cure_wounds', 1), false, 'there are twenty squares');
+  assert.ok(validCommand({ kind: 'bind_spell', slot: 3, spell: 'cure_wounds', level: 2 }));
   assert.ok(!validCommand({ kind: 'bind_spell', slot: 3, spell: 'not_a_spell', level: 2 }));
-  assert.ok(!validCommand({ kind: 'bind_spell', slot: 20, spell: 'bless', level: 2 }));
+  assert.ok(!validCommand({ kind: 'bind_spell', slot: 20, spell: 'cure_wounds', level: 2 }));
 });
 
 test('the quick bar\'s second row holds the hero\'s active class features until something else is bound there', () => {
@@ -2747,34 +2776,34 @@ test('a spell cast at a higher level hits harder and recovers more slowly; a bou
   assert.equal(wizard.spellbook.recovery[0], stretched, 'two levels above its own, so a longer recovery');
   assert.equal(wizard.casting.level, 3);
   const mage = casterAt(2, 4, 'wizard', 1);
-  assert.equal(bindSpell(mage, 1, 'shield', 1), true);
+  assert.equal(bindSpell(mage, 1, 'ice_knife', 1), true);
   cast(level, mage, 90);
-  assert.equal(mage.casting, undefined, 'Shield is bound but only a name for now');
+  assert.equal(mage.casting, undefined, 'Ice Knife is bound but only a name for now');
 });
 
 test('a guest\'s synced spellbook is checked: bound spells must be real', () => {
   arena(8, 6);
   const hero = playerAt(2, 2, 'cleric');
   world.addComponent(hero, 'playerSlot', 'host');
-  bindSpell(hero, 3, 'bless', 1);
+  bindSpell(hero, 3, 'cure_wounds', 1);
   const good = () => JSON.parse(JSON.stringify(captureWorld(false, 7)));
   assert.doesNotThrow(() => validateNetState(good()));
   const tampered = (bound) => { const w = good(); w.entities.find((e) => e.data.spellbook).data.spellbook.bound = bound; return w; };
   assert.throws(() => validateNetState(tampered([null, null, null, { spell: 'made_up', level: 1 }])), ValidationError);
-  assert.throws(() => validateNetState(tampered([null, null, null, { spell: 'bless', level: 12 }])), ValidationError);
+  assert.throws(() => validateNetState(tampered([null, null, null, { spell: 'cure_wounds', level: 12 }])), ValidationError);
   assert.throws(() => validateNetState(tampered(Array(21).fill(null))), ValidationError, 'only twenty squares');
 });
 
 test('a spell tooltip is short (kind, range, attack, the start of its text); "More info" holds the whole text and numbers', async () => {
   const { shortText, spellTopic } = await load('ui/SpellTopics');
-  const bless = Spellbook.CATALOG.bless;
-  const base = spellTopic(bless, 1, 3);
-  const upgraded = spellTopic(bless, 2, 3);
-  assert.ok(base.body.startsWith('You bless up to three creatures') && base.body.endsWith('...'), 'the start of the text, cut short');
+  const sickness = Spellbook.CATALOG.ray_of_sickness;
+  const base = spellTopic(sickness, 1, 3);
+  const upgraded = spellTopic(sickness, 2, 3);
+  assert.ok(base.body.startsWith('A ray of sickening greenish energy') && base.body.endsWith('...'), 'the start of the text, cut short');
   assert.ok(base.body.length <= 110);
-  assert.deepEqual(base.detail, ['Level 1 Enchantment', 'Range: 30 ft (288 px)', 'Attack: no attack roll']);
-  assert.ok(base.more.body.includes('You bless up to three creatures') && base.more.body.includes('one additional creature'), 'the whole text and its higher levels');
-  assert.ok(base.more.detail.includes('Range: 30 ft (288 px)') && base.more.detail.includes('Cooldown: 5.0s'), 'range in feet and px, five seconds');
+  assert.deepEqual(base.detail.slice(0, 2), ['Level 1 Necromancy', 'Range: 60 ft (576 px)']);
+  assert.ok(base.more.body.includes('A ray of sickening greenish energy') && base.more.body.includes('2nd level or higher'), 'the whole text and its higher levels');
+  assert.ok(base.more.detail.includes('Range: 60 ft (576 px)') && base.more.detail.includes('Cooldown: 5.0s'), 'range in feet and px, five seconds');
   assert.ok(upgraded.detail.includes('Cast at level 2'));
   assert.ok(upgraded.more.detail.includes('Cooldown: 7.5s'), 'a higher level recovers more slowly');
   const blast = Spellbook.CATALOG.eldritch_blast;
@@ -2794,16 +2823,16 @@ test('binding a spell from the inventory: it shuts, a square is chosen, and it c
   cleric.playerStats.level = 3;
   cleric.inSafeRoom = true;
   setInventoryOpen(true);
-  Binding.beginBinding({ spell: 'bless', level: 2 });
+  Binding.beginBinding({ spell: 'cure_wounds', level: 2 });
   assert.equal(isInventoryOpen(), false, 'the inventory shuts while a square is chosen');
   Binding.finishBinding(cleric, 4);
-  assert.deepEqual(Spellbook.quickBinding(cleric, 4), { spell: 'bless', level: 2 });
+  assert.deepEqual(Spellbook.quickBinding(cleric, 4), { spell: 'cure_wounds', level: 2 });
   assert.equal(Binding.pendingBinding(), null);
   assert.equal(isInventoryOpen(), true, 'and comes back');
-  Binding.beginBinding({ spell: 'bless', level: 1 });
+  Binding.beginBinding({ spell: 'cure_wounds', level: 1 });
   Binding.cancelBinding();
   assert.equal(Binding.pendingBinding(), null, 'giving up binds nothing');
-  assert.deepEqual(Spellbook.quickBinding(cleric, 4), { spell: 'bless', level: 2 });
+  assert.deepEqual(Spellbook.quickBinding(cleric, 4), { spell: 'cure_wounds', level: 2 });
   assert.equal(isInventoryOpen(), true);
   setInventoryOpen(false);
 });
@@ -3793,25 +3822,25 @@ test('Eldritch Knight: cantrips and spells known follow the table and are chosen
   const { build } = hero;
   assert.deepEqual(Build.knightNeeded(build, 3), { cantrips: 2, spells: 3 });
   const take = (level, ids) => Build.takePicks(CLASSES.fighter, build, level, { spells: ids });
-  assert.equal(take(3, ['fire_bolt', 'magic_missile', 'shield', 'burning_hands']), false, 'one cantrip too few');
-  assert.equal(take(3, ['fire_bolt', 'ray_of_frost', 'magic_missile', 'shield']), false, 'one spell too few');
-  assert.equal(take(3, ['fire_bolt', 'ray_of_frost', 'cure_wounds', 'shield', 'burning_hands']), false, 'not a wizard spell');
-  assert.equal(take(3, ['fire_bolt', 'ray_of_frost', 'fireball', 'shield', 'burning_hands']), false, 'no slots of that level yet');
-  assert.equal(take(3, ['fire_bolt', 'ray_of_frost', 'sleep', 'charm_person', 'shield']), false, 'only one spell may be outside abjuration and evocation');
-  assert.equal(take(3, ['fire_bolt', 'ray_of_frost', 'sleep', 'magic_missile', 'shield']), true);
+  assert.equal(take(3, ['fire_bolt', 'magic_missile', 'chromatic_orb', 'burning_hands']), false, 'one cantrip too few');
+  assert.equal(take(3, ['fire_bolt', 'ray_of_frost', 'magic_missile', 'chromatic_orb']), false, 'one spell too few');
+  assert.equal(take(3, ['fire_bolt', 'ray_of_frost', 'cure_wounds', 'chromatic_orb', 'burning_hands']), false, 'not a wizard spell');
+  assert.equal(take(3, ['fire_bolt', 'ray_of_frost', 'fireball', 'chromatic_orb', 'burning_hands']), false, 'no slots of that level yet');
+  assert.equal(take(3, ['fire_bolt', 'ray_of_frost', 'ice_knife', 'magic_missile', 'chromatic_orb']), false, 'only Player\'s Handbook spells');
+  assert.ok(Spellbook.knightOutsideSchools('ray_of_sickness') && !Spellbook.knightOutsideSchools('magic_missile'), 'necromancy is outside abjuration and evocation');
+  assert.equal(take(3, ['fire_bolt', 'ray_of_frost', 'ray_of_sickness', 'magic_missile', 'chromatic_orb']), true, 'one spell may be outside the schools');
   assert.deepEqual(Build.knightNeeded(build, 3), { cantrips: 0, spells: 0 });
   assert.deepEqual(Build.knightNeeded(build, 4), { cantrips: 0, spells: 1 });
-  assert.equal(take(4, ['charm_person']), false, 'a second spell outside the schools has to wait for level 8');
   assert.equal(take(4, ['thunderwave']), true);
   assert.equal(Build.validBuild(JSON.parse(JSON.stringify(build))), true);
-  assert.equal(Build.takePicks(CLASSES.fighter, heroWith('champion', 3).build, 3, { spells: ['fire_bolt', 'ray_of_frost', 'magic_missile', 'shield', 'thunderwave'] }), false, 'only a Knight');
+  assert.equal(Build.takePicks(CLASSES.fighter, heroWith('champion', 3).build, 3, { spells: ['fire_bolt', 'ray_of_frost', 'magic_missile', 'chromatic_orb', 'thunderwave'] }), false, 'only a Knight');
   const list = Spellbook.spellListOf('fighter', build);
   assert.equal(list, 'eldritch_knight');
   assert.equal(Spellbook.spellListOf('fighter', heroWith('champion', 3).build), 'fighter');
   assert.equal(Spellbook.spellListOf('wizard', build), 'wizard');
   const learnt = Spellbook.learntSpells(list, 3, build.spells).map((spells) => spells.map((s) => s.id));
   assert.deepEqual(learnt[0].sort(), ['fire_bolt', 'ray_of_frost']);
-  assert.deepEqual(learnt[1].sort(), ['magic_missile', 'shield', 'sleep', 'thunderwave']);
+  assert.deepEqual(learnt[1].sort(), ['chromatic_orb', 'magic_missile', 'ray_of_sickness', 'thunderwave']);
   assert.equal(Spellbook.highestSpellLevel(list, 3), 1);
   assert.equal(Spellbook.highestSpellLevel(list, 19), 4);
   assert.equal(Spellbook.canBind(list, 3, 'fire_bolt', 0, build.spells), true);
@@ -3906,7 +3935,7 @@ test('the new Fighter components cross the network checked', () => {
   assert.ok(validCommand({ kind: 'extra_style', style: 'two_weapon_fighting' }));
   assert.ok(!validCommand({ kind: 'extra_style', style: 'smiting' }));
   assert.ok(validCommand({ kind: 'pick', level: 3, maneuvers: ['parry', 'riposte', 'trip_attack'] }));
-  assert.ok(validCommand({ kind: 'pick', level: 3, spells: ['fire_bolt', 'shield'] }));
+  assert.ok(validCommand({ kind: 'pick', level: 3, spells: ['fire_bolt', 'magic_missile'] }));
   assert.ok(!validCommand({ kind: 'pick', level: 3, maneuvers: ['kick'] }));
   assert.ok(!validCommand({ kind: 'pick', level: 3, spells: ['cure_wounds'] }), 'not a wizard spell');
   assert.ok(!validCommand({ kind: 'pick', level: 99, maneuvers: ['parry'] }));

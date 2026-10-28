@@ -160,7 +160,6 @@ export const SFX = {
   cast_burning_hands: [layer(SORCERY.fire, 0.98), layer(CREATURE.dragonFire, 0.63, 1.2)],
   /** A boom and a gust: a slowed blast with great wings beating behind it. */
   cast_thunderwave: [layer(SORCERY.explode, 1, 0.7), layer(CREATURE.dragonWings, 0.7, 0.8)],
-  cast_arms_of_hadar: [layer(SORCERY.dark, 0.98, 0.7), layer(CREATURE.giantSlam, 0.35, 1.2)],
   cast_guiding_bolt: [layer(SORCERY.miracle, 0.77, 1.4), layer(SORCERY.fire, 0.56, 1.2)],
   cast_healing_word: [layer(SORCERY.miracle, 0.84, 1.15)],
   cast_cure_wounds: [layer(SORCERY.miracle, 0.98)],
@@ -275,7 +274,6 @@ export const SPELL_SOUNDS = {
   magic_missile: 'cast_magic_missile',
   burning_hands: 'cast_burning_hands',
   thunderwave: 'cast_thunderwave',
-  arms_of_hadar: 'cast_arms_of_hadar',
   guiding_bolt: 'cast_guiding_bolt',
   healing_word: 'cast_healing_word',
   cure_wounds: 'cast_cure_wounds',

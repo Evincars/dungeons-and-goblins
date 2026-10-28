@@ -566,8 +566,6 @@
   "spell.cure_wounds.description": "A touch of healing light: you regain 1d8 + your casting ability in hit points.",
   "spell.eldritch_blast.name": "Eldritch Blast",
   "spell.eldritch_blast.description": "A beam of crackling energy: a spell attack for 1d10 force damage.",
-  "spell.arms_of_hadar.name": "Arms of Hadar",
-  "spell.arms_of_hadar.description": "Tentacles of dark energy lash out around you: everyone near saves on STR against your spell DC or takes 2d6 necrotic damage (half on a success).",
   "spell.vicious_mockery.name": "Vicious Mockery",
   "spell.vicious_mockery.description": "A string of insults laced with magic, aimed close by: everyone in it saves on WIS against your spell DC or takes 1d4 psychic damage (half on a success).",
   "spell.healing_word.name": "Healing Word",

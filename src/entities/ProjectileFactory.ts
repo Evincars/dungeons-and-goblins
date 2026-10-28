@@ -31,8 +31,11 @@ export function createSpellBolt(
   });
 }
 
-/** What a spell's projectile carries: the spell, whether it always hits, and the effect it strikes with. */
-export type SpellCarry = { spell?: SpellId; autoHit?: boolean; impact?: SpellEffect };
+/**
+ * What a spell's projectile carries: the spell, whether it always hits, the effect it strikes with, and how many ticks
+ * it waits before it flies (a volley leaves one dart after another).
+ */
+export type SpellCarry = { spell?: SpellId; autoHit?: boolean; impact?: SpellEffect; wait?: number };
 
 /** A caster's own bolt: its flight frames looping, turned along (dx, dy). */
 function boltArt(def: CharacterDef, bolt: BoltDef, dx: number, dy: number): Partial<Entity> {

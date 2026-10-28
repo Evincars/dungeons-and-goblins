@@ -40,10 +40,6 @@
     "kind": "burst", "level": 1, "damage": "2d8", "damageType": "thunder", "save": "constitution", "range": 0, "radius": 48, "recovery": 6,
     "effect": ["ring_ripple", "white"], "effectScale": 1.6
   },
-  "arms_of_hadar": {
-    "kind": "burst", "level": 1, "damage": "2d6", "damageType": "necrotic", "save": "strength", "range": 0, "radius": 52, "recovery": 6,
-    "effect": ["vortex_ripple", "indigo"], "effectScale": 1.6
-  },
   "guiding_bolt": {
     "kind": "bolt", "level": 1, "damage": "4d6", "damageType": "radiant", "recovery": 8,
     "effect": ["sun_flare", "amber"], "effectScale": 1

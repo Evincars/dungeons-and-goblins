@@ -114,7 +114,9 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   following) in `src/ai/constants.ts`; the D&D rules tables (SRD weapons and armour) in `src/rules/WeaponTable.ts`
   and `src/rules/ArmorTable.ts`; hero classes (abilities, hit points, proficiencies, features) in
   `src/data/classes.json`; enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`;
-  castable spells (dice, recovery, save, area, effect) in `src/data/spells.json`; every spell of the D&D lists (who learns it
+  castable spells (dice, recovery, save, area, effect) in `src/data/spells.json`; the spells the game uses at all
+  (only ones that act at once and can be drawn with our effects) and their icons in `src/data/spell-list.json`
+  (`img`, filled in by `scripts/spell-icons.sh`, which pixelates `public/spells-icons/<id>.webp` into `<id>.png`); every spell of the D&D lists (who learns it
   and at which level, range in feet and px, dice, damage types, text) in `src/data/spellbook.json`, made by
   `scripts/scrape-spells.mjs`; the SRD class features by level (passive, active or info; `worked` says whether the game plays
   them) in `src/data/features.json`; every damage type, weapon and spell, in `src/rules/DamageTypes.ts`; sound effects (clips layered, re-pitched

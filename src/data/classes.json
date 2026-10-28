@@ -40,7 +40,7 @@
       "armor": ["light"], "weapons": ["simple"], "weaponBases": [],
       "savingThrows": ["wisdom", "charisma"], "spellcasting": "charisma",
       "progression": {
-        "1": [{ "spell": "eldritch_blast" }, { "spell": "chill_touch" }, { "spell": "arms_of_hadar" }],
+        "1": [{ "spell": "eldritch_blast" }, { "spell": "chill_touch" }],
         "2": [{ "feature": "agonizing_blast" }],
         "4": [{ "asi": true }], "8": [{ "asi": true }], "12": [{ "asi": true }], "16": [{ "asi": true }], "19": [{ "asi": true }]
       }

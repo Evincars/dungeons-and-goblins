@@ -448,6 +448,8 @@ export type Entity = {
     life: number; team: number; arrow?: boolean; attack: AttackProfile; owner?: number; burst?: ProjectileBurst;
     /** The spell it carries (for the combat log), whether it always hits (magic missile), and the effect it strikes with. */
     spell?: SpellId; autoHit?: boolean; impact?: SpellEffect;
+    /** Ticks it waits in the caster's hand before it flies: a magic missile's darts go one after another. */
+    wait?: number;
   };
 
   /** Point light this entity emits (spell bolts, …). */

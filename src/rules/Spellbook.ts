@@ -15,6 +15,7 @@ import type { Picks } from './Archetypes';
 import { SPELLS, TICKS_PER_SECOND, isSpellId } from './Spells';
 import type { SpellDef, SpellId } from './Spells';
 import spellbook from '../data/spellbook.json';
+import spellList from '../data/spell-list.json';
 
 /**
  * Every spell of the 5th edition lists (src/data/spellbook.json, made by scripts/scrape-spells.mjs from
@@ -122,9 +123,33 @@ function readSpell(id: string, raw: unknown): CatalogSpell {
   };
 }
 
+/**
+ * The spells the game uses (src/data/spell-list.json), each with its icon under public/ (null: none yet). Every one
+ * must be in the whole list; a mistake stops the game with a clear message.
+ */
+const GAME_SPELLS: ReadonlyMap<string, string | null> = new Map(Object.entries(spellList.spells).map(([id, entry]) => {
+  ensure(hasKey(spellbook.spells, id), `Spell list names an unknown spell ${id}`, { id });
+  const img: unknown = isRecord(entry) ? entry.img : undefined;
+  ensure(img === null || (typeof img === 'string' && img.length > 0), `Bad icon for spell ${id}`, { id });
+  return [id, typeof img === 'string' ? img : null];
+}));
+
+/** The spells there are in play: the whole list cut down to the game's own. */
 export const CATALOG: Readonly<Record<string, CatalogSpell>> = Object.fromEntries(
-  Object.entries(spellbook.spells).map(([id, raw]) => [id, readSpell(id, raw)]),
+  Object.entries(spellbook.spells).filter(([id]) => GAME_SPELLS.has(id)).map(([id, raw]) => [id, readSpell(id, raw)]),
 );
+
+/** Every spell with an icon, and where it is under public/ (the art loads lazily, see assets/SheetCatalog.ts). */
+export function spellIcons(): Array<{ id: string; src: string }> {
+  const icons: Array<{ id: string; src: string }> = [];
+  for (const [id, src] of GAME_SPELLS) if (src) icons.push({ id, src: `/${src}` });
+  return icons;
+}
+
+/** The texture key of a spell's icon, if it has one. */
+export function spellIconKey(id: string): string | null {
+  return GAME_SPELLS.get(id) ? `spell_icon_${id}` : null;
+}
 
 export function isCatalogSpell(id: unknown): id is string {
   return typeof id === 'string' && hasKey(CATALOG, id);

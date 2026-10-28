@@ -3,7 +3,7 @@ import { QUICK_ROW } from '../world';
 import type { Player } from '../world';
 import { GAME_HEIGHT, GAME_WIDTH } from '../render/Camera';
 import { frameTexture } from '../render/Sheets';
-import { requestArt } from '../assets/LazyArt';
+import { lazyTexture, requestArt } from '../assets/LazyArt';
 import { EFFECT_COLOURS, EFFECT_SHAPES, effectSheetKey } from '../assets/Effects';
 import { chooseQuickSlot, chosenQuickSlot, claimPointer, quickRow } from '../systems/InputSystem';
 import { codeLabel, QUICK_KEYS } from '../game/Settings';
@@ -11,7 +11,7 @@ import { isInventoryOpen } from '../systems/InventorySystem';
 import { heroClass, spellLevelFor } from '../rules/Classes';
 import { SPELLS, TICKS_PER_SECOND, isSpellId } from '../rules/Spells';
 import type { SpellDef } from '../rules/Spells';
-import { CATALOG, castDef, quickBinding } from '../rules/Spellbook';
+import { CATALOG, castDef, quickBinding, spellIconKey } from '../rules/Spellbook';
 import type { CatalogSpell, QuickBinding } from '../rules/Spellbook';
 import { abandonBinding, cancelBinding, finishBinding, pendingBinding, setOverQuickSquare } from '../game/SpellBinding';
 import { bindingFeatureId, featureOfClass } from '../rules/ClassFeatures';
@@ -34,6 +34,8 @@ const SLOT_EDGE_ALPHA = 0.6;
 /** Effect frames are 64 px with room round the flash: drawn this much bigger than the square, clipped to it. */
 const EFFECT_FRAME = 64;
 const ICON_ZOOM = 1.7;
+/** A spell icon's size before it is fitted to the square (it is scaled to the loaded picture's own width). */
+const ICON_SIZE = 64;
 /** A spell recovering is shaded from the top by the share of its recovery left; one not learnt yet is dimmed. */
 const SHADE_ALPHA = 0.65;
 const LOCKED_ALPHA = 0.3;
@@ -64,14 +66,21 @@ type SlotView = {
   shadeH: number;
 };
 
-/** The effect a spell strikes with, at the middle of its animation (its brightest), as the spell's picture. */
+/**
+ * The spell's picture: its icon (src/data/spell-list.json) when it has one, otherwise the effect it strikes with, at
+ * the middle of its animation (its brightest).
+ */
 function showIcon(view: SlotView, def: SpellDef): void {
-  const { shape, colour } = def.effect;
-  const key = effectSheetKey(shape);
-  const frame = Math.floor(EFFECT_SHAPES[shape][2] / 2);
   view.icon.texture = Texture.EMPTY;
+  const iconKey = spellIconKey(def.id);
+  const { shape, colour } = def.effect;
+  const key = iconKey ?? effectSheetKey(shape);
+  const frame = Math.floor(EFFECT_SHAPES[shape][2] / 2);
+  view.icon.scale.set(iconKey ? SLOT / ICON_SIZE : (SLOT / EFFECT_FRAME) * ICON_ZOOM);
   const show = (): void => {
-    if (view.bound?.startsWith(def.id)) view.icon.texture = frameTexture(key, frame, EFFECT_COLOURS.indexOf(colour));
+    if (!view.bound?.startsWith(def.id)) return;
+    view.icon.texture = iconKey ? lazyTexture(iconKey) : frameTexture(key, frame, EFFECT_COLOURS.indexOf(colour));
+    if (iconKey) view.icon.scale.set(SLOT / Math.max(1, view.icon.texture.width));
   };
   reportRejection(requestArt(key).then(show), `Spell icon ${def.id} did not load`, 'render');
 }

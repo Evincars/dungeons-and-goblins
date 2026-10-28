@@ -2,6 +2,7 @@ import { SpriteSheet, frameRun } from './SpriteSheet';
 import { registerLazy } from './LazyArt';
 import { registerEffects } from './Effects';
 import { catalogIconSources } from '../entities/ItemCatalog';
+import { spellIconKey, spellIcons } from '../rules/Spellbook';
 import type { Rect, SheetRegion } from './SpriteSheet';
 import { characterSheets } from '../characters/Characters';
 import { PROPS, PROP_IMAGES } from '../level/Props';
@@ -292,7 +293,7 @@ const TREASURES = 80;
 
 /**
  * Registers the art that loads the first time it is drawn: item icons (weapons, shields, armour, medals),
- * gates, treasures and every effect.
+ * gates, treasures, spell icons and every effect.
  */
 export function registerLazyArt(): void {
   for (const { key, src } of catalogIconSources()) {
@@ -302,5 +303,10 @@ export function registerLazyArt(): void {
   registerLazy(new SpriteSheet('weapons_loose', '/weapons-1.png', { regions: BLADE_ICONS }), Object.keys(BLADE_ICONS));
   numberedIcons('gate', 'gates', GATES);
   numberedIcons('treasure', 'treasures', TREASURES);
+  // Spell icons are pixelated on purpose (scripts/spell-icons.sh), so drawn crisp.
+  for (const { id, src } of spellIcons()) {
+    const key = spellIconKey(id);
+    if (key) registerLazy(new SpriteSheet(key, src), [key]);
+  }
   registerEffects();
 }

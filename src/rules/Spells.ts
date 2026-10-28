@@ -17,7 +17,7 @@ import spells from '../data/spells.json';
 
 export const SPELL_IDS = [
   'fire_bolt', 'ray_of_frost', 'chill_touch', 'eldritch_blast', 'vicious_mockery', 'sacred_flame',
-  'chromatic_orb', 'magic_missile', 'burning_hands', 'thunderwave', 'arms_of_hadar', 'guiding_bolt', 'healing_word', 'cure_wounds',
+  'chromatic_orb', 'magic_missile', 'burning_hands', 'thunderwave', 'guiding_bolt', 'healing_word', 'cure_wounds',
 ] as const;
 export type SpellId = (typeof SPELL_IDS)[number];
 
@@ -93,7 +93,6 @@ export const SPELLS = {
   magic_missile: readSpell('magic_missile', spells.magic_missile),
   burning_hands: readSpell('burning_hands', spells.burning_hands),
   thunderwave: readSpell('thunderwave', spells.thunderwave),
-  arms_of_hadar: readSpell('arms_of_hadar', spells.arms_of_hadar),
   guiding_bolt: readSpell('guiding_bolt', spells.guiding_bolt),
   healing_word: readSpell('healing_word', spells.healing_word),
   cure_wounds: readSpell('cure_wounds', spells.cure_wounds),

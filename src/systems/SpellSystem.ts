@@ -47,8 +47,8 @@ type Bolt = (typeof bolts)['entities'][number];
 
 /** Bolts reach this far at most beyond their own position to touch a body. */
 const BOLT_QUERY_RADIUS = MAX_MOB_RADIUS + SPELL_STATS.reachY;
-/** A magic missile's darts fan out this far apart (radians). */
-const MISSILE_SPREAD = 0.22;
+/** A magic missile's darts leave one after another along the same line, this many ticks apart. */
+const DART_GAP_TICKS = 5;
 /** "Recovering" and "not yet" are said at most this often while the cast key is held. */
 const FEEDBACK_TICKS = 30;
 const victims: Entity[] = [];
@@ -171,15 +171,13 @@ function castBolt(caster: Player, def: SpellDef, dirX: number, dirY: number): vo
   createSpellBolt(caster.position.x, caster.position.y, dirX, dirY, attack, world.id(caster), caster.character?.def, { spell: def.id, impact: impactOf(def) });
 }
 
-/** Magic missile: its darts fan out round the aim, and each always hits. */
+/** Magic missile: its darts fly the aimed line one after another, and each always hits. */
 function castMissiles(caster: Player, def: SpellDef, dirX: number, dirY: number): void {
   const sheet = characterSheet(caster);
   const attack = { attackBonus: sheet.spell.attack, damage: def.damage, mode: sheet.attack.mode };
-  const base = Math.atan2(dirY, dirX);
   for (let i = 0; i < def.count; i++) {
-    const angle = base + (i - (def.count - 1) / 2) * MISSILE_SPREAD;
-    createSpellBolt(caster.position.x, caster.position.y, Math.cos(angle), Math.sin(angle), attack, world.id(caster), caster.character?.def,
-      { spell: def.id, autoHit: true, impact: impactOf(def) });
+    createSpellBolt(caster.position.x, caster.position.y, dirX, dirY, attack, world.id(caster), caster.character?.def,
+      { spell: def.id, autoHit: true, impact: impactOf(def), wait: i * DART_GAP_TICKS });
   }
 }
 
@@ -303,6 +301,11 @@ function strikeWith(bolt: Bolt, victim: Entity): boolean {
 }
 
 function flyBolt(level: Level, bolt: Bolt): void {
+  // A dart queued behind the one before it stays in the caster's hand until its turn.
+  if ((bolt.projectile.wait ?? 0) > 0) {
+    bolt.projectile.wait = (bolt.projectile.wait ?? 0) - 1;
+    return;
+  }
   const pos = bolt.position;
   pos.x += bolt.velocity.x;
   pos.y += bolt.velocity.y;

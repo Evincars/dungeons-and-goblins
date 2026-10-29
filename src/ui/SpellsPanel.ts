@@ -1,14 +1,16 @@
-import { Container, Graphics, Rectangle } from 'pixi.js';
+import { Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
 import type { Player } from '../world';
 import { text } from '../core/texts';
 import { heroClass } from '../rules/Classes';
 import type { DndClass } from '../rules/Classes';
-import { castLevels, isCaster, learnLevel, learntSpells, spellListOf } from '../rules/Spellbook';
+import { castLevels, isCaster, learnLevel, learntSpells, spellIconKey, spellListOf } from '../rules/Spellbook';
 import type { CatalogSpell, SpellList } from '../rules/Spellbook';
 import type { Build } from '../rules/Build';
 import { featureBinding, featuresAt } from '../rules/ClassFeatures';
 import type { FeatureDef } from '../rules/ClassFeatures';
 import { beginBinding } from '../game/SpellBinding';
+import { lazyTexture, requestArt } from '../assets/LazyArt';
+import { reportRejection } from '../core/errors';
 import { preparesSpells, requestToggleFeature } from '../game/PlayerActions';
 import type { TipTopic } from './InfoTooltip';
 import { PixelLabel } from './PixelText';
@@ -29,6 +31,8 @@ const GAP = 3;
 const PAD = 6;
 const HEADING_H = 11;
 const SECTION_GAP = 6;
+/** A spell's icon sits this far inside its box's edge. */
+const ICON_INSET = 1;
 /** Scrolling: design pixels moved per unit of wheel delta (a notch is about 100 units). */
 const WHEEL_STEP = 0.3;
 const BOX_FILL_ALPHA = 0.35;
@@ -127,9 +131,25 @@ export class SpellsPanel {
     items.forEach((item, i) => {
       const rect = new Rectangle(this.area.x + PAD + (i % cols) * (BOX + GAP), first + Math.floor(i / cols) * (BOX + GAP), BOX, BOX);
       this.boxes.push({ spell: item.spell ?? null, feature: item.feature ?? null, rect });
+      if (item.spell) this.addIcon(item.spell, rect);
     });
     const rows = Math.ceil(items.length / cols);
     return first + rows * (BOX + GAP) + SECTION_GAP;
+  }
+
+  /** A spell's icon (src/data/spell-list.json) inside its box, once it has loaded; a spell without one keeps an empty box. */
+  private addIcon(spell: CatalogSpell, rect: Rectangle): void {
+    const key = spellIconKey(spell.id);
+    if (!key) return;
+    const icon = new Sprite(Texture.EMPTY);
+    icon.position.set(rect.x + ICON_INSET, rect.y + ICON_INSET);
+    this.content.addChildAt(icon, this.content.getChildIndex(this.frames) + 1);
+    const show = (): void => {
+      if (icon.destroyed) return;
+      icon.texture = lazyTexture(key);
+      icon.scale.set((BOX - 2 * ICON_INSET) / Math.max(1, icon.texture.width));
+    };
+    reportRejection(requestArt(key).then(show), `Spell icon ${spell.id} did not load`, 'render');
   }
 
   private layout(cls: DndClass, level: number, build: Build | undefined): void {
@@ -213,14 +233,6 @@ export class SpellsPanel {
     const box = this.hovered;
     if (!box) return;
     g.rect(box.rect.x, box.rect.y, box.rect.width, box.rect.height).stroke({ color: THEME.title, width: 1, alignment: 1 });
-  }
-
-  /** The box (or level box) under the pointer, where it is drawn now (scrolled), for a tooltip to sit beside. */
-  anchorAt(x: number, y: number): { x: number; y: number; w: number; h: number } | null {
-    const option = this.optionAt(x, y);
-    if (option) return { x: option.rect.x, y: option.rect.y, w: option.rect.width, h: option.rect.height };
-    const box = this.boxAt(x, y);
-    return box ? { x: box.rect.x, y: box.rect.y - this.scrollY, w: box.rect.width, h: box.rect.height } : null;
   }
 
   /** Whether this hero may prepare spells here (in a safe room). */

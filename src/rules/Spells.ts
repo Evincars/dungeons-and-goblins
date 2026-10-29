@@ -18,6 +18,11 @@ import spells from '../data/spells.json';
 export const SPELL_IDS = [
   'fire_bolt', 'ray_of_frost', 'chill_touch', 'eldritch_blast', 'vicious_mockery', 'sacred_flame',
   'chromatic_orb', 'magic_missile', 'burning_hands', 'thunderwave', 'guiding_bolt', 'healing_word', 'cure_wounds',
+  'acid_splash', 'poison_spray', 'produce_flame', 'shocking_grasp', 'thorn_whip', 'toll_the_dead',
+  'dissonant_whispers', 'ice_knife', 'inflict_wounds', 'ray_of_sickness', 'witch_bolt', 'melfs_acid_arrow',
+  'prayer_of_healing', 'scorching_ray', 'shatter', 'conjure_barrage', 'fireball', 'lightning_bolt',
+  'mass_healing_word', 'blight', 'ice_storm', 'cone_of_cold', 'flame_strike', 'mass_cure_wounds',
+  'chain_lightning', 'circle_of_death', 'disintegrate', 'harm', 'heal', 'otilukes_freezing_sphere',
 ] as const;
 export type SpellId = (typeof SPELL_IDS)[number];
 
@@ -25,7 +30,7 @@ export function isSpellId(value: unknown): value is SpellId {
   return SPELL_IDS.some((id) => id === value);
 }
 
-/** bolt: a projectile, rolled to hit. missiles: darts that always hit. burst: an area, saved against. heal: the caster. */
+/** bolt: a projectile, rolled to hit. missiles: darts that always hit. burst: an area, saved against. heal: the caster (and, with a radius, the heroes near). */
 export const SPELL_KINDS = ['bolt', 'missiles', 'burst', 'heal'] as const;
 export type SpellKind = (typeof SPELL_KINDS)[number];
 
@@ -96,4 +101,34 @@ export const SPELLS = {
   guiding_bolt: readSpell('guiding_bolt', spells.guiding_bolt),
   healing_word: readSpell('healing_word', spells.healing_word),
   cure_wounds: readSpell('cure_wounds', spells.cure_wounds),
+  acid_splash: readSpell('acid_splash', spells.acid_splash),
+  poison_spray: readSpell('poison_spray', spells.poison_spray),
+  produce_flame: readSpell('produce_flame', spells.produce_flame),
+  shocking_grasp: readSpell('shocking_grasp', spells.shocking_grasp),
+  thorn_whip: readSpell('thorn_whip', spells.thorn_whip),
+  toll_the_dead: readSpell('toll_the_dead', spells.toll_the_dead),
+  dissonant_whispers: readSpell('dissonant_whispers', spells.dissonant_whispers),
+  ice_knife: readSpell('ice_knife', spells.ice_knife),
+  inflict_wounds: readSpell('inflict_wounds', spells.inflict_wounds),
+  ray_of_sickness: readSpell('ray_of_sickness', spells.ray_of_sickness),
+  witch_bolt: readSpell('witch_bolt', spells.witch_bolt),
+  melfs_acid_arrow: readSpell('melfs_acid_arrow', spells.melfs_acid_arrow),
+  prayer_of_healing: readSpell('prayer_of_healing', spells.prayer_of_healing),
+  scorching_ray: readSpell('scorching_ray', spells.scorching_ray),
+  shatter: readSpell('shatter', spells.shatter),
+  conjure_barrage: readSpell('conjure_barrage', spells.conjure_barrage),
+  fireball: readSpell('fireball', spells.fireball),
+  lightning_bolt: readSpell('lightning_bolt', spells.lightning_bolt),
+  mass_healing_word: readSpell('mass_healing_word', spells.mass_healing_word),
+  blight: readSpell('blight', spells.blight),
+  ice_storm: readSpell('ice_storm', spells.ice_storm),
+  cone_of_cold: readSpell('cone_of_cold', spells.cone_of_cold),
+  flame_strike: readSpell('flame_strike', spells.flame_strike),
+  mass_cure_wounds: readSpell('mass_cure_wounds', spells.mass_cure_wounds),
+  chain_lightning: readSpell('chain_lightning', spells.chain_lightning),
+  circle_of_death: readSpell('circle_of_death', spells.circle_of_death),
+  disintegrate: readSpell('disintegrate', spells.disintegrate),
+  harm: readSpell('harm', spells.harm),
+  heal: readSpell('heal', spells.heal),
+  otilukes_freezing_sphere: readSpell('otilukes_freezing_sphere', spells.otilukes_freezing_sphere),
 } as const satisfies Record<SpellId, SpellDef>;

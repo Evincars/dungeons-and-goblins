@@ -1,4 +1,4 @@
-import { world, q, isTarget, QUICK_SLOTS } from '../world';
+import { world, q, isActivePlayer, isTarget, QUICK_SLOTS } from '../world';
 import type { Entity, Player, SpellEffect } from '../world';
 import type { Level } from '../level/Level';
 import { bonusSwing, hitMob } from './SwordSystem';
@@ -227,11 +227,23 @@ function castHeal(caster: Player, def: SpellDef): void {
   // Supreme Healing: every die of a healing spell counts at its highest.
   const rolled = featureOn(caster, 'supreme_healing') ? diceRange(def.damage).max : rollDice(def.damage);
   const amount = Math.max(1, rolled + sheet.modifiers[sheet.spell.ability] + disciple);
-  const h = caster.health;
+  if (def.radius <= 0) {
+    mendWith(caster, caster, def, amount);
+    return;
+  }
+  // A heal with a radius (Prayer of Healing, the mass heals) mends every hero standing within it, the caster too.
+  for (const hero of q.players) {
+    if (isActivePlayer(hero) && Math.hypot(hero.position.x - caster.position.x, hero.position.y - caster.position.y) <= def.radius) mendWith(caster, hero, def, amount);
+  }
+}
+
+/** One hero mended by the caster's healing spell: up to their full health, with its effect, the number and the log line. */
+function mendWith(caster: Player, hero: Player, def: SpellDef, amount: number): void {
+  const h = hero.health;
   const healed = Math.min(h.max - h.current, amount);
   h.current += healed;
-  playEffect(def.effect.shape, def.effect.colour, caster.position.x, caster.position.y, AIM_HEIGHT, def.effect.scale);
-  logHeal(caster, healed);
+  playEffect(def.effect.shape, def.effect.colour, hero.position.x, hero.position.y, AIM_HEIGHT, def.effect.scale);
+  logHeal(hero, healed);
   recordSpell(caster, def.id, 'heal', healed);
 }
 

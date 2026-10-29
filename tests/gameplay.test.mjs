@@ -2692,6 +2692,21 @@ test('the game uses only the spells in its list, and every spell a class learns 
   }
 });
 
+test('every spell on the game\'s list can be cast, and a heal with a radius mends the heroes near', async () => {
+  const { SPELL_IDS } = await load('rules/Spells');
+  for (const id of Object.keys(Spellbook.CATALOG)) assert.ok(SPELL_IDS.includes(id), `${id} has its numbers in spells.json`);
+  const level = arena(12, 6);
+  const cleric = casterAt(2, 2, 'cleric', 0);
+  const ally = playerAt(3, 2);
+  const far = playerAt(10, 4);
+  for (const hero of [cleric, ally, far]) hero.health.current = 1;
+  cleric.playerStats.level = 3;
+  assert.equal(bindSpell(cleric, 0, 'prayer_of_healing', 2), true);
+  cast(level, cleric, 90);
+  assert.ok(cleric.health.current > 1 && ally.health.current > 1, 'the caster and the ally beside them are mended');
+  assert.equal(far.health.current, 1, 'a hero out of reach is not');
+});
+
 test('every spell of the lists is read with a range, the classes that learn it and the hero level they do', () => {
   const spells = Object.values(Spellbook.CATALOG);
   assert.ok(spells.length >= 40 && spells.length < 100, 'the game\'s own list (src/data/spell-list.json)');
@@ -2722,7 +2737,7 @@ test('a cantrip grows with the hero level; a spell with the level it is cast at,
   const fireball = Spellbook.CATALOG.fireball;
   assert.equal(Spellbook.spellDice(fireball, 3, 5).roll.count, 8);
   assert.equal(Spellbook.spellDice(fireball, 5, 9).roll.count, 10, '1d6 more for each level above the third');
-  assert.equal(Spellbook.cooldownSeconds('fireball', 3), 5, 'five seconds by default');
+  assert.equal(Spellbook.cooldownSeconds('fireball', 3), 16, 'its own recovery from spells.json');
   assert.ok(Spellbook.cooldownSeconds('fireball', 5) > Spellbook.cooldownSeconds('fireball', 4));
 });
 
@@ -2769,7 +2784,7 @@ test('the quick bar\'s second row holds the hero\'s active class features until 
   assert.deepEqual(Spellbook.quickBinding(fighter, 11), { spell: 'feature:action_surge', level: 0 });
 });
 
-test('a spell cast at a higher level hits harder and recovers more slowly; a bound spell that is not worked yet casts nothing', () => {
+test('a spell cast at a higher level hits harder and recovers more slowly; any spell on the list can be cast', () => {
   const level = arena(12, 6);
   const wizard = casterAt(2, 2, 'wizard', 0);
   wizard.playerStats.level = 5;
@@ -2780,8 +2795,8 @@ test('a spell cast at a higher level hits harder and recovers more slowly; a bou
   assert.equal(wizard.casting.level, 3);
   const mage = casterAt(2, 4, 'wizard', 1);
   assert.equal(bindSpell(mage, 1, 'ice_knife', 1), true);
-  cast(level, mage, 90);
-  assert.equal(mage.casting, undefined, 'Ice Knife is bound but only a name for now');
+  cast(level, mage, 1);
+  assert.equal(mage.casting?.spell, 'ice_knife', 'every spell on the list is cast');
 });
 
 test('a guest\'s synced spellbook is checked: bound spells must be real', () => {

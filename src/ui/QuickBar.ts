@@ -299,17 +299,8 @@ export class QuickBar {
     for (const view of this.slots) view.square.scale.set(1 + BREATH_SWELL * phase);
   }
 
-  /** Where a "More info" on a square's tooltip goes (the HUD opens it in its dialog). */
-  set onMore(handler: ((more: TipTopic) => void) | null) {
-    this.tip.onMore = handler;
-  }
-
-  /**
-   * The tooltip of the square under the pointer, pinned just over it; it stays while the pointer is on it, so its
-   * "More info" can be clicked.
-   */
+  /** The tooltip of the square under the pointer, just over it (asked for every update, so holding Alt shows its whole story). */
   private updateTip(player: Player): void {
-    if (this.tip.hovered && !pendingBinding()) return;
     const view = this.slots[this.hovered];
     if (!view || pendingBinding()) {
       this.tip.hide();

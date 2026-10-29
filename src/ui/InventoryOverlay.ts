@@ -13,7 +13,6 @@ import { armorClassTopic, armorTrainingTopic, damageTopic, hitPointsTopic, statT
 import { ProficiencyPanel } from './ProficiencyPanel';
 import { SpellsPanel } from './SpellsPanel';
 import { HudDialog } from './HudDialog';
-import { ScrollText } from './ScrollText';
 import { claimPointer } from '../systems/InputSystem';
 import { ABILITY_CELL_H, AbilityGrid } from './AbilityGrid';
 import { SheetInfoPanel } from './SheetInfoPanel';
@@ -57,9 +56,6 @@ const TITLE = { x: 80, y: 6 };
 /** The weight carried shows under the gold; it turns orange past this share of what can be carried. */
 const WEIGHT_ROW = 11;
 const HEAVY_SHARE = 0.9;
-/** The dialog a tooltip's "More info" opens: its text box, in game pixels. */
-const MORE_W = 280;
-const MORE_H = 150;
 
 /**
  * The screen is laid out once at this width (the art scaled down to it) and then scaled whole to fit the
@@ -153,9 +149,6 @@ export class InventoryOverlay {
   /** What the rules make of the player's gear, as last drawn (for the tooltips). */
   private sheet: CharacterSheet | null = null;
   private readonly infoTip = new InfoTooltip();
-  /** The whole story of what a tooltip told in short (a spell's text and numbers). */
-  private readonly moreDialog = new HudDialog();
-  private readonly moreText = new ScrollText(MORE_W, MORE_H);
   /** An item's right-click menu (send it to another player). */
   private readonly itemMenu = new PopupMenu();
   private readonly gold = new PixelLabel('', { color: 0xffcc00, align: 'right', shadow: true });
@@ -171,8 +164,6 @@ export class InventoryOverlay {
   /** The last press, to spot a double-click. */
   private lastPress: { place: ItemPlace; at: number } | null = null;
   private dragging: ItemPlace | null = null;
-  /** Where the pointer was last (design pixels), to look again once a pinned tooltip has lingered long enough. */
-  private readonly lastPointer = { x: 0, y: 0 };
   private readonly stopListening: () => void;
   /** What the screen shows, so it is redrawn only when the player's things change. */
   private shown: { inventory: unknown; equipped: unknown; contents: number; gold: number; hp: number; maxHp: number; progress: string } | null = null;
@@ -182,8 +173,7 @@ export class InventoryOverlay {
 
   constructor() {
     this.container.visible = false;
-    this.container.addChild(new Graphics().rect(0, 0, GAME_WIDTH, GAME_HEIGHT).fill({ color: THEME.backdrop, alpha: DIM_ALPHA }), this.root, this.moreDialog.container);
-    this.infoTip.onMore = (more) => this.showMore(more);
+    this.container.addChild(new Graphics().rect(0, 0, GAME_WIDTH, GAME_HEIGHT).fill({ color: THEME.backdrop, alpha: DIM_ALPHA }), this.root);
     this.build();
     this.fitToScreen();
     this.listen();
@@ -206,17 +196,16 @@ export class InventoryOverlay {
       this.endCompare();
       this.infoTip.hide();
       this.itemMenu.hide();
-      this.moreDialog.hide();
       this.spells?.closeChoice();
     }
   }
 
   /**
-   * Escape while the inventory is open closes the topmost thing inside it — the "More info" dialog, an item's menu, a
-   * spell's level boxes or a comparison — and returns true; with nothing of its own open, false (the inventory itself goes).
+   * Escape while the inventory is open closes the topmost thing inside it — an item's menu, a spell's level boxes or a
+   * comparison — and returns true; with nothing of its own open, false (the inventory itself goes).
    */
   handleEscape(): boolean {
-    if (this.moreDialog.hide() || this.itemMenu.hide()) return true;
+    if (this.itemMenu.hide()) return true;
     if (this.comparing) {
       this.endCompare();
       return true;
@@ -224,18 +213,12 @@ export class InventoryOverlay {
     return this.spells?.closeChoice() ?? false;
   }
 
-  /** "More info" on a tooltip: the whole text and every number, in a dialog over the inventory. */
-  private showMore(more: TipTopic): void {
-    this.moreText.set(more);
-    this.moreDialog.show(more.title, this.moreText.view, MORE_W, MORE_H);
-  }
-
   update(): void {
     const player = localPlayer();
     if (!this.container.visible || !player) return;
     if (this.activeTab === SKILLS_TAB) this.spells?.animate();
-    // A pinned tooltip waiting for the pointer: once its time is up, what the pointer is over now tells about itself.
-    if (this.infoTip.lingering) this.updateInfoTip(this.lastPointer.x, this.lastPointer.y);
+    // Alt held or let go: the tooltip up shows its whole story, or its short one again.
+    this.infoTip.refresh();
     const inventory = player.inventory ?? [];
     const equipped = player.equipped ?? {};
     const contents = contentsMark(inventory, equipped);
@@ -253,7 +236,6 @@ export class InventoryOverlay {
   destroy(): void {
     this.stopListening();
     claimPointer(this, false);
-    this.moreDialog.hide();
     this.infoTip.hide();
     this.container.destroy({ children: true });
   }
@@ -590,10 +572,8 @@ export class InventoryOverlay {
 
   private startDrag(e: FederatedPointerEvent): void {
     const player = localPlayer();
-    // A press on the menu is for its rows, one on a pinned tooltip for its link; anywhere else closes the menu.
-    if (this.itemMenu.covers(e.global) || this.infoTip.hovered) return;
-    // A press beside the "More info" dialog closes it, and does nothing else.
-    if (this.moreDialog.hide()) return;
+    // A press on the menu is for its rows; anywhere else closes the menu.
+    if (this.itemMenu.covers(e.global)) return;
     this.itemMenu.hide();
     this.endCompare();
     if (player && e.button === RIGHT_BUTTON) {
@@ -621,12 +601,6 @@ export class InventoryOverlay {
     const player = localPlayer();
     const square = this.squareAt(e);
     if (this.comparing) return;
-    // The "More info" dialog lies over the panel: nothing under it tells about itself meanwhile.
-    if (this.moreDialog.open) {
-      this.tooltip.hide();
-      this.infoTip.hide();
-      return;
-    }
     if (this.activeTab === SKILLS_TAB) this.spells?.hover(p.x, p.y);
     const item = player && square && !this.dragging && !this.itemMenu.open ? this.itemIn(player, square.place) : undefined;
     if (item) this.tooltip.show(item, p.x, p.y, { w: DESIGN_W, h: DESIGN_H }, this.sheet?.heroClass);
@@ -635,19 +609,14 @@ export class InventoryOverlay {
   }
 
   /**
-   * Over a stat or a sheet field on the Gear page (and nothing held): its full name, what it does and how it adds up.
-   * On the Skills tab a spell's short tooltip is pinned beside its box, and stays while the pointer is on it.
+   * Over a stat or a sheet field on the Gear page, or a spell on the Skills tab (and nothing held): its full name, what
+   * it does and how it adds up, following the pointer.
    */
   private updateInfoTip(x: number, y: number): void {
-    this.lastPointer.x = x;
-    this.lastPointer.y = y;
-    if (this.infoTip.hovered || this.infoTip.lingers(x, y, performance.now())) return;
     const bounds = { w: DESIGN_W, h: DESIGN_H };
     const skills = this.activeTab === SKILLS_TAB;
     const topic = this.dragging ? null : skills ? this.spells?.topicAt(x, y) ?? null : this.topicAt(x, y);
-    const anchor = topic?.more && skills ? this.spells?.anchorAt(x, y) : null;
-    if (topic && anchor) this.infoTip.showAt(topic, anchor, bounds);
-    else if (topic) this.infoTip.show(topic, x, y, bounds);
+    if (topic) this.infoTip.show(topic, x, y, bounds);
     else this.infoTip.hide();
   }
 

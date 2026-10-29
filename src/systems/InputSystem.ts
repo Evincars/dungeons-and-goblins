@@ -71,6 +71,11 @@ function shiftHeld(): boolean {
   return keys.has('ShiftLeft') || keys.has('ShiftRight');
 }
 
+/** Alt (either one) held: tooltips show the whole story of what they tell about. */
+export function isAltHeld(): boolean {
+  return keys.has('AltLeft') || keys.has('AltRight');
+}
+
 /** The quick-bar row the keys reach now: 0, or 1 while Shift is held. */
 export function quickRow(): number {
   return !captured && shiftHeld() ? 1 : 0;
@@ -106,7 +111,8 @@ export function resetInput(): void {
 }
 
 function onKeyDown(e: KeyboardEvent): void {
-  if (e.code === 'Space' || e.code === 'Tab') e.preventDefault();
+  // Alt alone would move the browser's focus to its menu bar; here it opens tooltips' whole story.
+  if (e.code === 'Space' || e.code === 'Tab' || e.code === 'AltLeft' || e.code === 'AltRight') e.preventDefault();
   if (captured) return;
   keys.add(e.code);
   if (!e.repeat) pending.add(e.code);

@@ -1,5 +1,5 @@
 {
-  "$comment": "Spells (D&D 5e SRD), cast from the quick bar: each of its keys (Q R T 1-5 X C, Shift for the second row) casts its square, right click the one last picked. There are no spell slots: each spell has a recovery (seconds) before it can be cast again, and a short rest recovers them all. level: the spell's own level (0: cantrip), which sets how long it takes to recover: about 0.75-2 s for a cantrip, 4-10 s for level 1, longer for each level after. Which hero learns a spell, and at what hero level, is in the class's progression (src/data/classes.json). kind: bolt (a projectile; a spell attack, d20 + proficiency + casting ability, against AC), missiles (count darts that always hit), burst (everyone within radius px of the point aimed at, within range px of the caster, or of the caster when range is 0, rolls a save against the spell DC: full damage on a failure, half on a success), heal (the caster, dice + casting ability). damage: dice notation; damageType: fire, cold, lightning, force, necrotic, radiant, thunder, acid, psychic. effect: [shape, colour] from src/assets/Effects.ts, played where it strikes (and as its icon); effectScale sizes it.",
+  "$comment": "Spells (D&D 5e SRD), cast from the quick bar: each of its keys (Q R T 1-5 X C, Shift for the second row) casts its square, right click the one last picked. There are no spell slots: each spell has a recovery (seconds) before it can be cast again, and a short rest recovers them all. level: the spell's own level (0: cantrip), which sets how long it takes to recover: about 0.75-2 s for a cantrip, 4-10 s for level 1, longer for each level after. Which hero learns a spell, and at what hero level, is in the class's progression (src/data/classes.json). kind: bolt (a projectile; a spell attack, d20 + proficiency + casting ability, against AC), missiles (count darts that always hit), burst (everyone within radius px of the point aimed at, within range px of the caster, or of the caster when range is 0, rolls a save against the spell DC: full damage on a failure, half on a success), heal (the caster, dice + casting ability; with a radius, every hero within it). damage: dice notation; damageType: fire, cold, lightning, force, necrotic, radiant, thunder, acid, psychic. effect: [shape, colour] from src/assets/Effects.ts, played where it strikes (and as its icon); effectScale sizes it.",
   "fire_bolt": {
     "kind": "bolt", "level": 0, "damage": "1d10", "damageType": "fire", "recovery": 0.75,
     "effect": ["flame_lick", "coral"], "effectScale": 0.8
@@ -51,5 +51,125 @@
   "cure_wounds": {
     "kind": "heal", "level": 1, "damage": "1d8", "damageType": "radiant", "recovery": 10,
     "effect": ["sparkle_ring", "green"], "effectScale": 1
+  },
+  "acid_splash": {
+    "kind": "burst", "level": 0, "damage": "1d6", "damageType": "acid", "save": "dexterity", "range": 96, "radius": 32, "recovery": 1.5,
+    "effect": ["bubble_cluster", "green"], "effectScale": 0.9
+  },
+  "poison_spray": {
+    "kind": "burst", "level": 0, "damage": "1d12", "damageType": "poison", "save": "constitution", "range": 48, "radius": 24, "recovery": 1.5,
+    "effect": ["cloud_puff", "green"], "effectScale": 0.9
+  },
+  "produce_flame": {
+    "kind": "bolt", "level": 0, "damage": "1d8", "damageType": "fire", "recovery": 0.75,
+    "effect": ["flame_lick", "amber"], "effectScale": 0.8
+  },
+  "shocking_grasp": {
+    "kind": "bolt", "level": 0, "damage": "1d8", "damageType": "lightning", "recovery": 0.75,
+    "effect": ["crackle_ring", "azure"], "effectScale": 0.8
+  },
+  "thorn_whip": {
+    "kind": "bolt", "level": 0, "damage": "1d6", "damageType": "force", "recovery": 0.75,
+    "effect": ["claw_slash", "green"], "effectScale": 0.8
+  },
+  "toll_the_dead": {
+    "kind": "burst", "level": 0, "damage": "1d8", "damageType": "necrotic", "save": "wisdom", "range": 96, "radius": 24, "recovery": 1.5,
+    "effect": ["smoke_flower", "indigo"], "effectScale": 0.9
+  },
+  "dissonant_whispers": {
+    "kind": "burst", "level": 1, "damage": "3d6", "damageType": "psychic", "save": "wisdom", "range": 120, "radius": 24, "recovery": 6,
+    "effect": ["swirl_bloom", "mauve"], "effectScale": 1
+  },
+  "ice_knife": {
+    "kind": "burst", "level": 1, "damage": "2d6", "damageType": "cold", "save": "dexterity", "range": 120, "radius": 28, "recovery": 5,
+    "effect": ["frost_shard", "azure"], "effectScale": 1
+  },
+  "inflict_wounds": {
+    "kind": "bolt", "level": 1, "damage": "3d10", "damageType": "necrotic", "recovery": 8,
+    "effect": ["claw_swirl", "crimson"], "effectScale": 1
+  },
+  "ray_of_sickness": {
+    "kind": "bolt", "level": 1, "damage": "2d8", "damageType": "poison", "recovery": 5,
+    "effect": ["orb_fade", "green"], "effectScale": 1
+  },
+  "witch_bolt": {
+    "kind": "bolt", "level": 1, "damage": "1d12", "damageType": "lightning", "recovery": 5,
+    "effect": ["beam_streak", "azure"], "effectScale": 1
+  },
+  "melfs_acid_arrow": {
+    "kind": "bolt", "level": 2, "damage": "4d4", "damageType": "acid", "recovery": 9,
+    "effect": ["triangle_shard", "green"], "effectScale": 1
+  },
+  "prayer_of_healing": {
+    "kind": "heal", "level": 2, "damage": "2d8", "damageType": "radiant", "radius": 96, "recovery": 14,
+    "effect": ["sparkle_ring", "white"], "effectScale": 1.4
+  },
+  "scorching_ray": {
+    "kind": "missiles", "level": 2, "damage": "2d6", "damageType": "fire", "count": 3, "recovery": 10,
+    "effect": ["flame_lick", "coral"], "effectScale": 0.6
+  },
+  "shatter": {
+    "kind": "burst", "level": 2, "damage": "3d8", "damageType": "thunder", "save": "constitution", "range": 120, "radius": 40, "recovery": 10,
+    "effect": ["diamond_shatter", "white"], "effectScale": 1.3
+  },
+  "conjure_barrage": {
+    "kind": "burst", "level": 3, "damage": "3d8", "damageType": "force", "save": "dexterity", "range": 56, "radius": 48, "recovery": 14,
+    "effect": ["blade_streak", "white"], "effectScale": 1.5
+  },
+  "fireball": {
+    "kind": "burst", "level": 3, "damage": "8d6", "damageType": "fire", "save": "dexterity", "range": 160, "radius": 56, "recovery": 16,
+    "effect": ["cloud_burst", "coral"], "effectScale": 2
+  },
+  "lightning_bolt": {
+    "kind": "burst", "level": 3, "damage": "8d6", "damageType": "lightning", "save": "dexterity", "range": 120, "radius": 40, "recovery": 16,
+    "effect": ["beam_streak", "azure"], "effectScale": 2
+  },
+  "mass_healing_word": {
+    "kind": "heal", "level": 3, "damage": "1d4", "damageType": "radiant", "radius": 128, "recovery": 14,
+    "effect": ["sparkle_cluster", "green"], "effectScale": 1.4
+  },
+  "blight": {
+    "kind": "burst", "level": 4, "damage": "8d8", "damageType": "necrotic", "save": "constitution", "range": 120, "radius": 24, "recovery": 20,
+    "effect": ["smoke_flower", "green"], "effectScale": 1.2
+  },
+  "ice_storm": {
+    "kind": "burst", "level": 4, "damage": "6d6", "damageType": "cold", "save": "dexterity", "range": 160, "radius": 56, "recovery": 20,
+    "effect": ["shard_tumble", "azure"], "effectScale": 2
+  },
+  "cone_of_cold": {
+    "kind": "burst", "level": 5, "damage": "8d8", "damageType": "cold", "save": "constitution", "range": 64, "radius": 64, "recovery": 24,
+    "effect": ["cone_spray", "azure"], "effectScale": 2
+  },
+  "flame_strike": {
+    "kind": "burst", "level": 5, "damage": "8d6", "damageType": "radiant", "save": "dexterity", "range": 160, "radius": 32, "recovery": 24,
+    "effect": ["sun_spiral", "amber"], "effectScale": 1.6
+  },
+  "mass_cure_wounds": {
+    "kind": "heal", "level": 5, "damage": "3d8", "damageType": "radiant", "radius": 128, "recovery": 26,
+    "effect": ["sparkle_ring", "green"], "effectScale": 1.8
+  },
+  "chain_lightning": {
+    "kind": "burst", "level": 6, "damage": "10d8", "damageType": "lightning", "save": "dexterity", "range": 160, "radius": 64, "recovery": 30,
+    "effect": ["crackle_ring", "azure"], "effectScale": 2
+  },
+  "circle_of_death": {
+    "kind": "burst", "level": 6, "damage": "8d6", "damageType": "necrotic", "save": "constitution", "range": 160, "radius": 96, "recovery": 30,
+    "effect": ["vortex_bloom", "indigo"], "effectScale": 2.5
+  },
+  "disintegrate": {
+    "kind": "bolt", "level": 6, "damage": "10d6+40", "damageType": "force", "recovery": 30,
+    "effect": ["beam_streak", "green"], "effectScale": 1.4
+  },
+  "harm": {
+    "kind": "burst", "level": 6, "damage": "14d6", "damageType": "necrotic", "save": "constitution", "range": 80, "radius": 20, "recovery": 30,
+    "effect": ["claw_swirl", "crimson"], "effectScale": 1.4
+  },
+  "heal": {
+    "kind": "heal", "level": 6, "damage": "10d6+35", "damageType": "radiant", "recovery": 30,
+    "effect": ["sparkle_ring", "green"], "effectScale": 1.6
+  },
+  "otilukes_freezing_sphere": {
+    "kind": "burst", "level": 6, "damage": "10d6", "damageType": "cold", "save": "constitution", "range": 200, "radius": 60, "recovery": 30,
+    "effect": ["spiral_orb", "azure"], "effectScale": 2.2
   }
 }

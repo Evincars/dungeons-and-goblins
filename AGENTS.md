@@ -182,8 +182,9 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `systems/SpellSystem.ts` with effects from the library (`assets/Effects.ts`). `Spellbook.ts` reads the whole list: a class opens
   spell levels as the tabletop does, a cantrip's dice grow at hero levels 5/11/17, and a spell cast above its own level
   (the Skills tab of the inventory offers a box per level, `ui/SpellsPanel.ts`) rolls more and recovers more slowly. A click binds it
-  to a quick-bar square (`game/SpellBinding.ts`, `spellbook.bound`, the `bind_spell` command); only the spells in `spells.json`
-  go off yet. Class features (`rules/ClassFeatures.ts`) fill the Skills tab above the cantrips: a worked passive is on from its
+  to a quick-bar square (`game/SpellBinding.ts`, `spellbook.bound`, the `bind_spell` command); every spell of
+  `spell-list.json` has its numbers in `spells.json` and goes off (a heal with a `radius` mends every hero within it). Tooltips with
+  more to tell show it while Alt is held (`ui/InfoTooltip.ts`). Class features (`rules/ClassFeatures.ts`) fill the Skills tab above the cantrips: a worked passive is on from its
   level and a click switches it off and on (`featuresOff`, the `toggle_feature` command; `featureOn` is what effects ask, and the
   HUD's top left lists the ones on, `ui/PassiveHud.ts`); an active (Second Wind, Action Surge…) is bound to a quick-bar square as
   `feature:<id>` and used with the cast key (`systems/FeatureSystem.ts`; an active with several uses recovers in its share, `featureCooldown`).

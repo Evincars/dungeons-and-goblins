@@ -66,21 +66,27 @@ type SlotView = {
   shadeH: number;
 };
 
-/**
- * The spell's picture: its icon (src/data/spell-list.json) when it has one, otherwise the effect it strikes with, at
- * the middle of its animation (its brightest).
- */
-function showIcon(view: SlotView, def: SpellDef): void {
+/** A spell's own icon (src/data/spell-list.json), fitted to the square once it has loaded. */
+function showSpellIcon(view: SlotView, spell: string, key: string): void {
   view.icon.texture = Texture.EMPTY;
-  const iconKey = spellIconKey(def.id);
-  const { shape, colour } = def.effect;
-  const key = iconKey ?? effectSheetKey(shape);
-  const frame = Math.floor(EFFECT_SHAPES[shape][2] / 2);
-  view.icon.scale.set(iconKey ? SLOT / ICON_SIZE : (SLOT / EFFECT_FRAME) * ICON_ZOOM);
+  view.icon.scale.set(SLOT / ICON_SIZE);
   const show = (): void => {
-    if (!view.bound?.startsWith(def.id)) return;
-    view.icon.texture = iconKey ? lazyTexture(iconKey) : frameTexture(key, frame, EFFECT_COLOURS.indexOf(colour));
-    if (iconKey) view.icon.scale.set(SLOT / Math.max(1, view.icon.texture.width));
+    if (!view.bound?.startsWith(spell)) return;
+    view.icon.texture = lazyTexture(key);
+    view.icon.scale.set(SLOT / Math.max(1, view.icon.texture.width));
+  };
+  reportRejection(requestArt(key).then(show), `Spell icon ${spell} did not load`, 'render');
+}
+
+/** A spell with no icon of its own: the effect it strikes with, at the middle of its animation (its brightest). */
+function showEffect(view: SlotView, def: SpellDef): void {
+  const { shape, colour } = def.effect;
+  const key = effectSheetKey(shape);
+  const frame = Math.floor(EFFECT_SHAPES[shape][2] / 2);
+  view.icon.texture = Texture.EMPTY;
+  view.icon.scale.set((SLOT / EFFECT_FRAME) * ICON_ZOOM);
+  const show = (): void => {
+    if (view.bound?.startsWith(def.id)) view.icon.texture = frameTexture(key, frame, EFFECT_COLOURS.indexOf(colour));
   };
   reportRejection(requestArt(key).then(show), `Spell icon ${def.id} did not load`, 'render');
 }
@@ -215,14 +221,17 @@ export class QuickBar {
       .stroke({ color: view.active ? THEME.title : SLOT_EDGE, alpha: view.active ? 1 : SLOT_EDGE_ALPHA, width: view.active ? 2 : 1, alignment: 1 });
   }
 
-  /** A square shows a new spell: its picture (or initials, for a spell with none yet) and the level it is cast at. */
+  /** A square shows a new spell: its picture (or initials, for a spell with none) and the level it is cast at. */
   private showBinding(view: SlotView, binding: QuickBinding | null, castWith: Player['heroClass']): void {
     view.bound = bindingKey(binding);
     const spell = binding ? CATALOG[binding.spell] : null;
-    const worked = !!binding && isSpellId(binding.spell);
-    view.icon.visible = worked;
-    if (binding && isSpellId(binding.spell)) showIcon(view, SPELLS[binding.spell]);
-    view.initials.text = binding && !worked ? bindingName(binding, castWith).slice(0, INITIALS).toUpperCase() : '';
+    // Its icon if it has one (castable yet or not), else the effect of a castable spell, else its initials.
+    const iconKey = binding ? spellIconKey(binding.spell) : null;
+    const pictured = !!iconKey || (!!binding && isSpellId(binding.spell));
+    view.icon.visible = pictured;
+    if (binding && iconKey) showSpellIcon(view, binding.spell, iconKey);
+    else if (binding && isSpellId(binding.spell)) showEffect(view, SPELLS[binding.spell]);
+    view.initials.text = binding && !pictured ? bindingName(binding, castWith).slice(0, INITIALS).toUpperCase() : '';
     view.levelTag.text = binding && spell && binding.level > spell.level ? text('skills.cast_level', { level: binding.level }) : '';
   }
 

@@ -1,48 +1,134 @@
 {
-  "$comment": "The spells the game uses, out of the whole list in src/data/spellbook.json: only ones that act at once (a bolt, darts, a burst with a save, a heal) and can be drawn with the effects we have; summons, walls, lasting zones, charms and utility spells are left out. img: the spell's icon under public/ (spells-icons/<id>.png, the pixelated copy of <id>.webp), or null until there is one; scripts/spell-icons.sh makes the copies and fills this in. A spell with no icon shows its effect instead.",
+  "$comment": "The spells the game uses, out of the whole list in src/data/spellbook.json: only ones that act at once (a bolt, darts, a burst with a save, a heal) and can be drawn with the effects we have; summons, walls, lasting zones, charms and utility spells are left out. img: the spell's icon under public/ (spells-icons/<name>_pixelart.png, the pixelated copy of the icon file named after the spell), or null when there is none; scripts/spell-icons.sh makes the copies and fills this in. A spell with no icon shows its effect instead.",
   "spells": {
-    "acid_splash": { "img": null },
-    "chill_touch": { "img": null },
-    "eldritch_blast": { "img": null },
-    "fire_bolt": { "img": null },
-    "poison_spray": { "img": null },
-    "produce_flame": { "img": null },
-    "ray_of_frost": { "img": null },
-    "sacred_flame": { "img": null },
-    "shocking_grasp": { "img": null },
-    "thorn_whip": { "img": null },
-    "toll_the_dead": { "img": null },
-    "vicious_mockery": { "img": null },
-    "burning_hands": { "img": null },
-    "chromatic_orb": { "img": null },
-    "cure_wounds": { "img": null },
-    "dissonant_whispers": { "img": null },
-    "guiding_bolt": { "img": null },
-    "healing_word": { "img": null },
-    "ice_knife": { "img": null },
-    "inflict_wounds": { "img": null },
-    "magic_missile": { "img": null },
-    "ray_of_sickness": { "img": null },
-    "thunderwave": { "img": null },
-    "witch_bolt": { "img": null },
-    "melfs_acid_arrow": { "img": null },
-    "prayer_of_healing": { "img": null },
-    "scorching_ray": { "img": null },
-    "shatter": { "img": null },
-    "conjure_barrage": { "img": null },
-    "fireball": { "img": null },
-    "lightning_bolt": { "img": null },
-    "mass_healing_word": { "img": null },
-    "blight": { "img": null },
-    "ice_storm": { "img": null },
-    "cone_of_cold": { "img": null },
-    "flame_strike": { "img": null },
-    "mass_cure_wounds": { "img": null },
-    "chain_lightning": { "img": null },
-    "circle_of_death": { "img": null },
-    "disintegrate": { "img": null },
-    "harm": { "img": null },
-    "heal": { "img": null },
-    "otilukes_freezing_sphere": { "img": null }
+    "acid_splash": {
+      "img": "spells-icons/Acid-Splash-Level-1-Spell-Baldurs-Gate-3-1_pixelart.png"
+    },
+    "chill_touch": {
+      "img": "spells-icons/Bone-Chill-Level-1-Spell-Baldurs-Gate-3_pixelart.png"
+    },
+    "eldritch_blast": {
+      "img": "spells-icons/Eldtrich-Blast-spell-Cantrip-Baldurs-Gate-3_pixelart.png"
+    },
+    "fire_bolt": {
+      "img": "spells-icons/Firebolt-spell-Cantrip-Baldurs-Gate-3_pixelart.png"
+    },
+    "poison_spray": {
+      "img": "spells-icons/Poison-Spray-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "produce_flame": {
+      "img": "spells-icons/Produce-Flame-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "ray_of_frost": {
+      "img": "spells-icons/Ray-of-Frost-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "sacred_flame": {
+      "img": "spells-icons/Sacred-Flame-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "shocking_grasp": {
+      "img": "spells-icons/Shocking-grasp-spell-BG3_pixelart.png"
+    },
+    "thorn_whip": {
+      "img": "spells-icons/Thorn_Whip_pixelart.png"
+    },
+    "toll_the_dead": {
+      "img": "spells-icons/Toll-of-the-Dead-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "vicious_mockery": {
+      "img": "spells-icons/Vicious-Mockery-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "burning_hands": {
+      "img": "spells-icons/Burning-Hands-level-1-spell-Baldurs-Gate-3_pixelart.png"
+    },
+    "chromatic_orb": {
+      "img": "spells-icons/Chromatic-Orb-Level-1-Spell-Slot-Baldurs-Gate-3_pixelart.png"
+    },
+    "cure_wounds": {
+      "img": "spells-icons/Cure-Wounds-Level-1-Spell-BG3_pixelart.png"
+    },
+    "dissonant_whispers": {
+      "img": "spells-icons/Dissonant-Whispers-Bg3-spell_pixelart.png"
+    },
+    "guiding_bolt": {
+      "img": "spells-icons/Guiding-Bolt-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "healing_word": {
+      "img": "spells-icons/Healing-Word-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "ice_knife": {
+      "img": "spells-icons/Ice-Knife-spell-BG3_pixelart.png"
+    },
+    "inflict_wounds": {
+      "img": "spells-icons/Inflict-Wounds-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "magic_missile": {
+      "img": "spells-icons/Magic-Missile-Spell-BG3_pixelart.png"
+    },
+    "ray_of_sickness": {
+      "img": "spells-icons/Ray-of-Sickness-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "thunderwave": {
+      "img": "spells-icons/Thunderwave-spell-BG3_pixelart.png"
+    },
+    "witch_bolt": {
+      "img": "spells-icons/Witch-Bolt-Spell-BG3_pixelart.png"
+    },
+    "melfs_acid_arrow": {
+      "img": "spells-icons/Melfs-Acid-Arrow-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "prayer_of_healing": {
+      "img": "spells-icons/Prayer-of-Healing-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "scorching_ray": {
+      "img": "spells-icons/Scorching-Ray-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "shatter": {
+      "img": "spells-icons/Shatter-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "conjure_barrage": {
+      "img": "spells-icons/Conjure-Barrage-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "fireball": {
+      "img": null
+    },
+    "lightning_bolt": {
+      "img": "spells-icons/Lightning-Bolt-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "mass_healing_word": {
+      "img": "spells-icons/Mass-Healing-Word-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "blight": {
+      "img": "spells-icons/Blight-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "ice_storm": {
+      "img": "spells-icons/Ice-Storm-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "cone_of_cold": {
+      "img": "spells-icons/Cone-of-Cold-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "flame_strike": {
+      "img": "spells-icons/Flame-Strike-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "mass_cure_wounds": {
+      "img": "spells-icons/Mass-Cure-Wounds-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "chain_lightning": {
+      "img": "spells-icons/Chain-Lightning-Spell-Baldurs-Gate-3_pixelart.png"
+    },
+    "circle_of_death": {
+      "img": "spells-icons/Circle-of-Death-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "disintegrate": {
+      "img": "spells-icons/Disintegrate-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "harm": {
+      "img": "spells-icons/Harm-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "heal": {
+      "img": "spells-icons/Heal-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "otilukes_freezing_sphere": {
+      "img": "spells-icons/Otilukes-Freezing-Sphere-Launch_pixelart.png"
+    }
   }
 }

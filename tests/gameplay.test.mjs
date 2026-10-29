@@ -2677,7 +2677,7 @@ const DamageTypes = await load('rules/DamageTypes');
 const { bindSpell } = await load('game/PlayerActions');
 
 test('the game uses only the spells in its list, and every spell a class learns or casts is in it', async () => {
-  const { readFileSync } = await import('node:fs');
+  const { existsSync, readFileSync } = await import('node:fs');
   const { CLASSES } = await load('rules/Classes');
   const list = JSON.parse(readFileSync(new URL('../src/data/spell-list.json', import.meta.url), 'utf8'));
   assert.deepEqual(Object.keys(Spellbook.CATALOG).sort(), Object.keys(list.spells).sort());
@@ -2686,7 +2686,10 @@ test('the game uses only the spells in its list, and every spell a class learns 
   const { SPELL_IDS } = await load('rules/Spells');
   for (const id of SPELL_IDS) assert.ok(Spellbook.CATALOG[id], `${id} can be cast, so it is in the list`);
   for (const cls of Object.values(CLASSES)) for (const id of cls.spells) assert.ok(Spellbook.CATALOG[id], `${cls.id} learns ${id}`);
-  assert.equal(Spellbook.spellIconKey('fire_bolt'), null, 'no icon until scripts/spell-icons.sh makes one');
+  assert.equal(Spellbook.spellIconKey('fire_bolt'), 'spell_icon_fire_bolt', 'Fire Bolt has its icon');
+  for (const [id, { img }] of Object.entries(list.spells)) {
+    if (img) assert.ok(existsSync(new URL(`../public/${img}`, import.meta.url)), `${id}: ${img} is there`);
+  }
 });
 
 test('every spell of the lists is read with a range, the classes that learn it and the hero level they do', () => {

@@ -1,4 +1,6 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Sprite } from 'pixi.js';
+import { lazyTexture, requestArt } from '../assets/LazyArt';
+import { reportRejection } from '../core/errors';
 import { isAltHeld } from '../systems/InputSystem';
 import { text } from '../core/texts';
 import { PixelLabel } from './PixelText';
@@ -22,6 +24,9 @@ const DETAIL_COLOR = 0x8fd18f;
 /** The "hold Alt" line at the bottom of a tooltip with more to tell: the gap above it and its colour. */
 const HINT_GAP = 4;
 const HINT_COLOR = 0x9cc4ff;
+/** A topic's picture (a spell's icon) sits under the header on the left, as large as an item's in its tooltip, this far from the text. */
+const PICTURE = 64;
+const PICTURE_GAP = 6;
 
 /** Adds one paragraph to `lines`, broken into lines no wider than `maxWidth` (a single longer word keeps its own line). */
 function wrapParagraph(paragraph: string, maxWidth: number, measure: PixelLabel, lines: string[]): void {
@@ -50,9 +55,10 @@ export function wrapLines(content: string, maxWidth: number): string[] {
 
 /**
  * What a tooltip tells: a header, a description, and optionally the numbers behind a value. `more`: the whole story;
- * the tooltip stays short and says to hold Alt, and shows the whole story while Alt is held.
+ * the tooltip stays short and says to hold Alt, and shows the whole story while Alt is held. `icon`: the texture key of
+ * a picture shown beside the text (a spell's icon).
  */
-export type TipTopic = { title: string; body: string; detail?: readonly string[]; wide?: boolean; more?: TipTopic };
+export type TipTopic = { title: string; body: string; detail?: readonly string[]; wide?: boolean; more?: TipTopic; icon?: string };
 
 type Bounds = { w: number; h: number };
 type Anchor = { x: number; y: number; w: number; h: number };
@@ -173,21 +179,39 @@ export class InfoTooltip {
     for (const child of this.view.removeChildren()) child.destroy({ children: true });
     const header = new PixelLabel(topic.title, { color: THEME.title, shadow: true });
     header.position.set(PAD, PAD);
+    // With a picture, the text stands to its right and the tooltip is at least as tall as the picture.
+    const left = topic.icon ? PAD + PICTURE + PICTURE_GAP : PAD;
     const { lines, details } = this.wrap(topic, bounds);
     const body = new PixelLabel(lines.join('\n'), { color: THEME.text, shadow: true });
-    body.position.set(PAD, PAD + HEADER_H);
+    body.position.set(left, PAD + HEADER_H);
     const detail = new PixelLabel(details.join('\n'), { color: DETAIL_COLOR, shadow: true });
-    detail.position.set(PAD, PAD + HEADER_H + lines.length * LINE_H + DETAIL_GAP);
-    const textH = 2 * PAD + HEADER_H + lines.length * LINE_H + (details.length ? DETAIL_GAP + details.length * LINE_H : 0);
+    detail.position.set(left, PAD + HEADER_H + lines.length * LINE_H + DETAIL_GAP);
+    const linesH = lines.length * LINE_H + (details.length ? DETAIL_GAP + details.length * LINE_H : 0);
+    const textH = 2 * PAD + HEADER_H + Math.max(linesH, topic.icon ? PICTURE : 0);
     // A short tooltip with more to tell says how to see it.
     const hint = topic.more ? new PixelLabel(text('spell.tip.more'), { color: HINT_COLOR, shadow: true }) : null;
     hint?.position.set(PAD, textH - PAD + HINT_GAP);
-    const w = Math.max(header.textWidth, body.textWidth, detail.textWidth, hint?.textWidth ?? 0) + 2 * PAD;
+    const w = Math.max(header.textWidth + PAD, left + Math.max(body.textWidth, detail.textWidth), PAD + (hint?.textWidth ?? 0)) + PAD;
     const h = hint ? textH + HINT_GAP + LINE_H : textH;
     const frame = new Graphics()
       .rect(0, 0, w, h).fill({ color: THEME.panel, alpha: BG_ALPHA })
       .stroke({ color: THEME.panelBorder, width: 1, alignment: 1 });
     this.view.addChild(frame, header, body, detail);
     if (hint) this.view.addChild(hint);
+    if (topic.icon) this.addPicture(topic.icon);
+  }
+
+  /** The topic's picture under the header, fitted to PICTURE once it has loaded. */
+  private addPicture(key: string): void {
+    const picture = new Sprite();
+    picture.anchor.set(0.5);
+    picture.position.set(PAD + PICTURE / 2, PAD + HEADER_H + PICTURE / 2);
+    this.view.addChild(picture);
+    const show = (): void => {
+      if (picture.destroyed) return;
+      picture.texture = lazyTexture(key);
+      picture.scale.set(PICTURE / Math.max(1, picture.texture.width, picture.texture.height));
+    };
+    reportRejection(requestArt(key).then(show), `Tooltip picture ${key} did not load`, 'render');
   }
 }

@@ -15,12 +15,14 @@ icons="$root/public/spells-icons"
 list="$root/src/data/spell-list.json"
 book="$root/src/data/spellbook.json"
 
-# Spells whose icon's file name says something else: the icons' own spelling, or the spell's other name.
+# Spells whose icon's file name says something else: the icons' own spelling, the spell's other name, or a stand-in.
 declare -A ALIASES=(
   [fire_bolt]="firebolt"
   [eldritch_blast]="eldtrich blast"
   [chill_touch]="bone chill"
   [toll_the_dead]="toll of the dead"
+  # No Fireball icon in the set: the closest look is Flaming Sphere's ball of fire.
+  [fireball]="flaming sphere"
 )
 
 # A name to compare by: lower case, no apostrophes (spellbook.json writes some as "&#039;"), words split by single spaces.

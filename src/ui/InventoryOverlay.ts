@@ -1,7 +1,7 @@
 import { Container, Graphics, Rectangle, Sprite } from 'pixi.js';
 import type { FederatedPointerEvent, FederatedWheelEvent } from 'pixi.js';
 import { EQUIP_SLOTS, localPlayer, q } from '../world';
-import type { BagSquare, EquipSlot, InventoryItem, Player } from '../world';
+import type { BagSquare, EquipSlot, InventoryItem, ItemType, Player } from '../world';
 import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
 import { getTexture } from '../assets/Textures';
 import { lazyTexture, onArtLoaded } from '../assets/LazyArt';
@@ -19,7 +19,7 @@ import { SheetInfoPanel } from './SheetInfoPanel';
 import { text } from '../core/texts';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
-import { INVENTORY_COLS, INVENTORY_ROWS, MAX_CARRY_KG, carriedWeight, freeSquare, moveItem, requestDrop, requestGive, requestLoadout } from '../game/PlayerActions';
+import { INVENTORY_COLS, MAX_CARRY_KG, MAX_INVENTORY, carriedWeight, freeSquare, moveItem, requestDrop, requestGive, requestLoadout } from '../game/PlayerActions';
 import { seatOf } from '../game/Party';
 import { PopupMenu } from './PopupMenu';
 import type { MenuRow } from './PopupMenu';
@@ -87,16 +87,52 @@ const FIELD_H = 24;
 /** Space round each rule, and between the fields. */
 const RULE_GAP = 4;
 const FIELD_GAP = 4;
-const SQUARE_FILL_ALPHA = 0.35;
+/** An item square: a lighter, more solid well than the art, so the items stand out on it. */
+const SQUARE_FILL = 0x3b342c;
+const SQUARE_FILL_ALPHA = 0.88;
 const SQUARE_EDGE = 0xb4a488;
 const SQUARE_EDGE_ALPHA = 0.55;
 const DIM_ALPHA = 0.6;
+/** The bag shows this many of its rows at a time; the wheel or the scrollbar at its right edge moves through the rest. */
+const BAG_VISIBLE_ROWS = 7;
+const BAG_SCROLLBAR_W = 3;
+const BAG_SCROLLBAR_MIN_H = 10;
+/** The filter buttons stand in a row this tall over the bag, this far apart. */
+const FILTER_H = 12;
+const FILTER_GAP = 8;
+/** An item marked with Ctrl+click is tinted gold this much and framed in gold. */
+const MARK_ALPHA = 0.28;
 const GHOST_ALPHA = 0.85;
 
 type Rect = { x: number; y: number; w: number; h: number };
 /** `page`: the tab page the square is on (bag squares are always shown). */
 /** `box` is the square drawn; `zone` the area that takes a dropped item (a gear slot's whole row). */
-type Square = { place: ItemPlace; box: Rectangle; zone: Rectangle; icon: Sprite; page: Container | null };
+type Square = { place: ItemPlace; box: Rectangle; zone: Rectangle; icon: Sprite; mark: Graphics; page: Container | null };
+
+/** A filter over the bag: the kinds of item it shows (null: everything, empty squares too). */
+type BagFilter = { label: string; types: readonly ItemType[] | null };
+const BAG_FILTERS: readonly BagFilter[] = [
+  { label: text('inventory.filter.all'), types: null },
+  { label: text('inventory.filter.weapons'), types: ['weapon'] },
+  { label: text('inventory.filter.armour'), types: ['helmet', 'armor', 'boots'] },
+  { label: text('inventory.filter.shields'), types: ['shield'] },
+  { label: text('inventory.filter.other'), types: ['ring', 'medal'] },
+];
+
+/** Adds the bag's free squares to `view`, in order. */
+function pushFreeSquares(inventory: readonly BagSquare[], view: number[]): void {
+  for (let i = 0; i < MAX_INVENTORY; i++) if (!inventory[i]) view.push(i);
+}
+
+/** A place to keep: a bag square's own place changes as the bag scrolls. */
+function copyPlace(place: ItemPlace): ItemPlace {
+  return 'bag' in place ? { bag: place.bag } : { slot: place.slot };
+}
+
+/** A key for a square that stays the same while the bag scrolls (a bag square by its index, a gear slot by its name). */
+function placeKey(place: ItemPlace): string {
+  return 'bag' in place ? `bag:${place.bag}` : `slot:${place.slot}`;
+}
 /** A read-only field of the character sheet: what it shows, and its tooltip. */
 type FieldDef = { caption: string; accent: number; value: (sheet: CharacterSheet) => string; topic: (sheet: CharacterSheet) => TipTopic };
 type Field = { field: SheetField; def: FieldDef };
@@ -141,6 +177,19 @@ export class InventoryOverlay {
   readonly container = new Container();
   private readonly root = new Container();
   private readonly squares: Square[] = [];
+  /** The bag's squares on screen; each shows the bag square `bagView[bagRow * cols + i]` (-1: none). */
+  private readonly bagSquares: Square[] = [];
+  /** The bag squares in the order shown: all of them, or under a filter the items it shows and then the free squares. */
+  private readonly bagView: number[] = [];
+  private bagRow = 0;
+  private filter = 0;
+  private readonly filterLabels: PixelLabel[] = [];
+  private readonly bagScrollbar = new Graphics();
+  private scrollTrack: Rectangle | null = null;
+  /** Dragging the bag's scrollbar. */
+  private scrolling = false;
+  /** Items marked with Ctrl+click, by where they are, for one menu over them all. */
+  private readonly marked = new Map<string, ItemPlace>();
   private abilities: AbilityGrid | null = null;
   private info: SheetInfoPanel | null = null;
   private readonly fields: Field[] = [];
@@ -323,9 +372,11 @@ export class InventoryOverlay {
    * The bag: borderless cells packed close together and stretched to the leather's corners (a little wider
    * than tall where the leather is); icons fit the smaller side.
    */
-  private buildBag(area: Rect): void {
+  private buildBag(bag: Rect): void {
+    this.buildFilters(bag);
+    const area = { x: bag.x, y: bag.y + FILTER_H, w: bag.w - BAG_SCROLLBAR_W - BAG_GAP, h: bag.h - FILTER_H };
     const cols = INVENTORY_COLS;
-    const rows = INVENTORY_ROWS;
+    const rows = BAG_VISIBLE_ROWS;
     const cellW = (area.w - 2 * BAG_PAD - BAG_GAP * (cols - 1)) / cols;
     const cellH = (area.h - 2 * BAG_PAD - BAG_GAP * (rows - 1)) / rows;
     this.cell = Math.floor(Math.min(cellW, cellH));
@@ -334,8 +385,90 @@ export class InventoryOverlay {
       const y = Math.round(area.y + BAG_PAD + Math.floor(i / cols) * (cellH + BAG_GAP));
       const right = Math.round(area.x + BAG_PAD + (i % cols) * (cellW + BAG_GAP) + cellW);
       const bottom = Math.round(area.y + BAG_PAD + Math.floor(i / cols) * (cellH + BAG_GAP) + cellH);
-      this.addSquare({ bag: i }, x, y, right - x, null, undefined, false, bottom - y);
+      this.bagSquares.push(this.addSquare({ bag: i }, x, y, right - x, null, undefined, false, bottom - y));
     }
+    this.scrollTrack = new Rectangle(bag.x + bag.w - BAG_SCROLLBAR_W, area.y + BAG_PAD, BAG_SCROLLBAR_W, area.h - 2 * BAG_PAD);
+    this.root.addChild(this.bagScrollbar);
+  }
+
+  /** The filters over the bag, as words in a row: a click shows only that kind of item (the open one in gold). */
+  private buildFilters(bag: Rect): void {
+    let x = bag.x + BAG_PAD;
+    BAG_FILTERS.forEach((filter, i) => {
+      const label = new PixelLabel(filter.label, { color: THEME.muted, shadow: true });
+      label.position.set(Math.round(x), Math.round(bag.y + 1));
+      label.eventMode = 'static';
+      label.cursor = 'pointer';
+      label.hitArea = new Rectangle(-1, -1, label.textWidth + 2, FILTER_H);
+      label.on('pointertap', () => this.setFilter(i));
+      this.filterLabels.push(label);
+      this.root.addChild(label);
+      x += label.textWidth + FILTER_GAP;
+    });
+    this.setFilter(0);
+  }
+
+  private setFilter(index: number): void {
+    this.filter = index;
+    this.bagRow = 0;
+    this.filterLabels.forEach((label, i) => { label.fill = i === index ? THEME.title : THEME.muted; });
+    this.shown = null;
+  }
+
+  /**
+   * Which bag square each square on screen shows: the filter's view of the bag (everything; or the items it lets
+   * through, then the free squares to drop onto), from the row scrolled to.
+   */
+  private layoutBag(player: Player): void {
+    const view = this.bagView;
+    view.length = 0;
+    const types = BAG_FILTERS[this.filter].types;
+    const inventory = player.inventory ?? [];
+    for (let i = 0; i < MAX_INVENTORY; i++) {
+      const item = inventory[i];
+      if (!types || (item && types.includes(item.type))) view.push(i);
+    }
+    // Under a filter, the free squares follow the items, to drop things onto.
+    if (types) pushFreeSquares(inventory, view);
+    this.bagRow = Math.max(0, Math.min(this.bagRow, this.lastBagRow()));
+    this.bagSquares.forEach((square, i) => {
+      if ('bag' in square.place) square.place.bag = view[this.bagRow * INVENTORY_COLS + i] ?? -1;
+    });
+    this.drawBagScrollbar();
+  }
+
+  /** The furthest row the bag can be scrolled to. */
+  private lastBagRow(): number {
+    return Math.max(0, Math.ceil(this.bagView.length / INVENTORY_COLS) - BAG_VISIBLE_ROWS);
+  }
+
+  /** A thin track down the bag's right edge, with a thumb as long as the share of the rows on screen. */
+  private drawBagScrollbar(): void {
+    const track = this.scrollTrack;
+    const g = this.bagScrollbar.clear();
+    const last = this.lastBagRow();
+    if (!track || last === 0) return;
+    const rows = last + BAG_VISIBLE_ROWS;
+    const thumbH = Math.max(BAG_SCROLLBAR_MIN_H, (track.height * BAG_VISIBLE_ROWS) / rows);
+    const y = track.y + ((track.height - thumbH) * this.bagRow) / last;
+    g.rect(track.x, track.y, track.width, track.height).fill({ color: 0x000000, alpha: SQUARE_FILL_ALPHA })
+      .rect(track.x, y, track.width, thumbH).fill({ color: SQUARE_EDGE, alpha: SQUARE_EDGE_ALPHA });
+  }
+
+  /** Scrolls the bag by whole rows. */
+  private scrollBag(rows: number): void {
+    const next = Math.max(0, Math.min(this.bagRow + rows, this.lastBagRow()));
+    if (next === this.bagRow) return;
+    this.bagRow = next;
+    this.shown = null;
+  }
+
+  /** The scrollbar dragged: the bag shows the rows where the pointer is along its track. */
+  private scrollBagTo(y: number): void {
+    const track = this.scrollTrack;
+    if (!track) return;
+    const share = Math.max(0, Math.min(1, (y - track.y) / track.height));
+    this.scrollBag(Math.round(share * this.lastBagRow()) - this.bagRow);
   }
 
   /**
@@ -401,15 +534,20 @@ export class InventoryOverlay {
    * One cell (bag square or equipment slot), `size` wide and `height` tall (square unless given): a dark well
    * (with a light edge if `edged`), and the icon of what is in it.
    */
-  private addSquare(place: ItemPlace, x: number, y: number, size: number, page: Container | null = null, zone?: Rectangle, edged = true, height = size): void {
-    const frame = new Graphics().rect(x, y, size, height).fill({ color: 0x000000, alpha: SQUARE_FILL_ALPHA });
+  private addSquare(place: ItemPlace, x: number, y: number, size: number, page: Container | null = null, zone?: Rectangle, edged = true, height = size): Square {
+    const frame = new Graphics().rect(x, y, size, height).fill({ color: SQUARE_FILL, alpha: SQUARE_FILL_ALPHA });
     if (edged) frame.stroke({ color: SQUARE_EDGE, alpha: SQUARE_EDGE_ALPHA, width: 1, alignment: 1 });
     const icon = new Sprite();
     icon.anchor.set(0.5);
     icon.position.set(x + size / 2, y + height / 2);
-    (page ?? this.root).addChild(frame, icon);
+    const mark = new Graphics().rect(x, y, size, height).fill({ color: THEME.title, alpha: MARK_ALPHA })
+      .stroke({ color: THEME.title, width: 1, alignment: 1 });
+    mark.visible = false;
+    (page ?? this.root).addChild(frame, icon, mark);
     const box = new Rectangle(x, y, size, height);
-    this.squares.push({ place, box, zone: zone ?? box, icon, page });
+    const square: Square = { place, box, zone: zone ?? box, icon, mark, page };
+    this.squares.push(square);
+    return square;
   }
 
   /** Scales the whole overlay to the largest size that fits the screen with a margin, centred. */
@@ -422,6 +560,7 @@ export class InventoryOverlay {
   // ── Contents ────────────────────────────────────────────────────────────────
 
   private itemIn(player: Player, place: ItemPlace): InventoryItem | undefined {
+    if ('bag' in place && place.bag < 0) return undefined;
     return ('bag' in place ? player.inventory?.[place.bag] : player.equipped?.[place.slot]) ?? undefined;
   }
 
@@ -435,9 +574,11 @@ export class InventoryOverlay {
   }
 
   private refresh(player: Player): void {
+    this.layoutBag(player);
     for (const square of this.squares) {
       const item = this.itemIn(player, square.place);
       this.showIcon(square.icon, item, Math.min(square.box.width, square.box.height));
+      square.mark.visible = !!item && this.marked.has(placeKey(square.place));
     }
     const sheet = characterSheet(player);
     this.sheet = sheet;
@@ -465,8 +606,14 @@ export class InventoryOverlay {
     this.root.on('wheel', (e) => this.wheel(e));
   }
 
-  /** The wheel scrolls the spell list while the Skills tab is open. */
+  /** The wheel scrolls the bag while the pointer is over it, else the spell list while the Skills tab is open. */
   private wheel(e: FederatedWheelEvent): void {
+    const p = this.root.toLocal(e.global);
+    const bag = designRect(BAG_AREA);
+    if (p.x >= bag.x && p.x <= bag.x + bag.w && p.y >= bag.y && p.y <= bag.y + bag.h) {
+      this.scrollBag(Math.sign(e.deltaY));
+      return;
+    }
     if (this.activeTab !== SKILLS_TAB) return;
     this.spells?.scroll(e.deltaY);
   }
@@ -474,7 +621,8 @@ export class InventoryOverlay {
   /** The square under the pointer; `forDrop` also counts a gear slot's whole row. */
   private squareAt(e: FederatedPointerEvent, forDrop = false): Square | undefined {
     const p = this.root.toLocal(e.global);
-    return this.squares.find((s) => (!s.page || s.page.visible) && (forDrop ? s.zone : s.box).contains(p.x, p.y));
+    const shown = (s: Square): boolean => (!s.page || s.page.visible) && !('bag' in s.place && s.place.bag < 0);
+    return this.squares.find((s) => shown(s) && (forDrop ? s.zone : s.box).contains(p.x, p.y));
   }
 
   /**
@@ -484,9 +632,14 @@ export class InventoryOverlay {
   private openItemMenu(player: Player, e: FederatedPointerEvent): void {
     const square = this.squareAt(e);
     const item = square ? this.itemIn(player, square.place) : undefined;
-    if (!square || !item) return;
-    const place = square.place;
     const p = this.root.toLocal(e.global);
+    if (square && this.marked.has(placeKey(square.place))) {
+      this.openMarkedMenu(player, p.x, p.y);
+      return;
+    }
+    this.clearMarks();
+    if (!square || !item) return;
+    const place = copyPlace(square.place);
     const rows: MenuRow[] = [
       { label: text('inventory.menu.drop'), action: () => requestDrop(player, place) },
       { label: text('inventory.menu.compare'), action: null, submenu: this.compareRows(player, item, p.x, p.y) },
@@ -498,6 +651,40 @@ export class InventoryOverlay {
     }
     this.tooltip.hide();
     this.itemMenu.show(rows, p.x, p.y, { w: DESIGN_W, h: DESIGN_H });
+  }
+
+  /** Right-click on a marked item: drop all the marked items, or send them all to another player. */
+  private openMarkedMenu(player: Player, x: number, y: number): void {
+    const places = [...this.marked.values()];
+    const count = places.length;
+    const rows: MenuRow[] = [{ label: text('inventory.menu.drop_marked', { count }), action: () => this.forMarked(places, (place) => requestDrop(player, place)) }];
+    for (const other of q.players) {
+      if (other === player) continue;
+      const label = text('inventory.menu.send_marked_to', { count, name: other.playerName ?? '' });
+      rows.push({ label, action: () => this.forMarked(places, (place) => requestGive(player, place, seatOf(other))) });
+    }
+    this.tooltip.hide();
+    this.itemMenu.show(rows, x, y, { w: DESIGN_W, h: DESIGN_H });
+  }
+
+  /** Does the same to each marked item (one square at a time: the others keep theirs), then unmarks them. */
+  private forMarked(places: readonly ItemPlace[], act: (place: ItemPlace) => void): void {
+    for (const place of places) act(place);
+    this.clearMarks();
+  }
+
+  /** Ctrl+click on an item marks it, or unmarks it if it was. */
+  private toggleMark(place: ItemPlace): void {
+    const key = placeKey(place);
+    if (this.marked.has(key)) this.marked.delete(key);
+    else this.marked.set(key, copyPlace(place));
+    this.shown = null;
+  }
+
+  private clearMarks(): void {
+    if (this.marked.size === 0) return;
+    this.marked.clear();
+    this.shown = null;
   }
 
   /** "Compare": every other item of the same kind the hero has (weapon with weapon, armour with armour), worn ones marked. */
@@ -576,18 +763,31 @@ export class InventoryOverlay {
     if (this.itemMenu.covers(e.global)) return;
     this.itemMenu.hide();
     this.endCompare();
+    const p = this.root.toLocal(e.global);
+    if (this.scrollTrack?.contains(p.x, p.y)) {
+      this.scrolling = true;
+      this.scrollBagTo(p.y);
+      return;
+    }
     if (player && e.button === RIGHT_BUTTON) {
       this.openItemMenu(player, e);
       return;
     }
-    if (this.activeTab === SKILLS_TAB && this.pressSkills(e)) return;
     const square = this.squareAt(e);
-    if (!player || !square || !this.itemIn(player, square.place)) return;
-    if (this.doubleClicked(square.place, e)) {
-      this.quickMove(player, square.place);
+    // Ctrl+click marks an item (or unmarks it); any other click unmarks them all.
+    if (player && square && (e.ctrlKey || e.metaKey) && this.itemIn(player, square.place)) {
+      this.toggleMark(square.place);
       return;
     }
-    this.dragging = square.place;
+    this.clearMarks();
+    if (this.activeTab === SKILLS_TAB && this.pressSkills(e)) return;
+    if (!player || !square || !this.itemIn(player, square.place)) return;
+    const place = copyPlace(square.place);
+    if (this.doubleClicked(place, e)) {
+      this.quickMove(player, place);
+      return;
+    }
+    this.dragging = place;
     this.showIcon(this.ghost, this.itemIn(player, square.place));
     square.icon.alpha = 0.3;
     this.moveDrag(e);
@@ -597,6 +797,10 @@ export class InventoryOverlay {
   private moveDrag(e: FederatedPointerEvent): void {
     if (!this.container.visible) return;
     const p = this.root.toLocal(e.global);
+    if (this.scrolling) {
+      this.scrollBagTo(p.y);
+      return;
+    }
     this.ghost.position.set(p.x, p.y);
     const player = localPlayer();
     const square = this.squareAt(e);
@@ -657,6 +861,7 @@ export class InventoryOverlay {
   }
 
   private endDrag(): void {
+    this.scrolling = false;
     this.dragging = null;
     this.ghost.visible = false;
     for (const square of this.squares) square.icon.alpha = 1;

@@ -2,7 +2,7 @@ import type { TipTopic } from './InfoTooltip';
 import { text } from '../core/texts';
 import { formatDamage } from '../rules/Dice';
 import { damageTypeName } from '../rules/Names';
-import { spellStats } from '../rules/Spellbook';
+import { spellIconKey, spellStats } from '../rules/Spellbook';
 import { SPELLS, isSpellId } from '../rules/Spells';
 import { featureCooldown, featureUses } from '../rules/ClassFeatures';
 import type { FeatureDef } from '../rules/ClassFeatures';
@@ -99,11 +99,12 @@ function detailLines(spell: CatalogSpell, castLevel: number, heroLevel: number, 
  */
 export function spellTopic(spell: CatalogSpell, castLevel: number, heroLevel: number, learntAt?: number): TipTopic {
   const higher = spell.higherLevels ? `\n${text('spell.tip.higher', { text: spell.higherLevels })}` : '';
-  const more: TipTopic = { title: spell.name, body: spell.description + higher, detail: detailLines(spell, castLevel, heroLevel, learntAt) };
+  const icon = spellIconKey(spell.id) ?? undefined;
+  const more: TipTopic = { title: spell.name, body: spell.description + higher, detail: detailLines(spell, castLevel, heroLevel, learntAt), icon };
   const detail = [kindLine(spell), rangeLine(spell), attackLine(spell, castLevel, heroLevel)];
   if (castLevel > spell.level) detail.push(text('spell.tip.cast_at', { level: castLevel }));
   if (learntAt !== undefined && learntAt > heroLevel) detail.push(text('spell.tip.learnt_at', { level: learntAt }));
-  return { title: spell.name, body: shortText(spell.description), detail, more };
+  return { title: spell.name, body: shortText(spell.description), detail, more, icon };
 }
 
 /** Seconds as the tooltip writes them: whole when they are, else a tenth. */

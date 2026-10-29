@@ -2,6 +2,7 @@ import { Container, Graphics, Rectangle } from 'pixi.js';
 import { STAT_NAMES } from '../world';
 import type { StatName } from '../world';
 import { statShort } from '../entities/Items';
+import { keyAbilities } from '../rules/CharacterSheet';
 import type { CharacterSheet } from '../rules/CharacterSheet';
 import { formatModifier } from '../rules/Dice';
 import { PixelLabel } from './PixelText';
@@ -16,12 +17,16 @@ const SCORE_Y = 12;
 const MODIFIER_SCALE = 2;
 const MODIFIER_Y = 19;
 const WELL_ALPHA = 0.85;
+/** The class's key abilities (rules/CharacterSheet.ts keyAbilities) are framed in gold this thick, their name band lit. */
+const KEY_EDGE = 2;
+const KEY_BAND = 0x6a5220;
 
-type Cell = { stat: StatName; hit: Rectangle; score: PixelLabel; modifier: PixelLabel; centre: number };
+type Cell = { stat: StatName; hit: Rectangle; score: PixelLabel; modifier: PixelLabel; centre: number; key: Graphics };
 
 /**
  * The six abilities side by side, as on a character sheet: in each cell the ability's short name on top, its
- * score small under it, and its modifier — what every roll adds, the number that matters — large below.
+ * score small under it, and its modifier — what every roll adds, the number that matters — large below. The
+ * abilities the hero's class leans on (its primary ability, and the one it casts spells with) are framed in gold.
  */
 export class AbilityGrid {
   readonly view = new Container();
@@ -36,6 +41,10 @@ export class AbilityGrid {
     const frame = new Graphics()
       .rect(x, y, w, ABILITY_CELL_H).fill({ color: THEME.well, alpha: WELL_ALPHA }).stroke({ color: THEME.panelBorder, width: 1, alignment: 1 })
       .rect(x, y, w, NAME_H).fill({ color: THEME.row });
+    const key = new Graphics()
+      .rect(x, y, w, NAME_H).fill({ color: KEY_BAND })
+      .rect(x, y, w, ABILITY_CELL_H).stroke({ color: THEME.title, width: KEY_EDGE, alignment: 1 });
+    key.visible = false;
     const centre = Math.round(x + w / 2);
     const name = new PixelLabel(statShort(stat), { color: THEME.title, align: 'center', shadow: true });
     name.position.set(centre, y + 1);
@@ -43,12 +52,14 @@ export class AbilityGrid {
     score.position.set(centre, y + SCORE_Y);
     const modifier = new PixelLabel('', { color: THEME.text, scale: MODIFIER_SCALE, align: 'center', shadow: true });
     modifier.position.set(centre, y + MODIFIER_Y);
-    this.view.addChild(frame, name, score, modifier);
-    this.cells.push({ stat, hit: new Rectangle(x, y, w, ABILITY_CELL_H), score, modifier, centre });
+    this.view.addChild(frame, key, name, score, modifier);
+    this.cells.push({ stat, hit: new Rectangle(x, y, w, ABILITY_CELL_H), score, modifier, centre, key });
   }
 
   set(sheet: CharacterSheet): void {
+    const keys = keyAbilities(sheet);
     for (const cell of this.cells) {
+      cell.key.visible = keys.has(cell.stat);
       cell.score.text = String(sheet.scores[cell.stat]);
       cell.modifier.text = formatModifier(sheet.modifiers[cell.stat]);
     }

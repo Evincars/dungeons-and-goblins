@@ -28,9 +28,9 @@ import { chooseDeparture } from '../systems/ExitSystem';
  * (the host owns the world, so a guest changing its own copy would be undone by the next update).
  */
 
-/** The bag is a grid of this many squares across and down; it holds one item per square. */
+/** The bag is a grid of this many squares across and down (the inventory shows a few rows at a time and scrolls); one item per square. */
 export const INVENTORY_COLS = 6;
-export const INVENTORY_ROWS = 7;
+export const INVENTORY_ROWS = 20;
 export const MAX_INVENTORY = INVENTORY_COLS * INVENTORY_ROWS;
 /** Sword tier (how far a swing reaches) with nothing equipped; each point of strength on gear adds one. */
 const BASE_SWORD_TIER = 1;

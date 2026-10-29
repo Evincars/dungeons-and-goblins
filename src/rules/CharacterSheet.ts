@@ -11,6 +11,7 @@ import { armorRule, isShield, magicBonus, weaponRule } from './Equipment';
 import { armorProficient, heroClass, weaponProficient } from './Classes';
 import { classHasFeature } from './ClassFeatures';
 import type { HeroClass } from './Classes';
+import { PRIMARY_ABILITIES } from './DndClasses';
 import { baseScores, featInitiative } from './Build';
 import type { Build } from './Build';
 import {
@@ -312,6 +313,21 @@ function speedIn(ac: ArmorClass, scores: Readonly<Record<StatName, number>>): nu
 function spellcasting(cls: HeroClass, modifiers: Modifiers, proficiency: number, knight: boolean): Spellcasting {
   const ability = cls.spellcasting ?? 'intelligence';
   return { ability, attack: proficiency + modifiers[ability], dc: SPELL_DC_BASE + proficiency + modifiers[ability], trained: cls.spellcasting !== null || knight };
+}
+
+/**
+ * The abilities to mark on the sheet for this hero: their class's primary ability (of two, the one with the higher
+ * score, Strength on a tie) and, for anyone who casts spells, their spellcasting ability.
+ */
+export function keyAbilities(sheet: Pick<CharacterSheet, 'heroClass' | 'scores' | 'spell'>): ReadonlySet<StatName> {
+  const keys = new Set<StatName>();
+  let best: StatName | null = null;
+  for (const stat of PRIMARY_ABILITIES[sheet.heroClass.dndClass]) {
+    if (best === null || sheet.scores[stat] > sheet.scores[best]) best = stat;
+  }
+  if (best) keys.add(best);
+  if (sheet.spell.trained) keys.add(sheet.spell.ability);
+  return keys;
 }
 
 /**

@@ -94,8 +94,8 @@ const BUTTONS = ['up', 'down', 'left', 'right', 'attack', 'use', 'sprint', 'mous
 const INTENTS = ['use', 'attack', 'cast', 'inventoryOpen', 'swap'] as const satisfies readonly (keyof PlayerInput['intents'])[];
 /** Aim points farther than this from the origin are not a real cursor. */
 const MAX_AIM = 100000;
-/** More than any bag (MAX_INVENTORY) or shop holds, so honest messages always fit. */
-const MAX_ITEMS = 64;
+/** More than any bag (MAX_INVENTORY, 120 squares) or shop holds, so honest messages always fit. */
+const MAX_ITEMS = 128;
 /** The longest name an item may have (every line written about an item has room for it). */
 export const MAX_ITEM_NAME = 40;
 const MAX_ITEM_STAT = 1000;

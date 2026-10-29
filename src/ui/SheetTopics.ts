@@ -1,6 +1,7 @@
 import type { StatName } from '../world';
 import { text } from '../core/texts';
 import { statDescription, statName, statShort } from '../entities/Items';
+import { keyAbilities } from '../rules/CharacterSheet';
 import type { CharacterSheet } from '../rules/CharacterSheet';
 import { NATURAL_CRIT, formatDamage, formatDice, formatModifier } from '../rules/Dice';
 import { armorName, damageTypeName, dndClassName, featureName, fightingStyleName, trainingName, weaponName } from '../rules/Names';
@@ -12,8 +13,10 @@ import type { TipTopic } from './InfoTooltip';
 export function statTopic(stat: StatName, sheet: CharacterSheet): TipTopic {
   const score = sheet.scores[stat];
   const base = sheet.baseScores[stat];
-  const detail = text('stat.score_detail', { score, base, gear: formatModifier(score - base), modifier: formatModifier(sheet.modifiers[stat]) });
-  return { title: statName(stat), body: statDescription(stat), detail: detail.split('\n') };
+  const detail = text('stat.score_detail', { score, base, gear: formatModifier(score - base), modifier: formatModifier(sheet.modifiers[stat]) }).split('\n');
+  // Why it is framed in gold: the class leans on it, or casts its spells with it.
+  if (keyAbilities(sheet).has(stat)) detail.push(sheet.spell.trained && sheet.spell.ability === stat ? text('stat.key_spellcasting') : text('stat.key_primary'));
+  return { title: statName(stat), body: statDescription(stat), detail };
 }
 
 export function armorClassTopic(sheet: CharacterSheet): TipTopic {

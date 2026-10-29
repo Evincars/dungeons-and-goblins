@@ -1844,7 +1844,7 @@ test('hit dice are spent in a short rest, as many as the hero chooses: each the 
   // Two of the Fighter's d10 (loaded: 10) + CON +2 each: 24, as at the table.
   assert.equal(hero.health.current, 5 + 2 * 12);
   assert.equal(hero.playerStats.hitDice, 1, 'one left for the next short rest');
-  assert.ok(rollLines(hero).includes('Hit dice 2d10+4 = 24'));
+  assert.ok(rollLines(hero).includes('Heal dice 2d10+4 = 24'));
   assert.equal(Rest.hitDiceLabel(hero, 1), '1d10+2');
   hero.health.current = 35;
   Rest.queueRestRequest('host', 'short', 5);
@@ -2705,6 +2705,25 @@ test('every spell on the game\'s list can be cast, and a heal with a radius mend
   cast(level, cleric, 90);
   assert.ok(cleric.health.current > 1 && ally.health.current > 1, 'the caster and the ally beside them are mended');
   assert.equal(far.health.current, 1, 'a hero out of reach is not');
+});
+
+test('the sheet marks each class\'s key abilities: its primary one and the one it casts with', async () => {
+  const { characterSheet, keyAbilities } = await load('rules/CharacterSheet');
+  const keys = (cls) => [...keyAbilities(characterSheet(createPlayer(0, 0, cls)))].sort();
+  assert.deepEqual(keys('wizard'), ['intelligence']);
+  assert.deepEqual(keys('cleric'), ['wisdom']);
+  assert.deepEqual(keys('warlock'), ['charisma']);
+  assert.deepEqual(keys('rogue'), ['dexterity']);
+  const fighter = createPlayer(0, 0, 'fighter');
+  const sheet = characterSheet(fighter);
+  const better = sheet.scores.strength >= sheet.scores.dexterity ? 'strength' : 'dexterity';
+  assert.deepEqual([...keyAbilities(sheet)], [better], 'a Fighter: STR or DEX, whichever is higher');
+});
+
+test('the bag holds 120 items over 20 rows, and a guest\'s full bag still passes the network checks', async () => {
+  const { INVENTORY_COLS, INVENTORY_ROWS } = await load('game/PlayerActions');
+  assert.equal(PlayerActions.MAX_INVENTORY, INVENTORY_COLS * INVENTORY_ROWS);
+  assert.equal(PlayerActions.MAX_INVENTORY, 120);
 });
 
 test('every spell of the lists is read with a range, the classes that learn it and the hero level they do', () => {

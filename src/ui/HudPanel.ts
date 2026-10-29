@@ -20,8 +20,7 @@ import { heroClass } from '../rules/Classes';
 import { heroName } from '../rules/Names';
 import type { Level } from '../level/Level';
 
-/** The health bar, bottom left: how long, how thick, its corner rounding and the margin to the screen's edge. */
-const BAR_W = 112;
+/** The health bar, bottom left: how thick, its corner rounding and the margin to the screen's edge. */
 const BAR_H = 12;
 const BAR_GAP = 3;
 const BAR_RADIUS = 5;
@@ -34,14 +33,14 @@ const GOLD = 0x8a6a2c;
 const GOLD_DARK = 0x4a3818;
 const WELL = 0x0c0a08;
 /**
- * The buttons: diamonds this far from their centre to a point, in a column climbing from beside the health bar's
- * right end, each this much higher than the one below and stepping in and out by this much, so they nest in a zigzag.
+ * The buttons: diamonds this far from their centre to a point, in one row over the health bar, this far apart point to
+ * point (the row spans the bar exactly, see BAR_W) and this far above it.
  */
 const BUTTON_R = 12;
-const BUTTON_STEP_Y = 19;
-const BUTTON_ZIG = 9;
-/** The lowest diamond's left point sits this far right of the bar. */
-const BUTTON_GAP = 1;
+const BUTTON_GAP = 12;
+const BUTTON_LIFT = 4;
+/** The three buttons over the bar span it exactly: the bar is as long as their row. */
+const BAR_W = 3 * 2 * BUTTON_R + 2 * BUTTON_GAP;
 const HOVER_ALPHA = 0.14;
 /** The quick bar keeps this far clear of the buttons and of the combat log. */
 const QUICK_BAR_CLEARANCE = 6;
@@ -88,7 +87,7 @@ function moonIcon(g: Graphics): void {
 }
 
 /**
- * The column, top down: the character, the hero's level (its number on it) and rest (its drop-down offers a short or
+ * The row, left to right: the character, the hero's level (its number on it) and rest (its drop-down offers a short or
  * a long rest). The map button is left out of the HUD for now; its dialog (MinimapView) still works, so putting the
  * line back brings it again.
  */
@@ -99,27 +98,21 @@ const BUTTONS: readonly ButtonDef[] = [
   { id: 'rest', title: text('hud.button.rest'), color: 0x1a2a20, icon: moonIcon },
 ];
 
-/**
- * Centres of the diamonds, top down like BUTTONS: the lowest stands beside the bar's right end, level with it, and
- * each one above steps up and in or out, so the column zigzags as it climbs.
- */
+/** Centres of the diamonds, left to right like BUTTONS, in a row just over the bar whose top-left corner is (barX, barY). */
 function buttonPoints(barX: number, barY: number): Array<{ x: number; y: number }> {
-  const x = barX + BAR_W + BUTTON_GAP + BUTTON_R;
-  const y = barY + BAR_H / 2;
-  const last = BUTTONS.length - 1;
-  return BUTTONS.map((_, i) => ({ x: x - ((last - i) % 2) * BUTTON_ZIG, y: y - (last - i) * BUTTON_STEP_Y }));
+  const y = barY - BUTTON_LIFT - BUTTON_R;
+  return BUTTONS.map((_, i) => ({ x: barX + BUTTON_R + i * (2 * BUTTON_R + BUTTON_GAP), y }));
 }
 
-/** The right-most point of the button column, which the quick bar keeps clear of. */
-const BUTTONS_RIGHT = MARGIN + BAR_W + BUTTON_GAP + 2 * BUTTON_R;
+/** The right edge of the bar and the buttons over it, which the quick bar keeps clear of. */
+const BUTTONS_RIGHT = MARGIN + BAR_W;
 
 /** A diamond (a square on its corner) this far from its centre to a point. */
 const diamond = (g: Graphics, r: number): Graphics => g.poly([0, -r, r, 0, 0, r, -r, 0]);
 
 /**
- * What stays on screen during play. Bottom left: the health bar (dark gold frame, the value on it) and a zigzag
- * column of diamond buttons climbing beside its right end — the character, the hero's level and rest (a short or a
- * long rest). Bottom middle: the quick bar of the hero's spells (ui/QuickBar.ts). High in the middle: what the party
+ * What stays on screen during play. Bottom left: the health bar (dark gold frame, the value on it) and a row of
+ * diamond buttons over it — the character, the hero's level and rest (a short or a long rest). Bottom middle: the quick bar of the hero's spells (ui/QuickBar.ts). High in the middle: what the party
  * is asked, or how it went, and the gate's countdown (ui/PartyBanner.ts).
  */
 export class HudPanel {
@@ -149,9 +142,9 @@ export class HudPanel {
     BARS.forEach((spec, i) => this.addBar(spec, i));
     const points = buttonPoints(MARGIN, GAME_HEIGHT - MARGIN - BAR_H);
     BUTTONS.forEach((def, i) => this.addButton(def, points[i]));
-    // The rest menu opens upwards from beside the rest button, clear of the column.
+    // The rest menu opens upwards from over the rest button.
     const rest = points[BUTTONS.findIndex((def) => def.id === 'rest')];
-    this.restMenu = new RestMenu(Math.round(rest.x + BUTTON_R + 2), Math.round(rest.y + BUTTON_R));
+    this.restMenu = new RestMenu(Math.round(rest.x - BUTTON_R), Math.round(rest.y - BUTTON_R - 2));
     this.container.addChild(this.quickBar.view, this.partyBanner.view, this.lootRolls.view, this.passives.view, this.restMenu.view, this.dialog.container);
   }
 
@@ -190,8 +183,7 @@ export class HudPanel {
     if (def.id === 'level') {
       this.level.position.set(0, -4);
       this.choiceMark.pivot.set(0, this.choiceMark.textHeight / 2);
-      // On its left point: the column steps out to the right above it.
-      this.choiceMark.position.set(-r + 1, -r + 5);
+      this.choiceMark.position.set(r - 1, -r + 3);
       this.choiceMark.visible = false;
       this.choiceMark.eventMode = 'none';
       button.addChild(this.level, this.choiceMark);

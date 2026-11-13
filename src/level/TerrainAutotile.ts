@@ -2,6 +2,8 @@ import type { Level } from './Level';
 import type { TileData } from './TileType';
 import { forEachTile } from './Grid';
 import { TileType, TILE_WIDTH, TILE_HEIGHT } from './TileType';
+import { LOBE_E, LOBE_N, LOBE_S, LOBE_W } from './PitShapes';
+import type { Pit } from './PitShapes';
 
 /**
  * One textured quad: draw tileset rect (sx,sy,w,h) at world (dx,dy). Pieces with
@@ -77,6 +79,19 @@ export const OVERHEAD_Z = 1e6;
 
 // Framed 2×2 pit (cols 38–43, rows 16–21): 64px hole with a 5px rim outside it
 const PIT = { x: 619, y: 267, w: 74, h: 74, rim: 5 };
+// Its lobes (laid over its rim where they join, LOBE_OVERLAP in from its edge), and the quatrefoil pit on 2×2 tiles.
+const LOBE_PIECES = {
+  north: { x: 640, y: 208, w: 32, h: 48 },
+  east: { x: 704, y: 288, w: 16, h: 32 },
+  south: { x: 640, y: 352, w: 32, h: 16 },
+  west: { x: 592, y: 288, w: 16, h: 32 },
+} as const;
+const LOBE_OVERLAP = 4;
+const QUATREFOIL = { x: 624, y: 384, w: 64, h: 64 };
+// A framed 2×2 drain grate set into the floor, its frame spilling this far past the tiles.
+const GRATE = { x: 487, y: 202, w: 82, h: 79, rimX: 9, rimY: 8 };
+// The cobblestone walls: the brick face set's rows, this much lower in the tileset (same columns).
+const COBBLE_DY = 224;
 
 // Floors (32×32, each window sits on a fully opaque band)
 // Main floor: teal cobble variants that share one hue, so they blend seamlessly.
@@ -87,7 +102,7 @@ const FLOOR_MAIN: Array<[number, number]> = [
 const FLOOR_PATCH: Array<[number, number]> = [[928, 272], [976, 272], [928, 320], [976, 320]];
 const FLOOR_ROUGH: Array<[number, number]> = [[304, 336], [336, 336], [304, 400], [336, 400]];
 const FLOOR_SAFE: Array<[number, number]> = [[832, 208]];
-const FLOOR_GRATE: [number, number] = [496, 288];
+const FLOOR_GRATES: Array<[number, number]> = [[496, 288], [496, 336]];
 
 // Cave ground (MainLev2.0.png, charcoal set): bare earth, pebbles, and tufts of blue grass.
 const CAVE_PLAIN: Array<[number, number]> = [[0, 1472], [32, 1472], [0, 1504], [32, 1504], [64, 1472], [96, 1472]];
@@ -188,6 +203,7 @@ class TerrainBuilder {
     forEachTile(0, 1, this.W - 1, this.H - 1, this.markFace);
     forEachTile(0, 0, this.level.width - 1, this.level.height - 1, this.addFloor);
     for (const p of this.level.pits) this.addPit(p);
+    for (const g of this.level.grates) this.addGrate(g);
     forEachTile(0, 0, this.W - 1, this.H - 1, this.addSubTile);
     forEachTile(0, 0, this.W - 3, this.H - 1, this.addArch);
     return [...this.floorPieces, ...this.wallPieces, ...this.overlayPieces];
@@ -265,13 +281,37 @@ class TerrainBuilder {
     this.floorPieces.push(piece);
   };
 
-  // ── Framed pits (2×2 holes) — rims spill onto the surrounding floor ────────
+  // ── Shaped pits on 2×2 holes — rims and lobes spill onto the surrounding floor ──
 
-  private addPit(p: { x: number; y: number }): void {
+  private addPit(p: Pit): void {
     forEachTile(0, 0, PIT_SUBTILES - 1, PIT_SUBTILES - 1, (dx, dy) => this.framed.add(p.x * 2 + dx + (p.y * 2 + dy) * this.W));
+    const x = p.x * TILE_WIDTH;
+    const y = p.y * TILE_HEIGHT;
+    if (p.shape === 'quatrefoil') {
+      this.overlayPieces.push({ dx: x, dy: y, sx: QUATREFOIL.x, sy: QUATREFOIL.y, w: QUATREFOIL.w, h: QUATREFOIL.h });
+      return;
+    }
+    this.overlayPieces.push({ dx: x - PIT.rim, dy: y - PIT.rim, sx: PIT.x, sy: PIT.y, w: PIT.w, h: PIT.h });
+    if (p.shape === 'lobed') this.addLobes(p.lobes, x, y);
+  }
+
+  /** A lobed pit's lobes, each laid over the square's rim where they join so the two read as one hole. */
+  private addLobes(lobes: number, x: number, y: number): void {
+    const side = 2 * TILE_WIDTH;
+    const { north, east, south, west } = LOBE_PIECES;
+    const lobe = (piece: { x: number; y: number; w: number; h: number }, dx: number, dy: number): void => {
+      this.overlayPieces.push({ dx, dy, sx: piece.x, sy: piece.y, w: piece.w, h: piece.h });
+    };
+    if (lobes & LOBE_N) lobe(north, x + (side - north.w) / 2, y + LOBE_OVERLAP - north.h);
+    if (lobes & LOBE_E) lobe(east, x + side - LOBE_OVERLAP, y + (side - east.h) / 2);
+    if (lobes & LOBE_S) lobe(south, x + (side - south.w) / 2, y + side - LOBE_OVERLAP);
+    if (lobes & LOBE_W) lobe(west, x + LOBE_OVERLAP - west.w, y + (side - west.h) / 2);
+  }
+
+  /** A framed drain grate over 2×2 floor tiles, its frame spilling onto the floor round it. */
+  private addGrate(g: { x: number; y: number }): void {
     this.overlayPieces.push({
-      dx: p.x * TILE_WIDTH - PIT.rim, dy: p.y * TILE_HEIGHT - PIT.rim,
-      sx: PIT.x, sy: PIT.y, w: PIT.w, h: PIT.h,
+      dx: g.x * TILE_WIDTH - GRATE.rimX, dy: g.y * TILE_HEIGHT - GRATE.rimY, sx: GRATE.x, sy: GRATE.y, w: GRATE.w, h: GRATE.h,
     });
   }
 
@@ -292,7 +332,8 @@ class TerrainBuilder {
   private addOpenSubTile(sx: number, sy: number, dx: number, dy: number): void {
     // Plinth along the foot of a face, laid over the floor
     if (!this.hole(sx, sy) && this.isFace(sx, sy - 1) && this.faceK[sx + (sy - 1) * this.W] === 1) {
-      quad(this.overlayPieces, dx, dy, [plinthX(this.faceStyle(sx, sy - 1)), BASE_Y], SUB, Q);
+      const base = BASE_Y + (this.cobble(sx, sy - 1) ? COBBLE_DY : 0);
+      quad(this.overlayPieces, dx, dy, [plinthX(this.faceStyle(sx, sy - 1)), base], SUB, Q);
     }
     // A hole outside a framed pit: dark brick lip under open floor, then black
     if (!this.hole(sx, sy) || this.framed.has(sx + sy * this.W)) return;
@@ -301,7 +342,29 @@ class TerrainBuilder {
     else if (this.hole(sx, sy - 1) && floorAbove(sy - 2)) quad(this.wallPieces, dx, dy, PIT_WALL[1], SUB, SUB);
   }
 
+  /** Whether the wall a face sub-tile belongs to is cobblestone (its room's material) rather than brick. */
+  private cobble(sx: number, sy: number): boolean {
+    return this.level.cobbleWalls.has((sx >> 1) + (sy >> 1) * this.level.width);
+  }
+
+  /** The face's art: brick, or the same piece from the cobblestone set (which has no windows). */
   private faceSource(sx: number, sy: number): Src {
+    const src = this.brickFaceSource(sx, sy);
+    if (!this.cobble(sx, sy)) return src;
+    const style = this.faceStyle(sx, sy);
+    if (style === 'cracked') return src;
+    if (style === 'window') return [FACE_MID_X[sx % 4], this.brickRowY(sx, sy) + COBBLE_DY];
+    return [src[0], src[1] + COBBLE_DY];
+  }
+
+  /** The brick face row a face sub-tile shows: the cap at its top, plain bricks below. */
+  private brickRowY(sx: number, sy: number): number {
+    const i = sx + sy * this.W;
+    const k = this.faceK[i];
+    return k === this.faceH[i] ? FACE_CAP_Y : FACE_BRICK_Y[k - 1];
+  }
+
+  private brickFaceSource(sx: number, sy: number): Src {
     const i = sx + sy * this.W;
     const k = this.faceK[i];
     const cap = k === this.faceH[i];
@@ -405,7 +468,7 @@ function stoneGround(level: Level, t: TileData, tx: number, ty: number): Ground 
   const at = (kind: GroundKind, from: ReadonlyArray<Src>): Ground => ({ kind, sx: from[v % from.length][0], sy: from[v % from.length][1] });
   if (level.isSafeZone(tx, ty)) return at('safe', FLOOR_SAFE);
   const n = noise(tx, ty, FLOOR_NOISE_SCALE);
-  if (v % GRATE_EVERY === 0 && t.type === TileType.Floor) return at('stone', [FLOOR_GRATE]);
+  if (v % GRATE_EVERY === 0 && t.type === TileType.Floor) return at('stone', FLOOR_GRATES);
   if (n > FLOOR_ROUGH_LEVEL) return at('rough', FLOOR_ROUGH);
   if (n > FLOOR_PATCH_LEVEL) return at('stone', FLOOR_PATCH);
   return at('stone', FLOOR_MAIN);
@@ -414,7 +477,9 @@ function stoneGround(level: Level, t: TileData, tx: number, ty: number): Ground 
 /** The ground a tile is floored with, or null when it isn't floor (walls, holes, off the map). */
 export function groundAt(level: Level, tx: number, ty: number): Ground | null {
   const t = level.getTile(tx, ty);
-  if (!t || (t.type !== TileType.Floor && t.type !== TileType.Obstacle)) return null;
+  // A pit's own tiles are floored too: a quatrefoil leaves their corners open ground, and the pit art covers the rest.
+  const pitFloor = t?.type === TileType.Hole && level.hasPit(tx, ty);
+  if (!t || (t.type !== TileType.Floor && t.type !== TileType.Obstacle && !pitFloor)) return null;
   return caveGround(level, tx, ty) ?? stoneGround(level, t, tx, ty);
 }
 

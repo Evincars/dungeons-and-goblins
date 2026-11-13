@@ -162,9 +162,14 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `StateMachine` states, squad tactics by Yuka `Think`, each squad member's place in a ring round its target,
   `surround.ts`) → `execution/` (Yuka steering).
 - `src/level/` — `Level` tiles, `TileGraph`/`TileSearch` (Yuka graph search), procedural generation
-  (`generators/`), terrain autotiling and rendering, soft edges between kinds of ground (`GroundBlend.ts`, baked
+  (`generators/`: BSP rooms, each dressed by theme — crypt, storeroom or plain hall with a colonnade and floor grates —
+  with brick or cobblestone walls, `level.cobbleWalls`), shaped pits (`PitShapes.ts`: square, lobed or quatrefoil on 2×2
+  Hole tiles; `level.overPit` tests the drawn shape, for falling in, keeping enemies out and hiding a faller), terrain
+  autotiling and rendering (`TerrainAutotile.ts`, from `public/catacombs/mainlevbuild.png`), soft edges between kinds of ground (`GroundBlend.ts`, baked
   into one atlas by `render/BlendAtlas.ts`), fog of war (`FogRenderer.ts`: per-corner fading buffer, blurred, with
   drifting mist), lighting, and `LevelMap.ts` (a generated level as validated JSON, gzipped to send or save).
+- Animated decor stored one frame per file (`public/catacombs` torches and candles) is padded to one height with the base
+  at the bottom, so only the flame moves.
 - `src/characters/` — side-view `CharacterDef`s (`Heroes.ts`: the main characters from `public/main-characters`; clips may
   be grids read row by row, or a frame range of a sheet; casters carry a `bolt`) and their animation-state triggers.
 - `src/rules/` — the tabletop rules: dice (`Dice.ts`: d4–d20 rolls, attacks, checks; tests load the dice with

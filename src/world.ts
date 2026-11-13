@@ -547,7 +547,8 @@ export type Entity = {
   ai?: MobAI;
 
   // --- falling ---
-  falling?: { age: number; duration: number };
+  /** A fall into a pit: how far it has gone, and the point inside the pit the faller is drawn down to (see HoleSystem.ts). */
+  falling?: { age: number; duration: number; toX?: number; toY?: number };
 
   // --- ephemeral ---
   ephemeral?: { age: number; life: number; drop: number };

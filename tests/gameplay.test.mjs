@@ -628,6 +628,47 @@ test('the safe and exit rooms have campfires (two beside the exit) and banners o
   assert.ok(props.some((p) => p.ty === exit.y && HANGINGS.includes(p.kind)), 'banners');
 });
 
+test('a shaped pit swallows what stands over its drawn ground: its lobes, not the corners of a quatrefoil', async () => {
+  const { insidePit, LOBE_W, LOBE_N } = await load('level/PitShapes');
+  const level = arena(14, 12);
+  const pit = { x: 5, y: 5, shape: 'lobed', lobes: LOBE_W | LOBE_N };
+  for (const [x, y] of [[5, 5], [6, 5], [5, 6], [6, 6]]) level.setTile(x, y, createTile(TileType.Hole));
+  level.addPit(pit);
+  const left = 5 * TILE_WIDTH;
+  const mid = 6 * TILE_WIDTH;
+  assert.ok(level.overPit(left - 6, mid), 'the west lobe reaches into the floor tile beside the square');
+  assert.ok(!level.overPit(left - 20, mid), 'past it is floor');
+  assert.ok(level.overPit(mid, 5 * TILE_WIDTH - 30), 'the arched alcove north of it');
+  assert.ok(!level.overPit(left - 6, 5 * TILE_WIDTH + 2), 'the corner beside a lobe is floor');
+  assert.ok(insidePit(pit, mid, mid));
+  const foil = { x: 10, y: 2, shape: 'quatrefoil', lobes: 0 };
+  level.addPit(foil);
+  assert.ok(level.overPit(11 * TILE_WIDTH, 3 * TILE_WIDTH), 'the middle of a quatrefoil');
+  assert.ok(!level.overPit(10 * TILE_WIDTH + 2, 2 * TILE_WIDTH + 2), 'its tile corners are floor');
+  assert.ok(!level.canHold(left - 6, mid), 'nothing set down in a lobe stays on the floor');
+});
+
+test('a hero who steps into a lobe falls, and is drawn down into the pit; an enemy will not step in', async () => {
+  const { updateFalling: fallTick } = await load('systems/HoleSystem');
+  const level = arena(14, 12);
+  for (const [x, y] of [[5, 5], [6, 5], [5, 6], [6, 6]]) level.setTile(x, y, createTile(TileType.Hole));
+  level.addPit({ x: 5, y: 5, shape: 'lobed', lobes: 8 });
+  const player = playerAt(4, 6);
+  // Feet over the lobe's bulge, just west of the square: their whole support box fits inside it.
+  player.position.x = 5 * TILE_WIDTH - 2;
+  player.position.y = 6 * TILE_WIDTH;
+  updateHoles(level);
+  assert.ok(player.falling, 'over the west lobe, off the square');
+  const startX = player.position.x;
+  for (let t = 0; t < 10; t++) fallTick(level);
+  assert.ok(player.position.x > startX, 'pulled in towards the middle of the lobe');
+  const mob = mobAt(level, 'goblin', 3, 6);
+  mob.position.y = 6 * TILE_WIDTH;
+  mob.velocity.x = 8;
+  for (let t = 0; t < 10; t++) { mob.velocity.x = 2; updateMovement(level); }
+  assert.ok(!level.overPit(mob.position.x, mob.position.y), 'the enemy stops at the lobe\'s edge');
+});
+
 test('falling into a pit pops a "!" over the player that follows them down', () => {
   const level = arena(8, 6);
   level.setTile(4, 2, createTile(TileType.Hole));
@@ -1522,6 +1563,8 @@ test('a generated level saves to JSON and gzip, and comes back the same; a damag
   assert.deepEqual([...back.level.wallDecor], [...level.wallDecor]);
   assert.deepEqual([...back.level.blockBoxes], [...level.blockBoxes]);
   assert.deepEqual(back.level.pits, level.pits);
+  assert.deepEqual([...back.level.cobbleWalls].sort(), [...level.cobbleWalls].sort(), 'cobblestone walls');
+  assert.deepEqual(back.level.grates, level.grates, 'floor grates');
   assert.deepEqual(back.playerSpawn, spawns.playerSpawn);
   assert.deepEqual(back.torchPositions, spawns.torchPositions);
   assert.deepEqual(back.rooms, layout.rooms, 'the rooms');

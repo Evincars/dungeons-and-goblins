@@ -200,7 +200,8 @@ const OPENABLE_PROPS: ReadonlySet<PropKind> = new Set<PropKind>([
   'coffin', 'coffin_cracked', 'sarcophagus', 'sarcophagus2',
   'barrel', 'barrel2', 'supplies_barrel',
   'crate', 'crate2', 'crate_stack', 'crate_stack2', 'supplies_crate', 'supplies_crates',
-  'urn', 'urn_small', 'urn_green', 'urn_green_small', 'supplies_vase', 'supplies_jar',
+  'urn', 'urn_small', 'urn_m', 'urn_s', 'urn_xs', 'urn_green', 'urn_green_small', 'urn_green_m', 'urn_green_s', 'urn_green_xs',
+  'supplies_vase', 'supplies_jar',
   'sack', 'sack_m', 'sack_s', 'sack_xs', 'sack2', 'sack2_m', 'sack2_s', 'sack2_xs', 'sacks_pile', 'sacks_pile2', 'sacks_pile3',
 ]);
 /** A stash's body reaches this far up and down its prop's foot, for the crosshair and the corner brackets. */

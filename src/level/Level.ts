@@ -4,6 +4,8 @@ import type { TileData } from './TileType';
 import { BoxPool } from '../core/geometry';
 import { forEachTile } from './Grid';
 import type { BlockRect } from './Props';
+import { insidePit, pitTileBounds } from './PitShapes';
+import type { Pit } from './PitShapes';
 
 export type SpawnPoint = { x: number; y: number };
 
@@ -23,6 +25,11 @@ export type WallDecor = (typeof WALL_DECORS)[number];
 
 export function isWallDecor(value: unknown): value is WallDecor {
   return WALL_DECORS.some((decor) => decor === value);
+}
+
+/** A tile box as forEachTile's arguments. */
+function boundsArgs(b: { x0: number; y0: number; x1: number; y1: number }): [number, number, number, number] {
+  return [b.x0, b.y0, b.x1, b.y1];
 }
 
 function isWallType(tile: TileData | null): boolean {
@@ -45,8 +52,14 @@ export class Level {
    * in pixels from the tile's top-left. Obstacles without an entry block the whole tile.
    */
   readonly blockBoxes = new Map<number, BlockRect>();
-  /** Top-left tiles of 2×2 pits (each is four Hole tiles drawn as one framed pit). */
-  readonly pits: Array<{ x: number; y: number }> = [];
+  /** The pits: each four Hole tiles drawn as one shaped pit (PitShapes.ts). Add them with `addPit`. */
+  readonly pits: Pit[] = [];
+  /** The pits whose open ground reaches into each tile, by tile index (most tiles have none). */
+  private readonly pitTiles = new Map<number, Pit[]>();
+  /** Tiles (index x + y·width) whose wall faces are cobblestone rather than brick. */
+  readonly cobbleWalls = new Set<number>();
+  /** Top-left tiles of framed 2×2 drain grates set into the floor (walked over: decor only). */
+  readonly grates: Array<{ x: number; y: number }> = [];
 
   readonly seen: boolean[];
   /** Bumped whenever a corner is seen for the first time, so the fog redraws only when it changed. */
@@ -86,6 +99,38 @@ export class Level {
 
   tileCentreY(index: number): number {
     return Math.floor(index / this.width) * TILE_HEIGHT + TILE_HEIGHT / 2;
+  }
+
+  addPit(pit: Pit): void {
+    this.pits.push(pit);
+    forEachTile(...boundsArgs(pitTileBounds(pit)), (tx, ty) => {
+      const i = tx + ty * this.width;
+      const list = this.pitTiles.get(i);
+      if (list) list.push(pit);
+      else this.pitTiles.set(i, [pit]);
+    });
+  }
+
+  /** Whether some pit's ground reaches into the tile (its Hole tiles, and the floor its lobes bulge into). */
+  hasPit(tx: number, ty: number): boolean {
+    return this.pitTiles.has(tx + ty * this.width);
+  }
+
+  /** The pit whose open ground the world point is over, if any. */
+  pitAt(worldX: number, worldY: number): Pit | null {
+    const list = this.pitTiles.get(this.tileIndexAt(worldX, worldY));
+    if (!list) return null;
+    for (const pit of list) if (insidePit(pit, worldX, worldY)) return pit;
+    return null;
+  }
+
+  /**
+   * Whether a world point is over open pit, where feet find no floor: inside a pit's drawn shape (its lobes too, and
+   * not the corners of a quatrefoil's tiles), or on a Hole tile that belongs to no pit.
+   */
+  overPit(worldX: number, worldY: number): boolean {
+    if (this.pitTiles.has(this.tileIndexAt(worldX, worldY))) return this.pitAt(worldX, worldY) !== null;
+    return this.getTileAt(worldX, worldY)?.type === TileType.Hole;
   }
 
   markSafeZone(tx: number, ty: number): void {
@@ -186,7 +231,7 @@ export class Level {
   /** Whether something set down here lies on the floor: open ground that is not a pit (a pit swallows it). */
   canHold(worldX: number, worldY: number): boolean {
     const tile = this.getTileAt(worldX, worldY);
-    return !!tile && tile.passable && tile.type !== TileType.Hole;
+    return !!tile && tile.passable && tile.type !== TileType.Hole && !this.overPit(worldX, worldY);
   }
 
   /**

@@ -5,6 +5,8 @@ import type { Level } from '../level/Level';
 import { TileType, TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
 import { whiteFrame } from '../render/Sheets';
 import { FALL_DEPTH } from './HoleSystem';
+import { worldOutline } from '../level/PitShapes';
+import type { Pit } from '../level/PitShapes';
 
 type Overlay = { color: number; alpha: number };
 
@@ -70,9 +72,15 @@ function syncOverlay(entity: Entity, sprite: Sprite): void {
   layer.visible = true;
 }
 
+/** A faller fades out over the last part of the drop (from this share of it), into the dark of the pit. */
+const FADE_FROM = 0.55;
+/** The mask over a pit reaches this far into its top, besides everything straight above it (the faller's upper body). */
+const ABOVE_PIT_DIP = 16;
+
 function dropFallMask(entity: Entity, sprite: Sprite): void {
   if (!entity.fallMask) return;
   sprite.mask = null;
+  sprite.alpha = 1;
   if (entity.hurtOverlay) entity.hurtOverlay.mask = null;
   entity.fallMask.destroy();
   world.removeComponent(entity, 'fallMask');
@@ -84,6 +92,18 @@ function pitFloorY(level: Level, x: number, y: number): number {
   let ty = Math.floor(y / TILE_HEIGHT) + 1;
   while (level.getTile(tx, ty)?.type === TileType.Hole) ty++;
   return ty * TILE_HEIGHT;
+}
+
+/**
+ * What of a faller still shows over a shaped pit: the pit's open ground (its square, lobes or quatrefoil) and
+ * everything straight above it, so they sink into its dark between its edges and behind its south lip.
+ */
+function drawPitMask(mask: Graphics, pit: Pit): void {
+  const { ox, oy, outline } = worldOutline(pit);
+  const { bounds } = outline;
+  mask.rect(ox + bounds.x0, 0, bounds.x1 - bounds.x0, oy + bounds.y0 + ABOVE_PIT_DIP).fill(0xffffff);
+  for (const b of outline.boxes) mask.rect(ox + b.x0, oy + b.y0, b.x1 - b.x0, b.y1 - b.y0).fill(0xffffff);
+  for (const d of outline.discs) mask.circle(ox + d.cx, oy + d.cy, d.r).fill(0xffffff);
 }
 
 /** The entity whose fall this sprite follows: its own, or that of the player a "!" hangs over. */
@@ -102,14 +122,19 @@ function syncFall(entity: Entity, sprite: Sprite, level: Level): void {
     dropFallMask(entity, sprite);
     return;
   }
-  sprite.y += Math.round(FALL_DEPTH * Math.min(1, falling.age / falling.duration));
+  const t = Math.min(1, falling.age / falling.duration);
+  sprite.y += Math.round(FALL_DEPTH * t);
+  sprite.alpha = t < FADE_FROM ? 1 : 1 - (t - FADE_FROM) / (1 - FADE_FROM);
   let mask = entity.fallMask;
   if (!mask) {
     mask = new Graphics();
     sprite.parent?.addChild(mask);
     world.addComponent(entity, 'fallMask', mask);
   }
-  mask.clear().rect(0, 0, level.width * TILE_WIDTH, pitFloorY(level, pos.x, pos.y)).fill(0xffffff);
+  mask.clear();
+  const pit = level.pitAt(pos.x, pos.y);
+  if (pit) drawPitMask(mask, pit);
+  else mask.rect(0, 0, level.width * TILE_WIDTH, pitFloorY(level, pos.x, pos.y)).fill(0xffffff);
   sprite.mask = mask;
   if (entity.hurtOverlay) entity.hurtOverlay.mask = mask;
 }

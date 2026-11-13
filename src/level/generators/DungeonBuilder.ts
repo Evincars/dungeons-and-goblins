@@ -19,12 +19,14 @@ import type { DungeonConfig } from './DungeonConfig';
 import { bspTree, bspLeaves, type BspNode } from './BSPSplit';
 import { isPillarColumn } from '../TerrainAutotile';
 import {
-  CAVE_CENTREPIECES, CAVE_CRYSTALS, GEM_CRYSTALS, CAVE_PLANTS, CAVE_SPIRES, CAVE_STONES, COFFINS, CRATES, CRYPT_CENTREPIECES,
-  HALL_CENTREPIECES, HANGINGS, PEDESTALS, POSTS, PROPS, SARCOPHAGI, STORE_CENTREPIECES, STORE_FURNITURE, STORE_GOODS, URNS,
+  CAVE_CENTREPIECES, CAVE_CRYSTALS, GEM_CRYSTALS, CAVE_PLANTS, CAVE_SPIRES, CAVE_STONES, COFFINS, COLD_CANDLES, CRATES, CRYPT_CENTREPIECES,
+  COLUMNS, HALL_CENTREPIECES, HANGINGS, PEDESTALS, POSTS, PROPS, SARCOPHAGI, STORE_CENTREPIECES, STORE_FURNITURE, STORE_GOODS, URNS,
   propBlockRect, propWeight,
 } from '../Props';
 import type { BlockRect, PropDef, PropKind, PropPlacement } from '../Props';
 import { MathUtils } from 'yuka';
+import { LOBE_E, LOBE_N, LOBE_S, LOBE_W } from '../PitShapes';
+import type { Pit } from '../PitShapes';
 
 type TileChange = { x: number; y: number; prev: TileType };
 type Keep = (apply: () => TileChange[]) => boolean;
@@ -56,6 +58,28 @@ const FOUR_PILLAR_ROOM_H = 12;
 const SECOND_PIT_CHANCE = 0.2;
 /** Tries to find a free spot for each pit. */
 const PIT_ATTEMPTS = 6;
+/** Of the pits dug, this share are plain squares and this share quatrefoils; the rest have rounded lobes. */
+const PIT_SQUARE_SHARE = 0.3;
+const PIT_FOIL_SHARE = 0.25;
+/** Chance a lobed pit bulges on each of its east, south and west sides, and that it has an arched alcove north. */
+const LOBE_CHANCE = 0.55;
+const ARCH_CHANCE = 0.5;
+/** Chance a dungeon room's walls are cobblestone rather than brick (more often in the great cave halls). */
+const COBBLE_CHANCE = 0.4;
+const COBBLE_HALL_CHANCE = 0.7;
+/** How far round a room its walls take its material: a tile at the sides and below, its full north face above. */
+const WALL_REACH_SIDE = 1;
+const WALL_REACH_NORTH = 3;
+/** Chance a plain hall has drain grates set in its floor (two, or four in a tall room), and how tall that is. */
+const GRATE_CHANCE = 0.6;
+const FOUR_GRATE_ROOM_H = 9;
+/** Grates keep this many tiles from the walls. */
+const GRATE_INSET = 2;
+/** Chance a plain hall big enough is lined with columns along its north and south walls, this many tiles apart. */
+const COLONNADE_CHANCE = 0.5;
+const COLONNADE_STEP = 3;
+const COLONNADE_MIN_W = 9;
+const COLONNADE_MIN_H = 7;
 /** Chance a tomb niche spot is skipped, and that a candle stands beside a niche coffin. */
 const NICHE_SKIP_CHANCE = 0.35;
 const CANDLE_CHANCE = 0.7;
@@ -101,6 +125,8 @@ const CAMPFIRE_BLOCK: BlockRect = { x0: 3, y0: 14, x1: 29, y1: 24 };
 /** Urns and pots, and sacks and bowls, stood along the walls of the safe and exit rooms. */
 const GATHERING_URNS = 4;
 const GATHERING_GOODS = 5;
+/** The share of candles set down that are long burnt out (no flame, no light). */
+const COLD_CANDLE_SHARE = 0.25;
 /** Torch flames hang this far above the foot of their wall. */
 const TORCH_FLAME_LIFT = 30;
 /** Rows above which walls are too thin for wall fixtures. */
@@ -265,6 +291,8 @@ export class DungeonBuilder {
       }
       this.furnish(room, structured, props, keepIfReachable);
     }
+
+    this.wallMaterials(dungeonRooms);
 
     // ── Safe zones ────────────────────────────────────────────────────────────
     for (const room of [safe, exit]) {
@@ -565,11 +593,29 @@ export class DungeonBuilder {
       const py = this.randInt(room.y + 2, maxY);
       if (someTile(px - 1, py - 1, px + 2, py + 2, (x, y) => !this.free(x, y))) continue;
       if (!keep(() => this.setTiles([[px, py], [px + 1, py], [px, py + 1], [px + 1, py + 1]], TileType.Hole))) continue;
-      this.level.pits.push({ x: px, y: py });
+      const pit = this.pitShape(px, py);
+      this.level.addPit(pit);
       forEachTile(px - 1, py - 1, px + 2, py + 2, (x, y) => this.claim(x, y));
+      // An arched alcove reaches half a tile into the row above the ring.
+      if (pit.lobes & LOBE_N) forEachTile(px, py - 2, px + 1, py - 2, (x, y) => this.claim(x, y));
       return true;
     }
     return false;
+  }
+
+  /**
+   * The shape a pit at (px, py) is dug in: a plain square, a quatrefoil, or a square with rounded lobes (at least
+   * one), its arched alcove only where the floor two tiles north of it is free.
+   */
+  private pitShape(px: number, py: number): Pit {
+    const roll = this.rng();
+    if (roll < PIT_SQUARE_SHARE) return { x: px, y: py, shape: 'square', lobes: 0 };
+    if (roll < PIT_SQUARE_SHARE + PIT_FOIL_SHARE) return { x: px, y: py, shape: 'quatrefoil', lobes: 0 };
+    let lobes = 0;
+    for (const bit of [LOBE_E, LOBE_S, LOBE_W]) if (this.rng() < LOBE_CHANCE) lobes |= bit;
+    const archRoom = this.free(px, py - 2) && this.free(px + 1, py - 2);
+    if (archRoom && this.rng() < ARCH_CHANCE) lobes |= LOBE_N;
+    return { x: px, y: py, shape: 'lobed', lobes: lobes || LOBE_S };
   }
 
   /** Blocks the given tiles with props, if the dungeon stays connected. */
@@ -612,8 +658,8 @@ export class DungeonBuilder {
     } else if (roll < 0.7) {
       this.crateCorners(room, props, keep);
       centrepieces = STORE_CENTREPIECES;
-    } else if (!structured && room.w >= 8 && room.h >= 8) {
-      this.flankingPair(room, props, keep);
+    } else {
+      this.plainHall(room, structured, props, keep);
     }
     if (!middleTaken && this.rng() < CENTREPIECE_CHANCE) this.centrepiece(room, centrepieces, props, keep);
     if (this.rng() < STORE_CHANCE) this.storeroom(room, props, keep);
@@ -780,6 +826,57 @@ export class DungeonBuilder {
   }
 
   /** Posts, or a matching pair of pedestals, standing either side of the middle of a plain hall. */
+  /** A plain hall: columns along its long walls, or a pair of pedestals or posts; drain grates set in its floor. */
+  private plainHall(room: RoomData, structured: boolean, props: PropPlacement[], keep: Keep): void {
+    const colonnade = !structured && room.w >= COLONNADE_MIN_W && room.h >= COLONNADE_MIN_H && this.rng() < COLONNADE_CHANCE;
+    if (colonnade) this.colonnade(room, props, keep);
+    else if (!structured && room.w >= 8 && room.h >= 8) this.flankingPair(room, props, keep);
+    if (this.rng() < GRATE_CHANCE) this.grates(room);
+  }
+
+  /** One kind of column in a row along the north wall and another along the south, a few tiles apart. */
+  private colonnade(room: RoomData, props: PropPlacement[], keep: Keep): void {
+    const kind = this.pick(COLUMNS);
+    for (let x = room.x + 1; x <= room.x + room.w - 2; x += COLONNADE_STEP) {
+      for (const y of [room.y + 1, room.y + room.h - 2]) this.placeSolid([[x, y]], [kind], props, keep);
+    }
+  }
+
+  /**
+   * Framed 2×2 drain grates mirrored across the room: two side by side, or four in a tall room. They are floor
+   * (walked over) but nothing is set down on them.
+   */
+  private grates(room: RoomData): void {
+    const xs = [room.x + GRATE_INSET, room.x + room.w - GRATE_INSET - 2];
+    const middle = room.y + Math.floor((room.h - 2) / 2);
+    const ys = room.h >= FOUR_GRATE_ROOM_H ? [room.y + GRATE_INSET, room.y + room.h - GRATE_INSET - 2] : [middle];
+    if (xs[1] - xs[0] < 3) return;
+    for (const y of ys) {
+      for (const x of xs) this.placeGrate(x, y);
+    }
+  }
+
+  private placeGrate(x: number, y: number): void {
+    if (someTile(x, y, x + 1, y + 1, (tx, ty) => !this.free(tx, ty))) return;
+    this.level.grates.push({ x, y });
+    forEachTile(x, y, x + 1, y + 1, (tx, ty) => this.claim(tx, ty));
+  }
+
+  /**
+   * Each dungeon room's walls are brick or cobblestone; the tiles round it (its whole north face) take its material,
+   * corridors and the safe and exit rooms stay brick.
+   */
+  private wallMaterials(rooms: readonly RoomData[]): void {
+    for (const room of rooms) {
+      if (this.rng() >= (room.hall ? COBBLE_HALL_CHANCE : COBBLE_CHANCE)) continue;
+      const x0 = Math.max(0, room.x - WALL_REACH_SIDE);
+      const y0 = Math.max(0, room.y - WALL_REACH_NORTH);
+      const x1 = Math.min(this.cfg.mapWidth - 1, room.x + room.w - 1 + WALL_REACH_SIDE);
+      const y1 = Math.min(this.cfg.mapHeight - 1, room.y + room.h - 1 + WALL_REACH_SIDE);
+      forEachTile(x0, y0, x1, y1, (x, y) => this.level.cobbleWalls.add(x + y * this.cfg.mapWidth));
+    }
+  }
+
   private flankingPair(room: RoomData, props: PropPlacement[], keep: Keep): void {
     const y = room.y + Math.floor(room.h / 2);
     const pedestal = this.rng() < PEDESTAL_CHANCE ? this.pickProp(PEDESTALS) : null;
@@ -834,11 +931,12 @@ export class DungeonBuilder {
     }
   }
 
-  /** Sometimes stands a candle (or a cluster of them) on a free floor tile. */
+  /** Sometimes stands a candle (or a cluster of them) on a free floor tile; now and then one long burnt out. */
   private placeCandle(tx: number, ty: number, props: PropPlacement[]): void {
     if (!this.free(tx, ty) || this.rng() >= CANDLE_CHANCE) return;
     this.claim(tx, ty);
-    props.push({ kind: this.rng() < 0.5 ? 'candles' : 'candle', tx, ty });
+    const lit: PropKind = this.rng() < 0.5 ? 'candles' : 'candle';
+    props.push({ kind: this.rng() < COLD_CANDLE_SHARE ? this.pick(COLD_CANDLES) : lit, tx, ty });
   }
 
   /** A row of sarcophagi across the middle of the room, with gaps to walk between; returns whether it stands. */

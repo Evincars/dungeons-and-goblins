@@ -92,7 +92,7 @@ function settle(v: Point, factor: number): void {
 
 /** Ground no enemy may stand on: holes, and the safe rooms players rest in. */
 function offLimits(level: Level, x: number, y: number): boolean {
-  return level.getTileAt(x, y)?.type === TileType.Hole || level.isWorldPosSafe(x, y);
+  return level.overPit(x, y) || level.isWorldPosSafe(x, y);
 }
 
 /**

@@ -2,6 +2,7 @@ import { Level, isWallDecor } from './Level';
 import type { WallDecor } from './Level';
 import { createTile, TileType } from './TileType';
 import { PROPS } from './Props';
+import { ALL_LOBES, PIT_SHAPES } from './PitShapes';
 import type { PropKind } from './Props';
 import type { DungeonLayout, RoomData, RoomType } from './generators/DungeonBuilder';
 import { ensure } from '../core/errors';
@@ -10,7 +11,8 @@ import { gunzipJson, gzipText } from '../core/compression';
 
 /**
  * A generated dungeon as plain JSON, so the co-op host can send its clients the very map it built (and a
- * map can be saved): the terrain (tiles, safe rooms, cave ground, wall niches, pits, prop footprints, spawn
+ * map can be saved): the terrain (tiles, safe rooms, cave ground, wall niches and cobblestone walls, shaped pits, floor
+ * grates, prop footprints, spawn
  * points), the decor every screen draws for itself (rooms, torches, props, campfires — the level's assets)
  * and where the live pieces stand (shop, exit, training dummy, the doors and levers of the safe and exit rooms). Tiles are
  * one byte each (type and image variant) in base64; sets of tiles are runs of consecutive indices; props are
@@ -18,7 +20,7 @@ import { gunzipJson, gzipText } from '../core/compression';
  */
 
 export const MAP_FORMAT = 'dungeons-and-goblins/map';
-export const MAP_VERSION = 3;
+export const MAP_VERSION = 4;
 /** A tile's byte: its type in the high bits, its image variant (0–15) in the low four. */
 const VARIANT_BITS = 4;
 const VARIANT_MASK = (1 << VARIANT_BITS) - 1;
@@ -28,6 +30,8 @@ const MAX_UNPACKED = 4_000_000;
 const TILE_TYPES: readonly TileType[] = [TileType.Floor, TileType.Wall, TileType.BreakableWall, TileType.Hole, TileType.Obstacle];
 
 type Pair = [number, number];
+/** A pit: [tile x, tile y, shape (index in PIT_SHAPES), lobes (bits)]. */
+type PitRow = [number, number, number, number];
 const ROOM_TYPES: readonly RoomType[] = ['safe', 'dungeon', 'exit'];
 /** A room: [id, type, cave hall (1) or not (0), x, y, w, h, centre x, centre y]. */
 type RoomRow = [number, RoomType, number, number, number, number, number, number, number];
@@ -45,7 +49,10 @@ export type LevelMap = {
   wallDecor: Array<[number, WallDecor]>;
   /** Props blocking less than their whole tile: [tile index, x0, y0, x1, y1]. */
   blocks: Array<[number, number, number, number, number]>;
-  pits: Pair[];
+  pits: PitRow[];
+  /** Tiles whose wall faces are cobblestone, as runs. */
+  cobble: Pair[];
+  grates: Pair[];
   respawns: Pair[];
   playerSpawn: Pair;
   torches: Pair[];
@@ -100,7 +107,9 @@ export function encodeLevelMap(layout: DungeonLayout): LevelMap {
     cave: toRuns(level.caveFloor),
     wallDecor: [...level.wallDecor],
     blocks: [...level.blockBoxes].map(([i, b]) => [i, b.x0, b.y0, b.x1, b.y1]),
-    pits: level.pits.map((p) => [p.x, p.y]),
+    pits: level.pits.map((p) => [p.x, p.y, PIT_SHAPES.indexOf(p.shape), p.lobes]),
+    cobble: toRuns(level.cobbleWalls),
+    grates: level.grates.map(pair),
     respawns: level.respawnPoints.map(pair),
     playerSpawn: pair(layout.playerSpawn),
     torches: layout.torchPositions.map(pair),
@@ -120,6 +129,8 @@ export function encodeLevelMap(layout: DungeonLayout): LevelMap {
 // ── Reading ───────────────────────────────────────────────────────────────────
 
 const isPair = (v: unknown): v is Pair => Array.isArray(v) && v.length === 2 && v.every(isFiniteNumber);
+const isPitRow = (v: unknown): v is PitRow => Array.isArray(v) && v.length === 4 && v.every(Number.isInteger)
+  && v[2] >= 0 && v[2] < PIT_SHAPES.length && v[3] >= 0 && v[3] <= ALL_LOBES;
 const isList = (v: unknown, item: (x: unknown) => boolean): v is unknown[] => Array.isArray(v) && v.every(item);
 const isPropKind = (v: unknown): v is PropKind => typeof v === 'string' && hasKey(PROPS, v);
 const isRoomRow = (v: unknown): v is RoomRow => Array.isArray(v) && v.length === 9 && ROOM_TYPES.some((t) => t === v[1])
@@ -153,7 +164,8 @@ function checkShape(value: unknown): asserts value is LevelMap {
   const { width, height } = value;
   ensure(Number.isInteger(width) && Number.isInteger(height) && Number(width) > 0 && Number(height) > 0
     && Number(width) <= MAX_SIDE && Number(height) <= MAX_SIDE, 'Bad map size');
-  ensure(typeof value.tiles === 'string' && isList(value.safe, isPair) && isList(value.cave, isPair) && isList(value.pits, isPair)
+  ensure(typeof value.tiles === 'string' && isList(value.safe, isPair) && isList(value.cave, isPair) && isList(value.pits, isPitRow)
+    && isList(value.cobble, isPair) && isList(value.grates, isPair)
     && isList(value.respawns, isPair) && isList(value.torches, isPair) && isPair(value.playerSpawn), 'Malformed map');
   ensure(isList(value.wallDecor, (d) => Array.isArray(d) && d.length === 2 && Number.isInteger(d[0]) && isWallDecor(d[1])), 'Bad wall decor');
   ensure(isList(value.blocks, isFootprint), 'Bad prop footprint');
@@ -176,7 +188,9 @@ export function decodeLevelMap(value: unknown): DungeonLayout {
   eachInRuns(value.cave, tiles, (i) => level.caveFloor.add(i));
   for (const [i, decor] of value.wallDecor) level.wallDecor.set(i, decor);
   for (const [i, x0, y0, x1, y1] of value.blocks) level.blockBoxes.set(i, { x0, y0, x1, y1 });
-  for (const [x, y] of value.pits) level.pits.push({ x, y });
+  eachInRuns(value.cobble, tiles, (i) => level.cobbleWalls.add(i));
+  for (const [x, y, shape, lobes] of value.pits) level.addPit({ x, y, shape: PIT_SHAPES[shape], lobes });
+  for (const [x, y] of value.grates) level.grates.push({ x, y });
   for (const [x, y] of value.respawns) level.addSpawnPoint(x, y);
   level.clearDirty();
   return {

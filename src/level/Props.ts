@@ -6,6 +6,8 @@
 
 export const PROP_IMAGES = {
   decorative: '/catacombs/decorative.png',
+  // The catacomb tileset itself, for its free-standing columns.
+  mainlev: '/catacombs/mainlevbuild.png',
   wall_decor: '/objects-assets/Other_objects.png',
   supplies:   '/objects-assets/supplies_objects.png',
   pedestals:  '/objects-assets/pedestals.png',
@@ -152,18 +154,53 @@ export const PROPS = {
   urn_green_small:   { image: 'decorative', rect: { x: 162, y: 176, w: 12, h: 16 }, mount: 'floor', solid: true },
   urn_broken:        { image: 'decorative', rect: { x: 144, y: 147, w: 16, h: 13 }, mount: 'floor' },
   crate_broken:      { image: 'decorative', rect: { x: 130, y: 97, w: 12, h: 15 }, mount: 'floor' },
+  sarcophagus_broken:  { image: 'decorative', rect: { x: 5, y: 136, w: 37, h: 24 }, mount: 'floor', solid: true, base: { w: 30, d: 18 } },
+  sarcophagus_broken2: { image: 'decorative', rect: { x: 5, y: 232, w: 37, h: 24 }, mount: 'floor', solid: true, base: { w: 30, d: 18 } },
+  crate_broken2:     { image: 'decorative', rect: { x: 170, y: 97, w: 12, h: 15 }, mount: 'floor' },
+  post_cauldron:     { image: 'decorative', rect: { x: 17, y: 16, w: 14, h: 48 }, mount: 'floor', solid: true },
+  post_chain:        { image: 'decorative', rect: { x: 49, y: 22, w: 13, h: 42 }, mount: 'floor', solid: true },
+  post_broken:       { image: 'decorative', rect: { x: 33, y: 36, w: 13, h: 28 }, mount: 'floor', solid: true },
+  // Urns large to small (the two largest are above), whole and broken, in both glazes.
+  urn_m:             { image: 'decorative', rect: { x: 179, y: 129, w: 9, h: 15 }, mount: 'floor', solid: true },
+  urn_s:             { image: 'decorative', rect: { x: 196, y: 132, w: 8, h: 12 }, mount: 'floor', solid: true },
+  urn_xs:            { image: 'decorative', rect: { x: 212, y: 133, w: 8, h: 11 }, mount: 'floor', solid: true },
+  urn_broken_l:      { image: 'decorative', rect: { x: 162, y: 148, w: 12, h: 12 }, mount: 'floor' },
+  urn_broken_m:      { image: 'decorative', rect: { x: 179, y: 150, w: 9, h: 10 }, mount: 'floor' },
+  urn_broken_s:      { image: 'decorative', rect: { x: 196, y: 152, w: 8, h: 8 }, mount: 'floor' },
+  urn_broken_xs:     { image: 'decorative', rect: { x: 212, y: 151, w: 8, h: 9 }, mount: 'floor' },
+  urn_green_m:       { image: 'decorative', rect: { x: 179, y: 177, w: 9, h: 15 }, mount: 'floor', solid: true },
+  urn_green_s:       { image: 'decorative', rect: { x: 196, y: 180, w: 8, h: 12 }, mount: 'floor', solid: true },
+  urn_green_xs:      { image: 'decorative', rect: { x: 212, y: 181, w: 8, h: 11 }, mount: 'floor', solid: true },
+  urn_green_broken:    { image: 'decorative', rect: { x: 144, y: 195, w: 16, h: 13 }, mount: 'floor' },
+  urn_green_broken_l:  { image: 'decorative', rect: { x: 162, y: 196, w: 12, h: 12 }, mount: 'floor' },
+  urn_green_broken_m:  { image: 'decorative', rect: { x: 179, y: 198, w: 9, h: 10 }, mount: 'floor' },
+  urn_green_broken_s:  { image: 'decorative', rect: { x: 196, y: 200, w: 8, h: 8 }, mount: 'floor' },
+  urn_green_broken_xs: { image: 'decorative', rect: { x: 212, y: 199, w: 8, h: 9 }, mount: 'floor' },
+  // Burnt-out candles (no flame, no light), walk-through.
+  candles_cold:      { image: 'decorative', rect: { x: 162, y: 20, w: 10, h: 11 }, mount: 'floor' },
+  candles_cold2:     { image: 'decorative', rect: { x: 178, y: 20, w: 13, h: 11 }, mount: 'floor' },
+  candle_cold:       { image: 'decorative', rect: { x: 197, y: 21, w: 5, h: 9 }, mount: 'floor' },
+  candle_stub:       { image: 'decorative', rect: { x: 212, y: 27, w: 5, h: 5 }, mount: 'floor' },
+  // Each candle frame is its own file, padded to the same height with the base at the bottom, so only the flame moves.
   candles: {
     image: 'candle_b_1', rect: { x: 0, y: 0, w: 13, h: 16 }, mount: 'floor', glow: 44,
     frames: framesFromImages(CANDLE_B, 13, 16), frameTime: CANDLE_FRAME_TICKS,
   },
   candle: {
-    image: 'candle_a_1', rect: { x: 0, y: 0, w: 7, h: 14 }, mount: 'floor', glow: 36,
-    frames: framesFromImages(CANDLE_A, 7, 14), frameTime: CANDLE_FRAME_TICKS,
+    image: 'candle_a_1', rect: { x: 0, y: 0, w: 7, h: 16 }, mount: 'floor', glow: 36,
+    frames: framesFromImages(CANDLE_A, 7, 16), frameTime: CANDLE_FRAME_TICKS,
   },
   cauldron:          { image: 'decorative', rect: { x: 81, y: 16, w: 14, h: 32 }, mount: 'wall', weight: 1.5 },
   cauldron_water:    { image: 'decorative', rect: { x: 97, y: 16, w: 14, h: 32 }, mount: 'wall', weight: 1.5 },
   shackles:          { image: 'decorative', rect: { x: 113, y: 16, w: 14, h: 22 }, mount: 'wall', weight: 1.5 },
   chain:             { image: 'decorative', rect: { x: 148, y: 16, w: 7, h: 30 }, mount: 'wall', weight: 1.5 },
+  // Free-standing stone columns (mainlevbuild.png): two broad, two slender.
+  column:            { image: 'mainlev', rect: { x: 592, y: 135, w: 32, h: 57 }, mount: 'floor', solid: true, base: { w: 28, d: 12 } },
+  column_low:        { image: 'mainlev', rect: { x: 704, y: 144, w: 32, h: 48 }, mount: 'floor', solid: true, base: { w: 28, d: 12 } },
+  column_slender:    { image: 'mainlev', rect: { x: 640, y: 112, w: 16, h: 80 }, mount: 'floor', solid: true, base: { w: 14, d: 10 } },
+  column_slender_low: { image: 'mainlev', rect: { x: 672, y: 144, w: 16, h: 48 }, mount: 'floor', solid: true, base: { w: 14, d: 10 } },
+  chain_short:       { image: 'decorative', rect: { x: 132, y: 16, w: 7, h: 22 }, mount: 'wall', weight: 1.5 },
+  hook_bracket:      { image: 'decorative', rect: { x: 32, y: 20, w: 16, h: 12 }, mount: 'wall', weight: 1 },
 
   // ── Wall decor (Other_objects.png): trophies, armour and banners hung on north walls ──
   dragon_skull:        { image: 'wall_decor', rect: { x: 7, y: 5, w: 34, h: 43 }, mount: 'wall', weight: 1 },
@@ -468,10 +505,13 @@ function keysOf<T extends object>(table: T): Array<keyof T & string> {
 }
 
 export const COFFINS: PropKind[] = ['coffin', 'coffin_cracked', 'coffin_open'];
-export const SARCOPHAGI: PropKind[] = ['sarcophagus', 'sarcophagus2', 'sarcophagus_open', 'sarcophagus_open2'];
+export const SARCOPHAGI: PropKind[] = ['sarcophagus', 'sarcophagus2', 'sarcophagus_open', 'sarcophagus_open2', 'sarcophagus_broken', 'sarcophagus_broken2'];
 export const CRATES: PropKind[] = ['crate', 'crate2', 'crate_stack', 'crate_stack2'];
-export const URNS: PropKind[] = ['urn', 'urn_small', 'urn_green', 'urn_green_small', 'urn_broken', 'crate_broken'];
-export const POSTS: PropKind[] = ['post', 'post2'];
+/** Urns of every size and glaze, whole and broken, and a broken crate or two among them. */
+export const URNS: PropKind[] = [...propsStarting('urn'), 'crate_broken', 'crate_broken2'];
+export const POSTS: PropKind[] = ['post', 'post2', 'post_cauldron', 'post_chain', 'post_broken'];
+/** Burnt-out candles, left on crypt floors. */
+export const COLD_CANDLES: PropKind[] = ['candles_cold', 'candles_cold2', 'candle_cold', 'candle_stub'];
 /** Everything hung on north-wall faces: the catacomb fixtures and the trophies, armour and banners. */
 export const HANGINGS: PropKind[] = keysOf(PROPS).filter((kind) => PROPS[kind].mount === 'wall');
 /** Storeroom furniture backed against a north wall: shelves, weapon racks and stands, supply heaps and casks. */
@@ -483,7 +523,9 @@ export const PEDESTALS: PropKind[] = propsStarting('pedestal_').filter((kind) =>
 /** Something to stand in the middle of a room, by theme. */
 export const CRYPT_CENTREPIECES: PropKind[] = [...SARCOPHAGI, 'coffin_open'];
 export const STORE_CENTREPIECES: PropKind[] = ['crate_stack', 'crate_stack2', 'crate', 'crate2'];
-export const HALL_CENTREPIECES: PropKind[] = [...PEDESTALS, ...POSTS];
+/** Free-standing columns: in rows along a hall's long walls, or alone in its middle. */
+export const COLUMNS: PropKind[] = ['column', 'column_low', 'column_slender', 'column_slender_low'];
+export const HALL_CENTREPIECES: PropKind[] = [...PEDESTALS, ...POSTS, 'column', 'column_low'];
 /** Cave halls: rock spires (the great clusters for the middle), crystals, stones and plants. */
 export const CAVE_CENTREPIECES: PropKind[] = ['cave_spires', 'cave_spires_b', 'cave_spire_twin', 'cave_spire_twin_b'];
 export const CAVE_SPIRES: PropKind[] = ['cave_spire', 'cave_spire_s', 'cave_spire_xs', 'cave_spire_b', 'cave_spire_s_b', 'cave_spire_xs_b'];

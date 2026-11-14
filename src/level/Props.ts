@@ -83,8 +83,11 @@ export type PropDef = {
   image: PropImage;
   /** The sprite's bounds (an animated prop's first frame). */
   rect: Rect;
-  /** 'floor' stands on its tile; 'wall' hangs on the brick face above its tile. */
-  mount: 'floor' | 'wall';
+  /**
+   * 'floor' stands on its tile; 'wall' hangs on the brick face above its tile; 'foot' stands at the very foot of that
+   * face (in an alcove of it); 'front' hangs on the front of the solid prop standing on its tile (a flag on a column).
+   */
+  mount: 'floor' | 'wall' | 'foot' | 'front';
   /** Occupies its tile as an obstacle (coffins, crates, posts). */
   solid?: boolean;
   /** Tiles a large solid prop blocks: `w` across (odd, centred on its tile) and `h` up from its tile. */
@@ -287,6 +290,14 @@ export const PROPS = {
     image: 'light_b_1', rect: { x: 0, y: 0, w: 8, h: 18 }, mount: 'wall', glow: 40, weight: 0,
     frames: framesFromImages(LIGHT_B, 8, 18), frameTime: LIGHT_FRAME_TICKS,
   },
+  // The same candle standing on the floor of an arched alcove in a wall.
+  castle_candle: {
+    image: 'light_b_1', rect: { x: 0, y: 0, w: 8, h: 18 }, mount: 'foot', glow: 36, weight: 0,
+    frames: framesFromImages(LIGHT_B, 8, 18), frameTime: LIGHT_FRAME_TICKS,
+  },
+  // Flags hung on the front of a square column (the smallest banners, narrower than the column).
+  castle_flag:      { image: 'castle_decor', rect: { x: 116, y: 17, w: 25, h: 30 }, mount: 'front', weight: 0 },
+  castle_flag_teal: { image: 'castle_decor', rect: { x: 116, y: 65, w: 25, h: 30 }, mount: 'front', weight: 0 },
 
   // ── Wall decor (Other_objects.png): trophies, armour and banners hung on north walls ──
   dragon_skull:        { image: 'wall_decor', rect: { x: 7, y: 5, w: 34, h: 43 }, mount: 'wall', weight: 1 },
@@ -614,9 +625,9 @@ export const CASTLE_POTS: PropKind[] = propsStarting('castle_urn', 'castle_pot')
 export const CASTLE_STORES: PropKind[] = ['castle_barrel', 'castle_bucket', 'castle_chests', 'castle_urn', 'castle_pot'];
 export const CASTLE_RUBBLE: PropKind[] = propsStarting('castle_rubble', 'castle_rock', 'castle_stone', 'castle_shard');
 export const CASTLE_RUGS: PropKind[] = propsStarting('castle_rug_');
-export const CASTLE_COLUMNS: PropKind[] = ['castle_column', 'castle_column_block'];
 export const CASTLE_POOL_COLUMNS: PropKind[] = propsStarting('castle_column_moss');
 export const CASTLE_COLD_CANDLES: PropKind[] = propsStarting('castle_candle_cold');
+export const CASTLE_FLAGS: PropKind[] = propsStarting('castle_flag');
 /** Storeroom furniture backed against a north wall: shelves, weapon racks and stands, supply heaps and casks. */
 export const STORE_FURNITURE: PropKind[] = propsStarting('shelf', 'supplies_', 'rack', 'stand', 'barrel');
 /** Goods scattered in front of the furniture. */

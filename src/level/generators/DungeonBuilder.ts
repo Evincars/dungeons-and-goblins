@@ -20,7 +20,7 @@ import { bspTree, bspLeaves, type BspNode } from './BSPSplit';
 import { isPillarColumn } from '../TerrainAutotile';
 import {
   CAVE_CENTREPIECES, CAVE_CRYSTALS, GEM_CRYSTALS, CAVE_PLANTS, CAVE_SPIRES, CAVE_STONES, COFFINS, COLD_CANDLES, CRATES, CRYPT_CENTREPIECES,
-  CASTLE_BANNERS, CASTLE_BONES, CASTLE_COLD_CANDLES, CASTLE_COLUMNS, CASTLE_POOL_COLUMNS, CASTLE_POTS, CASTLE_RUBBLE, CASTLE_RUGS,
+  CASTLE_BANNERS, CASTLE_BONES, CASTLE_COLD_CANDLES, CASTLE_FLAGS, CASTLE_POOL_COLUMNS, CASTLE_POTS, CASTLE_RUBBLE, CASTLE_RUGS,
   CASTLE_STORES, COLUMNS, HALL_CENTREPIECES, HANGINGS, PEDESTALS, POSTS, PROPS, SARCOPHAGI, STORE_CENTREPIECES, STORE_FURNITURE, STORE_GOODS, URNS,
   propBlockRect, propWeight,
 } from '../Props';
@@ -91,6 +91,27 @@ const CASTLE_DECOR_PER_ROOM = 3;
 const CASTLE_DECOR_SKIP = 0.25;
 const CASTLE_DECOR_GAP = 1;
 const CASTLE_DECOR_KINDS: readonly CastleFaceDecor[] = ['door', 'glass', 'ornate', 'ornate', 'gothic', 'gothic', 'gothic'];
+/** Lit candles standing in an arched alcove (the 'door' stretch): none, one or two, and how far apart a pair stands (px). */
+const ALCOVE_CANDLES_MAX = 2;
+const ALCOVE_CANDLE_SPREAD = 7;
+/** Chance of a lit candelabra on each side of a great gothic window. */
+const GOTHIC_CANDELABRA_CHANCE = 0.7;
+/** A castle great hall's columns are square ones (rather than slender) by this chance, and flagged by this one. */
+const BLOCK_COLUMN_SHARE = 0.65;
+const FLAG_CHANCE = 0.6;
+/** Chance a castle room that is neither a hall nor a room of pools gets a pair of flagged columns across its middle. */
+const FLAGGED_PAIR_CHANCE = 0.3;
+/** Not every room is a rectangle: this share lose a corner or two, back into the wall (an L, a T, a cross). */
+const ROOM_SHAPE_CHANCE = 0.55;
+const ROOM_CORNERS_MAX = 2;
+/**
+ * A room must be this big to lose a corner; a cut is at least CORNER_MIN tiles each way (so the step it leaves has a
+ * full face) and at most a third of the room each way (so its middle stays open).
+ */
+const SHAPED_MIN_W = 6;
+const SHAPED_MIN_H = 6;
+const CORNER_MIN = 2;
+const CORNER_MAX_SHARE = 3;
 /** Chance a plain hall has drain grates set in its floor (two, or four in a tall room), and how tall that is. */
 const GRATE_CHANCE = 0.6;
 const FOUR_GRATE_ROOM_H = 9;
@@ -301,6 +322,7 @@ export class DungeonBuilder {
     const keepIfReachable = (apply: () => TileChange[]) => this.tryFeature(playerTile, anchors, apply);
     for (const room of dungeonRooms) {
       let structured = false;
+      this.shapeRoom(room, keepIfReachable);
       if (room.hall) {
         this.furnishCave(room, props, keepIfReachable);
         continue;
@@ -313,7 +335,7 @@ export class DungeonBuilder {
       if (cfg.theme === 'castle') this.furnishCastle(room, structured, props, keepIfReachable);
       else this.furnish(room, structured, props, keepIfReachable);
     }
-    if (cfg.theme === 'castle') this.castleFaces(dungeonRooms);
+    if (cfg.theme === 'castle') this.castleFaces(dungeonRooms, props, keepIfReachable);
 
     if (cfg.theme === 'catacomb') this.wallMaterials(dungeonRooms);
 
@@ -456,6 +478,34 @@ export class DungeonBuilder {
       centerX: (x + Math.floor(w / 2)) * TILE_WIDTH + TILE_WIDTH / 2,
       centerY: (y + Math.floor(h / 2)) * TILE_HEIGHT + TILE_HEIGHT / 2,
     };
+  }
+
+  /**
+   * Now and then cuts one or two of a room's corners back into the wall, so not every room is a rectangle. A corner a
+   * corridor runs into is left whole (it would end against the wall), and so is any cut that would cut a way off.
+   */
+  private shapeRoom(room: RoomData, keep: Keep): void {
+    if (room.w < SHAPED_MIN_W || room.h < SHAPED_MIN_H || this.rng() >= ROOM_SHAPE_CHANCE) return;
+    const corners: Array<[boolean, boolean]> = [[false, false], [true, false], [false, true], [true, true]];
+    // Corners in random order, until enough are cut (one a corridor comes into gives way to the next).
+    let cuts = this.randInt(1, ROOM_CORNERS_MAX);
+    while (cuts > 0 && corners.length) {
+      const [right, bottom] = corners.splice(Math.floor(this.rng() * corners.length), 1)[0];
+      if (this.cutCorner(room, right, bottom, keep)) cuts--;
+    }
+  }
+
+  /** Walls up one corner of the room (the right or left one, at its bottom or top), if nothing comes in there. */
+  private cutCorner(room: RoomData, right: boolean, bottom: boolean, keep: Keep): boolean {
+    const w = this.randInt(CORNER_MIN, Math.floor(room.w / CORNER_MAX_SHARE));
+    const h = this.randInt(CORNER_MIN, Math.floor(room.h / CORNER_MAX_SHARE));
+    const x0 = right ? room.x + room.w - w : room.x;
+    const y0 = bottom ? room.y + room.h - h : room.y;
+    const outside = (x: number, y: number): boolean => x < room.x || y < room.y || x >= room.x + room.w || y >= room.y + room.h;
+    if (someTile(x0 - 1, y0 - 1, x0 + w, y0 + h, (x, y) => outside(x, y) && !this.isWall(x, y))) return false;
+    const cells: Array<[number, number]> = [];
+    forEachTile(x0, y0, x0 + w - 1, y0 + h - 1, (x, y) => cells.push([x, y]));
+    return keep(() => this.setTiles(cells, TileType.Wall));
   }
 
   private rectGap(a: RoomData, b: RoomData): number {
@@ -725,6 +775,7 @@ export class DungeonBuilder {
     else if (roll < CASTLE_POOL_SHARE && room.w >= POOL_W + 2 && room.h >= POOL_H + 3 && !structured) this.pools(room, props, keep);
     else if (roll < CASTLE_STORE_SHARE) this.urnsAlongWalls(room, CASTLE_STORE_ITEMS, props, keep, CASTLE_STORES);
     else this.ruin(room, props, keep);
+    if (roll >= CASTLE_POOL_SHARE && !structured && big && this.rng() < FLAGGED_PAIR_CHANCE) this.flaggedPair(room, props, keep);
     this.candelabras(room, props, keep);
     this.urnsAlongWalls(room, CASTLE_POTS_PER_ROOM, props, keep, CASTLE_POTS);
     const open = this.shuffledFreeTiles(room);
@@ -732,9 +783,12 @@ export class DungeonBuilder {
     if (this.rng() < CASTLE_COLD_CANDLE_CHANCE) this.scatterLoose(open, CASTLE_COLD_CANDLES, 1, props);
   }
 
-  /** Columns along the north and south walls and a rug laid down the middle. */
+  /** Columns along the north and south walls (square ones flagged now and then) and a rug laid down the middle. */
   private greatHall(room: RoomData, props: PropPlacement[], keep: Keep): void {
-    this.colonnade(room, props, keep, CASTLE_COLUMNS);
+    const square = this.rng() < BLOCK_COLUMN_SHARE;
+    const first = props.length;
+    this.colonnade(room, props, keep, [square ? 'castle_column_block' : 'castle_column']);
+    if (square && this.rng() < FLAG_CHANCE) this.flagColumns(props.slice(first), props);
     const tx = room.x + Math.floor(room.w / 2);
     const ty = room.y + Math.floor(room.h / 2);
     if (someTile(tx - 1, ty - 1, tx + 1, ty + 1, (x, y) => !this.free(x, y))) return;
@@ -767,6 +821,20 @@ export class DungeonBuilder {
     }
   }
 
+  /** A flag of one colour hung on the front of each of these columns. */
+  private flagColumns(columns: readonly PropPlacement[], props: PropPlacement[]): void {
+    const flag = this.pick(CASTLE_FLAGS);
+    for (const column of columns) props.push({ kind: flag, tx: column.tx, ty: column.ty });
+  }
+
+  /** A pair of square columns, flagged alike, standing either side of the room's middle. */
+  private flaggedPair(room: RoomData, props: PropPlacement[], keep: Keep): void {
+    const y = room.y + Math.floor(room.h / 2);
+    const first = props.length;
+    for (const x of [room.x + 2, room.x + room.w - 3]) this.placeSolid([[x, y]], ['castle_column_block'], props, keep);
+    this.flagColumns(props.slice(first), props);
+  }
+
   /** A ruin: fallen stone and rubble lying about the room. */
   private ruin(room: RoomData, props: PropPlacement[], keep: Keep): void {
     const open = this.shuffledFreeTiles(room);
@@ -781,24 +849,65 @@ export class DungeonBuilder {
   }
 
   /**
-   * The castle's decorated stretches of north face — arched doors, dark stained windows, ornate panels and great
-   * gothic windows — set on full-height faces between pilasters, a couple to a room.
+   * The castle's decorated stretches of north face — arched alcoves, dark stained windows, ornate panels and great
+   * gothic windows — set on full-height faces (the pilasters framing them are drawn by TerrainAutotile.ts), a couple
+   * to a room; candles stand lit in an alcove, candelabras beside a great window.
    */
-  private castleFaces(rooms: readonly RoomData[]): void {
-    for (const room of rooms) this.decorateNorthFace(room);
+  private castleFaces(rooms: readonly RoomData[], props: PropPlacement[], keep: Keep): void {
+    for (const room of rooms) this.decorateNorthFaces(room, props, keep);
   }
 
-  /** Up to CASTLE_DECOR_PER_ROOM decorated stretches along one room's north face, left to right. */
-  private decorateNorthFace(room: RoomData): void {
+  /**
+   * Up to CASTLE_DECOR_PER_ROOM decorated stretches along a room's north faces, left to right and top row first: its
+   * north wall, and the steps a cut corner leaves in it.
+   */
+  private decorateNorthFaces(room: RoomData, props: PropPlacement[], keep: Keep): void {
     let placed = 0;
-    for (let tx = room.x; tx < room.x + room.w && placed < CASTLE_DECOR_PER_ROOM; tx++) {
+    for (let ty = room.y; ty < room.y + room.h && placed < CASTLE_DECOR_PER_ROOM; ty++) {
+      placed += this.decorateFaceRow(room, ty, CASTLE_DECOR_PER_ROOM - placed, props, keep);
+    }
+  }
+
+  /** Up to `most` decorated stretches on the faces over floor row ty of the room; returns how many it set. */
+  private decorateFaceRow(room: RoomData, ty: number, most: number, props: PropPlacement[], keep: Keep): number {
+    let placed = 0;
+    for (let tx = room.x; tx < room.x + room.w && placed < most; tx++) {
+      if (!this.isWall(tx, ty - 1) || !this.isFloor(tx, ty)) continue;
       const kind = this.pick(CASTLE_DECOR_KINDS);
       const len = CASTLE_FACE_DECOR[kind];
-      if (!this.decorFits(tx, room.y, len, kind) || this.rng() < CASTLE_DECOR_SKIP) continue;
-      this.markDecor(tx, room.y - 1, kind, len);
+      if (!this.decorFits(tx, ty, len, kind) || this.rng() < CASTLE_DECOR_SKIP) continue;
+      this.markDecor(tx, ty - 1, kind, len);
+      if (kind === 'door') this.alcoveCandles(tx, ty, props);
+      if (kind === 'gothic') this.windowCandelabras(tx, ty, len, props, keep);
       placed++;
       tx += len + CASTLE_DECOR_GAP;
     }
+    return placed;
+  }
+
+  /** None, one or two lit candles standing in the arched alcove that starts over floor tile (tx, ty), two tiles wide. */
+  private alcoveCandles(tx: number, ty: number, props: PropPlacement[]): void {
+    const count = this.randInt(0, ALCOVE_CANDLES_MAX);
+    if (count === 0 || !this.free(tx, ty) || !this.free(tx + 1, ty)) return;
+    this.claim(tx, ty);
+    this.claim(tx + 1, ty);
+    // The alcove's middle is the line between its two tiles: half a tile right of the first one's middle.
+    const middle = TILE_WIDTH / 2;
+    if (count === 1) props.push({ kind: 'castle_candle', tx, ty, dx: middle });
+    else for (const side of [-1, 1]) props.push({ kind: 'castle_candle', tx, ty, dx: middle + side * ALCOVE_CANDLE_SPREAD });
+  }
+
+  /** Lit candelabras standing either side of a great window that starts over floor tile (tx, ty), each by a chance. */
+  private windowCandelabras(tx: number, ty: number, len: number, props: PropPlacement[], keep: Keep): void {
+    for (const x of [tx - 1, tx + len]) {
+      if (this.rng() >= GOTHIC_CANDELABRA_CHANCE || this.candelabraBeside(x, ty, props)) continue;
+      this.placeSolid([[x, ty]], ['castle_candelabra'], props, keep);
+    }
+  }
+
+  /** Whether a candelabra already stands on the tile beside (tx, ty): two side by side would crowd the wall. */
+  private candelabraBeside(tx: number, ty: number, props: readonly PropPlacement[]): boolean {
+    return props.some((p) => p.kind === 'castle_candelabra' && p.ty === ty && Math.abs(p.tx - tx) === 1);
   }
 
   /** Marks each wall tile of a decorated stretch with its part (`gothic0`, `gothic1`…), left to right. */
@@ -1174,7 +1283,13 @@ export class DungeonBuilder {
     return this.isFloor(tx, ty)
       && this.isWall(tx, ty - 1) && this.isWall(tx, ty - 2)
       && this.isWall(tx - 1, ty - 1) && this.isWall(tx + 1, ty - 1)
-      && !isPillarColumn(tx) && !this.level.wallDecor.has(tx + (ty - 1) * W);
+      && !isPillarColumn(tx) && !this.level.wallDecor.has(tx + (ty - 1) * W) && !this.besideCastleDecor(tx, ty - 1);
+  }
+
+  /** Whether a castle wall tile is beside a decorated stretch, where a pilaster frames it (nothing hangs there). */
+  private besideCastleDecor(tx: number, wallRow: number): boolean {
+    const W = this.cfg.mapWidth;
+    return this.cfg.theme === 'castle' && (this.level.wallDecor.has(tx - 1 + wallRow * W) || this.level.wallDecor.has(tx + 1 + wallRow * W));
   }
 
   /** Torches hang on full-height brick faces; returns the floor tiles below them. */

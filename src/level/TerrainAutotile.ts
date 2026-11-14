@@ -4,7 +4,8 @@ import { forEachTile } from './Grid';
 import { TileType, TILE_WIDTH, TILE_HEIGHT } from './TileType';
 import { LOBE_E, LOBE_N, LOBE_S, LOBE_W } from './PitShapes';
 import {
-  CASTLE_ARCH, CASTLE_ARCH_SPAN, CASTLE_TOP, castleAboveCap, castleFaceSource, castleFloor, castlePlinth, poolPiece, spikePitPieces,
+  CASTLE_ARCH_SPAN, CASTLE_TOP, castleAboveCap, castleArchPieces, castleFaceSource, castleFloor, castlePlinth, poolPiece, spikePitPieces,
+  stairsPiece,
 } from './CastleTiles';
 import type { CastleFaceStyle } from './CastleTiles';
 import type { Pit } from './PitShapes';
@@ -175,10 +176,19 @@ const SLAB_EVERY = 2;
 const GRATE_EVERY = 53;
 /** One plain full-height face column in this many (by hash) shows an arched window. */
 const WINDOW_EVERY = 9;
+/** One plain full-height castle face tile in this many (by hash) has an arrow slit in one of its halves. */
+const SLIT_EVERY = 6;
+/**
+ * Castle stairs: a north–south passage two tiles wide gets a flight of steps in its middle when it runs between walls
+ * for at least STAIRS_MIN_RUN tiles (two flights from STAIRS_DOUBLE_RUN), save one passage in STAIRS_SKIP (by hash).
+ */
+const STAIRS_MIN_RUN = 4;
+const STAIRS_DOUBLE_RUN = 7;
+const STAIRS_SKIP = 3;
 /** The void that covers characters behind a wall row sorts just under the wall row itself. */
 const VOID_BELOW_WALL = 0.5;
 
-type FaceStyle = 'left' | 'right' | 'mid' | 'pillarL' | 'pillarR' | 'window' | 'cracked' | 'niche' | 'decor';
+type FaceStyle = 'left' | 'right' | 'mid' | 'pillarL' | 'pillarR' | 'window' | 'slit' | 'cracked' | 'niche' | 'decor';
 type Src = readonly [number, number];
 
 function quad(out: TerrainPiece[], dx: number, dy: number, s: Src, w: number, h: number, z?: number): void {
@@ -231,6 +241,7 @@ class TerrainBuilder {
     for (const pool of this.level.pools) this.overlayPieces.push(poolPiece(pool));
     forEachTile(0, 0, this.W - 1, this.H - 1, this.addSubTile);
     forEachTile(0, 0, this.W - 3, this.H - 1, this.addArch);
+    if (this.castle) forEachTile(1, 1, this.level.width - 3, this.level.height - 2, this.addStairs);
     return [...this.floorPieces, ...this.wallPieces, ...this.overlayPieces];
   }
 
@@ -293,8 +304,31 @@ class TerrainBuilder {
     const decor = full ? this.level.wallDecor.get(tx + (bottom >> 1) * this.level.width) : undefined;
     if (decor) return this.castle ? 'decor' : 'niche';
     if (full && tx % PILLAR_EVERY === PILLAR_PHASE && this.pillarFits(tx, bottom)) return sx === tx * 2 ? 'pillarL' : 'pillarR';
+    if (full && this.castle) return this.castleBareStyle(sx, bottom);
     if (full && hash(tx, bottom) % WINDOW_EVERY === 0) return 'window';
     return 'mid';
+  }
+
+  /**
+   * A castle's full face where nothing else stands: a pilaster framing a decorated stretch beside it (as the great
+   * windows are framed), a narrow window, an arrow slit in one half of the tile, or plain stone.
+   */
+  private castleBareStyle(sx: number, bottom: number): FaceStyle {
+    if (this.flanksDecor(sx, bottom)) return 'pillarL';
+    // The other half of a tile with a pilaster stays plain: a window there would be cut in two.
+    if (this.flanksDecor(sx ^ 1, bottom)) return 'mid';
+    const v = hash(sx >> 1, bottom);
+    if (v % WINDOW_EVERY === 0) return 'window';
+    const slitHalf = (v >>> 4) & 1;
+    if ((v >>> 8) % SLIT_EVERY === 0 && (sx & 1) === slitHalf) return 'slit';
+    return 'mid';
+  }
+
+  /** Whether a face sub-tile stands right beside a decorated stretch of the castle's face (not in it). */
+  private flanksDecor(sx: number, bottom: number): boolean {
+    const row = (bottom >> 1) * this.level.width;
+    const decorAt = (x: number): boolean => this.level.wallDecor.has((x >> 1) + row);
+    return !decorAt(sx) && (decorAt(sx - 1) || decorAt(sx + 1));
   }
 
   // ── Floors (per 32px game tile; obstacles stand on floor) ──────────────────
@@ -380,7 +414,9 @@ class TerrainBuilder {
     const cap = k === this.faceH[i];
     const style = this.castleStyle(sx, sy);
     const decor = this.faceDecor(sx, sy);
-    quad(this.wallPieces, dx, dy, castleFaceSource(style, sx, k, cap, decor, hash(sx >> 1, sy)), SUB, SUB, z);
+    // The variant is keyed by the face's foot, so every row of a window or slit picks the same art.
+    const variant = hash(sx >> 1, sy + k - 1);
+    quad(this.wallPieces, dx, dy, castleFaceSource(style, sx, k, cap, decor, variant), SUB, SUB, z);
     if (!cap || this.faceH[i] !== FACE_MAX) return;
     for (const [src, up] of castleAboveCap(style, sx, decor)) quad(this.wallPieces, dx, dy - up * SUB, src, SUB, SUB, z);
   }
@@ -506,15 +542,31 @@ class TerrainBuilder {
   };
 
   /**
-   * A castle passage through a face two tiles wide gets the great stone arch, its legs on the faces either side and
-   * its feet on the floor; other openings stand bare.
+   * A castle passage through a face two tiles wide gets the great stone arch, its legs on the faces either side (not
+   * over the passage) and its feet on the floor; other openings stand bare.
    */
   private castleArch(sx: number, n: number, sy: number, capRow: boolean): void {
     if (!capRow || n !== CASTLE_ARCH_SPAN) return;
-    const a = CASTLE_ARCH;
-    const dx = (sx + 1) * SUB - a.leg;
-    const dy = (sy + FACE_MAX) * SUB - a.h;
-    this.overlayPieces.push({ dx, dy, sx: a.x, sy: a.y, w: a.w, h: a.h, z: OVERHEAD_Z });
+    for (const piece of castleArchPieces((sx + 1) * SUB, (sy + FACE_MAX) * SUB)) this.overlayPieces.push(piece);
+  }
+
+  // ── Stairs in the castle's north–south passages ────────────────────────────
+
+  /** At the top of each run of passage rows, a flight of stairs (or two) in the run's middle, if it is long enough. */
+  private readonly addStairs = (tx: number, ty: number): void => {
+    if (!this.passageRow(tx, ty) || this.passageRow(tx, ty - 1)) return;
+    let n = 1;
+    while (this.passageRow(tx, ty + n)) n++;
+    if (n < STAIRS_MIN_RUN || hash(tx, ty) % STAIRS_SKIP === 0) return;
+    const flights = n >= STAIRS_DOUBLE_RUN ? 2 : 1;
+    const top = ty + Math.floor((n - flights) / 2);
+    for (let i = 0; i < flights; i++) this.overlayPieces.push(stairsPiece(tx, top + i));
+  };
+
+  /** Whether tiles tx and tx + 1 of row ty are a passage two tiles wide: open floor between walls. */
+  private passageRow(tx: number, ty: number): boolean {
+    const open = (x: number): boolean => this.level.getTile(x, ty)?.type === TileType.Floor && !this.level.isSafeZone(x, ty);
+    return open(tx) && open(tx + 1) && this.solid(tx * 2 - 1, ty * 2) && this.solid((tx + 2) * 2, ty * 2);
   }
 
   private lintel(x0: number, x1: number, sy: number, z: number): void {

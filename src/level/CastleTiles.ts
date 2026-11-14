@@ -32,6 +32,12 @@ const PILASTER_X = 48;
 const PILASTER_TOP_Y = 96;
 /** Narrow stained-glass windows, two sub-tiles wide, on the face's rows. */
 const WINDOW_X = [0, 320];
+/**
+ * Arrow slits, one sub-tile wide and two rows tall (a dark slit under its lintel, or a crack in the stone), on the
+ * face's lower two rows; the third row and the cap above them are plain.
+ */
+const SLIT_X = [0, 336];
+const SLIT_Y = [64, 48];
 
 /**
  * The decorated stretches of face, each a run of whole tiles: [first x in the tileset, cap y, stone rows y from the
@@ -59,7 +65,7 @@ function decorParts(decor: WallDecor): { art: (typeof DECOR_ART)[CastleFaceDecor
   return { art: DECOR_ART[kind], index: Number(match[2]) };
 }
 
-export type CastleFaceStyle = 'left' | 'right' | 'mid' | 'pillarL' | 'pillarR' | 'window' | 'decor';
+export type CastleFaceStyle = 'left' | 'right' | 'mid' | 'pillarL' | 'pillarR' | 'window' | 'slit' | 'decor';
 
 /** The piece one face sub-tile shows: k counts its row from the face's foot (1 = lowest); `cap` is the top row. */
 export function castleFaceSource(style: CastleFaceStyle, sx: number, k: number, cap: boolean, decor: WallDecor | undefined, variant: number): Src {
@@ -71,6 +77,7 @@ export function castleFaceSource(style: CastleFaceStyle, sx: number, k: number, 
     case 'right': return [RIGHT_X, row];
     case 'pillarL': return [PILASTER_X, row];
     case 'window': return [WINDOW_X[variant % WINDOW_X.length] + (sx & 1) * 16, row];
+    case 'slit': return !cap && k <= SLIT_Y.length ? [SLIT_X[variant % SLIT_X.length], SLIT_Y[k - 1]] : [MID_X[sx % MID_X.length], row];
     default: return [MID_X[sx % MID_X.length], row];
   }
 }
@@ -95,10 +102,49 @@ export function castlePlinth(style: CastleFaceStyle, sx: number): { src: Src; h:
   return { src: [MID_X[sx % MID_X.length], PLINTH_Y], h: 8 };
 }
 
-/** The great stone arch over a passage two tiles wide, its legs on the faces either side. */
-export const CASTLE_ARCH = { x: 0, y: 208, w: 80, h: 112, leg: 8 };
-/** The opening (in sub-tiles) the arch spans. */
+/**
+ * The great stone arch over a passage two tiles wide. Its art (80 wide) is narrower than the passage and the faces
+ * either side of it, so it is drawn in halves set apart, a slice of its crown between them, each leg standing wholly on
+ * the face beside the passage (never over the floor anyone walks on). Its peak's single row is left off, so the crown
+ * runs flat across the slice.
+ */
+const ARCH_ART = { x: 0, y: 212, w: 80, h: 108 };
+/** Where its halves part (in the art), and the slice of crown laid between them. */
+const ARCH_SPLIT = 40;
+const ARCH_CROWN = { x: 32, w: 16 };
+/** The crown slice is only the band over the opening (its top 20 rows); below it is the open passage the halves frame. */
+const ARCH_CROWN_OPEN = 88;
+/** The opening (in sub-tiles) the arch spans, and how far its legs stand on the faces either side (one sub-tile). */
 export const CASTLE_ARCH_SPAN = 4;
+const ARCH_LEG = 16;
+
+/**
+ * The great arch over an opening starting at world x `ox` (CASTLE_ARCH_SPAN sub-tiles wide) whose faces stand on the
+ * floor at `footY`: its pieces, sorted at that foot, so whoever is in the passage is under it and whoever is in front
+ * of the wall is drawn over it.
+ */
+export function castleArchPieces(ox: number, footY: number): CastlePiece[] {
+  const a = ARCH_ART;
+  const dy = footY - a.h;
+  const left = ox - ARCH_LEG;
+  const crownX = left + ARCH_SPLIT;
+  const right = crownX + ARCH_CROWN.w;
+  return [
+    { dx: left, dy, sx: a.x, sy: a.y, w: ARCH_SPLIT, h: a.h, z: footY },
+    { dx: crownX, dy, sx: a.x + ARCH_CROWN.x, sy: a.y, w: ARCH_CROWN.w, h: a.h - ARCH_CROWN_OPEN, z: footY },
+    { dx: right, dy, sx: a.x + ARCH_SPLIT, sy: a.y, w: a.w - ARCH_SPLIT, h: a.h, z: footY },
+  ];
+}
+
+/**
+ * Stairs (64×32: four steps), laid across a passage two tiles wide that runs north and south — the way up or down
+ * between the castle's rooms.
+ */
+const STAIRS = { x: 416, y: 528, w: 64, h: 32 };
+
+export function stairsPiece(tx: number, ty: number): CastlePiece {
+  return { dx: tx * TILE_WIDTH, dy: ty * TILE_HEIGHT, sx: STAIRS.x, sy: STAIRS.y, w: STAIRS.w, h: STAIRS.h };
+}
 
 /** The spike pit (124×66), centred on its 4×2 tiles; spikes rise from its floor, and now and then a stone slab. */
 export const SPIKE_PIT_ART = { x: 266, y: 359, w: 124, h: 66, dx: 2, dy: -1 };

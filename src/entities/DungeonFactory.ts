@@ -29,6 +29,17 @@ const TORCH_FRAMES = 4;
 const TORCH_FRAME_TICKS = 7;
 /** Wall props hang from just under the face's cap molding. */
 const HANG_TOP = 54;
+/**
+ * A prop at the foot of a wall stands this far onto the floor below it (on the plinth, in the alcove), so it is drawn
+ * over the wall.
+ */
+const FOOT_DEPTH = 5;
+/**
+ * A prop hung on the front of a column is drawn just in front of it, its top this far above the column's foot (under
+ * the column's capital).
+ */
+const FRONT_BIAS = 0.5;
+const FRONT_TOP = 62;
 /** A castle's wall candle (in place of a torch): drawn this big, its flame this far below the top of its art. */
 const SCONCE_SCALE = 1.5;
 const SCONCE_FLAME_DROP = 3;
@@ -206,6 +217,17 @@ export function createProp(p: PropPlacement): Entity {
     // Stands at the foot of the wall like a torch, drawn up on the bricks.
     return world.add({
       position: { x, y: p.ty * TILE_HEIGHT }, visual: { sheet }, yOffset: HANG_TOP - h / 2, localOnly: true,
+    });
+  }
+  if (def.mount === 'foot') {
+    return world.add({
+      position: { x, y: p.ty * TILE_HEIGHT + FOOT_DEPTH }, visual: { sheet }, yOffset: h / 2, localOnly: true,
+      ...propAnimation(sheet, def), ...propGlow(def),
+    });
+  }
+  if (def.mount === 'front') {
+    return world.add({
+      position: { x, y: p.ty * TILE_HEIGHT + PROP_GROUND + FRONT_BIAS }, visual: { sheet }, yOffset: FRONT_TOP - h / 2, localOnly: true,
     });
   }
   if (def.flat) {

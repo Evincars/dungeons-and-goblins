@@ -3167,6 +3167,56 @@ test('the console\'s /dungeon builds the level again as a castle or the catacomb
   assert.match(runCommand('/dungeon moon', ctx)[0], /Usage/);
 });
 
+test('rooms are not all rectangles: some lose a corner to the wall', () => {
+  let cut = 0;
+  for (const [seed, theme] of [[11, 'catacomb'], [22, 'catacomb'], [33, 'castle'], [44, 'castle']]) {
+    const { layout, level } = buildDungeon(seed, true, theme);
+    for (const r of layout.rooms.filter((room) => room.type === 'dungeon')) {
+      const corners = [[r.x, r.y], [r.x + r.w - 1, r.y], [r.x, r.y + r.h - 1], [r.x + r.w - 1, r.y + r.h - 1]];
+      cut += corners.filter(([x, y]) => level.getTile(x, y).type === TileType.Wall).length;
+    }
+  }
+  assert.ok(cut > 0);
+});
+
+test('in a castle, lit candles stand in the arched alcoves and flags hang only on square columns', () => {
+  let candles = 0;
+  let flags = 0;
+  for (const seed of [4242, 77, 1234, 9, 31, 5150]) {
+    const { layout, level } = buildDungeon(seed, true, 'castle');
+    for (const p of layout.props) {
+      if (p.kind === 'castle_candle') {
+        candles++;
+        assert.equal(level.wallDecor.get(p.tx + (p.ty - 1) * level.width), 'door0', 'under the alcove');
+      }
+      if (!p.kind.startsWith('castle_flag')) continue;
+      flags++;
+      assert.ok(layout.props.some((c) => c.kind === 'castle_column_block' && c.tx === p.tx && c.ty === p.ty), 'on a column');
+    }
+  }
+  assert.ok(candles > 0, 'some alcove has its candles');
+  assert.ok(flags > 0, 'some column has its flag');
+});
+
+test('a castle passage running north and south has stairs in it; the great arch stands on the walls beside its opening', async () => {
+  const { buildTerrainPieces } = await load('level/TerrainAutotile');
+  const { castleArchPieces, stairsPiece } = await load('level/CastleTiles');
+  const level = new Level(16, 12, 'castle');
+  for (let y = 0; y < 12; y++) for (let x = 0; x < 16; x++) level.setTile(x, y, createTile(TileType.Wall));
+  const passages = [2, 6, 10];
+  for (const x of passages) {
+    for (let y = 1; y < 11; y++) for (const px of [x, x + 1]) level.setTile(px, y, createTile(TileType.Floor));
+  }
+  const art = stairsPiece(0, 0);
+  const stairs = buildTerrainPieces(level).filter((p) => p.sx === art.sx && p.sy === art.sy);
+  assert.ok(stairs.length > 0, 'stairs in at least one of the passages');
+  for (const step of stairs) assert.ok(passages.includes(step.dx / TILE_WIDTH), 'across a passage, never on a wall');
+  const [left, crown, right] = castleArchPieces(100, 300);
+  assert.equal(left.dx, 100 - 16, 'the left leg stands on the face beside the opening');
+  assert.equal(right.dx + right.w, 100 + 64 + 16, 'and the right one on the face beyond it');
+  assert.ok([left, crown, right].every((p) => p.z === 300), 'sorted at the foot of the wall: under it in the passage, over it in front');
+});
+
 test('going deeper brings the fallen back whole, with their experience but without gear or gold', () => {
   startRun();
   const ana = seated(2, 2, 'host', 'Ana');

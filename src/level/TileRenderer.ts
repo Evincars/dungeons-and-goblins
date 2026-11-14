@@ -6,6 +6,7 @@ import { tilesetRect } from '../render/Sheets';
 import { StaticTileLayer } from '../render/StaticTileLayer';
 import { groundBlends } from './GroundBlend';
 import { blendTexture, commitBlendAtlas } from '../render/BlendAtlas';
+import { tilesetKey } from './Theme';
 
 export type LevelView = {
   /** Floors, faces and wall tops that lie beneath every entity. */
@@ -41,9 +42,11 @@ export function buildLevelView(level: Level): LevelView {
   const blends = new StaticTileLayer();
   const base = new StaticTileLayer();
   const byZ = new Map<number, StaticTileLayer>();
+  // Walls and overlays come from the level's own tileset: the catacombs' or the castle's.
+  const tileset = tilesetKey(level.theme);
   for (const p of buildTerrainPieces(level)) {
     const layer = p.sheet ? cave : p.floor ? floors : layerFor(p, base, byZ);
-    layer.addTile(tilesetRect(p.sx, p.sy, p.w, p.h, p.sheet), p.dx, p.dy);
+    layer.addTile(tilesetRect(p.sx, p.sy, p.w, p.h, p.sheet ?? tileset), p.dx, p.dy);
   }
   for (const blend of groundBlends(level)) blends.addTile(blendTexture(blend), blend.dx, blend.dy);
   commitBlendAtlas();

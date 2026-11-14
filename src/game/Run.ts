@@ -1,4 +1,5 @@
 import { q } from '../world';
+import type { LevelTheme } from '../level/Theme';
 import type { Entity, InventoryItem, Player } from '../world';
 import { ARMORS, HAND_WEAPONS, SHIELDS } from '../entities/ItemCatalog';
 import { WEAPON_BASES } from '../rules/WeaponTable';
@@ -29,9 +30,11 @@ type RunState = {
   over: boolean;
   /** Seed of the next level, picked (and its map generated) as soon as the exit is pulled. */
   nextSeed: number | null;
+  /** What the levels are built as (catacombs, or a castle: the console's /dungeon switches it for testing). */
+  theme: LevelTheme;
 };
 
-export const run: RunState = { depth: 1, over: false, nextSeed: null };
+export const run: RunState = { depth: 1, over: false, nextSeed: null, theme: 'catacomb' };
 
 /**
  * What a player takes down to the next level: their progress, gear and wounds (they heal by resting), not their
@@ -55,7 +58,18 @@ export function startRun(): void {
   run.depth = 1;
   run.over = false;
   run.nextSeed = null;
+  run.theme = 'catacomb';
   carried.clear();
+}
+
+/**
+ * The console's /dungeon: this level is built again as `theme` (and the levels after it), at the same depth; every
+ * hero keeps what they have, as they would going deeper.
+ */
+export function rebuildLevelAs(theme: LevelTheme): void {
+  for (const player of q.players) carried.set(seatOf(player), player.health.current > 0 ? carryOf(player) : revivedCarry(player));
+  run.theme = theme;
+  run.nextSeed = null;
 }
 
 /** What a hero still on their feet takes deeper: everything, wounds included. */

@@ -1,4 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
+import type { LevelTheme } from '../level/Theme';
 import type { Application } from 'pixi.js';
 import { world, q, localPlayer } from '../world';
 import type { DepartChoice, Entity, Player } from '../world';
@@ -46,7 +47,7 @@ import type { Level } from '../level/Level';
 import { exposeForDebugging } from '../core/debugHooks';
 import { coop } from '../network/CoopSession';
 import { GuestGame, HostGame, pauserName } from '../network/CoopGame';
-import { descend, restorePlayer, run, startRun } from '../game/Run';
+import { descend, rebuildLevelAs, restorePlayer, run, startRun } from '../game/Run';
 import { ResultPanel } from '../ui/ResultPanel';
 import { attempt, report } from '../core/errors';
 
@@ -134,7 +135,9 @@ export class InGameScene implements Scene {
   private readonly guest: GuestGame | null = null;
   private readonly onKeyDown: (e: KeyboardEvent) => void;
   /** The ~ console, for testing: alone only (in co-op its commands say so). */
-  private readonly console = new ConsoleView((line) => runCommand(line, { player: localPlayer(), allowed: this.mode === 'solo' }));
+  private readonly console = new ConsoleView((line) => runCommand(line, {
+    player: localPlayer(), allowed: this.mode === 'solo', rebuild: (theme) => this.rebuildAs(theme),
+  }));
 
   constructor(private readonly manager: SceneManager) {
     this.app = manager.application;
@@ -158,7 +161,7 @@ export class InGameScene implements Scene {
     resetAmbience(depth);
     // A guest builds the very dungeon the host sent (its map came before this scene); the host sends its own.
     const sent = this.mode === 'guest' ? coop.level?.layout : undefined;
-    const built = sent ? { ...buildSentDungeon(sent), layout: sent } : buildDungeon(seed, this.mode !== 'guest');
+    const built = sent ? { ...buildSentDungeon(sent), layout: sent } : buildDungeon(seed, this.mode !== 'guest', run.theme);
     const { level, spawns } = built;
     this.level = level;
     this.ctx = { level, dt: 1, tick: 0, gameLayer: this.gameLayer, rebuildTerrain: () => this.rebuildTerrain() };
@@ -609,12 +612,18 @@ export class InGameScene implements Scene {
     return [{ label: text('game.game_over.new_game'), action: () => this.newGame() }, menu];
   }
 
+  /** The console's /dungeon: this level, built again as another kind of dungeon, the heroes keeping what they have. */
+  private rebuildAs(theme: LevelTheme): void {
+    rebuildLevelAs(theme);
+    this.manager.goto('in_game');
+  }
+
   /** Picks the next level and generates its map in the background, once the summary has drawn. */
   private prepareNextLevel(): void {
     const seed = randomSeed();
     run.nextSeed = seed;
     setTimeout(() => {
-      const ready = attempt(() => prepareLevel(seed));
+      const ready = attempt(() => prepareLevel(seed, run.theme));
       if (!ready.ok) report(ready.error, 'Could not prepare the next level', 'level');
     }, 0);
   }

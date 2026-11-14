@@ -633,6 +633,8 @@ export type Entity = {
 
   // --- lifecycle ---
   removed?: true;
+  /** Lies flat on the floor (a rug): drawn under every entity, just over the terrain. */
+  flat?: true;
   /**
    * Built on every machine from the level seed (torches, props, rooms), so it is never sent over the
    * network: each browser makes its own.

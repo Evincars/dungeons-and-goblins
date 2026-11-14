@@ -1,5 +1,9 @@
+import type { LevelTheme } from '../Theme';
+
 /** Configuration for the procedural dungeon generator. */
 export type DungeonConfig = {
+  /** What the level is built as (Theme.ts). */
+  theme: LevelTheme;
   /** Total map width in tiles. */
   mapWidth: number;
   /** Total map height in tiles. */
@@ -37,6 +41,7 @@ export type DungeonConfig = {
 };
 
 export const DEFAULT_CONFIG: DungeonConfig = {
+  theme:    'catacomb',
   mapWidth:     84,
   mapHeight:    44,
   safeRoomW:    16,

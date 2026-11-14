@@ -7,7 +7,7 @@ import { TILE_WIDTH, TILE_HEIGHT, TileType } from '../TileType';
 import { createMob } from '../../entities/MobFactory';
 import {
   createCampfire, createChest, createExitButton, createExitDoor, createProp, createRoom, createLever, createSafeDoor, createShopNpc, createStash,
-  createTorch, createTrainingDummy,
+  createSconce, createTorch, createTrainingDummy,
 } from '../../entities/DungeonFactory';
 import type { Level } from '../Level';
 import { forEachTile } from '../Grid';
@@ -75,7 +75,9 @@ function populateRoom(level: Level, room: RoomData, cfg: DungeonConfig): void {
 /** Decor every browser builds for itself from the seeded layout: rooms, torches, props and campfires. */
 export function spawnDecor(layout: DungeonLayout): void {
   for (const room of layout.rooms) createRoom(room);
-  for (const tp of layout.torchPositions) createTorch(tp.x, tp.y);
+  // A castle is lit by wall candles where the catacombs have torches.
+  const light = layout.level.theme === 'castle' ? createSconce : createTorch;
+  for (const tp of layout.torchPositions) light(tp.x, tp.y);
   for (const p of layout.props) createProp(p);
   for (const c of layout.campfires) createCampfire(c.x, c.y);
 }

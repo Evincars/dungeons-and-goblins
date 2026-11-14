@@ -1,4 +1,6 @@
 import { world } from '../world';
+import { LEVEL_THEMES, isLevelTheme } from '../level/Theme';
+import type { LevelTheme } from '../level/Theme';
 import type { InventoryItem, Player } from '../world';
 import { ARMORS, MEDALS, SHIELDS, WEAPONS } from '../entities/ItemCatalog';
 import { grantExperience } from '../systems/DeathSystem';
@@ -16,7 +18,8 @@ const AMOUNT_MAX = 1_000_000;
 const ITEMS_LISTED = 12;
 
 /** `allowed`: false in co-op, where the console would change the others' game too. */
-export type ConsoleContext = { player: Player | undefined; allowed: boolean };
+/** `rebuild`: builds the level again as another kind of dungeon (the scene's to do). */
+export type ConsoleContext = { player: Player | undefined; allowed: boolean; rebuild?: (theme: LevelTheme) => void };
 
 /** Every item the console can hand out, by its catalogue id. */
 const CATALOGUE: ReadonlyMap<string, InventoryItem> = new Map(
@@ -70,6 +73,13 @@ function addItem(player: Player, id: string | undefined): string[] {
   return [text('console.item.added', { name: item.name })];
 }
 
+/** /dungeon castle|catacomb: builds this level again as that kind of dungeon (and the levels after it). */
+function rebuildAs(theme: string | undefined, ctx: ConsoleContext): string[] {
+  if (!isLevelTheme(theme) || !ctx.rebuild) return [text('console.dungeon.usage', { themes: LEVEL_THEMES.join('|') })];
+  ctx.rebuild(theme);
+  return [text('console.dungeon.built', { theme })];
+}
+
 /** Item ids containing the filter (all of them without one), a page at a time. */
 function listItems(filter: string | undefined): string[] {
   const wanted = filter ? normaliseId(filter) : '';
@@ -97,6 +107,7 @@ export function runCommand(line: string, ctx: ConsoleContext): string[] {
     case 'god': return setGod(player, args[0]?.toLowerCase());
     case 'xp': case 'exp': case 'addxp': return giveExperience(player, parseAmount(args[0]));
     case 'additem': case 'item': return addItem(player, args[0]);
+    case 'dungeon': return rebuildAs(args[0]?.toLowerCase(), ctx);
     default: return [text('console.unknown', { name: command })];
   }
 }

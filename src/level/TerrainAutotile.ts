@@ -3,6 +3,10 @@ import type { TileData } from './TileType';
 import { forEachTile } from './Grid';
 import { TileType, TILE_WIDTH, TILE_HEIGHT } from './TileType';
 import { LOBE_E, LOBE_N, LOBE_S, LOBE_W } from './PitShapes';
+import {
+  CASTLE_ARCH, CASTLE_ARCH_SPAN, CASTLE_TOP, castleAboveCap, castleFaceSource, castleFloor, castlePlinth, poolPiece, spikePitPieces,
+} from './CastleTiles';
+import type { CastleFaceStyle } from './CastleTiles';
 import type { Pit } from './PitShapes';
 
 /**
@@ -12,8 +16,11 @@ import type { Pit } from './PitShapes';
  */
 export type TerrainPiece = {
   dx: number; dy: number; sx: number; sy: number; w: number; h: number; z?: number;
-  /** Texture the rect is cut from, when not the catacomb tileset: cave ground lies beneath all of it. */
-  sheet?: typeof CAVE_GROUND;
+  /**
+   * Texture the rect is cut from, when not the level's own tileset (Theme.ts tilesetKey): cave ground (or a castle's
+   * floors) lie beneath all of it.
+   */
+  sheet?: string;
   /** A floor tile: drawn under the soft edges where one kind of ground meets another (GroundBlend.ts). */
   floor?: true;
 };
@@ -26,7 +33,10 @@ export const GROUND_KINDS = ['cave', 'rough', 'stone', 'safe'] as const;
 export type GroundKind = (typeof GROUND_KINDS)[number];
 
 /** A floor tile's ground: its kind, and the 32×32 rect of the tileset (or the cave sheet) it is drawn from. */
-export type Ground = { kind: GroundKind; sx: number; sy: number; sheet?: typeof CAVE_GROUND };
+export type Ground = { kind: GroundKind; sx: number; sy: number; sheet?: string };
+
+/** The castle's tileset (/castle/mainlevbuild.png), which a castle's floors are cut from. */
+export const CASTLE_TILESET = 'castle_tileset';
 
 /** The cave tileset (/caves/MainLev2.0.png), whose charcoal ground tiles floor the cave halls. */
 export const CAVE_GROUND = 'cave_ground';
@@ -139,6 +149,12 @@ function noise(x: number, y: number, scale: number): number {
 /** A sub-tile of plain black wall-top void (inside the framed block at col 6, row 5). */
 const VOID = [96, 80] as const;
 
+/** The framed block's quarters, by theme: the catacombs' (above) or the castle's (CastleTiles.ts). */
+const CATACOMB_TOP = {
+  outerTL: OUTER_TL, outerTR: OUTER_TR, edgeTopL: EDGE_TOP_L, edgeTopR: EDGE_TOP_R, edgeLeft: EDGE_LEFT, edgeRight: EDGE_RIGHT, void: VOID,
+} as const;
+type WallTop = { outerTL: Src; outerTR: Src; edgeTopL: Src; edgeTopR: Src; edgeLeft: readonly [Src, Src]; edgeRight: readonly [Src, Src]; void: Src };
+
 /** Tallest a south face gets, in sub-tiles: a cap over three brick rows. */
 const FACE_MAX = 4;
 /** Sub-tiles of a framed 2×2 pit along each side. */
@@ -153,6 +169,8 @@ const CAVE_NOISE_SCALE = 4;
 const CAVE_LEVEL = 0.32;
 const CAVE_GRASS_LEVEL = 0.72;
 const CAVE_PEBBLE_EVERY = 4;
+/** One castle spike pit in this many (by hash) has a stone slab standing in it. */
+const SLAB_EVERY = 2;
 /** One floor tile in this many (by hash) is a drain grate. */
 const GRATE_EVERY = 53;
 /** One plain full-height face column in this many (by hash) shows an arched window. */
@@ -160,7 +178,7 @@ const WINDOW_EVERY = 9;
 /** The void that covers characters behind a wall row sorts just under the wall row itself. */
 const VOID_BELOW_WALL = 0.5;
 
-type FaceStyle = 'left' | 'right' | 'mid' | 'pillarL' | 'pillarR' | 'window' | 'cracked' | 'niche';
+type FaceStyle = 'left' | 'right' | 'mid' | 'pillarL' | 'pillarR' | 'window' | 'cracked' | 'niche' | 'decor';
 type Src = readonly [number, number];
 
 function quad(out: TerrainPiece[], dx: number, dy: number, s: Src, w: number, h: number, z?: number): void {
@@ -192,7 +210,13 @@ class TerrainBuilder {
   readonly wallPieces: TerrainPiece[] = [];
   readonly overlayPieces: TerrainPiece[] = [];
 
+  /** A castle (its own tileset and pieces), or the catacombs. */
+  private readonly castle: boolean;
+  private readonly top: WallTop;
+
   constructor(private readonly level: Level) {
+    this.castle = level.theme === 'castle';
+    this.top = this.castle ? CASTLE_TOP : CATACOMB_TOP;
     this.W = level.width * 2;
     this.H = level.height * 2;
     this.faceK = new Int8Array(this.W * this.H);
@@ -204,6 +228,7 @@ class TerrainBuilder {
     forEachTile(0, 0, this.level.width - 1, this.level.height - 1, this.addFloor);
     for (const p of this.level.pits) this.addPit(p);
     for (const g of this.level.grates) this.addGrate(g);
+    for (const pool of this.level.pools) this.overlayPieces.push(poolPiece(pool));
     forEachTile(0, 0, this.W - 1, this.H - 1, this.addSubTile);
     forEachTile(0, 0, this.W - 3, this.H - 1, this.addArch);
     return [...this.floorPieces, ...this.wallPieces, ...this.overlayPieces];
@@ -262,10 +287,11 @@ class TerrainBuilder {
     const bottom = sy + this.faceK[i] - 1;
     if (!this.solid(sx - 1, sy)) return 'left';
     if (!this.solid(sx + 1, sy)) return 'right';
-    if (this.tileAt(sx, sy)?.type === TileType.BreakableWall) return 'cracked';
+    if (!this.castle && this.tileAt(sx, sy)?.type === TileType.BreakableWall) return 'cracked';
     const tx = sx >> 1;
     const full = h === FACE_MAX;
-    if (full && this.level.wallDecor.get(tx + (bottom >> 1) * this.level.width)?.startsWith('niche')) return 'niche';
+    const decor = full ? this.level.wallDecor.get(tx + (bottom >> 1) * this.level.width) : undefined;
+    if (decor) return this.castle ? 'decor' : 'niche';
     if (full && tx % PILLAR_EVERY === PILLAR_PHASE && this.pillarFits(tx, bottom)) return sx === tx * 2 ? 'pillarL' : 'pillarR';
     if (full && hash(tx, bottom) % WINDOW_EVERY === 0) return 'window';
     return 'mid';
@@ -287,6 +313,11 @@ class TerrainBuilder {
     forEachTile(0, 0, PIT_SUBTILES - 1, PIT_SUBTILES - 1, (dx, dy) => this.framed.add(p.x * 2 + dx + (p.y * 2 + dy) * this.W));
     const x = p.x * TILE_WIDTH;
     const y = p.y * TILE_HEIGHT;
+    if (p.shape === 'spikes') {
+      forEachTile(0, 0, 7, 3, (dx, dy) => this.framed.add(p.x * 2 + dx + (p.y * 2 + dy) * this.W));
+      for (const piece of spikePitPieces(p.x, p.y, hash(p.x, p.y) % SLAB_EVERY === 0)) this.overlayPieces.push(piece);
+      return;
+    }
     if (p.shape === 'quatrefoil') {
       this.overlayPieces.push({ dx: x, dy: y, sx: QUATREFOIL.x, sy: QUATREFOIL.y, w: QUATREFOIL.w, h: QUATREFOIL.h });
       return;
@@ -325,21 +356,54 @@ class TerrainBuilder {
       return;
     }
     const z = this.occluderZ(sx, sy);
-    if (this.faceK[sx + sy * this.W] > 0) quad(this.wallPieces, dx, dy, this.faceSource(sx, sy), SUB, SUB, z);
-    else this.addWallTop(sx, sy, dx, dy, z);
+    if (this.faceK[sx + sy * this.W] === 0) this.addWallTop(sx, sy, dx, dy, z);
+    else if (this.castle) this.addCastleFace(sx, sy, dx, dy, z);
+    else quad(this.wallPieces, dx, dy, this.faceSource(sx, sy), SUB, SUB, z);
   };
+
+  /** The castle's face style for a sub-tile (the castle has no cracked walls or tomb niches; decor is its own). */
+  private castleStyle(sx: number, sy: number): CastleFaceStyle {
+    const style = this.faceStyle(sx, sy);
+    return style === 'cracked' || style === 'niche' ? 'mid' : style;
+  }
+
+  /** The decor of the wall tile a face sub-tile belongs to (decor is keyed by the face's foot tile). */
+  private faceDecor(sx: number, sy: number): ReturnType<Level['wallDecor']['get']> {
+    const bottom = sy + this.faceK[sx + sy * this.W] - 1;
+    return this.level.wallDecor.get((sx >> 1) + (bottom >> 1) * this.level.width);
+  }
+
+  /** A castle face sub-tile, and on its cap row whatever stands proud of it (a pilaster's top, a great window's gable). */
+  private addCastleFace(sx: number, sy: number, dx: number, dy: number, z: number | undefined): void {
+    const i = sx + sy * this.W;
+    const k = this.faceK[i];
+    const cap = k === this.faceH[i];
+    const style = this.castleStyle(sx, sy);
+    const decor = this.faceDecor(sx, sy);
+    quad(this.wallPieces, dx, dy, castleFaceSource(style, sx, k, cap, decor, hash(sx >> 1, sy)), SUB, SUB, z);
+    if (!cap || this.faceH[i] !== FACE_MAX) return;
+    for (const [src, up] of castleAboveCap(style, sx, decor)) quad(this.wallPieces, dx, dy - up * SUB, src, SUB, SUB, z);
+  }
 
   private addOpenSubTile(sx: number, sy: number, dx: number, dy: number): void {
     // Plinth along the foot of a face, laid over the floor
-    if (!this.hole(sx, sy) && this.isFace(sx, sy - 1) && this.faceK[sx + (sy - 1) * this.W] === 1) {
-      const base = BASE_Y + (this.cobble(sx, sy - 1) ? COBBLE_DY : 0);
-      quad(this.overlayPieces, dx, dy, [plinthX(this.faceStyle(sx, sy - 1)), base], SUB, Q);
-    }
+    if (!this.hole(sx, sy) && this.isFace(sx, sy - 1) && this.faceK[sx + (sy - 1) * this.W] === 1) this.addPlinth(sx, sy, dx, dy);
     // A hole outside a framed pit: dark brick lip under open floor, then black
     if (!this.hole(sx, sy) || this.framed.has(sx + sy * this.W)) return;
     const floorAbove = (y: number) => !this.solid(sx, y) && !this.hole(sx, y);
     if (floorAbove(sy - 1)) quad(this.wallPieces, dx, dy, PIT_WALL[0], SUB, SUB);
     else if (this.hole(sx, sy - 1) && floorAbove(sy - 2)) quad(this.wallPieces, dx, dy, PIT_WALL[1], SUB, SUB);
+  }
+
+  /** The plinth along a face's foot, on the floor sub-tile under it (a castle pilaster's base is taller). */
+  private addPlinth(sx: number, sy: number, dx: number, dy: number): void {
+    if (this.castle) {
+      const { src, h } = castlePlinth(this.castleStyle(sx, sy - 1), sx);
+      quad(this.overlayPieces, dx, dy, src, SUB, h);
+      return;
+    }
+    const base = BASE_Y + (this.cobble(sx, sy - 1) ? COBBLE_DY : 0);
+    quad(this.overlayPieces, dx, dy, [plinthX(this.faceStyle(sx, sy - 1)), base], SUB, Q);
   }
 
   /** Whether the wall a face sub-tile belongs to is cobblestone (its room's material) rather than brick. */
@@ -394,6 +458,7 @@ class TerrainBuilder {
   /** Wall top: void with a stone outline toward open floor (or a face beside it). */
   private addWallTop(sx: number, sy: number, dx: number, dy: number, z: number | undefined): void {
     const out = this.wallPieces;
+    const t = this.top;
     const openN = !this.solid(sx, sy - 1);
     const sideW = !this.solid(sx - 1, sy) || this.isFace(sx - 1, sy);
     const sideE = !this.solid(sx + 1, sy) || this.isFace(sx + 1, sy);
@@ -401,20 +466,20 @@ class TerrainBuilder {
     const diagNE = !this.solid(sx + 1, sy - 1);
 
     // upper-left quarter
-    if (sideW && openN) quad(out, dx, dy, OUTER_TL, Q, Q, z);
-    else if (sideW) quad(out, dx, dy, EDGE_LEFT[0], Q, Q, z);
-    else if (openN) quad(out, dx, dy, EDGE_TOP_L, Q, Q, z);
-    else if (diagNW) quad(out, dx, dy, EDGE_LEFT[0], Q, Q, z);
+    if (sideW && openN) quad(out, dx, dy, t.outerTL, Q, Q, z);
+    else if (sideW) quad(out, dx, dy, t.edgeLeft[0], Q, Q, z);
+    else if (openN) quad(out, dx, dy, t.edgeTopL, Q, Q, z);
+    else if (diagNW) quad(out, dx, dy, t.edgeLeft[0], Q, Q, z);
     // upper-right quarter
-    if (sideE && openN) quad(out, dx + Q, dy, OUTER_TR, Q, Q, z);
-    else if (sideE) quad(out, dx + Q, dy, EDGE_RIGHT[0], Q, Q, z);
-    else if (openN) quad(out, dx + Q, dy, EDGE_TOP_R, Q, Q, z);
-    else if (diagNE) quad(out, dx + Q, dy, EDGE_RIGHT[0], Q, Q, z);
+    if (sideE && openN) quad(out, dx + Q, dy, t.outerTR, Q, Q, z);
+    else if (sideE) quad(out, dx + Q, dy, t.edgeRight[0], Q, Q, z);
+    else if (openN) quad(out, dx + Q, dy, t.edgeTopR, Q, Q, z);
+    else if (diagNE) quad(out, dx + Q, dy, t.edgeRight[0], Q, Q, z);
     // lower quarters (south is never open here — that would make this a face)
-    if (sideW) quad(out, dx, dy + Q, EDGE_LEFT[1], Q, Q, z);
-    if (sideE) quad(out, dx + Q, dy + Q, EDGE_RIGHT[1], Q, Q, z);
+    if (sideW) quad(out, dx, dy + Q, t.edgeLeft[1], Q, Q, z);
+    if (sideE) quad(out, dx + Q, dy + Q, t.edgeRight[1], Q, Q, z);
     // The void itself must also cover anyone standing behind this wall row.
-    if (z !== undefined) this.overlayPieces.push({ dx, dy, sx: VOID[0], sy: VOID[1], w: SUB, h: SUB, z: z - VOID_BELOW_WALL });
+    if (z !== undefined) this.overlayPieces.push({ dx, dy, sx: t.void[0], sy: t.void[1], w: SUB, h: SUB, z: z - VOID_BELOW_WALL });
   }
 
   // ── Arches over openings: corridors through a south face, or out of a room's bottom wall ──
@@ -436,8 +501,21 @@ class TerrainBuilder {
     // Only openings that lead on (a corridor), not a notch.
     if (capRow && this.solid(sx + 1, sy - 1)) return;
     if (topRow && this.solid(sx + 1, sy + 1)) return;
-    this.lintel(sx, ex, sy, OVERHEAD_Z);
+    if (this.castle) this.castleArch(sx, n, sy, capRow);
+    else this.lintel(sx, ex, sy, OVERHEAD_Z);
   };
+
+  /**
+   * A castle passage through a face two tiles wide gets the great stone arch, its legs on the faces either side and
+   * its feet on the floor; other openings stand bare.
+   */
+  private castleArch(sx: number, n: number, sy: number, capRow: boolean): void {
+    if (!capRow || n !== CASTLE_ARCH_SPAN) return;
+    const a = CASTLE_ARCH;
+    const dx = (sx + 1) * SUB - a.leg;
+    const dy = (sy + FACE_MAX) * SUB - a.h;
+    this.overlayPieces.push({ dx, dy, sx: a.x, sy: a.y, w: a.w, h: a.h, z: OVERHEAD_Z });
+  }
 
   private lintel(x0: number, x1: number, sy: number, z: number): void {
     const out = this.overlayPieces;
@@ -480,6 +558,10 @@ export function groundAt(level: Level, tx: number, ty: number): Ground | null {
   // A pit's own tiles are floored too: a quatrefoil leaves their corners open ground, and the pit art covers the rest.
   const pitFloor = t?.type === TileType.Hole && level.hasPit(tx, ty);
   if (!t || (t.type !== TileType.Floor && t.type !== TileType.Obstacle && !pitFloor)) return null;
+  if (level.theme === 'castle') {
+    const floor = castleFloor(level, tx, ty, noise(tx, ty, FLOOR_NOISE_SCALE));
+    return { ...floor, sheet: CASTLE_TILESET };
+  }
   return caveGround(level, tx, ty) ?? stoneGround(level, t, tx, ty);
 }
 

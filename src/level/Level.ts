@@ -6,6 +6,7 @@ import { forEachTile } from './Grid';
 import type { BlockRect } from './Props';
 import { insidePit, pitTileBounds } from './PitShapes';
 import type { Pit } from './PitShapes';
+import type { LevelTheme } from './Theme';
 
 export type SpawnPoint = { x: number; y: number };
 
@@ -20,12 +21,22 @@ export const WALL_SINK = 26;
 const FLOOR_VARIANTS = 4;
 
 /** Decoration painted onto the brick face of a wall tile (the tile directly above a floor). */
-export const WALL_DECORS = ['niche0', 'niche1'] as const;
+export const WALL_DECORS = [
+  'niche0', 'niche1',
+  // A castle's decorated stretches of face (level/CastleTiles.ts), each tile numbered from the stretch's left.
+  'door0', 'door1', 'glass0', 'glass1', 'ornate0', 'ornate1', 'ornate2', 'ornate3', 'gothic0', 'gothic1', 'gothic2',
+] as const;
 export type WallDecor = (typeof WALL_DECORS)[number];
 
 export function isWallDecor(value: unknown): value is WallDecor {
   return WALL_DECORS.some((decor) => decor === value);
 }
+
+/** A castle pool is this many tiles across and down (its art, TerrainAutotile.ts, fits them with a rim). */
+export const POOL_W = 4;
+export const POOL_H = 3;
+export const POOL_KINDS = ['water', 'sludge'] as const;
+export type PoolKind = (typeof POOL_KINDS)[number];
 
 /** A tile box as forEachTile's arguments. */
 function boundsArgs(b: { x0: number; y0: number; x1: number; y1: number }): [number, number, number, number] {
@@ -60,6 +71,8 @@ export class Level {
   readonly cobbleWalls = new Set<number>();
   /** Top-left tiles of framed 2×2 drain grates set into the floor (walked over: decor only). */
   readonly grates: Array<{ x: number; y: number }> = [];
+  /** A castle's pools (water, or green sludge): top-left of their POOL_W×POOL_H obstacle tiles. */
+  readonly pools: Array<{ x: number; y: number; kind: PoolKind }> = [];
 
   readonly seen: boolean[];
   /** Bumped whenever a corner is seen for the first time, so the fog redraws only when it changed. */
@@ -72,7 +85,7 @@ export class Level {
   private readonly clipPool = new BoxPool();
   private readonly clipBoxes: Rectangle[] = [];
 
-  constructor(width: number, height: number) {
+  constructor(width: number, height: number, readonly theme: LevelTheme = 'catacomb') {
     this.width = width;
     this.height = height;
     this.tileStacks = [];

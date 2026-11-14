@@ -3,6 +3,8 @@ import type { WallDecor } from './Level';
 import { createTile, TileType } from './TileType';
 import { PROPS } from './Props';
 import { ALL_LOBES, PIT_SHAPES } from './PitShapes';
+import { LEVEL_THEMES } from './Theme';
+import { POOL_KINDS } from './Level';
 import type { PropKind } from './Props';
 import type { DungeonLayout, RoomData, RoomType } from './generators/DungeonBuilder';
 import { ensure } from '../core/errors';
@@ -20,7 +22,7 @@ import { gunzipJson, gzipText } from '../core/compression';
  */
 
 export const MAP_FORMAT = 'dungeons-and-goblins/map';
-export const MAP_VERSION = 4;
+export const MAP_VERSION = 5;
 /** A tile's byte: its type in the high bits, its image variant (0–15) in the low four. */
 const VARIANT_BITS = 4;
 const VARIANT_MASK = (1 << VARIANT_BITS) - 1;
@@ -39,6 +41,8 @@ type RoomRow = [number, RoomType, number, number, number, number, number, number
 export type LevelMap = {
   format: typeof MAP_FORMAT;
   version: typeof MAP_VERSION;
+  /** What the level is built as: an index in LEVEL_THEMES. */
+  theme: number;
   width: number;
   height: number;
   /** One byte per tile, row by row, base64. */
@@ -53,11 +57,14 @@ export type LevelMap = {
   /** Tiles whose wall faces are cobblestone, as runs. */
   cobble: Pair[];
   grates: Pair[];
+  /** A castle's pools: [tile x, tile y, kind (index in POOL_KINDS)]. */
+  pools: Array<[number, number, number]>;
   respawns: Pair[];
   playerSpawn: Pair;
   torches: Pair[];
   rooms: RoomRow[];
-  props: Array<[PropKind, number, number]>;
+  /** [kind, tile x, tile y], with a fourth for a prop moved across its tile ([…, dx]). */
+  props: Array<[PropKind, number, number] | [PropKind, number, number, number]>;
   campfires: Pair[];
   exitButton: Pair;
   shop: Pair;
@@ -101,7 +108,7 @@ export function encodeLevelMap(layout: DungeonLayout): LevelMap {
     bytes[i] = tile ? (tile.type << VARIANT_BITS) | (tile.imageVariant & VARIANT_MASK) : 0;
   }
   return {
-    format: MAP_FORMAT, version: MAP_VERSION, width: level.width, height: level.height,
+    format: MAP_FORMAT, version: MAP_VERSION, theme: LEVEL_THEMES.indexOf(level.theme), width: level.width, height: level.height,
     tiles: bytesToBase64(bytes),
     safe: toRuns(level.safeZoneTiles),
     cave: toRuns(level.caveFloor),
@@ -110,11 +117,12 @@ export function encodeLevelMap(layout: DungeonLayout): LevelMap {
     pits: level.pits.map((p) => [p.x, p.y, PIT_SHAPES.indexOf(p.shape), p.lobes]),
     cobble: toRuns(level.cobbleWalls),
     grates: level.grates.map(pair),
+    pools: level.pools.map((p) => [p.x, p.y, POOL_KINDS.indexOf(p.kind)]),
     respawns: level.respawnPoints.map(pair),
     playerSpawn: pair(layout.playerSpawn),
     torches: layout.torchPositions.map(pair),
     rooms: layout.rooms.map((r) => [r.id, r.type, r.hall ? 1 : 0, r.x, r.y, r.w, r.h, r.centerX, r.centerY]),
-    props: layout.props.map((p) => [p.kind, p.tx, p.ty]),
+    props: layout.props.map((p) => (p.dx === undefined ? [p.kind, p.tx, p.ty] : [p.kind, p.tx, p.ty, p.dx])),
     campfires: layout.campfires.map(pair),
     exitButton: pair(layout.exitButtonPos),
     shop: pair(layout.shopPos),
@@ -129,13 +137,15 @@ export function encodeLevelMap(layout: DungeonLayout): LevelMap {
 // ── Reading ───────────────────────────────────────────────────────────────────
 
 const isPair = (v: unknown): v is Pair => Array.isArray(v) && v.length === 2 && v.every(isFiniteNumber);
+const isPoolRow = (v: unknown) => Array.isArray(v) && v.length === 3 && v.every(Number.isInteger) && v[2] >= 0 && v[2] < POOL_KINDS.length;
 const isPitRow = (v: unknown): v is PitRow => Array.isArray(v) && v.length === 4 && v.every(Number.isInteger)
   && v[2] >= 0 && v[2] < PIT_SHAPES.length && v[3] >= 0 && v[3] <= ALL_LOBES;
 const isList = (v: unknown, item: (x: unknown) => boolean): v is unknown[] => Array.isArray(v) && v.every(item);
 const isPropKind = (v: unknown): v is PropKind => typeof v === 'string' && hasKey(PROPS, v);
 const isRoomRow = (v: unknown): v is RoomRow => Array.isArray(v) && v.length === 9 && ROOM_TYPES.some((t) => t === v[1])
   && [v[0], v[2], v[3], v[4], v[5], v[6], v[7], v[8]].every(isFiniteNumber);
-const isPropRow = (v: unknown) => Array.isArray(v) && v.length === 3 && isPropKind(v[0]) && Number.isInteger(v[1]) && Number.isInteger(v[2]);
+const isPropRow = (v: unknown) => Array.isArray(v) && (v.length === 3 || (v.length === 4 && isFiniteNumber(v[3])))
+  && isPropKind(v[0]) && Number.isInteger(v[1]) && Number.isInteger(v[2]);
 /** A doorway: its tiles, and where its room's side of it begins. */
 const isDoor = (v: unknown) => isRecord(v) && isList(v.tiles, isPair) && isFiniteNumber(v.boundaryX);
 /** A prop footprint: a whole tile index, then four pixel bounds. */
@@ -165,7 +175,8 @@ function checkShape(value: unknown): asserts value is LevelMap {
   ensure(Number.isInteger(width) && Number.isInteger(height) && Number(width) > 0 && Number(height) > 0
     && Number(width) <= MAX_SIDE && Number(height) <= MAX_SIDE, 'Bad map size');
   ensure(typeof value.tiles === 'string' && isList(value.safe, isPair) && isList(value.cave, isPair) && isList(value.pits, isPitRow)
-    && isList(value.cobble, isPair) && isList(value.grates, isPair)
+    && isList(value.cobble, isPair) && isList(value.grates, isPair) && isList(value.pools, isPoolRow)
+    && Number.isInteger(value.theme) && Number(value.theme) >= 0 && Number(value.theme) < LEVEL_THEMES.length
     && isList(value.respawns, isPair) && isList(value.torches, isPair) && isPair(value.playerSpawn), 'Malformed map');
   ensure(isList(value.wallDecor, (d) => Array.isArray(d) && d.length === 2 && Number.isInteger(d[0]) && isWallDecor(d[1])), 'Bad wall decor');
   ensure(isList(value.blocks, isFootprint), 'Bad prop footprint');
@@ -181,7 +192,7 @@ function roomOf([id, type, hall, x, y, w, h, centerX, centerY]: RoomRow): RoomDa
 /** The dungeon a map describes; throws a ValidationError for anything that doesn't hold together. */
 export function decodeLevelMap(value: unknown): DungeonLayout {
   checkShape(value);
-  const level = new Level(value.width, value.height);
+  const level = new Level(value.width, value.height, LEVEL_THEMES[value.theme]);
   const tiles = value.width * value.height;
   layTiles(level, base64ToBytes(value.tiles));
   eachInRuns(value.safe, tiles, (i) => level.markSafeZone(i % value.width, Math.floor(i / value.width)));
@@ -191,6 +202,7 @@ export function decodeLevelMap(value: unknown): DungeonLayout {
   eachInRuns(value.cobble, tiles, (i) => level.cobbleWalls.add(i));
   for (const [x, y, shape, lobes] of value.pits) level.addPit({ x, y, shape: PIT_SHAPES[shape], lobes });
   for (const [x, y] of value.grates) level.grates.push({ x, y });
+  for (const [x, y, kind] of value.pools) level.pools.push({ x, y, kind: POOL_KINDS[kind] });
   for (const [x, y] of value.respawns) level.addSpawnPoint(x, y);
   level.clearDirty();
   return {
@@ -198,7 +210,7 @@ export function decodeLevelMap(value: unknown): DungeonLayout {
     rooms: value.rooms.map(roomOf),
     playerSpawn: point(value.playerSpawn),
     torchPositions: value.torches.map(point),
-    props: value.props.map(([kind, tx, ty]) => ({ kind, tx, ty })),
+    props: value.props.map(([kind, tx, ty, dx]) => (dx === undefined ? { kind, tx, ty } : { kind, tx, ty, dx })),
     campfires: value.campfires.map(point),
     exitButtonPos: point(value.exitButton),
     shopPos: point(value.shop),

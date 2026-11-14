@@ -8,6 +8,16 @@ export const PROP_IMAGES = {
   decorative: '/catacombs/decorative.png',
   // The catacomb tileset itself, for its free-standing columns.
   mainlev: '/catacombs/mainlevbuild.png',
+  // The castle: its decor (banners, bones, pots, rubble, rugs) and its tileset (for the columns), and its two lights,
+  // a standing candelabra and a wall candle, three frames each, one file per frame.
+  castle_decor: '/castle/decorative.png',
+  castle_main: '/castle/mainlevbuild.png',
+  light_a_1: '/castle/lightA01.png',
+  light_a_2: '/castle/lightA02.png',
+  light_a_3: '/castle/lightA03.png',
+  light_b_1: '/castle/lightB01.png',
+  light_b_2: '/castle/lightB02.png',
+  light_b_3: '/castle/lightB03.png',
   wall_decor: '/objects-assets/Other_objects.png',
   supplies:   '/objects-assets/supplies_objects.png',
   pedestals:  '/objects-assets/pedestals.png',
@@ -87,6 +97,8 @@ export type PropDef = {
   coolGlow?: boolean;
   /** How often it is picked against the others in its group (default 1): rare finds weigh less. */
   weight?: number;
+  /** Lies flat on the floor (a rug): drawn under everything that stands or walks on it. */
+  flat?: boolean;
   /** Animation frames, played in a loop `frameTime` ticks each. */
   frames?: readonly PropFrame[];
   frameTime?: number;
@@ -105,6 +117,10 @@ function framesInRow(r: Rect, count: number, step: number): PropFrame[] {
 const CANDLE_A = ['candle_a_1', 'candle_a_2', 'candle_a_3', 'candle_a_4'] as const;
 const CANDLE_B = ['candle_b_1', 'candle_b_2', 'candle_b_3', 'candle_b_4'] as const;
 const CANDLE_FRAME_TICKS = 7;
+/** The castle's lights: a standing candelabra (16×48) and a wall candle (8×18), three frames each. */
+const LIGHT_A = ['light_a_1', 'light_a_2', 'light_a_3'] as const;
+const LIGHT_B = ['light_b_1', 'light_b_2', 'light_b_3'] as const;
+const LIGHT_FRAME_TICKS = 8;
 /** Cave plants: four frames 32px apart, each row 64px below the last plant's. */
 const PLANT_FRAMES = 4;
 const PLANT_STEP = 32;
@@ -201,6 +217,76 @@ export const PROPS = {
   column_slender_low: { image: 'mainlev', rect: { x: 672, y: 144, w: 16, h: 48 }, mount: 'floor', solid: true, base: { w: 14, d: 10 } },
   chain_short:       { image: 'decorative', rect: { x: 132, y: 16, w: 7, h: 22 }, mount: 'wall', weight: 1.5 },
   hook_bracket:      { image: 'decorative', rect: { x: 32, y: 20, w: 16, h: 12 }, mount: 'wall', weight: 1 },
+
+  // ── The castle (/castle): nothing of it is used in the catacombs, nor theirs in it ──
+  castle_banner:        { image: 'castle_decor', rect: { x: 16, y: 17, w: 48, h: 46 }, mount: 'wall', weight: 2 },
+  castle_banner_m:      { image: 'castle_decor', rect: { x: 80, y: 17, w: 32, h: 41 }, mount: 'wall', weight: 2 },
+  castle_banner_s:      { image: 'castle_decor', rect: { x: 116, y: 17, w: 25, h: 30 }, mount: 'wall', weight: 1.5 },
+  castle_banner_teal:   { image: 'castle_decor', rect: { x: 16, y: 65, w: 48, h: 46 }, mount: 'wall', weight: 2 },
+  castle_banner_teal_m: { image: 'castle_decor', rect: { x: 80, y: 65, w: 32, h: 41 }, mount: 'wall', weight: 2 },
+  castle_banner_teal_s: { image: 'castle_decor', rect: { x: 116, y: 65, w: 25, h: 30 }, mount: 'wall', weight: 1.5 },
+  castle_bones:         { image: 'castle_decor', rect: { x: 192, y: 67, w: 28, h: 25 }, mount: 'floor' },
+  castle_bones2:        { image: 'castle_decor', rect: { x: 372, y: 67, w: 28, h: 25 }, mount: 'floor' },
+  castle_skeleton:      { image: 'castle_decor', rect: { x: 200, y: 29, w: 18, h: 19 }, mount: 'floor' },
+  castle_skeleton2:     { image: 'castle_decor', rect: { x: 377, y: 21, w: 18, h: 19 }, mount: 'floor' },
+  castle_skull:         { image: 'castle_decor', rect: { x: 270, y: 73, w: 18, h: 19 }, mount: 'floor' },
+  castle_skull2:        { image: 'castle_decor', rect: { x: 304, y: 73, w: 18, h: 19 }, mount: 'floor' },
+  castle_ribs:          { image: 'castle_decor', rect: { x: 257, y: 37, w: 15, h: 18 }, mount: 'floor' },
+  castle_ribs2:         { image: 'castle_decor', rect: { x: 320, y: 37, w: 15, h: 18 }, mount: 'floor' },
+  castle_bone:          { image: 'castle_decor', rect: { x: 274, y: 18, w: 11, h: 13 }, mount: 'floor' },
+  castle_bone2:         { image: 'castle_decor', rect: { x: 307, y: 18, w: 11, h: 13 }, mount: 'floor' },
+  castle_bone3:         { image: 'castle_decor', rect: { x: 240, y: 48, w: 15, h: 15 }, mount: 'floor' },
+  castle_bone4:         { image: 'castle_decor', rect: { x: 337, y: 48, w: 15, h: 15 }, mount: 'floor' },
+  castle_bone5:         { image: 'castle_decor', rect: { x: 272, y: 49, w: 13, h: 15 }, mount: 'floor' },
+  castle_bone6:         { image: 'castle_decor', rect: { x: 307, y: 49, w: 13, h: 15 }, mount: 'floor' },
+  castle_jaw:           { image: 'castle_decor', rect: { x: 240, y: 82, w: 16, h: 12 }, mount: 'floor' },
+  castle_jaw2:          { image: 'castle_decor', rect: { x: 336, y: 82, w: 16, h: 12 }, mount: 'floor' },
+  castle_urn:           { image: 'castle_decor', rect: { x: 50, y: 139, w: 12, h: 21 }, mount: 'floor', solid: true },
+  castle_urn_m:         { image: 'castle_decor', rect: { x: 34, y: 145, w: 12, h: 15 }, mount: 'floor', solid: true },
+  castle_urn_s:         { image: 'castle_decor', rect: { x: 20, y: 151, w: 8, h: 9 }, mount: 'floor' },
+  castle_pot:           { image: 'castle_decor', rect: { x: 50, y: 171, w: 12, h: 21 }, mount: 'floor', solid: true },
+  castle_pot_m:         { image: 'castle_decor', rect: { x: 34, y: 177, w: 12, h: 15 }, mount: 'floor', solid: true },
+  castle_pot_s:         { image: 'castle_decor', rect: { x: 20, y: 183, w: 8, h: 9 }, mount: 'floor' },
+  castle_barrel:        { image: 'castle_decor', rect: { x: 80, y: 131, w: 16, h: 29 }, mount: 'floor', solid: true },
+  castle_bucket:        { image: 'castle_decor', rect: { x: 112, y: 136, w: 16, h: 19 }, mount: 'floor', solid: true },
+  castle_chests:        { image: 'castle_decor', rect: { x: 448, y: 16, w: 32, h: 16 }, mount: 'floor', solid: true },
+  castle_rubble:        { image: 'castle_decor', rect: { x: 211, y: 131, w: 37, h: 27 }, mount: 'floor', solid: true, base: { w: 32, d: 14 } },
+  castle_rubble2:       { image: 'castle_decor', rect: { x: 280, y: 132, w: 37, h: 27 }, mount: 'floor', solid: true, base: { w: 32, d: 14 } },
+  castle_rock:          { image: 'castle_decor', rect: { x: 164, y: 133, w: 26, h: 18 }, mount: 'floor', solid: true },
+  castle_rock2:         { image: 'castle_decor', rect: { x: 338, y: 134, w: 26, h: 18 }, mount: 'floor', solid: true },
+  castle_stone:         { image: 'castle_decor', rect: { x: 193, y: 161, w: 26, h: 26 }, mount: 'floor', solid: true },
+  castle_stone2:        { image: 'castle_decor', rect: { x: 309, y: 162, w: 26, h: 26 }, mount: 'floor', solid: true },
+  castle_shard:         { image: 'castle_decor', rect: { x: 165, y: 165, w: 20, h: 23 }, mount: 'floor', solid: true },
+  castle_shard2:        { image: 'castle_decor', rect: { x: 343, y: 166, w: 20, h: 23 }, mount: 'floor', solid: true },
+  castle_candelabra_cold: { image: 'castle_decor', rect: { x: 432, y: 80, w: 16, h: 32 }, mount: 'floor', solid: true, base: { w: 10, d: 6 } },
+  castle_candle_cold:   { image: 'castle_decor', rect: { x: 453, y: 101, w: 6, h: 11 }, mount: 'floor' },
+  castle_candle_cold2:  { image: 'castle_decor', rect: { x: 464, y: 101, w: 6, h: 11 }, mount: 'floor' },
+  castle_candle_cold3:  { image: 'castle_decor', rect: { x: 490, y: 101, w: 6, h: 11 }, mount: 'floor' },
+  // Rugs, laid flat in the middle of a hall: wide and tall, in four colours.
+  castle_rug_green:     { image: 'castle_decor', rect: { x: 16, y: 240, w: 95, h: 64 }, mount: 'floor', flat: true },
+  castle_rug_green_v:   { image: 'castle_decor', rect: { x: 128, y: 240, w: 64, h: 95 }, mount: 'floor', flat: true },
+  castle_rug_teal:      { image: 'castle_decor', rect: { x: 208, y: 240, w: 95, h: 64 }, mount: 'floor', flat: true },
+  castle_rug_teal_v:    { image: 'castle_decor', rect: { x: 320, y: 240, w: 64, h: 95 }, mount: 'floor', flat: true },
+  castle_rug_brown:     { image: 'castle_decor', rect: { x: 16, y: 369, w: 95, h: 64 }, mount: 'floor', flat: true },
+  castle_rug_brown_v:   { image: 'castle_decor', rect: { x: 128, y: 369, w: 64, h: 95 }, mount: 'floor', flat: true },
+  castle_rug_olive:     { image: 'castle_decor', rect: { x: 208, y: 368, w: 95, h: 64 }, mount: 'floor', flat: true },
+  castle_rug_olive_v:   { image: 'castle_decor', rect: { x: 320, y: 368, w: 64, h: 95 }, mount: 'floor', flat: true },
+  // Free-standing columns (castle tileset): plain ones for halls, mossy-footed ones for standing in a pool.
+  castle_column:        { image: 'castle_main', rect: { x: 336, y: 208, w: 16, h: 80 }, mount: 'floor', solid: true, base: { w: 14, d: 10 } },
+  castle_column_block:  { image: 'castle_main', rect: { x: 368, y: 208, w: 32, h: 80 }, mount: 'floor', solid: true, base: { w: 28, d: 12 } },
+  castle_column_moss:   { image: 'castle_main', rect: { x: 410, y: 432, w: 29, h: 80 }, mount: 'floor', solid: true, base: { w: 16, d: 10 } },
+  castle_column_moss_block: { image: 'castle_main', rect: { x: 459, y: 432, w: 44, h: 80 }, mount: 'floor', solid: true, base: { w: 30, d: 12 } },
+  castle_column_moss2:  { image: 'castle_main', rect: { x: 410, y: 592, w: 29, h: 80 }, mount: 'floor', solid: true, base: { w: 16, d: 10 } },
+  castle_column_moss_block2: { image: 'castle_main', rect: { x: 459, y: 592, w: 44, h: 80 }, mount: 'floor', solid: true, base: { w: 30, d: 12 } },
+  // The lights, which stand in for the catacombs' torches and candles: a candelabra on the floor, a candle on a wall.
+  castle_candelabra: {
+    image: 'light_a_1', rect: { x: 0, y: 0, w: 16, h: 48 }, mount: 'floor', solid: true, base: { w: 10, d: 6 }, glow: 52,
+    frames: framesFromImages(LIGHT_A, 16, 48), frameTime: LIGHT_FRAME_TICKS,
+  },
+  castle_sconce: {
+    image: 'light_b_1', rect: { x: 0, y: 0, w: 8, h: 18 }, mount: 'wall', glow: 40, weight: 0,
+    frames: framesFromImages(LIGHT_B, 8, 18), frameTime: LIGHT_FRAME_TICKS,
+  },
 
   // ── Wall decor (Other_objects.png): trophies, armour and banners hung on north walls ──
   dragon_skull:        { image: 'wall_decor', rect: { x: 7, y: 5, w: 34, h: 43 }, mount: 'wall', weight: 1 },
@@ -477,7 +563,8 @@ export const PROPS = {
 
 export type PropKind = keyof typeof PROPS;
 
-export type PropPlacement = { kind: PropKind; tx: number; ty: number };
+/** A prop on a tile; `dx` moves it that many pixels across from the tile's middle (a column centred in a pool). */
+export type PropPlacement = { kind: PropKind; tx: number; ty: number; dx?: number };
 
 /** The strip at a solid prop's foot that blocks movement (the rest of its tile can be walked through, behind it). */
 export function propBlockRect(def: PropDef): BlockRect {
@@ -512,8 +599,24 @@ export const URNS: PropKind[] = [...propsStarting('urn'), 'crate_broken', 'crate
 export const POSTS: PropKind[] = ['post', 'post2', 'post_cauldron', 'post_chain', 'post_broken'];
 /** Burnt-out candles, left on crypt floors. */
 export const COLD_CANDLES: PropKind[] = ['candles_cold', 'candles_cold2', 'candle_cold', 'candle_stub'];
+/** Whether a prop belongs to the castle (its images are the castle's own, never seen in the catacombs). */
+export function isCastleProp(kind: PropKind): boolean {
+  const image: PropImage = PROPS[kind].image;
+  return image.startsWith('castle_') || image.startsWith('light_');
+}
+
 /** Everything hung on north-wall faces: the catacomb fixtures and the trophies, armour and banners. */
-export const HANGINGS: PropKind[] = keysOf(PROPS).filter((kind) => PROPS[kind].mount === 'wall');
+export const HANGINGS: PropKind[] = keysOf(PROPS).filter((kind) => PROPS[kind].mount === 'wall' && !isCastleProp(kind));
+/** The castle's banners, hung on its walls. */
+export const CASTLE_BANNERS: PropKind[] = propsStarting('castle_banner');
+export const CASTLE_BONES: PropKind[] = propsStarting('castle_bone', 'castle_skeleton', 'castle_skull', 'castle_ribs', 'castle_jaw');
+export const CASTLE_POTS: PropKind[] = propsStarting('castle_urn', 'castle_pot');
+export const CASTLE_STORES: PropKind[] = ['castle_barrel', 'castle_bucket', 'castle_chests', 'castle_urn', 'castle_pot'];
+export const CASTLE_RUBBLE: PropKind[] = propsStarting('castle_rubble', 'castle_rock', 'castle_stone', 'castle_shard');
+export const CASTLE_RUGS: PropKind[] = propsStarting('castle_rug_');
+export const CASTLE_COLUMNS: PropKind[] = ['castle_column', 'castle_column_block'];
+export const CASTLE_POOL_COLUMNS: PropKind[] = propsStarting('castle_column_moss');
+export const CASTLE_COLD_CANDLES: PropKind[] = propsStarting('castle_candle_cold');
 /** Storeroom furniture backed against a north wall: shelves, weapon racks and stands, supply heaps and casks. */
 export const STORE_FURNITURE: PropKind[] = propsStarting('shelf', 'supplies_', 'rack', 'stand', 'barrel');
 /** Goods scattered in front of the furniture. */

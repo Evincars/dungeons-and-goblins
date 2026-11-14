@@ -181,6 +181,7 @@ const UI_SHEETS = [
 
   // Cave tileset: its ground tiles floor the cave halls (see level/TerrainAutotile.ts)
   new SpriteSheet('cave_ground', '/caves/MainLev2.0.png'),
+  new SpriteSheet('castle_tileset', '/castle/mainlevbuild.png'),
 
   // Torch frames (16×16 each) — composited into a single 'torch' strip by the loader
   new SpriteSheet('torch_1', '/catacombs/torch_1.png'),

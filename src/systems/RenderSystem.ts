@@ -72,6 +72,8 @@ function syncOverlay(entity: Entity, sprite: Sprite): void {
   layer.visible = true;
 }
 
+/** Rugs lie between the terrain (at -1) and everything that stands, which sorts by its feet (0 and down the map). */
+const FLAT_Z = -0.5;
 /** A faller fades out over the last part of the drop (from this share of it), into the dark of the pit. */
 const FADE_FROM = 0.55;
 /** The mask over a pit reaches this far into its top, besides everything straight above it (the faller's upper body). */
@@ -144,6 +146,7 @@ function syncFall(entity: Entity, sprite: Sprite, level: Level): void {
  * over a faller) is drawn just behind or in front of it instead.
  */
 function drawOrder(entity: Entity, pos: { x: number; y: number }): number {
+  if (entity.flat) return FLAT_Z;
   const fx = entity.fx;
   if (fx?.orderId === undefined) return pos.y;
   return (world.entity(fx.orderId)?.position?.y ?? pos.y) + (fx.orderBias ?? 0);

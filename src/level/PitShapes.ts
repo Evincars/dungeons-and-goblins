@@ -2,12 +2,13 @@ import { TILE_HEIGHT, TILE_WIDTH } from './TileType';
 
 /**
  * The shapes pits are dug in, from the catacomb tileset's pit pieces (mainlevbuild.png): a framed square, the same
- * square with rounded lobes bulging from some of its sides (an arched alcove on the north side), and a quatrefoil.
- * Each pit sits on 2×2 Hole tiles; its open ground is a union of boxes and discs (in pixels from the top-left corner
+ * square with rounded lobes bulging from some of its sides (an arched alcove on the north side), and a quatrefoil;
+ * and in a castle, a long framed pit of spikes (castle mainlevbuild.png). Each catacomb pit sits on 2×2 Hole tiles,
+ * a castle's on SPIKE_PIT_W×SPIKE_PIT_H; its open ground is a union of boxes and discs (in pixels from the top-left corner
  * of those tiles), so falling in, keeping enemies out and hiding a faller all follow the drawn edge, not the tiles.
  */
 
-export const PIT_SHAPES = ['square', 'lobed', 'quatrefoil'] as const;
+export const PIT_SHAPES = ['square', 'lobed', 'quatrefoil', 'spikes'] as const;
 export type PitShape = (typeof PIT_SHAPES)[number];
 
 export function isPitShape(value: unknown): value is PitShape {
@@ -20,6 +21,15 @@ export const LOBE_E = 2;
 export const LOBE_S = 4;
 export const LOBE_W = 8;
 export const ALL_LOBES = LOBE_N | LOBE_E | LOBE_S | LOBE_W;
+
+/** A castle's spike pit takes this many Hole tiles across and down. */
+export const SPIKE_PIT_W = 4;
+export const SPIKE_PIT_H = 2;
+
+/** The Hole tiles a pit of this shape is dug on: its width and height in tiles. */
+export function pitTiles(shape: PitShape): { w: number; h: number } {
+  return shape === 'spikes' ? { w: SPIKE_PIT_W, h: SPIKE_PIT_H } : { w: 2, h: 2 };
+}
 
 /** A pit: the top-left of its 2×2 Hole tiles, its shape, and (for a lobed one) which lobes it has. */
 export type Pit = { x: number; y: number; shape: PitShape; lobes: number };
@@ -63,6 +73,12 @@ const QUATREFOIL: Outline = withBounds(
   ],
 );
 
+/**
+ * The spike pit's dark inside: its art (124×66) is centred on its 4×2 tiles, and its frame is 6px wide, so the open
+ * ground runs from 8 to 120 across and from just under the top frame to the bottom one.
+ */
+const SPIKE_PIT: Outline = withBounds([{ x0: 8, y0: 6, x1: 120, y1: 56 }], []);
+
 function withBounds(boxes: Box[], discs: Disc[]): Outline {
   const bounds = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
   for (const b of boxes) {
@@ -95,6 +111,7 @@ export function pitOutline(pit: Pit): Outline {
   let outline = outlines.get(key);
   if (outline) return outline;
   if (pit.shape === 'quatrefoil') outline = QUATREFOIL;
+  else if (pit.shape === 'spikes') outline = SPIKE_PIT;
   else outline = pit.shape === 'lobed' ? lobedOutline(pit.lobes) : withBounds([CORE], []);
   outlines.set(key, outline);
   return outline;

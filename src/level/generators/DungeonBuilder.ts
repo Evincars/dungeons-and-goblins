@@ -20,12 +20,16 @@ import { bspTree, bspLeaves, type BspNode } from './BSPSplit';
 import { isPillarColumn } from '../TerrainAutotile';
 import {
   CAVE_CENTREPIECES, CAVE_CRYSTALS, GEM_CRYSTALS, CAVE_PLANTS, CAVE_SPIRES, CAVE_STONES, COFFINS, COLD_CANDLES, CRATES, CRYPT_CENTREPIECES,
-  COLUMNS, HALL_CENTREPIECES, HANGINGS, PEDESTALS, POSTS, PROPS, SARCOPHAGI, STORE_CENTREPIECES, STORE_FURNITURE, STORE_GOODS, URNS,
+  CASTLE_BANNERS, CASTLE_BONES, CASTLE_COLD_CANDLES, CASTLE_COLUMNS, CASTLE_POOL_COLUMNS, CASTLE_POTS, CASTLE_RUBBLE, CASTLE_RUGS,
+  CASTLE_STORES, COLUMNS, HALL_CENTREPIECES, HANGINGS, PEDESTALS, POSTS, PROPS, SARCOPHAGI, STORE_CENTREPIECES, STORE_FURNITURE, STORE_GOODS, URNS,
   propBlockRect, propWeight,
 } from '../Props';
 import type { BlockRect, PropDef, PropKind, PropPlacement } from '../Props';
 import { MathUtils } from 'yuka';
-import { LOBE_E, LOBE_N, LOBE_S, LOBE_W } from '../PitShapes';
+import { LOBE_E, LOBE_N, LOBE_S, LOBE_W, SPIKE_PIT_H, SPIKE_PIT_W } from '../PitShapes';
+import { POOL_H, POOL_KINDS, POOL_W, isWallDecor } from '../Level';
+import { CASTLE_FACE_DECOR } from '../CastleTiles';
+import type { CastleFaceDecor } from '../CastleTiles';
 import type { Pit } from '../PitShapes';
 
 type TileChange = { x: number; y: number; prev: TileType };
@@ -70,6 +74,23 @@ const COBBLE_HALL_CHANCE = 0.7;
 /** How far round a room its walls take its material: a tile at the sides and below, its full north face above. */
 const WALL_REACH_SIDE = 1;
 const WALL_REACH_NORTH = 3;
+/** Castle rooms, by a roll: up to the first share a great hall, then pools, then a storeroom, else a ruin. */
+const CASTLE_HALL_SHARE = 0.3;
+const CASTLE_POOL_SHARE = 0.5;
+const CASTLE_STORE_SHARE = 0.75;
+/** Things in a castle storeroom, pots along a castle room's walls, bones strewn about, fallen stone in a ruin. */
+const CASTLE_STORE_ITEMS = 5;
+const CASTLE_POTS_PER_ROOM = 2;
+const CASTLE_BONE_COUNT = [1, 4] as const;
+const CASTLE_RUBBLE_COUNT = [2, 4] as const;
+/** Chance of a burnt-out candle in a castle room, and of a lit candelabra at each end of its north wall. */
+const CASTLE_COLD_CANDLE_CHANCE = 0.4;
+const CANDELABRA_CHANCE = 0.6;
+/** Decorated stretches of face in a castle room: at most this many, each spot skipped by this chance, this many tiles apart. */
+const CASTLE_DECOR_PER_ROOM = 3;
+const CASTLE_DECOR_SKIP = 0.25;
+const CASTLE_DECOR_GAP = 1;
+const CASTLE_DECOR_KINDS: readonly CastleFaceDecor[] = ['door', 'glass', 'ornate', 'ornate', 'gothic', 'gothic', 'gothic'];
 /** Chance a plain hall has drain grates set in its floor (two, or four in a tall room), and how tall that is. */
 const GRATE_CHANCE = 0.6;
 const FOUR_GRATE_ROOM_H = 9;
@@ -222,7 +243,7 @@ export class DungeonBuilder {
     const cw = cfg.corridorW;
     this.rng = mulberry32(seed);
     this.roomIdSeq = 0;
-    this.level = new Level(W, H);
+    this.level = new Level(W, H, cfg.theme);
     this.fill(0, 0, W, H, TileType.Wall);
 
     // ── Safe room (left) and exit room (right), vertically centred ────────────
@@ -289,10 +310,12 @@ export class DungeonBuilder {
       } else if (room.w >= 6 && room.h >= 6 && this.rng() < cfg.pitChance) {
         structured = this.pits(room, keepIfReachable);
       }
-      this.furnish(room, structured, props, keepIfReachable);
+      if (cfg.theme === 'castle') this.furnishCastle(room, structured, props, keepIfReachable);
+      else this.furnish(room, structured, props, keepIfReachable);
     }
+    if (cfg.theme === 'castle') this.castleFaces(dungeonRooms);
 
-    this.wallMaterials(dungeonRooms);
+    if (cfg.theme === 'catacomb') this.wallMaterials(dungeonRooms);
 
     // ── Safe zones ────────────────────────────────────────────────────────────
     for (const room of [safe, exit]) {
@@ -355,7 +378,8 @@ export class DungeonBuilder {
     const x = r.x + 1 + this.randInt(0, r.w - 2 - w);
     const y = r.y + 2 + this.randInt(0, r.h - 3 - h);
     const room = this.carveRoom(x, y, w, h, 'dungeon');
-    if (!hall) return room;
+    // A castle keeps its great rooms, but they are halls of stone, not caves.
+    if (!hall || cfg.theme === 'castle') return room;
     room.hall = true;
     forEachTile(x, y, x + w - 1, y + h - 1, (tx, ty) => this.level.caveFloor.add(tx + ty * this.cfg.mapWidth));
     return room;
@@ -576,6 +600,7 @@ export class DungeonBuilder {
 
   /** One or two framed 2×2 pits, each with a ring of floor around it and 2 tiles clear of the walls. */
   private pits(room: RoomData, keep: Keep): boolean {
+    if (this.cfg.theme === 'castle') return this.spikePit(room, keep);
     let placed = false;
     const count = room.w >= 10 && this.rng() < SECOND_PIT_CHANCE ? 2 : 1;
     const maxX = room.x + room.w - 4;
@@ -584,6 +609,25 @@ export class DungeonBuilder {
       if (this.placePit(room, maxX, maxY, keep)) placed = true;
     }
     return placed;
+  }
+
+  /** A castle's pit: a long framed pit of spikes (4×2 tiles) with a ring of floor round it; returns whether one was dug. */
+  private spikePit(room: RoomData, keep: Keep): boolean {
+    const w = SPIKE_PIT_W;
+    const h = SPIKE_PIT_H;
+    if (room.w < w + 2 || room.h < h + 3) return false;
+    for (let attempt = 0; attempt < PIT_ATTEMPTS; attempt++) {
+      const px = this.randInt(room.x + 1, room.x + room.w - w - 1);
+      const py = this.randInt(room.y + 2, room.y + room.h - h - 1);
+      if (someTile(px - 1, py - 1, px + w, py + h, (x, y) => !this.free(x, y))) continue;
+      const cells: Array<[number, number]> = [];
+      forEachTile(px, py, px + w - 1, py + h - 1, (x, y) => cells.push([x, y]));
+      if (!keep(() => this.setTiles(cells, TileType.Hole))) continue;
+      this.level.addPit({ x: px, y: py, shape: 'spikes', lobes: 0 });
+      forEachTile(px - 1, py - 1, px + w, py + h, (x, y) => this.claim(x, y));
+      return true;
+    }
+    return false;
   }
 
   /** Tries a few random spots for one pit; returns whether one was dug. */
@@ -666,6 +710,113 @@ export class DungeonBuilder {
     const roomGem = this.rng() < GEM_CRYSTAL_CHANCE;
     if (roomGem && GEM_CRYSTALS_PLACED) this.scatterSolid(room, this.shuffledFreeTiles(room), GEM_CRYSTALS, props, keep);
     this.urnsAlongWalls(room, roll >= 0.4 && roll < 0.7 ? 4 : 2, props, keep);
+  }
+
+  // ── The castle ──────────────────────────────────────────────────────────────
+
+  /**
+   * Dresses a castle room: a great hall (columns along its walls, a rug, candelabras), a room of pools with columns
+   * standing in them, a storeroom, or a ruin of fallen stone; bones and pots everywhere, candelabras by the north wall.
+   */
+  private furnishCastle(room: RoomData, structured: boolean, props: PropPlacement[], keep: Keep): void {
+    const roll = this.rng();
+    const big = room.w >= COLONNADE_MIN_W && room.h >= COLONNADE_MIN_H;
+    if (roll < CASTLE_HALL_SHARE && big && !structured) this.greatHall(room, props, keep);
+    else if (roll < CASTLE_POOL_SHARE && room.w >= POOL_W + 2 && room.h >= POOL_H + 3 && !structured) this.pools(room, props, keep);
+    else if (roll < CASTLE_STORE_SHARE) this.urnsAlongWalls(room, CASTLE_STORE_ITEMS, props, keep, CASTLE_STORES);
+    else this.ruin(room, props, keep);
+    this.candelabras(room, props, keep);
+    this.urnsAlongWalls(room, CASTLE_POTS_PER_ROOM, props, keep, CASTLE_POTS);
+    const open = this.shuffledFreeTiles(room);
+    this.scatterLoose(open, CASTLE_BONES, this.countIn(CASTLE_BONE_COUNT), props);
+    if (this.rng() < CASTLE_COLD_CANDLE_CHANCE) this.scatterLoose(open, CASTLE_COLD_CANDLES, 1, props);
+  }
+
+  /** Columns along the north and south walls and a rug laid down the middle. */
+  private greatHall(room: RoomData, props: PropPlacement[], keep: Keep): void {
+    this.colonnade(room, props, keep, CASTLE_COLUMNS);
+    const tx = room.x + Math.floor(room.w / 2);
+    const ty = room.y + Math.floor(room.h / 2);
+    if (someTile(tx - 1, ty - 1, tx + 1, ty + 1, (x, y) => !this.free(x, y))) return;
+    props.push({ kind: this.pick(CASTLE_RUGS), tx, ty });
+  }
+
+  /**
+   * One or two pools (water or green sludge, POOL_W×POOL_H tiles, a ring of floor round each), each with a column
+   * standing in its middle.
+   */
+  private pools(room: RoomData, props: PropPlacement[], keep: Keep): void {
+    const kind = this.pick(POOL_KINDS);
+    const count = room.w >= 2 * POOL_W + 5 ? 2 : 1;
+    for (let i = 0; i < count; i++) this.placePool(room, kind, props, keep);
+  }
+
+  private placePool(room: RoomData, kind: (typeof POOL_KINDS)[number], props: PropPlacement[], keep: Keep): void {
+    for (let attempt = 0; attempt < PIT_ATTEMPTS; attempt++) {
+      const px = this.randInt(room.x + 1, room.x + room.w - POOL_W - 1);
+      const py = this.randInt(room.y + 2, room.y + room.h - POOL_H - 1);
+      if (someTile(px - 1, py - 1, px + POOL_W, py + POOL_H, (x, y) => !this.free(x, y))) continue;
+      const cells: Array<[number, number]> = [];
+      forEachTile(px, py, px + POOL_W - 1, py + POOL_H - 1, (x, y) => cells.push([x, y]));
+      if (!keep(() => this.setTiles(cells, TileType.Obstacle))) continue;
+      this.level.pools.push({ x: px, y: py, kind });
+      forEachTile(px - 1, py - 1, px + POOL_W, py + POOL_H, (x, y) => this.claim(x, y));
+      // Half a tile right of its second column of tiles: the pool's very middle.
+      props.push({ kind: this.pick(CASTLE_POOL_COLUMNS), tx: px + 1, ty: py + 1, dx: TILE_WIDTH / 2 });
+      return;
+    }
+  }
+
+  /** A ruin: fallen stone and rubble lying about the room. */
+  private ruin(room: RoomData, props: PropPlacement[], keep: Keep): void {
+    const open = this.shuffledFreeTiles(room);
+    for (let i = this.countIn(CASTLE_RUBBLE_COUNT); i > 0; i--) this.scatterSolid(room, open, CASTLE_RUBBLE, props, keep);
+  }
+
+  /** Lit candelabras (the castle's floor lights) standing by the north wall, one near each end. */
+  private candelabras(room: RoomData, props: PropPlacement[], keep: Keep): void {
+    for (const tx of [room.x + 1, room.x + room.w - 2]) {
+      if (this.rng() < CANDELABRA_CHANCE) this.placeSolid([[tx, room.y]], ['castle_candelabra'], props, keep);
+    }
+  }
+
+  /**
+   * The castle's decorated stretches of north face — arched doors, dark stained windows, ornate panels and great
+   * gothic windows — set on full-height faces between pilasters, a couple to a room.
+   */
+  private castleFaces(rooms: readonly RoomData[]): void {
+    for (const room of rooms) this.decorateNorthFace(room);
+  }
+
+  /** Up to CASTLE_DECOR_PER_ROOM decorated stretches along one room's north face, left to right. */
+  private decorateNorthFace(room: RoomData): void {
+    let placed = 0;
+    for (let tx = room.x; tx < room.x + room.w && placed < CASTLE_DECOR_PER_ROOM; tx++) {
+      const kind = this.pick(CASTLE_DECOR_KINDS);
+      const len = CASTLE_FACE_DECOR[kind];
+      if (!this.decorFits(tx, room.y, len, kind) || this.rng() < CASTLE_DECOR_SKIP) continue;
+      this.markDecor(tx, room.y - 1, kind, len);
+      placed++;
+      tx += len + CASTLE_DECOR_GAP;
+    }
+  }
+
+  /** Marks each wall tile of a decorated stretch with its part (`gothic0`, `gothic1`…), left to right. */
+  private markDecor(tx: number, wallRow: number, kind: CastleFaceDecor, len: number): void {
+    for (let i = 0; i < len; i++) {
+      const part = `${kind}${i}`;
+      if (isWallDecor(part)) this.level.wallDecor.set(tx + i + wallRow * this.cfg.mapWidth, part);
+    }
+  }
+
+  /** Whether a stretch of `len` tiles from tx fits the full-height face over floor row ty (a great window's gable needs one more wall row). */
+  private decorFits(tx: number, ty: number, len: number, kind: CastleFaceDecor): boolean {
+    const rows = kind === 'gothic' ? 3 : 2;
+    const W = this.cfg.mapWidth;
+    const plainFace = (x: number): boolean => this.isFloor(x, ty) && !isPillarColumn(x) && !this.level.wallDecor.has(x + (ty - 1) * W)
+      && !someTile(x, ty - rows, x, ty - 1, (wx, wy) => !this.isWall(wx, wy));
+    for (let x = tx; x < tx + len; x++) if (!plainFace(x)) return false;
+    return this.isWall(tx - 1, ty - 1) && this.isWall(tx + len, ty - 1);
   }
 
   // ── Centrepieces and large props ────────────────────────────────────────────
@@ -835,8 +986,8 @@ export class DungeonBuilder {
   }
 
   /** One kind of column in a row along the north wall and another along the south, a few tiles apart. */
-  private colonnade(room: RoomData, props: PropPlacement[], keep: Keep): void {
-    const kind = this.pick(COLUMNS);
+  private colonnade(room: RoomData, props: PropPlacement[], keep: Keep, kinds: readonly PropKind[] = COLUMNS): void {
+    const kind = this.pick(kinds);
     for (let x = room.x + 1; x <= room.x + room.w - 2; x += COLONNADE_STEP) {
       for (const y of [room.y + 1, room.y + room.h - 2]) this.placeSolid([[x, y]], [kind], props, keep);
     }
@@ -967,14 +1118,14 @@ export class DungeonBuilder {
   }
 
   /** Urns (they block, like the barrels they look like) and broken pots standing against the walls. */
-  private urnsAlongWalls(room: RoomData, count: number, props: PropPlacement[], keep: Keep): void {
+  private urnsAlongWalls(room: RoomData, count: number, props: PropPlacement[], keep: Keep, kinds: readonly PropKind[] = URNS): void {
     const spots: Array<[number, number]> = [];
     forEachTile(room.x, room.y, room.x + room.w - 1, room.y + room.h - 1, (tx, ty) => {
       if (this.free(tx, ty) && this.againstWall(tx, ty)) spots.push([tx, ty]);
     });
     for (let i = 0; i < count && spots.length; i++) {
       const [tx, ty] = spots.splice(Math.floor(this.rng() * spots.length), 1)[0];
-      const kind = this.pick(URNS);
+      const kind = this.pick(kinds);
       const def: PropDef = PROPS[kind];
       if (def.solid) {
         this.placeSolid([[tx, ty]], [kind], props, keep);
@@ -1052,7 +1203,7 @@ export class DungeonBuilder {
     const nearTorch = (tx: number) => torches.some((t) => t.y === ty && Math.abs(t.x - tx) < 2);
     for (let tx = 1; tx < this.cfg.mapWidth - 1; tx++) {
       if (!this.mountable(tx, ty) || nearTorch(tx) || this.level.isSafeZone(tx, ty) || this.rng() > HANGING_CHANCE) continue;
-      props.push({ kind: this.pickProp(HANGINGS), tx, ty });
+      props.push({ kind: this.pickProp(this.cfg.theme === 'castle' ? CASTLE_BANNERS : HANGINGS), tx, ty });
       tx += 2;
     }
   }

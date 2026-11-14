@@ -3125,6 +3125,48 @@ test('in co-op a hero who falls into a pit stays at its bottom; what they carrie
   assert.equal(god.falling, undefined, "the console's god mode walks over pits");
 });
 
+test('a castle is built of its own pieces alone: no caves, no cobble, castle props, spike pits and pools', async () => {
+  const { isCastleProp, PROPS: ALL_PROPS } = await load('level/Props');
+  const { encodeLevelMap, decodeLevelMap } = await load('level/LevelMap');
+  const { layout, level } = buildDungeon(4242, true, 'castle');
+  assert.equal(level.theme, 'castle');
+  assert.equal(level.caveFloor.size, 0, 'no cave halls');
+  assert.equal(level.cobbleWalls.size, 0, 'no catacomb cobblestone');
+  const gathering = layout.rooms.filter((r) => r.type !== 'dungeon');
+  const inGathering = (p) => gathering.some((r) => p.tx >= r.x - 1 && p.tx < r.x + r.w + 1 && p.ty >= r.y - 1 && p.ty < r.y + r.h + 1);
+  const foreign = layout.props.filter((p) => !inGathering(p) && !isCastleProp(p.kind));
+  assert.deepEqual(foreign.map((p) => p.kind), [], 'the castle rooms hold castle things only (the safe and exit rooms keep theirs)');
+  assert.ok(layout.props.some((p) => ALL_PROPS[p.kind].image.startsWith('light_')) || layout.torchPositions.length > 0, 'lit by its own lights');
+  for (const pit of level.pits) assert.equal(pit.shape, 'spikes');
+  for (const pool of level.pools) assert.equal(level.getTile(pool.x + 1, pool.y + 1).type, TileType.Obstacle, 'a pool is not walked through');
+  const back = decodeLevelMap(JSON.parse(JSON.stringify(encodeLevelMap(layout))));
+  assert.equal(back.level.theme, 'castle');
+  assert.deepEqual(back.level.pools, level.pools);
+  assert.deepEqual(back.props, layout.props, 'props, a column moved to the middle of its pool too');
+});
+
+test('a castle\'s spike pit swallows whoever steps over its dark inside, not its frame', () => {
+  const level = arena(12, 8);
+  for (let x = 3; x < 7; x++) for (const y of [3, 4]) level.setTile(x, y, createTile(TileType.Hole));
+  level.addPit({ x: 3, y: 3, shape: 'spikes', lobes: 0 });
+  assert.ok(level.overPit(3 * TILE_WIDTH + 64, 3 * TILE_WIDTH + 30), 'its middle');
+  assert.ok(!level.overPit(3 * TILE_WIDTH + 3, 3 * TILE_WIDTH + 30), 'its frame, at the west end of its tiles');
+  const player = playerAt(5, 4);
+  player.position.y = 3 * TILE_WIDTH + 40;
+  updateHoles(level);
+  assert.ok(player.falling);
+});
+
+test('the console\'s /dungeon builds the level again as a castle or the catacombs', async () => {
+  const { runCommand } = await load('game/Console');
+  const asked = [];
+  const ctx = { player: playerAt(2, 2), allowed: true, rebuild: (theme) => asked.push(theme) };
+  runCommand('/dungeon castle', ctx);
+  runCommand('/dungeon catacomb', ctx);
+  assert.deepEqual(asked, ['castle', 'catacomb']);
+  assert.match(runCommand('/dungeon moon', ctx)[0], /Usage/);
+});
+
 test('going deeper brings the fallen back whole, with their experience but without gear or gold', () => {
   startRun();
   const ana = seated(2, 2, 'host', 'Ana');

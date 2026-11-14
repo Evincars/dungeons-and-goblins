@@ -3,6 +3,7 @@ import { spawnDecor, spawnLiveEntities } from './generators/DungeonEntitySpawner
 import { DEFAULT_CONFIG } from './generators/DungeonConfig';
 import type { DungeonLayout } from './generators/DungeonBuilder';
 import type { Level } from './Level';
+import type { LevelTheme } from './Theme';
 
 export type DungeonSpawns = {
   playerSpawn: { x: number; y: number };
@@ -18,18 +19,18 @@ export function randomSeed(): number {
 }
 
 /** A level generated ahead of time, waiting to be played. */
-let prepared: { seed: number; layout: DungeonLayout } | null = null;
+let prepared: { seed: number; theme: LevelTheme; layout: DungeonLayout } | null = null;
 
-function layoutFor(seed: number): DungeonLayout {
-  return new DungeonBuilder({ ...DEFAULT_CONFIG, seed }).build();
+function layoutFor(seed: number, theme: LevelTheme): DungeonLayout {
+  return new DungeonBuilder({ ...DEFAULT_CONFIG, seed, theme }).build();
 }
 
 /**
  * Generates the next level's map while the current one is wrapping up (the level summary is on screen),
  * so going deeper starts a freshly generated level at once.
  */
-export function prepareLevel(seed: number): void {
-  if (prepared?.seed !== seed) prepared = { seed, layout: layoutFor(seed) };
+export function prepareLevel(seed: number, theme: LevelTheme = 'catacomb'): void {
+  if (prepared?.seed !== seed || prepared.theme !== theme) prepared = { seed, theme, layout: layoutFor(seed, theme) };
 }
 
 /**
@@ -38,9 +39,12 @@ export function prepareLevel(seed: number): void {
  * game (`authority`: alone, or the co-op host) also spawns what changes during play — enemies, chests,
  * the door, the exit and the shop — which guests then receive from the host.
  */
-export function buildDungeon(seed: number, authority: boolean): { level: Level; spawns: DungeonSpawns; layout: DungeonLayout } {
-  const config = { ...DEFAULT_CONFIG, seed };
-  const layout = prepared?.seed === seed ? prepared.layout : layoutFor(seed);
+export function buildDungeon(
+  seed: number, authority: boolean, theme: LevelTheme = 'catacomb',
+): { level: Level; spawns: DungeonSpawns; layout: DungeonLayout } {
+  const config = { ...DEFAULT_CONFIG, seed, theme };
+  const ready = prepared?.seed === seed && prepared.theme === theme;
+  const layout = ready && prepared ? prepared.layout : layoutFor(seed, theme);
   prepared = null;
   spawnDecor(layout);
   if (authority) spawnLiveEntities(layout, config);

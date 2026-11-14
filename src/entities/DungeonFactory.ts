@@ -29,6 +29,13 @@ const TORCH_FRAMES = 4;
 const TORCH_FRAME_TICKS = 7;
 /** Wall props hang from just under the face's cap molding. */
 const HANG_TOP = 54;
+/** A castle's wall candle (in place of a torch): drawn this big, its flame this far below the top of its art. */
+const SCONCE_SCALE = 1.5;
+const SCONCE_FLAME_DROP = 3;
+const SCONCE_FRAMES = 3;
+const SCONCE_FRAME_TICKS = 8;
+/** The castle's wall candle gives a softer, smaller light than a torch. */
+const SCONCE_LIGHT_RADIUS = 96;
 const CHEST_HEALTH = 20;
 /**
  * Chests are drawn at a fixed three-quarter size; the art (chest_small.png) is a 32×53 frame with the chest
@@ -136,6 +143,26 @@ export function createTorch(x: number, y: number): Entity {
   });
 }
 
+/**
+ * A castle's wall candle (light B), where the catacombs would have a torch: its flame at (x, y), giving light like a
+ * torch's, with the candle on its bracket below it.
+ */
+export function createSconce(x: number, y: number): Entity {
+  const sheet = 'prop_castle_sconce';
+  const below = (PROPS.castle_sconce.rect.h / 2 - SCONCE_FLAME_DROP) * SCONCE_SCALE;
+  return world.add({
+    position: { x, y: y + TORCH_LIFT },
+    torch: { radius: SCONCE_LIGHT_RADIUS, color: TORCH_COLOR, flicker: Math.random() * Math.PI * 2 },
+    visual: { sheet, scale: SCONCE_SCALE },
+    animation: {
+      sheet, frameX: Math.floor(Math.random() * SCONCE_FRAMES), frameY: 0, frameCount: SCONCE_FRAMES,
+      frameTime: SCONCE_FRAME_TICKS, timer: 0, loop: true,
+    },
+    yOffset: TORCH_LIFT - below,
+    localOnly: true,
+  });
+}
+
 /** A campfire on its (blocked) tile in the exit room. */
 export function createCampfire(x: number, y: number): Entity {
   return world.add({
@@ -173,13 +200,17 @@ function propGlow(def: PropDef): Pick<Entity, 'glow'> {
 export function createProp(p: PropPlacement): Entity {
   const def: PropDef = PROPS[p.kind];
   const sheet = `prop_${p.kind}`;
-  const x = p.tx * TILE_WIDTH + TILE_WIDTH / 2;
+  const x = p.tx * TILE_WIDTH + TILE_WIDTH / 2 + (p.dx ?? 0);
   const h = def.rect.h;
   if (def.mount === 'wall') {
     // Stands at the foot of the wall like a torch, drawn up on the bricks.
     return world.add({
       position: { x, y: p.ty * TILE_HEIGHT }, visual: { sheet }, yOffset: HANG_TOP - h / 2, localOnly: true,
     });
+  }
+  if (def.flat) {
+    // A rug lies centred on its tile, under everything.
+    return world.add({ position: { x, y: p.ty * TILE_HEIGHT + TILE_HEIGHT / 2 }, visual: { sheet }, flat: true, localOnly: true });
   }
   return world.add({
     position: { x, y: p.ty * TILE_HEIGHT + PROP_GROUND },
@@ -202,6 +233,7 @@ const OPENABLE_PROPS: ReadonlySet<PropKind> = new Set<PropKind>([
   'crate', 'crate2', 'crate_stack', 'crate_stack2', 'supplies_crate', 'supplies_crates',
   'urn', 'urn_small', 'urn_m', 'urn_s', 'urn_xs', 'urn_green', 'urn_green_small', 'urn_green_m', 'urn_green_s', 'urn_green_xs',
   'supplies_vase', 'supplies_jar',
+  'castle_barrel', 'castle_bucket', 'castle_chests', 'castle_urn', 'castle_urn_m', 'castle_pot', 'castle_pot_m',
   'sack', 'sack_m', 'sack_s', 'sack_xs', 'sack2', 'sack2_m', 'sack2_s', 'sack2_xs', 'sacks_pile', 'sacks_pile2', 'sacks_pile3',
 ]);
 /** A stash's body reaches this far up and down its prop's foot, for the crosshair and the corner brackets. */

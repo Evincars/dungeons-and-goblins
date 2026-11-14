@@ -50,6 +50,8 @@ export const MONSTERS = {
   goblin_warrior: readMonster('goblin_warrior', stats.mobs.goblin_warrior),
   ghost_wizard: readMonster('ghost_wizard', stats.mobs.ghost_wizard),
   evil_wizard: readMonster('evil_wizard', stats.mobs.evil_wizard),
+  shade: readMonster('shade', stats.mobs.shade),
+  grick: readMonster('grick', stats.mobs.grick),
 } as const satisfies Record<MobType, MonsterStats>;
 
 /** One of the weapons this kind of enemy may carry, picked at random. */

@@ -147,6 +147,7 @@ function moveBody(level: Level, entity: Body): void {
   const fromX = position.x;
   const fromY = position.y;
   move(position, radius, xa, ya, obstaclesFor(level, entity), entity.physicsSlide !== undefined);
+  level.pushOutOfSlopes(position, radius.x, radius.y);
   keepOutOfForbidden(level, entity, fromX, fromY);
   settle(velocity, entity.friction ?? DEFAULT_FRICTION);
   if (bump) settle(bump, KNOCKBACK_FADE);

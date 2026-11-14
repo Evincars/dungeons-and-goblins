@@ -3167,6 +3167,75 @@ test('the console\'s /dungeon builds the level again as a castle or the catacomb
   assert.match(runCommand('/dungeon moon', ctx)[0], /Usage/);
 });
 
+test('the isometric castle is built of its own pieces: slanted corners, galleries, chasms, its props and foes; its map keeps them', async () => {
+  const { isIsoProp } = await load('level/Props');
+  const { encodeLevelMap, decodeLevelMap } = await load('level/LevelMap');
+  let chasms = 0;
+  let stairs = 0;
+  for (const seed of [7, 11, 23, 31]) {
+    world.clear();
+    const { layout, level } = buildDungeon(seed, true, 'iso');
+    assert.equal(level.theme, 'iso');
+    assert.ok(level.slopes.size > 0, 'corners cut off on the slant');
+    assert.ok(level.floorZones.length > 0, 'floors laid in tones');
+    assert.deepEqual(layout.torchPositions, [], 'no torches: crystal braziers light it');
+    assert.deepEqual(layout.props.filter((p) => !isIsoProp(p.kind)).map((p) => p.kind), [], 'its own props only');
+    assert.ok(layout.props.some((p) => p.kind.startsWith('iso_brazier')), 'braziers');
+    const foes = [...world.with('mobType')].map((m) => m.mobType);
+    assert.ok(foes.length > 0 && foes.every((t) => t === 'shade' || t === 'grick'), 'haunted by its own foes');
+    for (const [i, slope] of level.slopes) {
+      const type = level.getTile(i % level.width, Math.floor(i / level.width)).type;
+      assert.equal(type, slope.major ? TileType.Wall : TileType.Floor, 'a slant\'s major tile is wall, its minor one floor');
+    }
+    for (let i = 0; i < level.width * level.height; i++) chasms += level.isChasm(i % level.width, Math.floor(i / level.width)) ? 1 : 0;
+    stairs += level.stairs.length;
+    for (const s of level.stairs) assert.equal(level.getTile(s.x, s.y).type, TileType.Floor, 'stairs are walked down');
+    const back = decodeLevelMap(JSON.parse(JSON.stringify(encodeLevelMap(layout))));
+    assert.equal(back.level.theme, 'iso');
+    assert.deepEqual([...back.level.slopes], [...level.slopes]);
+    assert.deepEqual(back.level.floorZones, level.floorZones);
+    assert.deepEqual(back.level.stairs, level.stairs);
+  }
+  assert.ok(chasms > 0, 'some rooms are cut by chasms or sunk in pits');
+  assert.ok(stairs > 0, 'some rooms have galleries with stairs down');
+});
+
+test('a slanted wall pushes a body back over its slant (it slides along it); a chasm stops bodies, not shots or sight', async () => {
+  const { slopeClearance } = await load('level/Slopes');
+  const level = new Level(12, 10, 'iso');
+  // A north-west corner cut off on the slant across tiles (2,2) and (3,2): the slant runs from (2,3) up to (4,2).
+  level.setTile(2, 2, createTile(TileType.Wall));
+  level.slopes.set(2 + 2 * 12, { corner: 'nw', major: true });
+  level.slopes.set(3 + 2 * 12, { corner: 'nw', major: false });
+  const minor = level.slopes.get(3 + 2 * 12);
+  assert.ok(level.blocksPoint(3 * TILE_WIDTH + 2, 2 * TILE_WIDTH + 2), 'the corner of wall in the minor tile');
+  assert.ok(!level.blocksPoint(3 * TILE_WIDTH + 20, 2 * TILE_WIDTH + 20), 'the rest of it is floor');
+  assert.ok(level.blocksPoint(2 * TILE_WIDTH + 10, 2 * TILE_WIDTH + 10), 'most of the major tile is wall');
+  assert.ok(!level.blocksPoint(2 * TILE_WIDTH + 30, 2 * TILE_WIDTH + 30), 'but not its far corner');
+  const pos = { x: 3 * TILE_WIDTH + 6, y: 2 * TILE_WIDTH + 6 };
+  level.pushOutOfSlopes(pos, 4, 4);
+  assert.ok(slopeClearance(minor, 3, 2, pos.x - 4, pos.y - 4) > -0.01, 'its top-left corner is back on the slant');
+  assert.ok(pos.x > 3 * TILE_WIDTH + 6 && pos.y > 2 * TILE_WIDTH + 6, 'pushed down and to the right, along the slant\'s normal');
+  assert.ok(!level.getClipBBs(3 * TILE_WIDTH, 2 * TILE_WIDTH, 4, 4).some((b) => b.contains(3 * TILE_WIDTH + 20, 2 * TILE_WIDTH + 20)),
+    'no box over the slope tiles: the slant pushes on its own');
+
+  level.setTile(6, 5, createTile(TileType.Hole));
+  assert.ok(level.isChasm(6, 5));
+  assert.ok(level.getClipBBs(6 * TILE_WIDTH + 16, 4 * TILE_WIDTH + 16, 4, 4).some((b) => b.contains(6 * TILE_WIDTH + 16, 5 * TILE_WIDTH + 16)),
+    'a chasm is a box nobody walks into');
+  assert.ok(!level.blocksPoint(6 * TILE_WIDTH + 16, 5 * TILE_WIDTH + 16), 'shots fly over it');
+  assert.ok(level.checkLineOfSight(5 * TILE_WIDTH + 16, 5 * TILE_WIDTH + 16, 8 * TILE_WIDTH + 16, 5 * TILE_WIDTH + 16), 'and sight crosses it');
+  assert.ok(!level.canHold(6 * TILE_WIDTH + 16, 5 * TILE_WIDTH + 16), 'nothing is set down in it');
+  assert.equal(level.wallSink, 6, 'feet reach only just onto a south rim');
+});
+
+test('the console\'s /dungeon builds the level as the isometric castle too', async () => {
+  const { runCommand } = await load('game/Console');
+  const asked = [];
+  runCommand('/dungeon iso', { player: playerAt(2, 2), allowed: true, rebuild: (theme) => asked.push(theme) });
+  assert.deepEqual(asked, ['iso']);
+});
+
 test('rooms are not all rectangles: some lose a corner to the wall', () => {
   let cut = 0;
   for (const [seed, theme] of [[11, 'catacomb'], [22, 'catacomb'], [33, 'castle'], [44, 'castle']]) {

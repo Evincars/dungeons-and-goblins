@@ -18,6 +18,20 @@ export const PROP_IMAGES = {
   light_b_1: '/castle/lightB01.png',
   light_b_2: '/castle/lightB02.png',
   light_b_3: '/castle/lightB03.png',
+  // The isometric castle (/castle-izometric): its decor (crystal braziers, lecterns, books, pots), its tileset (for the
+  // columns), its floors' sheet (moss, the plates columns stand on), its stains, and its candles, one file per frame.
+  iso_decor: '/castle-izometric/decorative.png',
+  iso_main: '/castle-izometric/mainlevbuild1.png',
+  iso_ground: '/castle-izometric/mainlevbuild2.png',
+  iso_stains: '/castle-izometric/mainlevbuild3.png',
+  iso_candle_1: '/castle-izometric/anim/candle-01.png',
+  iso_candle_2: '/castle-izometric/anim/candle-02.png',
+  iso_candle_3: '/castle-izometric/anim/candle-03.png',
+  iso_candle_4: '/castle-izometric/anim/candle-04.png',
+  iso_candles_1: '/castle-izometric/anim/candles-01.png',
+  iso_candles_2: '/castle-izometric/anim/candles-02.png',
+  iso_candles_3: '/castle-izometric/anim/candles-03.png',
+  iso_candles_4: '/castle-izometric/anim/candles-04.png',
   wall_decor: '/objects-assets/Other_objects.png',
   supplies:   '/objects-assets/supplies_objects.png',
   pedestals:  '/objects-assets/pedestals.png',
@@ -124,6 +138,20 @@ const CANDLE_FRAME_TICKS = 7;
 const LIGHT_A = ['light_a_1', 'light_a_2', 'light_a_3'] as const;
 const LIGHT_B = ['light_b_1', 'light_b_2', 'light_b_3'] as const;
 const LIGHT_FRAME_TICKS = 8;
+/** The isometric castle's candles: a single one (8×16) and a cluster (16×24), four frames each. */
+const ISO_CANDLE = ['iso_candle_1', 'iso_candle_2', 'iso_candle_3', 'iso_candle_4'] as const;
+const ISO_CANDLE_CLUSTER = ['iso_candles_1', 'iso_candles_2', 'iso_candles_3', 'iso_candles_4'] as const;
+/** Its crystal braziers: a violet crystal burning cold on a wooden pedestal, lighting the room round it. */
+const BRAZIER_GLOW = 64;
+const ISO_BRAZIER = { image: 'iso_decor', mount: 'floor', solid: true, base: { w: 12, d: 7 }, glow: BRAZIER_GLOW, coolGlow: true } as const;
+/** Its columns: the great square ones, slender ones, round ones and broken stumps. */
+const ISO_COLUMN = { image: 'iso_main', mount: 'floor', solid: true } as const;
+const SQUARE_BASE = { w: 26, d: 14 };
+const SLENDER_BASE = { w: 14, d: 9 };
+const ROUND_BASE = { w: 28, d: 12 };
+/** Things lying flat on its floor: stains, moss and the carved plates its columns stand on. */
+const ISO_STAIN = { image: 'iso_stains', mount: 'floor', flat: true } as const;
+const ISO_MOSS = { image: 'iso_ground', mount: 'floor', flat: true } as const;
 /** Cave plants: four frames 32px apart, each row 64px below the last plant's. */
 const PLANT_FRAMES = 4;
 const PLANT_STEP = 32;
@@ -220,6 +248,76 @@ export const PROPS = {
   column_slender_low: { image: 'mainlev', rect: { x: 672, y: 144, w: 16, h: 48 }, mount: 'floor', solid: true, base: { w: 14, d: 10 } },
   chain_short:       { image: 'decorative', rect: { x: 132, y: 16, w: 7, h: 22 }, mount: 'wall', weight: 1.5 },
   hook_bracket:      { image: 'decorative', rect: { x: 32, y: 20, w: 16, h: 12 }, mount: 'wall', weight: 1 },
+
+  // ── The isometric castle (/castle-izometric) ──
+  iso_brazier:   { ...ISO_BRAZIER, rect: { x: 16, y: 9, w: 16, h: 44 } },
+  iso_brazier2:  { ...ISO_BRAZIER, rect: { x: 55, y: 9, w: 18, h: 43 } },
+  iso_brazier3:  { ...ISO_BRAZIER, rect: { x: 87, y: 9, w: 18, h: 43 } },
+  iso_brazier4:  { ...ISO_BRAZIER, rect: { x: 128, y: 9, w: 16, h: 44 } },
+  iso_brazier5:  { ...ISO_BRAZIER, rect: { x: 160, y: 9, w: 16, h: 44 } },
+  iso_lectern:   { image: 'iso_decor', rect: { x: 19, y: 81, w: 22, h: 38 }, mount: 'floor', solid: true, base: { w: 18, d: 8 } },
+  iso_lectern2:  { image: 'iso_decor', rect: { x: 52, y: 78, w: 22, h: 41 }, mount: 'floor', solid: true, base: { w: 18, d: 8 } },
+  iso_lectern3:  { image: 'iso_decor', rect: { x: 84, y: 78, w: 22, h: 41 }, mount: 'floor', solid: true, base: { w: 18, d: 8 } },
+  iso_lectern4:  { image: 'iso_decor', rect: { x: 117, y: 81, w: 22, h: 38 }, mount: 'floor', solid: true, base: { w: 18, d: 8 } },
+  iso_books:     { image: 'iso_decor', rect: { x: 197, y: 58, w: 17, h: 29 }, mount: 'floor', solid: true },
+  iso_books2:    { image: 'iso_decor', rect: { x: 165, y: 108, w: 17, h: 29 }, mount: 'floor', solid: true },
+  iso_book:      { image: 'iso_decor', rect: { x: 165, y: 70, w: 16, h: 17 }, mount: 'floor' },
+  iso_book2:     { image: 'iso_decor', rect: { x: 198, y: 120, w: 16, h: 17 }, mount: 'floor' },
+  iso_wreck:     { image: 'iso_decor', rect: { x: 16, y: 132, w: 48, h: 25 }, mount: 'floor' },
+  iso_wreck2:    { image: 'iso_decor', rect: { x: 86, y: 132, w: 36, h: 24 }, mount: 'floor' },
+  iso_wreck3:    { image: 'iso_decor', rect: { x: 24, y: 164, w: 36, h: 24 }, mount: 'floor' },
+  iso_wreck4:    { image: 'iso_decor', rect: { x: 80, y: 164, w: 48, h: 25 }, mount: 'floor' },
+  iso_pot_red:      { image: 'iso_decor', rect: { x: 35, y: 225, w: 11, h: 13 }, mount: 'floor', solid: true },
+  iso_pot_green:    { image: 'iso_decor', rect: { x: 83, y: 225, w: 11, h: 13 }, mount: 'floor', solid: true },
+  iso_pot_violet:   { image: 'iso_decor', rect: { x: 131, y: 225, w: 11, h: 13 }, mount: 'floor', solid: true },
+  iso_jar_red:      { image: 'iso_decor', rect: { x: 21, y: 226, w: 7, h: 11 }, mount: 'floor' },
+  iso_jar_green:    { image: 'iso_decor', rect: { x: 69, y: 226, w: 7, h: 11 }, mount: 'floor' },
+  iso_jar_violet:   { image: 'iso_decor', rect: { x: 117, y: 226, w: 7, h: 11 }, mount: 'floor' },
+  iso_bowl_red:     { image: 'iso_decor', rect: { x: 51, y: 228, w: 9, h: 9 }, mount: 'floor' },
+  iso_bowl_green:   { image: 'iso_decor', rect: { x: 99, y: 228, w: 9, h: 9 }, mount: 'floor' },
+  iso_bowl_violet:  { image: 'iso_decor', rect: { x: 147, y: 228, w: 9, h: 9 }, mount: 'floor' },
+  iso_candle: {
+    image: 'iso_candle_1', rect: { x: 0, y: 0, w: 8, h: 16 }, mount: 'floor', glow: 38,
+    frames: framesFromImages(ISO_CANDLE, 8, 16), frameTime: CANDLE_FRAME_TICKS,
+  },
+  iso_candles: {
+    image: 'iso_candles_1', rect: { x: 0, y: 0, w: 16, h: 24 }, mount: 'floor', glow: 48,
+    frames: framesFromImages(ISO_CANDLE_CLUSTER, 16, 24), frameTime: CANDLE_FRAME_TICKS,
+  },
+  iso_column:         { ...ISO_COLUMN, rect: { x: 848, y: 783, w: 32, h: 113 }, base: SQUARE_BASE },
+  iso_column2:        { ...ISO_COLUMN, rect: { x: 976, y: 783, w: 33, h: 113 }, base: SQUARE_BASE },
+  iso_column_slender: { ...ISO_COLUMN, rect: { x: 784, y: 784, w: 16, h: 94 }, base: SLENDER_BASE },
+  iso_column_slender2: { ...ISO_COLUMN, rect: { x: 817, y: 784, w: 16, h: 94 }, base: SLENDER_BASE },
+  iso_column_slender3: { ...ISO_COLUMN, rect: { x: 903, y: 784, w: 16, h: 94 }, base: SLENDER_BASE },
+  iso_column_slender4: { ...ISO_COLUMN, rect: { x: 936, y: 784, w: 16, h: 94 }, base: SLENDER_BASE },
+  iso_column_round:   { ...ISO_COLUMN, rect: { x: 743, y: 928, w: 32, h: 74 }, base: ROUND_BASE },
+  iso_column_round2:  { ...ISO_COLUMN, rect: { x: 800, y: 928, w: 32, h: 74 }, base: ROUND_BASE },
+  iso_column_broken:  { ...ISO_COLUMN, rect: { x: 848, y: 912, w: 32, h: 64 }, base: SQUARE_BASE },
+  iso_column_broken2: { ...ISO_COLUMN, rect: { x: 976, y: 912, w: 32, h: 64 }, base: SQUARE_BASE },
+  iso_column_cross:   { ...ISO_COLUMN, rect: { x: 912, y: 912, w: 32, h: 102 }, base: SQUARE_BASE },
+  iso_plate:       { ...ISO_MOSS, rect: { x: 288, y: 208, w: 32, h: 32 } },
+  iso_plate2:      { ...ISO_MOSS, rect: { x: 336, y: 208, w: 32, h: 32 } },
+  iso_stain_brown:   { ...ISO_STAIN, rect: { x: 13, y: 16, w: 136, h: 127 } },
+  iso_stain_green:   { ...ISO_STAIN, rect: { x: 173, y: 16, w: 136, h: 127 } },
+  iso_stain_violet:  { ...ISO_STAIN, rect: { x: 333, y: 16, w: 136, h: 127 } },
+  iso_stain_brown2:  { ...ISO_STAIN, rect: { x: 16, y: 160, w: 127, h: 136 } },
+  iso_stain_green2:  { ...ISO_STAIN, rect: { x: 176, y: 160, w: 127, h: 136 } },
+  iso_stain_violet2: { ...ISO_STAIN, rect: { x: 336, y: 160, w: 127, h: 136 } },
+  iso_stain_brown3:  { ...ISO_STAIN, rect: { x: 27, y: 379, w: 105, h: 58 } },
+  iso_stain_green3:  { ...ISO_STAIN, rect: { x: 187, y: 379, w: 105, h: 58 } },
+  iso_stain_violet3: { ...ISO_STAIN, rect: { x: 347, y: 379, w: 105, h: 58 } },
+  iso_moss:   { ...ISO_MOSS, rect: { x: 16, y: 800, w: 48, h: 29 } },
+  iso_moss2:  { ...ISO_MOSS, rect: { x: 320, y: 800, w: 48, h: 29 } },
+  iso_moss3:  { ...ISO_MOSS, rect: { x: 96, y: 832, w: 32, h: 27 } },
+  iso_moss4:  { ...ISO_MOSS, rect: { x: 256, y: 832, w: 32, h: 27 } },
+  iso_moss5:  { ...ISO_MOSS, rect: { x: 8, y: 868, w: 61, h: 44 } },
+  iso_moss6:  { ...ISO_MOSS, rect: { x: 315, y: 868, w: 61, h: 44 } },
+  iso_moss7:  { ...ISO_MOSS, rect: { x: 132, y: 894, w: 49, h: 23 } },
+  iso_moss8:  { ...ISO_MOSS, rect: { x: 203, y: 894, w: 49, h: 23 } },
+  iso_moss9:  { ...ISO_MOSS, rect: { x: 59, y: 945, w: 35, h: 30 } },
+  iso_moss10: { ...ISO_MOSS, rect: { x: 290, y: 945, w: 35, h: 30 } },
+  iso_moss_patch:  { ...ISO_MOSS, rect: { x: 19, y: 612, w: 125, h: 160 }, weight: 0.3 },
+  iso_moss_patch2: { ...ISO_MOSS, rect: { x: 208, y: 612, w: 126, h: 160 }, weight: 0.3 },
 
   // ── The castle (/castle): nothing of it is used in the catacombs, nor theirs in it ──
   castle_banner:        { image: 'castle_decor', rect: { x: 16, y: 17, w: 48, h: 46 }, mount: 'wall', weight: 2 },
@@ -616,8 +714,13 @@ export function isCastleProp(kind: PropKind): boolean {
   return image.startsWith('castle_') || image.startsWith('light_');
 }
 
+/** Whether a prop belongs to the isometric castle (drawn from /castle-izometric). */
+export function isIsoProp(kind: PropKind): boolean {
+  return PROPS[kind].image.startsWith('iso_');
+}
+
 /** Everything hung on north-wall faces: the catacomb fixtures and the trophies, armour and banners. */
-export const HANGINGS: PropKind[] = keysOf(PROPS).filter((kind) => PROPS[kind].mount === 'wall' && !isCastleProp(kind));
+export const HANGINGS: PropKind[] = keysOf(PROPS).filter((kind) => PROPS[kind].mount === 'wall' && !isCastleProp(kind) && !isIsoProp(kind));
 /** The castle's banners, hung on its walls. */
 export const CASTLE_BANNERS: PropKind[] = propsStarting('castle_banner');
 export const CASTLE_BONES: PropKind[] = propsStarting('castle_bone', 'castle_skeleton', 'castle_skull', 'castle_ribs', 'castle_jaw');
@@ -648,3 +751,19 @@ export const CAVE_STONES: PropKind[] = propsStarting('cave_stone_');
 export const CAVE_PLANTS: PropKind[] = propsStarting('cave_plant_', 'cave_grass_');
 /** The big glowing crystals, found very rarely in a room. */
 export const GEM_CRYSTALS: PropKind[] = propsStarting('gem_crystal_');
+
+// ── The isometric castle ──────────────────────────────────────────────────────
+export const ISO_BRAZIERS: PropKind[] = propsStarting('iso_brazier');
+export const ISO_LECTERNS: PropKind[] = propsStarting('iso_lectern');
+export const ISO_BOOKS: PropKind[] = propsStarting('iso_book');
+export const ISO_WRECKS: PropKind[] = propsStarting('iso_wreck');
+export const ISO_POTS: PropKind[] = propsStarting('iso_pot_', 'iso_jar_', 'iso_bowl_');
+export const ISO_CANDLES: PropKind[] = ['iso_candle', 'iso_candles'];
+/** The great square columns (and the cross-topped one), which hold up a hall; slender and round ones line it. */
+export const ISO_SQUARE_COLUMNS: PropKind[] = ['iso_column', 'iso_column2', 'iso_column_cross'];
+export const ISO_SLENDER_COLUMNS: PropKind[] = propsStarting('iso_column_slender');
+export const ISO_ROUND_COLUMNS: PropKind[] = propsStarting('iso_column_round');
+export const ISO_BROKEN_COLUMNS: PropKind[] = propsStarting('iso_column_broken');
+export const ISO_PLATES: PropKind[] = propsStarting('iso_plate');
+export const ISO_STAINS: PropKind[] = propsStarting('iso_stain_');
+export const ISO_MOSS_BITS: PropKind[] = propsStarting('iso_moss');

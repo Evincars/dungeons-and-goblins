@@ -92,6 +92,9 @@ export const TEMPERAMENT = {
   goblin_warrior: { direct: 1.3, flank: 0.7, support: 1.1 },
   ghost_wizard:   { direct: 0.8, flank: 1.5, support: 0.9 },
   evil_wizard:    { direct: 1.4, flank: 0.6, support: 1.2 },
+  // A shade drifts round to strike from the side; a grick rears up in the way.
+  shade:          { direct: 0.8, flank: 1.5, support: 0.8 },
+  grick:          { direct: 1.3, flank: 0.6, support: 1.0 },
 } as const satisfies Record<MobType, Record<TacticRole, number>>;
 
 /** The largest temperament for a role, which bounds what its option can ever score. */

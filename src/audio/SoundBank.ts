@@ -258,6 +258,8 @@ export const MOB_CRIES = {
   troll: { ...cries('troll'), step: 'troll_step' },
   ghost_wizard: cries('wizard'),
   evil_wizard: cries('wizard'),
+  shade: cries('wizard'),
+  grick: cries('troll'),
 } as const satisfies Record<MobType, MobCries>;
 
 /** Enemies whose fight has the boss music, and whose fall the fanfare for a foe felled. */

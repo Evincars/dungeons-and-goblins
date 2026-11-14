@@ -201,6 +201,8 @@ export function isPlayerSlot(value: unknown): value is PlayerSlot {
 /** The goblin_* kinds are the three goblins drawn in /other-orcs, the wizards have art of their own; the rest share the old orc art. */
 export const MOB_TYPES = [
   'goblin', 'skeleton', 'orc', 'troll', 'goblin_grunt', 'goblin_rogue', 'goblin_warrior', 'ghost_wizard', 'evil_wizard',
+  // The isometric castle's own (characters/IsoFoes.ts).
+  'shade', 'grick',
 ] as const;
 export type MobType = (typeof MOB_TYPES)[number];
 

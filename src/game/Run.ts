@@ -30,7 +30,7 @@ type RunState = {
   over: boolean;
   /** Seed of the next level, picked (and its map generated) as soon as the exit is pulled. */
   nextSeed: number | null;
-  /** What the levels are built as (catacombs, or a castle: the console's /dungeon switches it for testing). */
+  /** What the levels are built as (catacombs, a castle or the isometric castle: the console's /dungeon switches it for testing). */
   theme: LevelTheme;
 };
 

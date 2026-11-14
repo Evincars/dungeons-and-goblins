@@ -9,6 +9,8 @@ import {
 } from './CastleTiles';
 import type { CastleFaceStyle } from './CastleTiles';
 import type { Pit } from './PitShapes';
+import { buildIsoTerrain, isoFloorSource } from './IsoTerrain';
+import { ISO_FLOORS } from './IsoTiles';
 
 /**
  * One textured quad: draw tileset rect (sx,sy,w,h) at world (dx,dy). Pieces with
@@ -614,10 +616,13 @@ export function groundAt(level: Level, tx: number, ty: number): Ground | null {
     const floor = castleFloor(level, tx, ty, noise(tx, ty, FLOOR_NOISE_SCALE));
     return { ...floor, sheet: CASTLE_TILESET };
   }
+  // The isometric castle's tones meet at hard edges: all of it is one kind of ground, so nothing blends.
+  if (level.theme === 'iso') return { kind: 'stone', ...isoFloorSource(level, tx, ty), sheet: ISO_FLOORS };
   return caveGround(level, tx, ty) ?? stoneGround(level, t, tx, ty);
 }
 
 export function buildTerrainPieces(level: Level): TerrainPiece[] {
+  if (level.theme === 'iso') return buildIsoTerrain(level);
   return new TerrainBuilder(level).build();
 }
 

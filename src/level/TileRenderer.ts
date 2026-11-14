@@ -7,6 +7,7 @@ import { StaticTileLayer } from '../render/StaticTileLayer';
 import { groundBlends } from './GroundBlend';
 import { blendTexture, commitBlendAtlas } from '../render/BlendAtlas';
 import { tilesetKey } from './Theme';
+import { CAVE_GROUND } from './TerrainAutotile';
 
 export type LevelView = {
   /** Floors, faces and wall tops that lie beneath every entity. */
@@ -17,6 +18,16 @@ export type LevelView = {
    */
   occluders: Container[];
 };
+
+/** The flat batches pieces go to, bottom up. */
+type FlatLayers = { cave: StaticTileLayer; floors: StaticTileLayer; base: StaticTileLayer };
+
+/** A piece's batch: cave ground at the very bottom, then floors, then the walls and overlays (or their depth's layer). */
+function pieceLayer(p: TerrainPiece, flat: FlatLayers, byZ: Map<number, StaticTileLayer>): StaticTileLayer {
+  if (p.sheet === CAVE_GROUND) return flat.cave;
+  if (p.floor) return flat.floors;
+  return layerFor(p, flat.base, byZ);
+}
 
 /** The batch a piece belongs to: the flat base, or the occluder layer for its depth (made on first use). */
 function layerFor(piece: TerrainPiece, base: StaticTileLayer, byZ: Map<number, StaticTileLayer>): StaticTileLayer {
@@ -44,10 +55,9 @@ export function buildLevelView(level: Level): LevelView {
   const byZ = new Map<number, StaticTileLayer>();
   // Walls and overlays come from the level's own tileset: the catacombs' or the castle's.
   const tileset = tilesetKey(level.theme);
-  for (const p of buildTerrainPieces(level)) {
-    const layer = p.sheet ? cave : p.floor ? floors : layerFor(p, base, byZ);
-    layer.addTile(tilesetRect(p.sx, p.sy, p.w, p.h, p.sheet ?? tileset), p.dx, p.dy);
-  }
+  const flat = { cave, floors, base };
+  // Walls, overlays and the isometric castle's chasm rims may come from another sheet than the level's own.
+  for (const p of buildTerrainPieces(level)) pieceLayer(p, flat, byZ).addTile(tilesetRect(p.sx, p.sy, p.w, p.h, p.sheet ?? tileset), p.dx, p.dy);
   for (const blend of groundBlends(level)) blends.addTile(blendTexture(blend), blend.dx, blend.dy);
   commitBlendAtlas();
   const container = new Container();

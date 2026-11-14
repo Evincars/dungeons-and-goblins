@@ -112,7 +112,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - Tuning tables live together: sword and spell in `src/entities/WeaponStats.ts`; mobs in
   `src/entities/MobFactory.ts` (`MOB_CONFIGS`); gold from kills and from searching openable props (`KILL_GOLD`,
   `STASH_FINDS`) in `src/entities/LootFactory.ts`, and which props open in `src/entities/DungeonFactory.ts`; dungeon generation in
-  `src/level/generators/DungeonConfig.ts`; enemy AI knobs (sight, squad sizes, flanking, trail
+  `src/level/generators/DungeonConfig.ts` (the isometric castle's room dressing in `src/level/generators/IsoDresser.ts`); enemy AI knobs (sight, squad sizes, flanking, trail
   following) in `src/ai/constants.ts`; the D&D rules tables (SRD weapons and armour) in `src/rules/WeaponTable.ts`
   and `src/rules/ArmorTable.ts`; hero classes (abilities, hit points, proficiencies, features) in
   `src/data/classes.json`; enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`;
@@ -174,7 +174,15 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   ornate panels and gothic windows (candelabras beside them) as `wallDecor`, the great arch over passages, its legs on the
   walls beside them, stairs across north–south passages, its floors, pools `level.pools` and 4×2 spike pits), its decor
   are the `castle_*` props (flags hang on square columns, mount `front`), and wall candles and candelabras (lightB,
-  lightA) light it in place of torches and candles; its safe and exit rooms keep their own design, soft edges between kinds of ground (`GroundBlend.ts`, baked
+  lightA) light it in place of torches and candles; its safe and exit rooms keep their own design. The third theme, `iso`
+  (`/dungeon iso`), is the isometric castle of `public/castle-izometric` alone: its art is mapped in `IsoTiles.ts` and laid
+  by `IsoTerrain.ts` (a wall with floor below shows its face two tiles tall; north corners cut off on the 2:1 slant show
+  their face on the slant, south ones a rim; every other edge of the dark is rimmed, chasms more darkly, with columns sinking
+  into the dark under the rims), its rooms dressed by `generators/IsoDresser.ts` (slanted corners `level.slopes`, galleries
+  raised over a face with stairs down it `level.stairs`, chasms and pits of `Hole` tiles that belong to no pit — nobody steps
+  in, sight and shots cross — floor tones `level.floorZones`, decor set into the faces as `wallDecor`, crystal braziers and
+  candles for light, its own foes `shade` and `grick`, `characters/IsoFoes.ts`); slanted walls push bodies back over the slant
+  (`Slopes.ts`, `Level.pushOutOfSlopes`) rather than blocking whole tiles. Soft edges between kinds of ground (`GroundBlend.ts`, baked
   into one atlas by `render/BlendAtlas.ts`), fog of war (`FogRenderer.ts`: per-corner fading buffer, blurred, with
   drifting mist), lighting, and `LevelMap.ts` (a generated level as validated JSON, gzipped to send or save).
 - Animated decor stored one frame per file (`public/catacombs` torches and candles) is padded to one height with the base

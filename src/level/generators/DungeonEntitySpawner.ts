@@ -28,20 +28,26 @@ const ENEMY_MIX = [
   { type: 'ghost_wizard', weight: 0.8 },
   { type: 'evil_wizard', weight: 0.4 },
 ] as const satisfies ReadonlyArray<{ type: MobType; weight: number }>;
-const ENEMY_MIX_TOTAL = ENEMY_MIX.reduce((sum, e) => sum + e.weight, 0);
+/** The isometric castle is haunted by its own: shades drifting about, and now and then a grick. */
+const ISO_ENEMY_MIX = [
+  { type: 'shade', weight: 3 },
+  { type: 'grick', weight: 1 },
+] as const satisfies ReadonlyArray<{ type: MobType; weight: number }>;
+
+type EnemyMix = ReadonlyArray<{ type: MobType; weight: number }>;
 /** Chance a dungeon room holds a chest. */
 const CHEST_CHANCE = 0.4;
 
 type FloorSpot = { tx: number; ty: number; x: number; y: number };
 
-/** A kind of enemy drawn from {@link ENEMY_MIX} by weight. */
-function randomEnemy(): MobType {
-  let roll = Math.random() * ENEMY_MIX_TOTAL;
-  for (const entry of ENEMY_MIX) {
+/** A kind of enemy drawn from a mix by weight. */
+function randomEnemy(mix: EnemyMix): MobType {
+  let roll = Math.random() * mix.reduce((sum, e) => sum + e.weight, 0);
+  for (const entry of mix) {
     roll -= entry.weight;
     if (roll < 0) return entry.type;
   }
-  return ENEMY_MIX[0].type;
+  return mix[0].type;
 }
 
 /** Walkable floor tiles inside a room (pits and pillar blocks excluded). */
@@ -61,9 +67,10 @@ function populateRoom(level: Level, room: RoomData, cfg: DungeonConfig): void {
   const pick = () => floors.splice(Math.floor(Math.random() * floors.length), 1)[0];
 
   const enemyCount = Math.max(1, Math.round(floors.length * cfg.enemyDensity / 100));
+  const mix = level.theme === 'iso' ? ISO_ENEMY_MIX : ENEMY_MIX;
   for (let i = 0; i < enemyCount && floors.length; i++) {
     const t = pick();
-    createMob(level, randomEnemy(), t.x, t.y);
+    createMob(level, randomEnemy(mix), t.x, t.y);
   }
 
   if (Math.random() < CHEST_CHANCE && floors.length) {

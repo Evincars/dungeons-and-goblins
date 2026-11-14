@@ -7,6 +7,8 @@ import type { BlockRect } from './Props';
 import { insidePit, pitTileBounds } from './PitShapes';
 import type { Pit } from './PitShapes';
 import type { LevelTheme } from './Theme';
+import { slopeBlocks, slopeClearance, slopePush, slopeSupport } from './Slopes';
+import type { Slope } from './Slopes';
 
 export type SpawnPoint = { x: number; y: number };
 
@@ -16,6 +18,11 @@ export type SpawnPoint = { x: number; y: number };
  * behind it with only their upper body showing, as in Catacomb Snatch.
  */
 export const WALL_SINK = 26;
+/**
+ * In the isometric castle a wall south of the floor is only the floor's edge, a rim over the dark (its art has no
+ * parapet to stand behind): feet reach just onto it.
+ */
+const ISO_WALL_SINK = 6;
 
 /** Floor tiles come in this many image variants. */
 const FLOOR_VARIANTS = 4;
@@ -25,6 +32,11 @@ export const WALL_DECORS = [
   'niche0', 'niche1',
   // A castle's decorated stretches of face (level/CastleTiles.ts), each tile numbered from the stretch's left.
   'door0', 'door1', 'glass0', 'glass1', 'ornate0', 'ornate1', 'ornate2', 'ornate3', 'gothic0', 'gothic1', 'gothic2',
+  // The isometric castle's (level/IsoTiles.ts ISO_DECOR), each keyed by its first tile: the face's foot tile on a
+  // straight face, the slope tile of its first column on a slanted one.
+  'isoWindow', 'isoWindow2', 'isoStatue', 'isoStatue2', 'isoShelf', 'isoCrystal', 'isoDoor', 'isoAlcove',
+  'isoWindowNW', 'isoStatueNW', 'isoMirrorNW', 'isoCrystalNW', 'isoGroupNW',
+  'isoWindowNE', 'isoStatueNE', 'isoMirrorNE', 'isoCrystalNE', 'isoGroupNE',
 ] as const;
 export type WallDecor = (typeof WALL_DECORS)[number];
 
@@ -38,10 +50,23 @@ export const POOL_H = 3;
 export const POOL_KINDS = ['water', 'sludge'] as const;
 export type PoolKind = (typeof POOL_KINDS)[number];
 
+/** How many floor tones the isometric castle has (IsoTiles.ts: dark slate, oxblood, teal). */
+export const FLOOR_TONES = 3;
+/** A stretch of the isometric castle's floor laid in one tone (tile box; later zones lie over earlier ones). */
+export type FloorZone = { x: number; y: number; w: number; h: number; tone: number };
+/** Stairs down a gallery's face: two tiles wide, two (the face) tall, from this top-left tile. */
+export const STAIRS_W = 2;
+export const STAIRS_H = 2;
+
 /** A tile box as forEachTile's arguments. */
 function boundsArgs(b: { x0: number; y0: number; x1: number; y1: number }): [number, number, number, number] {
   return [b.x0, b.y0, b.x1, b.y1];
 }
+
+/** Both sides of a body's box, for walking its corners. */
+const SIDES = [-1, 1] as const;
+/** Scratch point for the slope pushes (an object pool of one). */
+const slopeScratch = { x: 0, y: 0 };
 
 function isWallType(tile: TileData | null): boolean {
   return tile?.type === TileType.Wall || tile?.type === TileType.BreakableWall;
@@ -73,6 +98,14 @@ export class Level {
   readonly grates: Array<{ x: number; y: number }> = [];
   /** A castle's pools (water, or green sludge): top-left of their POOL_W×POOL_H obstacle tiles. */
   readonly pools: Array<{ x: number; y: number; kind: PoolKind }> = [];
+  /** The isometric castle's slanted walls: the tiles their slants cross, by tile index (Slopes.ts). */
+  readonly slopes = new Map<number, Slope>();
+  /** The isometric castle's floor tones, laid in order (the floor outside every zone is tone 0). */
+  readonly floorZones: FloorZone[] = [];
+  /** Top-left tiles of flights of stairs down the face of a raised gallery (STAIRS_W × STAIRS_H tiles of floor). */
+  readonly stairs: Array<{ x: number; y: number }> = [];
+  /** How far feet may step into a wall tile with floor north of it (WALL_SINK, or the isometric castle's rim). */
+  readonly wallSink: number;
 
   readonly seen: boolean[];
   /** Bumped whenever a corner is seen for the first time, so the fog redraws only when it changed. */
@@ -93,6 +126,7 @@ export class Level {
       this.tileStacks[i] = [createTile(TileType.Floor, Math.floor(Math.random() * FLOOR_VARIANTS))];
     }
     this.seen = new Array((width + 1) * (height + 1)).fill(false);
+    this.wallSink = theme === 'iso' ? ISO_WALL_SINK : WALL_SINK;
   }
 
   /** Packed index of a tile, as the tile graph numbers it. */
@@ -144,6 +178,48 @@ export class Level {
   overPit(worldX: number, worldY: number): boolean {
     if (this.pitTiles.has(this.tileIndexAt(worldX, worldY))) return this.pitAt(worldX, worldY) !== null;
     return this.getTileAt(worldX, worldY)?.type === TileType.Hole;
+  }
+
+  /**
+   * Whether a tile is part of a chasm: a Hole that belongs to no pit. Nobody can step into a chasm (it is no trap to
+   * fall in, only a gap), but sight, spells and arrows cross it.
+   */
+  isChasm(tx: number, ty: number): boolean {
+    return this.getTile(tx, ty)?.type === TileType.Hole && !this.hasPit(tx, ty);
+  }
+
+  /** Whether a world point lies on the wall's side of a slanted wall (Slopes.ts); false off the slants. */
+  inSlopeWall(worldX: number, worldY: number): boolean {
+    const tx = Math.floor(worldX / TILE_WIDTH);
+    const ty = Math.floor(worldY / TILE_HEIGHT);
+    const slope = this.slopes.get(tx + ty * this.width);
+    return !!slope && slopeBlocks(slope, tx, ty, worldX, worldY);
+  }
+
+  /**
+   * Pushes a body (its box `r` round `pos`) back out of any slanted wall it has moved into, straight back over the
+   * slant, so it slides along it. Each of its box's corners is checked against the slope tile it lies in.
+   */
+  pushOutOfSlopes(pos: { x: number; y: number }, rx: number, ry: number): void {
+    if (this.slopes.size === 0) return;
+    for (const sx of SIDES) {
+      for (const sy of SIDES) this.pushCornerOut(pos, rx, ry, pos.x + sx * rx, pos.y + sy * ry);
+    }
+  }
+
+  /** One corner of a body's box: if it lies in a slope tile whose wall faces it and is past the slant, back it out. */
+  private pushCornerOut(pos: { x: number; y: number }, rx: number, ry: number, cornerX: number, cornerY: number): void {
+    const tx = Math.floor(cornerX / TILE_WIDTH);
+    const ty = Math.floor(cornerY / TILE_HEIGHT);
+    const slope = this.slopes.get(tx + ty * this.width);
+    if (!slope) return;
+    slopeSupport(slope, pos.x, pos.y, rx, ry, slopeScratch);
+    if (slopeScratch.x !== cornerX || slopeScratch.y !== cornerY) return;
+    const clearance = slopeClearance(slope, tx, ty, cornerX, cornerY);
+    if (clearance >= 0) return;
+    slopePush(slope, -clearance, slopeScratch);
+    pos.x += slopeScratch.x;
+    pos.y += slopeScratch.y;
   }
 
   markSafeZone(tx: number, ty: number): void {
@@ -244,7 +320,7 @@ export class Level {
   /** Whether something set down here lies on the floor: open ground that is not a pit (a pit swallows it). */
   canHold(worldX: number, worldY: number): boolean {
     const tile = this.getTileAt(worldX, worldY);
-    return !!tile && tile.passable && tile.type !== TileType.Hole && !this.overPit(worldX, worldY);
+    return !!tile && tile.passable && tile.type !== TileType.Hole && !this.overPit(worldX, worldY) && !this.inSlopeWall(worldX, worldY);
   }
 
   /**
@@ -257,12 +333,14 @@ export class Level {
     const ty = Math.floor(worldY / TILE_HEIGHT);
     const tile = this.getTile(tx, ty);
     if (!tile) return true;
+    const slope = this.slopes.get(tx + ty * this.width);
+    if (slope) return slopeBlocks(slope, tx, ty, worldX, worldY);
     if (tile.passable) return false;
     const inX = worldX - tx * TILE_WIDTH;
     const inY = worldY - ty * TILE_HEIGHT;
     const part = tile.type === TileType.Obstacle ? this.blockBoxes.get(tx + ty * this.width) : undefined;
     if (part) return inX >= part.x0 && inX < part.x1 && inY >= part.y0 && inY < part.y1;
-    const sink = isWallType(tile) && this.getTile(tx, ty - 1)?.passable ? WALL_SINK : 0;
+    const sink = isWallType(tile) && this.getTile(tx, ty - 1)?.passable ? this.wallSink : 0;
     return inY >= sink;
   }
 
@@ -297,6 +375,12 @@ export class Level {
    */
   private readonly addTileClip = (tx: number, ty: number): void => {
     const tile = this.getTile(tx, ty);
+    // Slanted walls push bodies back themselves (pushOutOfSlopes); a chasm is a whole tile nobody steps into.
+    if (this.slopes.has(tx + ty * this.width)) return;
+    if (this.isChasm(tx, ty)) {
+      this.clipBoxes.push(this.clipPool.between(tx * TILE_WIDTH, ty * TILE_HEIGHT, (tx + 1) * TILE_WIDTH, (ty + 1) * TILE_HEIGHT));
+      return;
+    }
     if (tile && tile.passable) return;
     const part = tile?.type === TileType.Obstacle ? this.blockBoxes.get(tx + ty * this.width) : undefined;
     if (part) {
@@ -305,7 +389,7 @@ export class Level {
       }
       return;
     }
-    const sink = isWallType(tile) && this.getTile(tx, ty - 1)?.passable ? WALL_SINK : 0;
+    const sink = isWallType(tile) && this.getTile(tx, ty - 1)?.passable ? this.wallSink : 0;
     this.clipBoxes.push(this.clipPool.between(
       tx * TILE_WIDTH, ty * TILE_HEIGHT + sink,
       (tx + 1) * TILE_WIDTH, (ty + 1) * TILE_HEIGHT,

@@ -182,6 +182,9 @@ const UI_SHEETS = [
   // Cave tileset: its ground tiles floor the cave halls (see level/TerrainAutotile.ts)
   new SpriteSheet('cave_ground', '/caves/MainLev2.0.png'),
   new SpriteSheet('castle_tileset', '/castle/mainlevbuild.png'),
+  // The isometric castle (level/IsoTiles.ts): its walls, faces, rims, stairs and wall decor; its floors and chasms.
+  new SpriteSheet('iso_walls', '/castle-izometric/mainlevbuild1.png'),
+  new SpriteSheet('iso_floors', '/castle-izometric/mainlevbuild2.png'),
 
   // Torch frames (16×16 each) — composited into a single 'torch' strip by the loader
   new SpriteSheet('torch_1', '/catacombs/torch_1.png'),

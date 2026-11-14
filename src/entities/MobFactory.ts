@@ -5,6 +5,7 @@ import { characterComponents, characterDef, groundOffset, headAboveCenter } from
 import { ORC } from '../characters/Orc';
 import { GOBLIN_GRUNT, GOBLIN_ROGUE, GOBLIN_WARRIOR } from '../characters/Goblins';
 import { EVIL_WIZARD, GHOST_WIZARD } from '../characters/Wizards';
+import { GRICK, SHADE } from '../characters/IsoFoes';
 import { NEVER_TICK, SENSE_TICKS } from '../ai/constants';
 import { MONSTERS, randomMonsterWeapon } from '../rules/Monsters';
 
@@ -71,6 +72,14 @@ export const MOB_CONFIGS = {
   evil_wizard: {
     health: STATS.evil_wizard.health, deathPoints: STATS.evil_wizard.deathPoints, character: EVIL_WIZARD.id, speed: 0.5, limp: 3,
     radius: { x: 11, y: 11 }, yOffset: groundOffset(EVIL_WIZARD), scale: EVIL_WIZARD.scale, minimapColor: 0xff2060,
+  },
+  shade: {
+    health: STATS.shade.health, deathPoints: STATS.shade.deathPoints, character: SHADE.id, speed: 0.8, limp: 0,
+    radius: { x: 9, y: 9 }, yOffset: groundOffset(SHADE), scale: SHADE.scale, minimapColor: 0x40c0b0,
+  },
+  grick: {
+    health: STATS.grick.health, deathPoints: STATS.grick.deathPoints, character: GRICK.id, speed: 0.55, limp: 3,
+    radius: { x: 10, y: 9 }, yOffset: groundOffset(GRICK), scale: GRICK.scale, minimapColor: 0xff70a0,
   },
 } as const satisfies Record<MobType, MobConfig>;
 

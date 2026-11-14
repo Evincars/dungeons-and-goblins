@@ -234,6 +234,8 @@
   "mob.goblin_warrior": "Goblin boss",
   "mob.ghost_wizard": "Specter",
   "mob.evil_wizard": "Mage",
+  "mob.shade": "Shade",
+  "mob.grick": "Grick",
 
   "proficiency.title": "{class} proficiencies",
 

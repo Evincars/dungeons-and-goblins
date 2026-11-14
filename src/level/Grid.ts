@@ -29,3 +29,10 @@ export function someTile(x0: number, y0: number, x1: number, y1: number, test: (
   for (let i = 0; i < count; i++) if (test(x0 + (i % width), y0 + Math.floor(i / width))) return true;
   return false;
 }
+
+/** A well-mixed 32-bit hash of a tile position: picks art variants that stay put however often the map is drawn. */
+export function tileHash(x: number, y: number): number {
+  let h = Math.imul(x, 374761393) ^ Math.imul(y, 668265263);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return (h ^ (h >>> 16)) >>> 0;
+}

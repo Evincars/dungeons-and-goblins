@@ -45,6 +45,16 @@
       "source": "Mage", "health": 40, "ac": 12, "proficiency": 3, "xp": 2300,
       "abilities": { "strength": 9, "dexterity": 14, "constitution": 11, "intelligence": 17, "wisdom": 12, "charisma": 11 },
       "weapons": ["dagger", "quarterstaff"], "deathPoints": 320
+    },
+    "shade": {
+      "source": "Shadow", "health": 16, "ac": 12, "proficiency": 2, "xp": 100,
+      "abilities": { "strength": 6, "dexterity": 14, "constitution": 13, "intelligence": 6, "wisdom": 10, "charisma": 8 },
+      "weapons": ["dagger", "sickle"], "deathPoints": 120
+    },
+    "grick": {
+      "source": "Grick", "health": 27, "ac": 14, "proficiency": 2, "xp": 450,
+      "abilities": { "strength": 14, "dexterity": 14, "constitution": 11, "intelligence": 3, "wisdom": 14, "charisma": 5 },
+      "weapons": ["club", "spear"], "deathPoints": 240
     }
   }
 }

@@ -24,7 +24,7 @@ import { bindingFeatureId, isFeatureId } from '../rules/ClassFeatures';
  */
 
 /** Bumped whenever messages or the world they describe change, so mismatched browsers are told to reload. */
-export const PROTOCOL_VERSION = 9;
+export const PROTOCOL_VERSION = 10;
 /** The most guests a room takes: the host plus three others make four players. */
 export const MAX_GUESTS = PLAYER_SLOTS.length - 1;
 

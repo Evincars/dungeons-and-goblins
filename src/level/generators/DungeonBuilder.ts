@@ -31,10 +31,15 @@ import { POOL_H, POOL_KINDS, POOL_W, isWallDecor } from '../Level';
 import { CASTLE_FACE_DECOR } from '../CastleTiles';
 import type { CastleFaceDecor } from '../CastleTiles';
 import type { Pit } from '../PitShapes';
+import { IsoDresser } from './IsoDresser';
+import type { IsoSite } from './IsoDresser';
+import { ISO_BOOKS, ISO_BRAZIERS, ISO_LECTERNS, ISO_POTS } from '../Props';
 
-type TileChange = { x: number; y: number; prev: TileType };
-type Keep = (apply: () => TileChange[]) => boolean;
-type TilePos = { x: number; y: number };
+/** A tile a feature changed, and what it was, so the feature can be undone. */
+export type TileChange = { x: number; y: number; prev: TileType };
+/** Applies a feature and keeps it only if the dungeon stays connected (else undoes it); returns whether it stayed. */
+export type Keep = (apply: () => TileChange[]) => boolean;
+export type TilePos = { x: number; y: number };
 
 /** Layouts that come out unusable (too few rooms, cut-off areas) are rerolled up to this many times. */
 const MAX_ATTEMPTS = 25;
@@ -169,6 +174,25 @@ const GATHERING_URNS = 4;
 const GATHERING_GOODS = 5;
 /** The share of candles set down that are long burnt out (no flame, no light). */
 const COLD_CANDLE_SHARE = 0.25;
+/**
+ * How a gathering room (the safe and exit rooms) is furnished, by theme: what stands in its corners, against its north
+ * wall and along its walls, and the goods strewn about.
+ */
+type GatheringKit = { corners: readonly PropKind[]; furniture: readonly PropKind[]; urns: readonly PropKind[]; goods: readonly PropKind[] };
+const GATHERING_KIT: GatheringKit = { corners: GATHERING_CORNERS, furniture: STORE_FURNITURE, urns: URNS, goods: STORE_GOODS };
+/** The isometric castle's: lecterns and stacks of books, crystal braziers by the north wall, its pots, loose books. */
+const ISO_GATHERING_KIT: GatheringKit = {
+  corners: [...ISO_LECTERNS, ...ISO_BOOKS.filter(isSolidProp)], furniture: ISO_BRAZIERS, urns: ISO_POTS,
+  goods: ISO_BOOKS.filter((kind) => !isSolidProp(kind)),
+};
+/** The isometric castle's safe and exit rooms are floored in oxblood (FLOOR_BLOCKS tone 1). */
+const GATHERING_TONE = 1;
+
+function isSolidProp(kind: PropKind): boolean {
+  const def: PropDef = PROPS[kind];
+  return !!def.solid;
+}
+
 /** Torch flames hang this far above the foot of their wall. */
 const TORCH_FLAME_LIFT = 30;
 /** Rows above which walls are too thin for wall fixtures. */
@@ -243,6 +267,8 @@ export class DungeonBuilder {
   private roomIdSeq = 0;
   /** Tiles already taken by a prop or pit ring, so features don't overlap. */
   private readonly usedTiles = new Set<number>();
+  /** Dresses the isometric castle's rooms, through the builder's own ways of setting things down. */
+  private readonly iso = new IsoDresser(this.isoSite());
 
   constructor(cfg: DungeonConfig) {
     this.cfg = cfg;
@@ -321,6 +347,10 @@ export class DungeonBuilder {
     this.usedTiles.clear();
     const keepIfReachable = (apply: () => TileChange[]) => this.tryFeature(playerTile, anchors, apply);
     for (const room of dungeonRooms) {
+      if (cfg.theme === 'iso') {
+        this.iso.dressRoom(room, props, keepIfReachable);
+        continue;
+      }
       let structured = false;
       this.shapeRoom(room, keepIfReachable);
       if (room.hall) {
@@ -344,8 +374,10 @@ export class DungeonBuilder {
       forEachTile(room.x, room.y, room.x + room.w - 1, room.y + room.h - 1, (tx, ty) => this.level.markSafeZone(tx, ty));
     }
 
-    const torchTiles = this.placeTorches();
-    this.placeHangings(torchTiles, props);
+    // The isometric castle has no torches on its walls: crystal braziers stand on its floors instead.
+    const torchTiles = cfg.theme === 'iso' ? [] : this.placeTorches();
+    if (cfg.theme !== 'iso') this.placeHangings(torchTiles, props);
+    if (cfg.theme === 'iso') for (const room of [safe, exit]) this.level.floorZones.push({ x: room.x, y: room.y, w: room.w, h: room.h, tone: GATHERING_TONE });
     const shopTile = { x: safe.x + Math.floor(safe.w / 2), y: safe.y + 1 };
     const dummyTile = { x: safe.x + 2, y: safe.y + safe.h - 3 };
     this.usedTiles.add(dummyTile.x + dummyTile.y * W);
@@ -379,6 +411,27 @@ export class DungeonBuilder {
     };
   }
 
+  /** The builder's ways of setting things down, lent to the isometric castle's dresser. */
+  private isoSite(): IsoSite {
+    const levelOf = (): Level => this.level;
+    return {
+      get level() { return levelOf(); },
+      rng: () => this.rng(),
+      randInt: (min, max) => this.randInt(min, max),
+      free: (tx, ty) => this.free(tx, ty),
+      claim: (tx, ty) => this.claim(tx, ty),
+      isWall: (tx, ty) => this.isWall(tx, ty),
+      isFloor: (tx, ty) => this.isFloor(tx, ty),
+      setTiles: (cells, type) => this.setTiles(cells, type),
+      placeSolid: (cells, kinds, props, keep) => this.placeSolid(cells, kinds, props, keep),
+      scatterSolid: (room, open, kinds, props, keep) => this.scatterSolid(room, open, kinds, props, keep),
+      scatterLoose: (open, kinds, count, props) => this.scatterLoose(open, kinds, count, props),
+      shuffledFreeTiles: (room) => this.shuffledFreeTiles(room),
+      urnsAlongWalls: (room, count, props, keep, kinds) => this.urnsAlongWalls(room, count, props, keep, kinds),
+      pickProp: (kinds) => this.pickProp(kinds),
+    };
+  }
+
   // ── Carving ─────────────────────────────────────────────────────────────────
 
   /**
@@ -400,8 +453,8 @@ export class DungeonBuilder {
     const x = r.x + 1 + this.randInt(0, r.w - 2 - w);
     const y = r.y + 2 + this.randInt(0, r.h - 3 - h);
     const room = this.carveRoom(x, y, w, h, 'dungeon');
-    // A castle keeps its great rooms, but they are halls of stone, not caves.
-    if (!hall || cfg.theme === 'castle') return room;
+    // The castles keep their great rooms, but they are halls of stone, not caves.
+    if (!hall || cfg.theme !== 'catacomb') return room;
     room.hall = true;
     forEachTile(x, y, x + w - 1, y + h - 1, (tx, ty) => this.level.caveFloor.add(tx + ty * this.cfg.mapWidth));
     return room;
@@ -1054,16 +1107,17 @@ export class DungeonBuilder {
     for (const fire of lit) {
       for (const x of [fire.x - 1, fire.x + 1]) this.placeCandle(x, fire.y + 1, props);
     }
-    this.hangBanners(room, torches, props);
+    const kit = this.cfg.theme === 'iso' ? ISO_GATHERING_KIT : GATHERING_KIT;
+    if (this.cfg.theme !== 'iso') this.hangBanners(room, torches, props);
     const corners: Array<[number, number]> = [
       [room.x, room.y], [room.x + room.w - 1, room.y], [room.x, room.y + room.h - 1], [room.x + room.w - 1, room.y + room.h - 1],
     ];
     for (const [x, y] of corners) {
-      if (this.placeSolid([[x, y]], [this.pickProp(GATHERING_CORNERS)], props, keep)) this.scatterGoods(x, y, props);
+      if (this.placeSolid([[x, y]], [this.pickProp(kit.corners)], props, keep)) this.scatterGoods(x, y, props, kit.goods);
     }
-    this.storeroom(room, props, keep);
-    this.urnsAlongWalls(room, GATHERING_URNS, props, keep);
-    this.scatterLoose(this.shuffledFreeTiles(room).filter((t) => this.againstWall(t.x, t.y)), STORE_GOODS, GATHERING_GOODS, props);
+    this.storeroom(room, props, keep, kit);
+    this.urnsAlongWalls(room, GATHERING_URNS, props, keep, kit.urns);
+    this.scatterLoose(this.shuffledFreeTiles(room).filter((t) => this.againstWall(t.x, t.y)), kit.goods, GATHERING_GOODS, props);
     return lit;
   }
 
@@ -1145,7 +1199,7 @@ export class DungeonBuilder {
   }
 
   /** A rare storeroom corner: shelves, racks or supply heaps backed against the north wall, goods strewn in front. */
-  private storeroom(room: RoomData, props: PropPlacement[], keep: Keep): void {
+  private storeroom(room: RoomData, props: PropPlacement[], keep: Keep, kit: GatheringKit = GATHERING_KIT): void {
     const ty = room.y;
     const backed: number[] = [];
     for (let tx = room.x; tx < room.x + room.w; tx++) {
@@ -1154,19 +1208,19 @@ export class DungeonBuilder {
     const count = 1 + Math.floor(this.rng() * STORE_FURNITURE_MAX);
     for (let i = 0; i < count && backed.length; i++) {
       const tx = backed.splice(Math.floor(this.rng() * backed.length), 1)[0];
-      if (this.placeSolid([[tx, ty]], [this.pickProp(STORE_FURNITURE)], props, keep)) this.scatterGoods(tx, ty, props);
+      if (this.placeSolid([[tx, ty]], [this.pickProp(kit.furniture)], props, keep)) this.scatterGoods(tx, ty, props, kit.goods);
     }
   }
 
   /** Up to a few sacks and bowls on free floor beside or in front of the furniture at (tx, ty). */
-  private scatterGoods(tx: number, ty: number, props: PropPlacement[]): void {
+  private scatterGoods(tx: number, ty: number, props: PropPlacement[], goods: readonly PropKind[] = STORE_GOODS): void {
     const count = Math.floor(this.rng() * (STORE_GOODS_MAX + 1));
     for (let i = 0; i < count; i++) {
       const gx = tx + this.randInt(-1, 1);
       const gy = ty + this.randInt(0, 1);
       if (!this.free(gx, gy)) continue;
       this.claim(gx, gy);
-      props.push({ kind: this.pickProp(STORE_GOODS), tx: gx, ty: gy });
+      props.push({ kind: this.pickProp(goods), tx: gx, ty: gy });
     }
   }
 
@@ -1195,8 +1249,10 @@ export class DungeonBuilder {
   private placeCandle(tx: number, ty: number, props: PropPlacement[]): void {
     if (!this.free(tx, ty) || this.rng() >= CANDLE_CHANCE) return;
     this.claim(tx, ty);
-    const lit: PropKind = this.rng() < 0.5 ? 'candles' : 'candle';
-    props.push({ kind: this.rng() < COLD_CANDLE_SHARE ? this.pick(COLD_CANDLES) : lit, tx, ty });
+    const iso = this.cfg.theme === 'iso';
+    const lit: PropKind = this.rng() < 0.5 ? (iso ? 'iso_candles' : 'candles') : (iso ? 'iso_candle' : 'candle');
+    // The isometric castle's candles all burn (it has no burnt-out ones of its own).
+    props.push({ kind: this.rng() < COLD_CANDLE_SHARE && !iso ? this.pick(COLD_CANDLES) : lit, tx, ty });
   }
 
   /** A row of sarcophagi across the middle of the room, with gaps to walk between; returns whether it stands. */

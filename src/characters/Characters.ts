@@ -10,10 +10,11 @@ import { GOBLIN_GRUNT, GOBLIN_ROGUE, GOBLIN_WARRIOR } from './Goblins';
 import { EVIL_WIZARD, GHOST_WIZARD } from './Wizards';
 import { HOODED_KNIGHT } from './Knights';
 import { HEROES } from './Heroes';
+import { GRICK, SHADE } from './IsoFoes';
 
 const REGISTRY = new Map<string, CharacterDef>([
   FIGHTER, ORC, GOBLIN_GRUNT, GOBLIN_ROGUE, GOBLIN_WARRIOR,
-  EVIL_WIZARD, GHOST_WIZARD, HOODED_KNIGHT, ...HEROES,
+  EVIL_WIZARD, GHOST_WIZARD, HOODED_KNIGHT, SHADE, GRICK, ...HEROES,
 ].map((def) => [def.id, def]));
 
 export function characterDef(id: string): CharacterDef {

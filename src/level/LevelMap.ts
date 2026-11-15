@@ -4,7 +4,7 @@ import { createTile, TileType } from './TileType';
 import { PROPS } from './Props';
 import { ALL_LOBES, PIT_SHAPES } from './PitShapes';
 import { LEVEL_THEMES } from './Theme';
-import { FLOOR_TONES, POOL_KINDS } from './Level';
+import { MAX_FLOOR_TONES, POOL_KINDS } from './Level';
 import { SLOPE_CODES, slopeCode, slopeOf } from './Slopes';
 import type { PropKind } from './Props';
 import type { DungeonLayout, RoomData, RoomType } from './generators/DungeonBuilder';
@@ -23,7 +23,7 @@ import { gunzipJson, gzipText } from '../core/compression';
  */
 
 export const MAP_FORMAT = 'dungeons-and-goblins/map';
-export const MAP_VERSION = 8;
+export const MAP_VERSION = 9;
 /** A tile's byte: its type in the high bits, its image variant (0–15) in the low four. */
 const VARIANT_BITS = 4;
 const VARIANT_MASK = (1 << VARIANT_BITS) - 1;
@@ -62,8 +62,8 @@ export type LevelMap = {
   pools: Array<[number, number, number]>;
   /** The isometric castle's slanted walls: [tile index, slope code (Slopes.ts)]. */
   slopes: Pair[];
-  /** Its floor tones: [x, y, w, h, tone], laid in order. */
-  zones: Array<[number, number, number, number, number]>;
+  /** Its floor tones: [x, y, w, h, tone, patch (1: a ragged patch of earth, the mines)], laid in order. */
+  zones: Array<[number, number, number, number, number, number]>;
   /** Its flights of stairs: [top-left tile x, y]. */
   stairs: Array<[number, number]>;
   respawns: Pair[];
@@ -126,7 +126,7 @@ export function encodeLevelMap(layout: DungeonLayout): LevelMap {
     grates: level.grates.map(pair),
     pools: level.pools.map((p) => [p.x, p.y, POOL_KINDS.indexOf(p.kind)]),
     slopes: [...level.slopes].map(([i, slope]) => [i, slopeCode(slope)]),
-    zones: level.floorZones.map((z) => [z.x, z.y, z.w, z.h, z.tone]),
+    zones: level.floorZones.map((z) => [z.x, z.y, z.w, z.h, z.tone, z.patch ? 1 : 0]),
     stairs: level.stairs.map((s) => [s.x, s.y]),
     respawns: level.respawnPoints.map(pair),
     playerSpawn: pair(layout.playerSpawn),
@@ -158,7 +158,7 @@ const isPropRow = (v: unknown) => Array.isArray(v) && (v.length === 3 || (v.leng
   && isPropKind(v[0]) && Number.isInteger(v[1]) && Number.isInteger(v[2]);
 const isSlopeRow = (v: unknown) => Array.isArray(v) && v.length === 2 && v.every(Number.isInteger) && v[1] >= 0 && v[1] < SLOPE_CODES;
 const isStairsRow = (v: unknown) => Array.isArray(v) && v.length === 2 && v.every(Number.isInteger);
-const isZoneRow = (v: unknown) => Array.isArray(v) && v.length === 5 && v.every(Number.isInteger) && v[4] >= 0 && v[4] < FLOOR_TONES;
+const isZoneRow = (v: unknown) => Array.isArray(v) && v.length === 6 && v.every(Number.isInteger) && v[4] >= 0 && v[4] < MAX_FLOOR_TONES && (v[5] === 0 || v[5] === 1);
 /** A doorway: its tiles, and where its room's side of it begins. */
 const isDoor = (v: unknown) => isRecord(v) && isList(v.tiles, isPair) && isFiniteNumber(v.boundaryX);
 /** A prop footprint: a whole tile index, then four pixel bounds. */
@@ -221,7 +221,7 @@ export function decodeLevelMap(value: unknown): DungeonLayout {
     ensure(i >= 0 && i < tiles, 'Slope off the map', { index: i });
     level.slopes.set(i, slopeOf(code));
   }
-  for (const [x, y, w, h, tone] of value.zones) level.floorZones.push({ x, y, w, h, tone });
+  for (const [x, y, w, h, tone, patch] of value.zones) level.floorZones.push(patch ? { x, y, w, h, tone, patch: true } : { x, y, w, h, tone });
   for (const [x, y] of value.stairs) level.stairs.push({ x, y });
   for (const [x, y] of value.respawns) level.addSpawnPoint(x, y);
   level.clearDirty();

@@ -75,6 +75,46 @@ export function slantTile(room: RoomData, c: SlantCorner, j: number): TilePos {
   };
 }
 
+// ── Spurs of rock ───────────────────────────────────────────────────────────────
+
+/** The side of a room a spur of rock juts out from. */
+export type SpurSide = 'n' | 's';
+
+/**
+ * Juts a spur of rock out of a room's north (or south) wall: a wedge `depth` tiles deep and four times that across, from
+ * column x0, with a slant down each side meeting at its point (the zigzag of a cave wall). Not where a corridor comes in,
+ * nor over anything set down, nor if the room is too shallow for it.
+ */
+export function cutSlantSpur(site: SlantSite, room: RoomData, x0: number, depth: number, side: SpurSide, keep: Keep): boolean {
+  const across = depth * 4;
+  const north = side === 'n';
+  const edge = north ? room.y : room.y + room.h - 1;
+  const beyond = north ? edge - 1 : edge + 1;
+  const fits = room.h >= depth * 2 + SLANT_ROOM_SPARE_H && x0 > room.x && x0 + across < room.x + room.w;
+  if (!fits || someTile(x0 - 1, beyond, x0 + across, beyond, (x, y) => !site.isWall(x, y))) return false;
+  const y0 = north ? edge : edge - depth + 1;
+  if (someTile(x0 - 1, y0, x0 + across, y0 + depth - 1, (x, y) => !site.free(x, y))) return false;
+  const walls: Array<[number, number]> = [];
+  const slopes: Array<[number, Slope]> = [];
+  // The spur's two halves are corners cut off back to back: its left half's wall lies right of its slant, its right's left.
+  const halves: ReadonlyArray<[SlopeCorner, number, 1 | -1]> = north
+    ? [['ne', x0 + depth * 2 - 1, -1], ['nw', x0 + depth * 2, 1]]
+    : [['se', x0 + depth * 2 - 1, -1], ['sw', x0 + depth * 2, 1]];
+  for (const [corner, apex, dir] of halves) {
+    forEachTile(0, 0, depth * 2 - 1, depth - 1, (j, k) => {
+      const x = apex + dir * j;
+      const y = north ? edge + k : edge - k;
+      const lx = 2 * (depth - 1 - k);
+      if (j <= lx) walls.push([x, y]);
+      if (j === lx || j === lx + 1) slopes.push([x + y * site.level.width, { corner, major: j === lx }]);
+    });
+  }
+  if (!keep(() => site.setTiles(walls, TileType.Wall))) return false;
+  for (const [i, slope] of slopes) site.level.slopes.set(i, slope);
+  forEachTile(x0 - 1, y0, x0 + across, y0 + depth - 1, (x, y) => site.claim(x, y));
+  return true;
+}
+
 // ── Corridors down the slant ────────────────────────────────────────────────────
 
 /**

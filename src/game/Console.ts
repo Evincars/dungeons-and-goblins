@@ -75,7 +75,7 @@ function addItem(player: Player, id: string | undefined): string[] {
   return [text('console.item.added', { name: item.name })];
 }
 
-/** /dungeon catacomb | castle | castle2: builds this level again as that kind of dungeon (and the levels after it). */
+/** /dungeon catacomb | castle | castle2 | mines: builds this level again as that kind of dungeon (and the levels after it). */
 function rebuildAs(theme: string | undefined, ctx: ConsoleContext): string[] {
   if (!isLevelTheme(theme) || !ctx.rebuild) return [text('console.dungeon.usage', { themes: LEVEL_THEMES.join(' | ') })];
   ctx.rebuild(theme);

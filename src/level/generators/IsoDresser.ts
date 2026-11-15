@@ -392,37 +392,8 @@ export class IsoDresser {
     this.site.scatterLoose(open, ISO_WRECKS, this.countIn(RUIN_WRECKS), props);
   }
 
-  /**
-   * Something lying flat (a stain, moss) centred on a tile of the room, only where all of it lies on open floor: it is
-   * drawn over the terrain, so it must not reach onto a wall, a rim, the stairs or a chasm.
-   */
   private flat(room: RoomData, kind: PropKind, props: PropPlacement[]): void {
-    const { w, h } = PROPS[kind].rect;
-    for (let attempt = 0; attempt < FLAT_TRIES; attempt++) {
-      const tx = this.site.randInt(room.x, room.x + room.w - 1);
-      const ty = this.site.randInt(room.y, room.y + room.h - 1);
-      if (!this.flatFits(tx, ty, w, h)) continue;
-      props.push({ kind, tx, ty });
-      return;
-    }
-  }
-
-  private flatFits(tx: number, ty: number, w: number, h: number): boolean {
-    const cx = tx * TILE_WIDTH + TILE_WIDTH / 2;
-    const cy = ty * TILE_HEIGHT + TILE_HEIGHT / 2;
-    const x0 = Math.floor((cx - w / 2) / TILE_WIDTH);
-    const x1 = Math.floor((cx + w / 2 - 1) / TILE_WIDTH);
-    const y0 = Math.floor((cy - h / 2) / TILE_HEIGHT);
-    const y1 = Math.floor((cy + h / 2 - 1) / TILE_HEIGHT);
-    return !someTile(x0, y0, x1, y1, (x, y) => !this.openGround(x, y));
-  }
-
-  /** Floor (or a prop's tile) with no slant or face decor coming down onto it. */
-  private openGround(x: number, y: number): boolean {
-    const type = this.level.getTile(x, y)?.type;
-    if (type !== TileType.Floor && type !== TileType.Obstacle) return false;
-    const W = this.level.width;
-    return !this.level.slopes.has(x + y * W) && !this.level.wallDecor.has(x + (y - 1) * W);
+    placeFlat(this.site, room, kind, props);
   }
 
   // ── Stairs in the corridors ──────────────────────────────────────────────────
@@ -469,4 +440,37 @@ export class IsoDresser {
   private stairsNear(x: number, y: number): boolean {
     return this.level.stairs.some((s) => Math.abs(s.x - x) + Math.abs(s.y - y) < STAIRS_RUN_MIN);
   }
+}
+
+/**
+ * Something lying flat (a stain, moss, a hole) centred on a tile of the room, only where all of it lies on open floor:
+ * it is drawn over the terrain, so it must not reach onto a wall, a rim, the stairs or a chasm. A few spots are tried.
+ */
+export function placeFlat(site: IsoSite, room: RoomData, kind: PropKind, props: PropPlacement[]): void {
+  const { w, h } = PROPS[kind].rect;
+  for (let attempt = 0; attempt < FLAT_TRIES; attempt++) {
+    const tx = site.randInt(room.x, room.x + room.w - 1);
+    const ty = site.randInt(room.y, room.y + room.h - 1);
+    if (!flatFits(site.level, tx, ty, w, h)) continue;
+    props.push({ kind, tx, ty });
+    return;
+  }
+}
+
+function flatFits(level: Level, tx: number, ty: number, w: number, h: number): boolean {
+  const cx = tx * TILE_WIDTH + TILE_WIDTH / 2;
+  const cy = ty * TILE_HEIGHT + TILE_HEIGHT / 2;
+  const x0 = Math.floor((cx - w / 2) / TILE_WIDTH);
+  const x1 = Math.floor((cx + w / 2 - 1) / TILE_WIDTH);
+  const y0 = Math.floor((cy - h / 2) / TILE_HEIGHT);
+  const y1 = Math.floor((cy + h / 2 - 1) / TILE_HEIGHT);
+  return !someTile(x0, y0, x1, y1, (x, y) => !openGround(level, x, y));
+}
+
+/** Floor (or a prop's tile) with no slant or face decor coming down onto it. */
+function openGround(level: Level, x: number, y: number): boolean {
+  const type = level.getTile(x, y)?.type;
+  if (type !== TileType.Floor && type !== TileType.Obstacle) return false;
+  const W = level.width;
+  return !level.slopes.has(x + y * W) && !level.wallDecor.has(x + (y - 1) * W);
 }

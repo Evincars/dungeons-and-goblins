@@ -112,8 +112,10 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - Tuning tables live together: sword and spell in `src/entities/WeaponStats.ts`; mobs in
   `src/entities/MobFactory.ts` (`MOB_CONFIGS`); gold from kills and from searching openable props (`KILL_GOLD`,
   `STASH_FINDS`) in `src/entities/LootFactory.ts`, and which props open in `src/entities/DungeonFactory.ts`; dungeon generation in
-  `src/level/generators/DungeonConfig.ts` (corridors and corners on the slant there too; the isometric castle's room dressing in
-  `src/level/generators/IsoDresser.ts`); the slanted wall pieces of the catacombs' and the castle's tilesets in `src/level/SlantTiles.ts`,
+  `src/level/generators/DungeonConfig.ts` (corridors and corners on the slant there too, and what each theme builds bigger,
+  `THEME_CONFIG`; the isometric castle's room dressing in `src/level/generators/IsoDresser.ts`, the mines' in
+  `src/level/generators/MineDresser.ts`; the mines' props in `src/level/MineProps.ts`, their terrain pieces in `src/level/MineTiles.ts`,
+  made by `scripts/mine-sheets.py` into `public/caves2/mines-terrain.png` (keep the two in step)); the slanted wall pieces of the catacombs' and the castle's tilesets in `src/level/SlantTiles.ts`,
   made by `scripts/iso-sheets.py` into each tileset's `mainlevbuild-isometric.png` copy (keep the two in step); enemy AI knobs (sight, squad sizes, flanking, trail
   following) in `src/ai/constants.ts`; the D&D rules tables (SRD weapons and armour) in `src/rules/WeaponTable.ts`
   and `src/rules/ArmorTable.ts`; hero classes (abilities, hit points, proficiencies, features) in
@@ -183,7 +185,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   over the heroes and foes standing behind them near the hero followed (`render/SeeThrough.ts`, `render/RevealFilter.ts`,
   `systems/SeeThroughSystem.ts`), easing in and out; the floor runs on under south walls so it shows there, and the dark
   beyond the walls and off the map is the theme's void colour (`THEME_VOID`). Feet over a chasm's north rim stand on it. A level is built as the
-  catacombs or a castle (`Theme.ts`, `level.theme`, `run.theme`; the ~ console's `/dungeon catacomb | castle | castle2` rebuilds the
+  catacombs or a castle (`Theme.ts`, `level.theme`, `run.theme`; the ~ console's `/dungeon catacomb | castle | castle2 | mines` rebuilds the
   level as either): a castle uses only `public/castle` (its tileset's `-isometric` copy) — its tileset's pieces are mapped in `CastleTiles.ts` (stone faces
   with pilasters (also framing each decorated stretch), windows and arrow slits, arched alcoves (candles stand lit in them),
   ornate panels and gothic windows (candelabras beside them) as `wallDecor`, the great arch over passages, its legs on the
@@ -201,7 +203,14 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   crystal braziers and candles for light, its own foes `shade` and `grick`, `characters/IsoFoes.ts`; more corridors run down
   the slant than in the other themes). Its stairs (`level.stairs`: the U-shaped block of `mainlevbuild1.png` is stairs, never
   face decor) lie only across straight north–south corridors two tiles wide (its middle, the steps; for now never in an
-  east–west one). Soft edges between kinds of ground (`GroundBlend.ts`, baked
+  east–west one). The fourth theme, the forgotten mines (`mines`, `/dungeon mines`), is built from the cave set of `public/caves2`
+  alone, on a bigger map (`THEME_CONFIG`): its caverns (`generators/MineDresser.ts`) have their corners cut on the slant and spurs
+  of rock jutting from their north and south walls (`cutSlantSpur`, `generators/Slants.ts`), so the walls zigzag; their faces
+  (`MineTerrain.ts`) stand four tiles tall over the black rock tops, cut short under the rim of whatever lies close behind; patches
+  of other earth lie about (a `FloorZone` with `patch`, a ragged ellipse, its edges blended); an abyss with a rock bridge, or a
+  great pit, is fenced round, old pit props sinking into its dark; the old timbering stands against the faces, lanterns of cold
+  light (no torches) on posts and hung on the rock with cobwebs and bracket fungi, and rocks, rubble, stalagmites, mushroom
+  tables, reeds, holes and roots strew the floor (wall props hang as high as `PropDef.hang` says). Soft edges between kinds of ground (`GroundBlend.ts`, baked
   into one atlas by `render/BlendAtlas.ts`), fog of war (`FogRenderer.ts`: per-corner fading buffer, blurred, with
   drifting mist), lighting, and `LevelMap.ts` (a generated level as validated JSON, gzipped to send or save).
 - Animated decor stored one frame per file (`public/catacombs` torches and candles) is padded to one height with the base

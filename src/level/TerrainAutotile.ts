@@ -1,3 +1,5 @@
+import { buildMineTerrain, mineFloorSource, minePatchAt } from './MineTerrain';
+import { MINE_GROUND } from './MineTiles';
 import type { Level } from './Level';
 import type { TileData } from './TileType';
 import { forEachTile } from './Grid';
@@ -805,11 +807,14 @@ export function groundAt(level: Level, tx: number, ty: number): Ground | null {
   }
   // The isometric castle's tones meet at hard edges: all of it is one kind of ground, so nothing blends.
   if (level.theme === 'castle2') return { kind: 'stone', ...isoFloorSource(level, tx, ty), sheet: ISO_FLOORS };
+  // The mines' patches of other earth (MineTerrain.ts) are the softer ground: their edges spill over the earth round them.
+  if (level.theme === 'mines') return { kind: minePatchAt(level, tx, ty) ? 'cave' : 'rough', ...mineFloorSource(level, tx, ty), sheet: MINE_GROUND };
   return caveGround(level, tx, ty) ?? stoneGround(level, t, tx, ty);
 }
 
 export function buildTerrainPieces(level: Level): TerrainPiece[] {
   if (level.theme === 'castle2') return buildIsoTerrain(level);
+  if (level.theme === 'mines') return buildMineTerrain(level);
   return new TerrainBuilder(level).build();
 }
 

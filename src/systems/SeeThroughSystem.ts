@@ -22,9 +22,9 @@ const FIGURE_HALF_WIDTH = 12;
  * shares of that height (down to a smallest width), so it holds the whole figure and fades out round it.
  */
 const ELLIPSE_MIDDLE = 0.45;
-const ELLIPSE_RX = 0.55;
-const ELLIPSE_RY = 0.68;
-const ELLIPSE_MIN_RX = 24;
+const ELLIPSE_RX = 0.85;
+const ELLIPSE_RY = 0.95;
+const ELLIPSE_MIN_RX = 36;
 /** Tall props are filed by grid cells this many pixels square, like the walls. */
 const CELL = 32;
 

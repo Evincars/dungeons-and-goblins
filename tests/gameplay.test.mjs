@@ -3274,13 +3274,14 @@ test('spells and arrows fly over a castle pool, which nobody wades into', () => 
   assert.ok(level.blocksPoint(8 * TILE_WIDTH + 16, 4 * TILE_WIDTH + 16), 'other furniture still stops them');
 });
 
-test('the console\'s /dungeon builds the level as the isometric castle too', async () => {
+test('the console\'s /dungeon builds the level as the isometric castle or the mines too', async () => {
   const { runCommand } = await load('game/Console');
   const asked = [];
   const ctx = { player: playerAt(2, 2), allowed: true, rebuild: (theme) => asked.push(theme) };
   runCommand('/dungeon castle2', ctx);
-  assert.deepEqual(asked, ['castle2']);
-  assert.match(runCommand('/dungeon', ctx)[0], /<catacomb \| castle \| castle2>/, 'the usage lists every kind, spaced');
+  runCommand('/dungeon mines', ctx);
+  assert.deepEqual(asked, ['castle2', 'mines']);
+  assert.match(runCommand('/dungeon', ctx)[0], /<catacomb \| castle \| castle2 \| mines>/, 'the usage lists every kind, spaced');
 });
 
 test('the console\'s /freeze stops every enemy and its blows until switched off; /killall kills them all', async () => {
@@ -3315,10 +3316,10 @@ test('the console\'s /freeze stops every enemy and its blows until switched off;
   assert.match(runCommand('/killall', ctx)[0], /Killed 0/, 'the dead are not killed twice');
 });
 
-test('the castles\' south walls are drawn raised over the floor, the catacombs\' as they are', async () => {
+test('every theme\'s south walls are drawn raised over the floor', async () => {
   const { buildTerrainPieces } = await load('level/TerrainAutotile');
   const { SOUTH_WALL_RAISE } = await load('level/Theme');
-  for (const theme of ['catacomb', 'castle', 'castle2']) {
+  for (const theme of ['catacomb', 'castle', 'castle2', 'mines']) {
     const level = new Level(8, 8, theme);
     for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) level.setTile(x, y, createTile(x === 0 || y === 0 || x === 7 || y >= 5 ? TileType.Wall : TileType.Floor));
     const wallTop = 5 * TILE_WIDTH;
@@ -3326,7 +3327,45 @@ test('the castles\' south walls are drawn raised over the floor, the catacombs\'
     const top = Math.min(...buildTerrainPieces(level).filter((p) => p.z === 6 * TILE_WIDTH && p.dx === 3 * TILE_WIDTH).map((p) => p.dy));
     assert.equal(top, wallTop - SOUTH_WALL_RAISE[theme], theme);
   }
-  assert.ok(SOUTH_WALL_RAISE.castle > 0 && SOUTH_WALL_RAISE.castle2 > 0 && SOUTH_WALL_RAISE.catacomb === 0);
+  assert.ok(Object.values(SOUTH_WALL_RAISE).every((raise) => raise > 0));
+});
+
+test('the mines are built as caverns: tall faces cut short under thin rock, spurs, fenced drops, lanterns', async () => {
+  const { buildTerrainPieces } = await load('level/TerrainAutotile');
+  const { FACE_FOOT, MINE_FACES, MINE_RIM_N } = await load('level/MineTiles');
+  const { dungeonConfig } = await load('level/generators/DungeonConfig');
+  const { PROPS } = await load('level/Props');
+  const { encodeLevelMap, decodeLevelMap } = await load('level/LevelMap');
+  // A room under 5 rows of rock, and one with a corridor only two rows of rock above its face.
+  const level = new Level(12, 16, 'mines');
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 12; x++) {
+    const open = (y >= 6 && y <= 9 && x >= 1 && x <= 5) || (y === 3 && x >= 7 && x <= 10) || (y >= 6 && y <= 9 && x >= 7 && x <= 10);
+    level.setTile(x, y, createTile(open ? TileType.Floor : TileType.Wall));
+  }
+  const pieces = buildTerrainPieces(level);
+  const faceAt = (x) => pieces.find((p) => p.dx === x * TILE_WIDTH && p.sx === MINE_FACES[x % 3].x && p.sy >= MINE_FACES[0].y && p.sy < MINE_FACES[0].y + MINE_FACES[0].h && p.z === 5 * TILE_WIDTH);
+  const full = faceAt(2);
+  assert.ok(full, 'a face stands over the room');
+  assert.equal(full.dy + FACE_FOOT, 6 * TILE_WIDTH, 'its foot on the room\'s top edge');
+  const cut = faceAt(8);
+  assert.ok(cut && cut.dy > full.dy && cut.h < full.h, 'the face under the corridor is cut short');
+  assert.ok(cut.dy >= 4 * TILE_WIDTH, 'and stays off the corridor\'s floor');
+  assert.ok(pieces.some((p) => p.dx === 8 * TILE_WIDTH && p.sy === MINE_RIM_N[0].y && p.z === cut.z), 'the corridor\'s rim is drawn over the cut');
+
+  // Whole levels: bigger maps, caverns with spurs on the slant, every drop fenced, lit by lanterns, no torches.
+  const cfg = dungeonConfig('mines', 7);
+  assert.ok(cfg.mapWidth > DEFAULT_CONFIG.mapWidth && cfg.northMargin > DEFAULT_CONFIG.northMargin);
+  const layout = new DungeonBuilder(cfg).build();
+  const L = layout.level;
+  assert.equal(L.theme, 'mines');
+  assert.equal(layout.torchPositions.length, 0);
+  assert.ok(L.slopes.size > 0, 'caverns have slanted walls');
+  assert.ok(layout.props.some((p) => PROPS[p.kind].glow && p.kind.startsWith('mine_lantern')), 'lanterns light them');
+  assert.ok(layout.props.some((p) => p.kind === 'mine_fence' || p.kind === 'mine_fence_side'), 'fences stand round the drops');
+  assert.ok(L.floorZones.some((z) => z.patch), 'patches of other earth lie about');
+  const decoded = decodeLevelMap(JSON.parse(JSON.stringify(encodeLevelMap(layout))));
+  assert.equal(decoded.level.theme, 'mines');
+  assert.deepEqual(decoded.level.floorZones, L.floorZones, 'patches go to co-op guests');
 });
 
 test('in the isometric castle, faces and slanted faces are drawn in front of whoever stands behind them, and a chasm\'s side rims reach its top', async () => {

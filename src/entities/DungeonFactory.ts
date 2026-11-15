@@ -216,7 +216,7 @@ export function createProp(p: PropPlacement): Entity {
   if (def.mount === 'wall') {
     // Stands at the foot of the wall like a torch, drawn up on the bricks.
     return world.add({
-      position: { x, y: p.ty * TILE_HEIGHT }, visual: { sheet }, yOffset: HANG_TOP - h / 2, localOnly: true,
+      position: { x, y: p.ty * TILE_HEIGHT }, visual: { sheet }, yOffset: (def.hang ?? HANG_TOP) - h / 2, localOnly: true, ...propGlow(def),
     });
   }
   if (def.mount === 'foot') {

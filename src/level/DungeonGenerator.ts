@@ -1,6 +1,6 @@
 import { DungeonBuilder } from './generators/DungeonBuilder';
 import { spawnDecor, spawnLiveEntities } from './generators/DungeonEntitySpawner';
-import { DEFAULT_CONFIG } from './generators/DungeonConfig';
+import { dungeonConfig } from './generators/DungeonConfig';
 import type { DungeonLayout } from './generators/DungeonBuilder';
 import type { Level } from './Level';
 import type { LevelTheme } from './Theme';
@@ -22,7 +22,7 @@ export function randomSeed(): number {
 let prepared: { seed: number; theme: LevelTheme; layout: DungeonLayout } | null = null;
 
 function layoutFor(seed: number, theme: LevelTheme): DungeonLayout {
-  return new DungeonBuilder({ ...DEFAULT_CONFIG, seed, theme }).build();
+  return new DungeonBuilder(dungeonConfig(theme, seed)).build();
 }
 
 /**
@@ -42,7 +42,7 @@ export function prepareLevel(seed: number, theme: LevelTheme = 'catacomb'): void
 export function buildDungeon(
   seed: number, authority: boolean, theme: LevelTheme = 'catacomb',
 ): { level: Level; spawns: DungeonSpawns; layout: DungeonLayout } {
-  const config = { ...DEFAULT_CONFIG, seed, theme };
+  const config = dungeonConfig(theme, seed);
   const ready = prepared?.seed === seed && prepared.theme === theme;
   const layout = ready && prepared ? prepared.layout : layoutFor(seed, theme);
   prepared = null;

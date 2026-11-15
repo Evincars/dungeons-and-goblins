@@ -42,8 +42,13 @@ export type PoolKind = (typeof POOL_KINDS)[number];
 
 /** How many floor tones the isometric castle has (IsoTiles.ts: dark slate, oxblood, teal). */
 export const FLOOR_TONES = 3;
-/** A stretch of the isometric castle's floor laid in one tone (tile box; later zones lie over earlier ones). */
-export type FloorZone = { x: number; y: number; w: number; h: number; tone: number };
+/** The most floor tones any theme lays (the mines have four, MineTiles.ts). */
+export const MAX_FLOOR_TONES = 4;
+/**
+ * A stretch of floor laid in one tone (tile box; later zones lie over earlier ones), in the isometric castle and the
+ * mines. A `patch` (the mines) is earth of that tone lying on the ground in a ragged ellipse filling the box.
+ */
+export type FloorZone = { x: number; y: number; w: number; h: number; tone: number; patch?: true };
 /**
  * A flight of stairs across a straight north–south corridor two tiles wide: steps STAIRS_PASSAGE tiles across and
  * STAIRS_ROWS tiles tall, from its top-left tile.

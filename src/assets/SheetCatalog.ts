@@ -185,6 +185,9 @@ const UI_SHEETS = [
   // The isometric castle (level/IsoTiles.ts): its walls, faces, rims, stairs and wall decor; its floors and chasms.
   new SpriteSheet('iso_walls', '/castle-izometric/mainlevbuild1.png'),
   new SpriteSheet('iso_floors', '/castle-izometric/mainlevbuild2.png'),
+  // The forgotten mines (level/MineTiles.ts): rock faces, rims and chasm cliffs (scripts/mine-sheets.py), and their ground.
+  new SpriteSheet('mine_walls', '/caves2/mines-terrain.png'),
+  new SpriteSheet('mine_ground', '/caves2/RPGFW_Set2_v1.0/g_terrain1.png'),
 
   // Torch frames (16×16 each) — composited into a single 'torch' strip by the loader
   new SpriteSheet('torch_1', '/catacombs/torch_1.png'),

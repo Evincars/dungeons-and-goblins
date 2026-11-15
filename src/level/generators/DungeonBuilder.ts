@@ -36,6 +36,7 @@ import { CASTLE_FACE_DECOR } from '../CastleTiles';
 import type { CastleFaceDecor } from '../CastleTiles';
 import type { Pit } from '../PitShapes';
 import { IsoDresser } from './IsoDresser';
+import { MineDresser } from './MineDresser';
 import type { IsoSite } from './IsoDresser';
 import { ISO_BOOKS, ISO_BRAZIERS, ISO_LECTERNS, ISO_POTS } from '../Props';
 
@@ -271,8 +272,9 @@ export class DungeonBuilder {
   private roomIdSeq = 0;
   /** Tiles already taken by a prop or pit ring, so features don't overlap. */
   private readonly usedTiles = new Set<number>();
-  /** Dresses the isometric castle's rooms, through the builder's own ways of setting things down. */
+  /** Dresses the isometric castle's rooms, and the mines', through the builder's own ways of setting things down. */
   private readonly iso = new IsoDresser(this.isoSite());
+  private readonly mines = new MineDresser(this.isoSite());
   /** Room pairs to be joined down the slant once every other corridor is in (so none cuts across a slant). */
   private readonly slantedPairs: Array<[RoomData, RoomData]> = [];
 
@@ -309,7 +311,7 @@ export class DungeonBuilder {
 
     // ── Dungeon rooms, one per BSP leaf ───────────────────────────────────────
     const area = { x: cfg.safeRoomW, y: 1, w: W - cfg.safeRoomW - cfg.exitRoomW, h: H - 2 };
-    const tree = bspTree(area, cfg.minRoomSize + 3, cfg.splitDepth, this.rng, cfg.hallChance);
+    const tree = bspTree(area, cfg.minRoomSize + 1 + cfg.northMargin, cfg.splitDepth, this.rng, cfg.hallChance);
     const leafRooms = new Map<BspNode, RoomData>();
     for (const leaf of bspLeaves(tree)) {
       const room = this.leafRoom(leaf);
@@ -360,6 +362,10 @@ export class DungeonBuilder {
         this.iso.dressRoom(room, props, keepIfReachable);
         continue;
       }
+      if (cfg.theme === 'mines') {
+        this.mines.dressRoom(room, props, keepIfReachable);
+        continue;
+      }
       let structured = false;
       this.shapeRoom(room, keepIfReachable);
       if (room.hall) {
@@ -384,9 +390,10 @@ export class DungeonBuilder {
       forEachTile(room.x, room.y, room.x + room.w - 1, room.y + room.h - 1, (tx, ty) => this.level.markSafeZone(tx, ty));
     }
 
-    // The isometric castle has no torches on its walls: crystal braziers stand on its floors instead.
-    const torchTiles = cfg.theme === 'castle2' ? [] : this.placeTorches();
-    if (cfg.theme !== 'castle2') this.placeHangings(torchTiles, props);
+    // The isometric castle has no torches on its walls (crystal braziers stand on its floors), nor the mines (lanterns).
+    const lit = cfg.theme === 'castle2' || cfg.theme === 'mines';
+    const torchTiles = lit ? [] : this.placeTorches();
+    if (!lit) this.placeHangings(torchTiles, props);
     if (cfg.theme === 'castle2') for (const room of [safe, exit]) this.level.floorZones.push({ x: room.x, y: room.y, w: room.w, h: room.h, tone: GATHERING_TONE });
     const shopTile = { x: safe.x + Math.floor(safe.w / 2), y: safe.y + 1 };
     const dummyTile = { x: safe.x + 2, y: safe.y + safe.h - 3 };
@@ -446,22 +453,23 @@ export class DungeonBuilder {
 
   /**
    * The room a BSP partition holds: a hall in a partition left whole (if it is big enough), else a room of
-   * the usual size. Rooms keep a 1-tile margin left, right and below, and 2 above so north walls are thick
-   * enough for a full brick face.
+   * the usual size. Rooms keep a 1-tile margin left, right and below, and `northMargin` above so north walls are
+   * thick enough for a full face.
    */
   private leafRoom(leaf: BspNode): RoomData | null {
     const { cfg } = this;
     const r = leaf.rect;
-    const hall = !!leaf.merged && r.w - 2 >= cfg.hallMinSize && r.h - 3 >= cfg.hallMinSize;
+    const freeH = r.h - 1 - cfg.northMargin;
+    const hall = !!leaf.merged && r.w - 2 >= cfg.hallMinSize && freeH >= cfg.hallMinSize;
     const minSize = hall ? cfg.hallMinSize : cfg.minRoomSize;
     const maxSize = hall ? cfg.hallMaxSize : cfg.maxRoomSize;
     const maxW = Math.min(maxSize, r.w - 2);
-    const maxH = Math.min(maxSize, r.h - 3);
+    const maxH = Math.min(maxSize, freeH);
     if (maxW < cfg.minRoomSize || maxH < cfg.minRoomSize) return null;
     const w = this.randInt(Math.min(minSize, maxW), maxW);
     const h = this.randInt(Math.min(minSize, maxH), maxH);
     const x = r.x + 1 + this.randInt(0, r.w - 2 - w);
-    const y = r.y + 2 + this.randInt(0, r.h - 3 - h);
+    const y = r.y + cfg.northMargin + this.randInt(0, freeH - h);
     const room = this.carveRoom(x, y, w, h, 'dungeon');
     // The castles keep their great rooms, but they are halls of stone, not caves.
     if (!hall || cfg.theme !== 'catacomb') return room;
@@ -1188,7 +1196,8 @@ export class DungeonBuilder {
       for (const x of [fire.x - 1, fire.x + 1]) this.placeCandle(x, fire.y + 1, props);
     }
     const kit = this.cfg.theme === 'castle2' ? ISO_GATHERING_KIT : GATHERING_KIT;
-    if (this.cfg.theme !== 'castle2') this.hangBanners(room, torches, props);
+    if (this.cfg.theme === 'mines') this.mines.lightGathering(room, props);
+    else if (this.cfg.theme !== 'castle2') this.hangBanners(room, torches, props);
     const corners: Array<[number, number]> = [
       [room.x, room.y], [room.x + room.w - 1, room.y], [room.x, room.y + room.h - 1], [room.x + room.w - 1, room.y + room.h - 1],
     ];

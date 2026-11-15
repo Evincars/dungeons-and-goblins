@@ -866,7 +866,7 @@ export class DungeonBuilder {
       const cells: Array<[number, number]> = [];
       forEachTile(px, py, px + POOL_W - 1, py + POOL_H - 1, (x, y) => cells.push([x, y]));
       if (!keep(() => this.setTiles(cells, TileType.Obstacle))) continue;
-      this.level.pools.push({ x: px, y: py, kind });
+      this.level.addPool({ x: px, y: py, kind });
       forEachTile(px - 1, py - 1, px + POOL_W, py + POOL_H, (x, y) => this.claim(x, y));
       // Half a tile right of its second column of tiles: the pool's very middle.
       props.push({ kind: this.pick(CASTLE_POOL_COLUMNS), tx: px + 1, ty: py + 1, dx: TILE_WIDTH / 2 });

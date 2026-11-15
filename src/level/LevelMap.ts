@@ -4,7 +4,7 @@ import { createTile, TileType } from './TileType';
 import { PROPS } from './Props';
 import { ALL_LOBES, PIT_SHAPES } from './PitShapes';
 import { LEVEL_THEMES } from './Theme';
-import { FLOOR_TONES, POOL_KINDS } from './Level';
+import { FLOOR_TONES, POOL_KINDS, STAIR_DIRS } from './Level';
 import { SLOPE_CODES, slopeCode, slopeOf } from './Slopes';
 import type { PropKind } from './Props';
 import type { DungeonLayout, RoomData, RoomType } from './generators/DungeonBuilder';
@@ -23,7 +23,7 @@ import { gunzipJson, gzipText } from '../core/compression';
  */
 
 export const MAP_FORMAT = 'dungeons-and-goblins/map';
-export const MAP_VERSION = 6;
+export const MAP_VERSION = 7;
 /** A tile's byte: its type in the high bits, its image variant (0–15) in the low four. */
 const VARIANT_BITS = 4;
 const VARIANT_MASK = (1 << VARIANT_BITS) - 1;
@@ -64,8 +64,8 @@ export type LevelMap = {
   slopes: Pair[];
   /** Its floor tones: [x, y, w, h, tone], laid in order. */
   zones: Array<[number, number, number, number, number]>;
-  /** Its flights of stairs: top-left tiles. */
-  stairs: Pair[];
+  /** Its flights of stairs: [top-left tile x, y, which way they climb (index in STAIR_DIRS)]. */
+  stairs: Array<[number, number, number]>;
   respawns: Pair[];
   playerSpawn: Pair;
   torches: Pair[];
@@ -127,7 +127,7 @@ export function encodeLevelMap(layout: DungeonLayout): LevelMap {
     pools: level.pools.map((p) => [p.x, p.y, POOL_KINDS.indexOf(p.kind)]),
     slopes: [...level.slopes].map(([i, slope]) => [i, slopeCode(slope)]),
     zones: level.floorZones.map((z) => [z.x, z.y, z.w, z.h, z.tone]),
-    stairs: level.stairs.map(pair),
+    stairs: level.stairs.map((s) => [s.x, s.y, STAIR_DIRS.indexOf(s.dir)]),
     respawns: level.respawnPoints.map(pair),
     playerSpawn: pair(layout.playerSpawn),
     torches: layout.torchPositions.map(pair),
@@ -157,6 +157,7 @@ const isRoomRow = (v: unknown): v is RoomRow => Array.isArray(v) && v.length ===
 const isPropRow = (v: unknown) => Array.isArray(v) && (v.length === 3 || (v.length === 4 && isFiniteNumber(v[3])))
   && isPropKind(v[0]) && Number.isInteger(v[1]) && Number.isInteger(v[2]);
 const isSlopeRow = (v: unknown) => Array.isArray(v) && v.length === 2 && v.every(Number.isInteger) && v[1] >= 0 && v[1] < SLOPE_CODES;
+const isStairsRow = (v: unknown) => Array.isArray(v) && v.length === 3 && v.every(Number.isInteger) && v[2] >= 0 && v[2] < STAIR_DIRS.length;
 const isZoneRow = (v: unknown) => Array.isArray(v) && v.length === 5 && v.every(Number.isInteger) && v[4] >= 0 && v[4] < FLOOR_TONES;
 /** A doorway: its tiles, and where its room's side of it begins. */
 const isDoor = (v: unknown) => isRecord(v) && isList(v.tiles, isPair) && isFiniteNumber(v.boundaryX);
@@ -192,7 +193,7 @@ function checkShape(value: unknown): asserts value is LevelMap {
     && isList(value.respawns, isPair) && isList(value.torches, isPair) && isPair(value.playerSpawn), 'Malformed map');
   ensure(isList(value.wallDecor, (d) => Array.isArray(d) && d.length === 2 && Number.isInteger(d[0]) && isWallDecor(d[1])), 'Bad wall decor');
   ensure(isList(value.blocks, isFootprint), 'Bad prop footprint');
-  ensure(isList(value.slopes, isSlopeRow) && isList(value.zones, isZoneRow) && isList(value.stairs, isPair), 'Bad slopes, floor zones or stairs');
+  ensure(isList(value.slopes, isSlopeRow) && isList(value.zones, isZoneRow) && isList(value.stairs, isStairsRow), 'Bad slopes, floor zones or stairs');
   ensure(isList(value.rooms, isRoomRow) && isList(value.props, isPropRow) && isList(value.campfires, isPair), 'Bad map decor');
   ensure([value.exitButton, value.shop, value.dummy, value.lever, value.exitLever].every(isPair), 'Bad map positions');
   ensure(isDoor(value.door) && isDoor(value.exitDoor), 'Bad map door');
@@ -215,13 +216,13 @@ export function decodeLevelMap(value: unknown): DungeonLayout {
   eachInRuns(value.cobble, tiles, (i) => level.cobbleWalls.add(i));
   for (const [x, y, shape, lobes] of value.pits) level.addPit({ x, y, shape: PIT_SHAPES[shape], lobes });
   for (const [x, y] of value.grates) level.grates.push({ x, y });
-  for (const [x, y, kind] of value.pools) level.pools.push({ x, y, kind: POOL_KINDS[kind] });
+  for (const [x, y, kind] of value.pools) level.addPool({ x, y, kind: POOL_KINDS[kind] });
   for (const [i, code] of value.slopes) {
     ensure(i >= 0 && i < tiles, 'Slope off the map', { index: i });
     level.slopes.set(i, slopeOf(code));
   }
   for (const [x, y, w, h, tone] of value.zones) level.floorZones.push({ x, y, w, h, tone });
-  for (const [x, y] of value.stairs) level.stairs.push({ x, y });
+  for (const [x, y, dir] of value.stairs) level.stairs.push({ x, y, dir: STAIR_DIRS[dir] });
   for (const [x, y] of value.respawns) level.addSpawnPoint(x, y);
   level.clearDirty();
   return {

@@ -18,11 +18,6 @@ export type SpawnPoint = { x: number; y: number };
  * behind it with only their upper body showing, as in Catacomb Snatch.
  */
 export const WALL_SINK = 26;
-/**
- * In the isometric castle a wall south of the floor is only the floor's edge, a rim over the dark (its art has no
- * parapet to stand behind): feet reach just onto it.
- */
-const ISO_WALL_SINK = 6;
 
 /** Floor tiles come in this many image variants. */
 const FLOOR_VARIANTS = 4;
@@ -54,9 +49,14 @@ export type PoolKind = (typeof POOL_KINDS)[number];
 export const FLOOR_TONES = 3;
 /** A stretch of the isometric castle's floor laid in one tone (tile box; later zones lie over earlier ones). */
 export type FloorZone = { x: number; y: number; w: number; h: number; tone: number };
-/** Stairs down a gallery's face: two tiles wide, two (the face) tall, from this top-left tile. */
-export const STAIRS_W = 2;
-export const STAIRS_H = 2;
+/**
+ * Stairs in a straight corridor two tiles wide: `across` a north–south one (steps two tiles wide, STAIRS_ROWS tall), or
+ * seen from the side in an east–west one, rising to the `east` or the `west` (a tile across, the corridor's height).
+ */
+export const STAIR_DIRS = ['across', 'east', 'west'] as const;
+export type StairDir = (typeof STAIR_DIRS)[number];
+export type Stairs = { x: number; y: number; dir: StairDir };
+export const STAIRS_ROWS = 2;
 
 /** A tile box as forEachTile's arguments. */
 function boundsArgs(b: { x0: number; y0: number; x1: number; y1: number }): [number, number, number, number] {
@@ -96,16 +96,16 @@ export class Level {
   readonly cobbleWalls = new Set<number>();
   /** Top-left tiles of framed 2×2 drain grates set into the floor (walked over: decor only). */
   readonly grates: Array<{ x: number; y: number }> = [];
-  /** A castle's pools (water, or green sludge): top-left of their POOL_W×POOL_H obstacle tiles. */
+  /** A castle's pools (water, or green sludge): top-left of their POOL_W×POOL_H obstacle tiles. Add them with `addPool`. */
   readonly pools: Array<{ x: number; y: number; kind: PoolKind }> = [];
+  /** The tiles the pools cover, by tile index: nobody wades in, but spells and arrows fly over the water. */
+  private readonly poolTiles = new Set<number>();
   /** The isometric castle's slanted walls: the tiles their slants cross, by tile index (Slopes.ts). */
   readonly slopes = new Map<number, Slope>();
   /** The isometric castle's floor tones, laid in order (the floor outside every zone is tone 0). */
   readonly floorZones: FloorZone[] = [];
-  /** Top-left tiles of flights of stairs down the face of a raised gallery (STAIRS_W × STAIRS_H tiles of floor). */
-  readonly stairs: Array<{ x: number; y: number }> = [];
-  /** How far feet may step into a wall tile with floor north of it (WALL_SINK, or the isometric castle's rim). */
-  readonly wallSink: number;
+  /** Flights of stairs in the isometric castle's corridors: their top-left tiles and which way they climb. */
+  readonly stairs: Stairs[] = [];
 
   readonly seen: boolean[];
   /** Bumped whenever a corner is seen for the first time, so the fog redraws only when it changed. */
@@ -126,7 +126,6 @@ export class Level {
       this.tileStacks[i] = [createTile(TileType.Floor, Math.floor(Math.random() * FLOOR_VARIANTS))];
     }
     this.seen = new Array((width + 1) * (height + 1)).fill(false);
-    this.wallSink = theme === 'castle2' ? ISO_WALL_SINK : WALL_SINK;
   }
 
   /** Packed index of a tile, as the tile graph numbers it. */
@@ -146,6 +145,11 @@ export class Level {
 
   tileCentreY(index: number): number {
     return Math.floor(index / this.width) * TILE_HEIGHT + TILE_HEIGHT / 2;
+  }
+
+  addPool(pool: { x: number; y: number; kind: PoolKind }): void {
+    this.pools.push(pool);
+    forEachTile(pool.x, pool.y, pool.x + POOL_W - 1, pool.y + POOL_H - 1, (tx, ty) => this.poolTiles.add(tx + ty * this.width));
   }
 
   addPit(pit: Pit): void {
@@ -335,12 +339,12 @@ export class Level {
     if (!tile) return true;
     const slope = this.slopes.get(tx + ty * this.width);
     if (slope) return slopeBlocks(slope, tx, ty, worldX, worldY);
-    if (tile.passable) return false;
+    if (tile.passable || this.poolTiles.has(tx + ty * this.width)) return false;
     const inX = worldX - tx * TILE_WIDTH;
     const inY = worldY - ty * TILE_HEIGHT;
     const part = tile.type === TileType.Obstacle ? this.blockBoxes.get(tx + ty * this.width) : undefined;
     if (part) return inX >= part.x0 && inX < part.x1 && inY >= part.y0 && inY < part.y1;
-    const sink = isWallType(tile) && this.getTile(tx, ty - 1)?.passable ? this.wallSink : 0;
+    const sink = isWallType(tile) && this.getTile(tx, ty - 1)?.passable ? WALL_SINK : 0;
     return inY >= sink;
   }
 
@@ -375,10 +379,12 @@ export class Level {
    */
   private readonly addTileClip = (tx: number, ty: number): void => {
     const tile = this.getTile(tx, ty);
-    // Slanted walls push bodies back themselves (pushOutOfSlopes); a chasm is a whole tile nobody steps into.
+    // Slanted walls push bodies back themselves (pushOutOfSlopes); nobody steps into a chasm, but feet reach over its
+    // north rim as over a wall's.
     if (this.slopes.has(tx + ty * this.width)) return;
     if (this.isChasm(tx, ty)) {
-      this.clipBoxes.push(this.clipPool.between(tx * TILE_WIDTH, ty * TILE_HEIGHT, (tx + 1) * TILE_WIDTH, (ty + 1) * TILE_HEIGHT));
+      const rim = this.getTile(tx, ty - 1)?.type === TileType.Floor ? WALL_SINK : 0;
+      this.clipBoxes.push(this.clipPool.between(tx * TILE_WIDTH, ty * TILE_HEIGHT + rim, (tx + 1) * TILE_WIDTH, (ty + 1) * TILE_HEIGHT));
       return;
     }
     if (tile && tile.passable) return;
@@ -389,7 +395,7 @@ export class Level {
       }
       return;
     }
-    const sink = isWallType(tile) && this.getTile(tx, ty - 1)?.passable ? this.wallSink : 0;
+    const sink = isWallType(tile) && this.getTile(tx, ty - 1)?.passable ? WALL_SINK : 0;
     this.clipBoxes.push(this.clipPool.between(
       tx * TILE_WIDTH, ty * TILE_HEIGHT + sink,
       (tx + 1) * TILE_WIDTH, (ty + 1) * TILE_HEIGHT,

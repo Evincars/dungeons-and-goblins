@@ -202,9 +202,14 @@ function propAnimation(sheet: string, def: PropDef): Pick<Entity, 'animation'> {
   };
 }
 
-/** The light a prop gives off, if any: firelight, or a crystal's cold shine. */
+/**
+ * The light a prop gives off, if any: firelight (candles, candelabras, braziers) or a lantern's flame, flickering out of
+ * step with every other, or a crystal's steady cold shine.
+ */
 function propGlow(def: PropDef): Pick<Entity, 'glow'> {
-  return def.glow ? { glow: { radius: def.glow, cool: def.coolGlow } } : {};
+  if (!def.glow) return {};
+  const flickers = !def.coolGlow || def.flame === true;
+  return { glow: { radius: def.glow, cool: def.coolGlow, flicker: flickers ? Math.random() * Math.PI * 2 : undefined } };
 }
 
 /** A decorative prop: standing on its tile, or hung on the brick face above it. */

@@ -12,7 +12,7 @@ Run from the repository root:  python3 scripts/mine-sheets.py
 
 from PIL import Image
 
-SRC = 'public/caves2/RPGFW_Set2_v1.0/'
+SRC = 'public/caves2/'
 OUT = 'public/caves2/mines-terrain.png'
 TILE = 32
 SHEET_W, SHEET_H = 512, 656

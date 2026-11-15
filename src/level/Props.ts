@@ -33,9 +33,9 @@ export const PROP_IMAGES = {
   iso_candles_3: '/castle-izometric/anim/candles-03.png',
   iso_candles_4: '/castle-izometric/anim/candles-04.png',
   // The forgotten mines (/caves2, level/MineProps.ts): cave decor, rocks and stalagmites, and the pit timbering.
-  mine_decor: '/caves2/RPGFW_Set2_v1.0/other_decoratives.png',
-  mine_rocks: '/caves2/RPGFW_Set2_v1.0/rocks_stones.png',
-  mine_wood: '/caves2/RPGFW_Set2_v1.0/wood_el.png',
+  mine_decor: '/caves2/other_decoratives.png',
+  mine_rocks: '/caves2/rocks_stones.png',
+  mine_wood: '/caves2/wood_el.png',
   wall_decor: '/objects-assets/Other_objects.png',
   supplies:   '/objects-assets/supplies_objects.png',
   pedestals:  '/objects-assets/pedestals.png',
@@ -116,14 +116,22 @@ export type PropDef = {
    * bodies: whoever comes from the north walks on behind the rest of it.
    */
   footprint?: { w: number; h: number };
-  /** How much of its foot a solid prop blocks, when not worked out from its art (`w` wide, `d` deep). */
-  base?: { w: number; d: number };
+  /**
+   * How much of its foot a solid prop blocks, when not worked out from its art: `w` wide, `d` deep, its middle `dx` px off
+   * the tile's (a rock drawn with its shadow to one side).
+   */
+  base?: { w: number; d: number; dx?: number };
   /** How far above the foot of the face a 'wall' prop's top hangs (the mines' faces are taller), when not the usual. */
   hang?: number;
   /** Light radius, for candles and crystals. */
   glow?: number;
   /** The glow is cold (crystals) rather than firelight. */
   coolGlow?: boolean;
+  /**
+   * A cold glow that is still a flame's (the mines' lanterns burn green) and flickers as one; firelight always flickers,
+   * a crystal's shine never does.
+   */
+  flame?: true;
   /** How often it is picked against the others in its group (default 1): rare finds weigh less. */
   weight?: number;
   /** Lies flat on the floor (a rug): drawn under everything that stands or walks on it. */
@@ -695,7 +703,7 @@ export function propBlockRect(def: PropDef): BlockRect {
   const across = def.footprint?.w ?? 1;
   const w = def.base?.w ?? Math.min(def.rect.w - 2 * BASE_INSET, across * TILE_WIDTH);
   const d = def.base?.d ?? Math.min(BASE_DEPTH, def.rect.h);
-  const cx = TILE_WIDTH / 2;
+  const cx = TILE_WIDTH / 2 + (def.base?.dx ?? 0);
   return { x0: cx - w / 2, x1: cx + w / 2, y0: PROP_GROUND - d, y1: PROP_GROUND };
 }
 
@@ -791,22 +799,24 @@ export const ISO_MOSS_BITS: PropKind[] = propsStarting('iso_moss');
 export const MINE_SHROOM_TABLES: PropKind[] = propsStarting('mine_shroom_table');
 export const MINE_PLANTS: PropKind[] = propsStarting('mine_flower_', 'mine_sprout', 'mine_reeds', 'mine_shroom_stool');
 export const MINE_FUNGI: PropKind[] = propsStarting('mine_fungus_');
-export const MINE_HOLES: PropKind[] = propsStarting('mine_hole_');
-export const MINE_PEBBLES: PropKind[] = propsStarting('mine_pebble_');
 export const MINE_WEBS: PropKind[] = propsStarting('mine_web_');
 export const MINE_ROOTS: PropKind[] = propsStarting('mine_root_');
+/** Stones underfoot: pebbles too small to stop anyone, and stones and heaps of rubble one must walk round. */
+function isSolid(kind: PropKind): boolean {
+  const def: PropDef = PROPS[kind];
+  return def.solid === true;
+}
+export const MINE_PEBBLES: PropKind[] = propsStarting('mine_pebble_').filter((kind) => !isSolid(kind));
+export const MINE_STONES: PropKind[] = propsStarting('mine_pebble_', 'mine_rubble_s_').filter(isSolid);
 /** Rocks by size: small and middling ones about a room, the great formations for its middle. */
 export const MINE_ROCKS: PropKind[] = propsStarting('mine_rock_s_', 'mine_rock_m_');
 export const MINE_BIG_ROCKS: PropKind[] = propsStarting('mine_rock_l_', 'mine_rock_xl_');
-export const MINE_RUBBLE: PropKind[] = propsStarting('mine_rubble_');
-export const MINE_LOOSE_RUBBLE: PropKind[] = propsStarting('mine_rubble_s_');
-export const MINE_SOLID_RUBBLE: PropKind[] = MINE_RUBBLE.filter((kind) => !MINE_LOOSE_RUBBLE.includes(kind));
+/** Great heaps of rubble (not the small heaps among MINE_STONES). */
+export const MINE_RUBBLE: PropKind[] = propsStarting('mine_rubble_').filter((kind) => !kind.startsWith('mine_rubble_s_'));
 export const MINE_STALAGMITES: PropKind[] = propsStarting('mine_stalagmite_', 'mine_stalagmites_').filter((kind) => !kind.includes('_xs_'));
 export const MINE_SMALL_STALAGMITES: PropKind[] = propsStarting('mine_stalagmite_xs_');
-/** The timbering: frames and supports against a face, posts standing free, lantern posts and lanterns, logs. */
+/** The timbering: frames against a face, posts standing free, lantern posts and lanterns. */
 export const MINE_FRAMES: PropKind[] = ['mine_frame', 'mine_frame_wide', 'mine_frame_door'];
-export const MINE_SUPPORTS: PropKind[] = ['mine_support', 'mine_support2'];
-export const MINE_POSTS: PropKind[] = propsStarting('mine_post');
+export const MINE_POSTS: PropKind[] = ['mine_post', 'mine_post2', 'mine_post3'];
 export const MINE_LANTERN_POSTS: PropKind[] = propsStarting('mine_lantern_post');
 export const MINE_LANTERNS: PropKind[] = ['mine_lantern', 'mine_lantern2', 'mine_lantern3', 'mine_lantern4'];
-export const MINE_LOGS: PropKind[] = ['mine_log', 'mine_log2', 'mine_trestle'];

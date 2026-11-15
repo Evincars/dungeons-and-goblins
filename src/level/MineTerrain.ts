@@ -5,8 +5,10 @@ import { forEachTile, tileHash } from './Grid';
 import {
   FACE_FOOT, FACE_H, MINE_CHASM_E, MINE_CHASM_LIP_S, MINE_CHASM_N, MINE_CHASM_W, MINE_FACE_END_LEFT, MINE_FACE_END_RIGHT,
   MINE_FACES, MINE_GROUND, MINE_GROUND_BLOCKS, MINE_RIM_E, MINE_RIM_N, MINE_RIM_NE, MINE_RIM_NW, MINE_RIM_SLANT, MINE_RIM_W,
-  MINE_SLANT_FACES, MINE_SUNKEN_POSTS, MINE_VOID,
+  MINE_SLANT_FACES, MINE_SUNKEN_POSTS, MINE_VOID, MINE_DECOR, holeArtOffset,
 } from './MineTiles';
+import { mineHole } from './PitShapes';
+import type { Pit } from './PitShapes';
 import type { IsoRect, SlantStrip } from './IsoTiles';
 import type { Slope } from './Slopes';
 import { isSouthSlope } from './Slopes';
@@ -22,7 +24,8 @@ import { SOUTH_WALL_RAISE } from './Theme';
  *   cut short where the rock behind it is thinner (a corridor or room close behind), its rim drawn over the cut;
  * - a wall cutting a north corner off on the slant shows the face on the slant, a south one the rim along it;
  * - every other wall is black, scalloped where floor touches it; a chasm's north edge drops away as a dark cliff into
- *   the black, old pit props rising out of it now and then.
+ *   the black, old pit props rising out of it now and then;
+ * - a hole in the floor (a pit of shape 'hole') is its art from the set's decorations, centred on its tiles.
  * Faces stand behind whoever is in front of them; the rims along a room's south side and a chasm's north edge are
  * drawn over the feet of whoever steps up to them, as in the other themes.
  */
@@ -113,7 +116,17 @@ class MineTerrainBuilder {
   build(): TerrainPiece[] {
     const { level } = this;
     forEachTile(0, 0, level.width - 1, level.height - 1, this.addTile);
+    for (const pit of level.pits) this.addHole(pit);
     return [...this.floors, ...this.walls, ...this.over, ...this.overFaces];
+  }
+
+  /** A hole in the floor: its art centred on its tiles, over the ground they are floored with. */
+  private addHole(pit: Pit): void {
+    const hole = mineHole(pit);
+    if (!hole) return;
+    const at = holeArtOffset(hole);
+    const { art } = hole;
+    this.walls.push({ dx: pit.x * TILE_WIDTH + at.x, dy: pit.y * TILE_HEIGHT + at.y, sx: art.x, sy: art.y, w: art.w, h: art.h, sheet: MINE_DECOR });
   }
 
   // ── What a tile is ───────────────────────────────────────────────────────────

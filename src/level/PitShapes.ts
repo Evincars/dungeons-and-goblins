@@ -1,14 +1,17 @@
 import { TILE_HEIGHT, TILE_WIDTH } from './TileType';
+import { MINE_HOLES, holeArtOffset } from './MineTiles';
 
 /**
  * The shapes pits are dug in, from the catacomb tileset's pit pieces (mainlevbuild.png): a framed square, the same
  * square with rounded lobes bulging from some of its sides (an arched alcove on the north side), and a quatrefoil;
  * and in a castle, a long framed pit of spikes (castle mainlevbuild.png). Each catacomb pit sits on 2×2 Hole tiles,
- * a castle's on SPIKE_PIT_W×SPIKE_PIT_H; its open ground is a union of boxes and discs (in pixels from the top-left corner
- * of those tiles), so falling in, keeping enemies out and hiding a faller all follow the drawn edge, not the tiles.
+ * a castle's on SPIKE_PIT_W×SPIKE_PIT_H; and in the mines, holes in the floor of every size (MineTiles.ts MINE_HOLES,
+ * `lobes` saying which), from one a body's size on a single tile to great ragged ones. A pit's open ground is a union of
+ * boxes and discs (in pixels from the top-left corner of its tiles), so falling in, keeping enemies out and hiding a
+ * faller all follow the drawn edge, not the tiles.
  */
 
-export const PIT_SHAPES = ['square', 'lobed', 'quatrefoil', 'spikes'] as const;
+export const PIT_SHAPES = ['square', 'lobed', 'quatrefoil', 'spikes', 'hole'] as const;
 export type PitShape = (typeof PIT_SHAPES)[number];
 
 export function isPitShape(value: unknown): value is PitShape {
@@ -26,13 +29,28 @@ export const ALL_LOBES = LOBE_N | LOBE_E | LOBE_S | LOBE_W;
 export const SPIKE_PIT_W = 4;
 export const SPIKE_PIT_H = 2;
 
-/** The Hole tiles a pit of this shape is dug on: its width and height in tiles. */
-export function pitTiles(shape: PitShape): { w: number; h: number } {
-  return shape === 'spikes' ? { w: SPIKE_PIT_W, h: SPIKE_PIT_H } : { w: 2, h: 2 };
+/**
+ * A pit: the top-left of its Hole tiles, its shape, and (for a lobed one) which lobes it has, or (for a mine's hole)
+ * which of MINE_HOLES it is.
+ */
+export type Pit = { x: number; y: number; shape: PitShape; lobes: number };
+
+/** The mine hole a pit of shape 'hole' is, if `lobes` names one. */
+export function mineHole(pit: Pit): (typeof MINE_HOLES)[number] | undefined {
+  return pit.shape === 'hole' ? MINE_HOLES[pit.lobes] : undefined;
 }
 
-/** A pit: the top-left of its 2×2 Hole tiles, its shape, and (for a lobed one) which lobes it has. */
-export type Pit = { x: number; y: number; shape: PitShape; lobes: number };
+/** Whether a pit's `lobes` fit its shape: lobe bits for the catacombs' pits, a hole's index for a mine's. */
+export function validPitDetail(shape: PitShape, lobes: number): boolean {
+  return shape === 'hole' ? lobes >= 0 && lobes < MINE_HOLES.length : lobes >= 0 && lobes <= ALL_LOBES;
+}
+
+/** The Hole tiles a pit is dug on: its width and height in tiles. */
+export function pitTiles(pit: Pit): { w: number; h: number } {
+  const hole = mineHole(pit);
+  if (hole) return { w: hole.w, h: hole.h };
+  return pit.shape === 'spikes' ? { w: SPIKE_PIT_W, h: SPIKE_PIT_H } : { w: 2, h: 2 };
+}
 
 type Box = { x0: number; y0: number; x1: number; y1: number };
 type Disc = { cx: number; cy: number; r: number };
@@ -51,7 +69,7 @@ const LOBE_OVERLAP = 4;
 const ARCH_REACH = 44;
 /** The quatrefoil's four round lobes, each centred this far in from its edge, with the same open radius. */
 const FOIL_INSET = 18;
-/** A faller is pulled at least this far inside the edge of the square they dropped into. */
+/** A faller is pulled at least this far inside the edge of the square they dropped into (half of a narrower box). */
 const DROP_MARGIN = 14;
 
 const CORE: Box = { x0: 0, y0: 0, x1: SIDE, y1: SIDE };
@@ -92,6 +110,13 @@ function withBounds(boxes: Box[], discs: Disc[]): Outline {
   return { boxes, discs, bounds };
 }
 
+/** A mine hole's open dark: its boxes, moved from its art onto its tiles. */
+function holeOutline(lobes: number): Outline {
+  const hole = MINE_HOLES[lobes] ?? MINE_HOLES[0];
+  const at = holeArtOffset(hole);
+  return withBounds(hole.open.map(([x0, y0, x1, y1]) => ({ x0: at.x + x0, y0: at.y + y0, x1: at.x + x1, y1: at.y + y1 })), []);
+}
+
 function lobedOutline(lobes: number): Outline {
   const boxes: Box[] = [CORE];
   const discs: Disc[] = [];
@@ -112,6 +137,7 @@ export function pitOutline(pit: Pit): Outline {
   if (outline) return outline;
   if (pit.shape === 'quatrefoil') outline = QUATREFOIL;
   else if (pit.shape === 'spikes') outline = SPIKE_PIT;
+  else if (pit.shape === 'hole') outline = holeOutline(pit.lobes);
   else outline = pit.shape === 'lobed' ? lobedOutline(pit.lobes) : withBounds([CORE], []);
   outlines.set(key, outline);
   return outline;
@@ -159,7 +185,9 @@ export function dropPoint(pit: Pit, x: number, y: number, out: { x: number; y: n
   }
   const box = boxes.find((b) => px >= b.x0 && px < b.x1 && py >= b.y0 && py < b.y1) ?? boxes[0];
   // Into the square by a margin from whichever edge it was entered at, not all the way to its middle.
-  out.x = ox + Math.min(Math.max(px, box.x0 + DROP_MARGIN), box.x1 - DROP_MARGIN);
-  out.y = oy + Math.min(Math.max(py, box.y0 + DROP_MARGIN), box.y1 - DROP_MARGIN);
+  const mx = Math.min(DROP_MARGIN, (box.x1 - box.x0) / 2);
+  const my = Math.min(DROP_MARGIN, (box.y1 - box.y0) / 2);
+  out.x = ox + Math.min(Math.max(px, box.x0 + mx), box.x1 - mx);
+  out.y = oy + Math.min(Math.max(py, box.y0 + my), box.y1 - my);
   return out;
 }

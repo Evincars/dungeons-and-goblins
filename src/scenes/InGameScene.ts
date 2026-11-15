@@ -57,9 +57,11 @@ const START_REVEAL_TILES = 6;
 const TORCH_LIGHT_RADIUS = 120;
 /** Torch flames flicker out of step, this far apart in phase. */
 const TORCH_FLICKER_STEP = 1.3;
-/** The player's lantern hangs this far above their feet. */
-const LANTERN_LIFT = 16;
-const LANTERN_RADIUS = 110;
+/** Each hero carries a torch this far above their feet, its firelight reaching this far and flickering as a flame does. */
+const HERO_TORCH_LIFT = 16;
+const HERO_TORCH_RADIUS = 150;
+/** Heroes' torches flicker out of step with each other and with the wall torches. */
+const HERO_TORCH_PHASE = 0.7;
 /** The fog of war must cover entities in unexplored areas, not just the terrain. */
 const FOG_Z = 1e7;
 const STATUS_Y = 6;
@@ -450,19 +452,21 @@ export class InGameScene implements Scene {
     return this.lightPool[i] ?? (this.lightPool[i] = { x: 0, y: 0, radius: 0, kind: 0 });
   }
 
-  /** Every light this frame: torches, each player's lantern, and glowing entities (spell bolts, candles). */
+  /** Every light this frame: wall torches, each hero's torch, and glowing entities (spell bolts, candles, lanterns). */
   private gatherLights(): LightSource[] {
     const lights = this.frameLights;
     lights.length = 0;
     for (const torch of this.torchSources) lights.push(torch);
     let used = 0;
     for (const p of q.players) {
-      const lantern = this.pooledLight(used++);
-      lantern.x = p.position.x;
-      lantern.y = p.position.y - LANTERN_LIFT;
-      lantern.radius = LANTERN_RADIUS;
-      lantern.kind = 1;
-      lights.push(lantern);
+      const torch = this.pooledLight(used);
+      torch.x = p.position.x;
+      torch.y = p.position.y - HERO_TORCH_LIFT;
+      torch.radius = HERO_TORCH_RADIUS;
+      torch.kind = 0;
+      torch.flicker = HERO_TORCH_PHASE + used * TORCH_FLICKER_STEP;
+      lights.push(torch);
+      used++;
     }
     for (const e of q.glowing) {
       const light = this.pooledLight(used++);

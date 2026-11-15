@@ -3352,7 +3352,7 @@ test('the mines are built as caverns: tall faces cut short under thin rock, spur
   assert.ok(cut.dy >= 4 * TILE_WIDTH, 'and stays off the corridor\'s floor');
   assert.ok(pieces.some((p) => p.dx === 8 * TILE_WIDTH && p.sy === MINE_RIM_N[0].y && p.z === cut.z), 'the corridor\'s rim is drawn over the cut');
 
-  // Whole levels: bigger maps, caverns with spurs on the slant, every drop fenced, lit by lanterns, no torches.
+  // Whole levels: bigger maps, caverns with spurs on the slant, drops fenced here and there, lit by lanterns, no torches.
   const cfg = dungeonConfig('mines', 7);
   assert.ok(cfg.mapWidth > DEFAULT_CONFIG.mapWidth && cfg.northMargin > DEFAULT_CONFIG.northMargin);
   const layout = new DungeonBuilder(cfg).build();
@@ -3361,11 +3361,134 @@ test('the mines are built as caverns: tall faces cut short under thin rock, spur
   assert.equal(layout.torchPositions.length, 0);
   assert.ok(L.slopes.size > 0, 'caverns have slanted walls');
   assert.ok(layout.props.some((p) => PROPS[p.kind].glow && p.kind.startsWith('mine_lantern')), 'lanterns light them');
-  assert.ok(layout.props.some((p) => p.kind === 'mine_fence' || p.kind === 'mine_fence_side'), 'fences stand round the drops');
   assert.ok(L.floorZones.some((z) => z.patch), 'patches of other earth lie about');
   const decoded = decodeLevelMap(JSON.parse(JSON.stringify(encodeLevelMap(layout))));
   assert.equal(decoded.level.theme, 'mines');
   assert.deepEqual(decoded.level.floorZones, L.floorZones, 'patches go to co-op guests');
+  assert.deepEqual(decoded.level.pits, L.pits, 'and the holes in the floor');
+});
+
+test('mine caverns: holes and drops to fall into, fenced only in part, timbering on whole faces, no floor cut off', async () => {
+  const { dungeonConfig } = await load('level/generators/DungeonConfig');
+  const { PROPS } = await load('level/Props');
+  let holes = 0;
+  let fenced = 0;
+  let unfenced = 0;
+  for (const seed of [3, 7, 11, 19]) {
+    const layout = new DungeonBuilder(dungeonConfig('mines', seed)).build();
+    const L = layout.level;
+    const W = L.width;
+    holes += L.pits.filter((p) => p.shape === 'hole').length;
+    for (const p of layout.props) {
+      const def = PROPS[p.kind];
+      assert.ok(!p.kind.startsWith('mine_log') && !p.kind.startsWith('mine_support'), 'no loose lengths of beam lie about');
+      if (p.kind === 'mine_fence' || p.kind === 'mine_fence_front') {
+        assert.equal(L.getTile(p.tx, p.ty).type, TileType.Obstacle, 'a fence stops whoever walks into it');
+        assert.ok(L.blockBoxes.has(p.tx + p.ty * W), 'along the strip at its foot');
+        const guards = p.kind === 'mine_fence' ? p.ty + 1 : p.ty - 1;
+        assert.ok(L.isChasm(p.tx, guards), 'it stands at a drop\'s edge');
+      }
+      if (def.mount === 'foot' && p.kind.startsWith('mine_frame')) {
+        for (let k = 1; k <= 5; k++) assert.equal(L.getTile(p.tx, p.ty - k).type, TileType.Wall, 'timbering stands against a whole face');
+      }
+    }
+    // Brinks of the drops left open, to fall from.
+    for (let y = 1; y < L.height - 1; y++) for (let x = 0; x < W; x++) {
+      if (!L.isChasm(x, y + 1) || L.getTile(x, y).type === TileType.Wall || L.slopes.has(x + y * W)) continue;
+      if (L.getTile(x, y).type === TileType.Obstacle) fenced++;
+      else unfenced++;
+    }
+    // Every bit of floor can be walked to from the start.
+    const start = Math.floor(layout.playerSpawn.x / TILE_WIDTH) + Math.floor(layout.playerSpawn.y / TILE_WIDTH) * W;
+    const reached = reachableTiles(tileGraphOf(L), start, (_f, to) => (L.getTile(to % W, Math.floor(to / W)).type === TileType.Floor ? 1 : Infinity));
+    for (let i = 0; i < W * L.height; i++) {
+      if (L.getTile(i % W, Math.floor(i / W)).type === TileType.Floor) assert.equal(reached[i], 1, `floor at ${i % W},${Math.floor(i / W)} is reached`);
+    }
+  }
+  assert.ok(holes > 0, 'holes open in the floor');
+  assert.ok(fenced > 0 && unfenced > fenced, 'drops are fenced along stretches, not all round');
+});
+
+test('in the mines, whoever walks out over a drop or a hole falls; the castle\'s chasms stay gaps', async () => {
+  const { overHole } = await load('systems/HoleSystem');
+  const { MINE_HOLES, holeArtOffset } = await load('level/MineTiles');
+  const { dropPoint, validPitDetail } = await load('level/PitShapes');
+  const { encodeLevelMap, decodeLevelMap } = await load('level/LevelMap');
+  const mines = new Level(12, 10, 'mines');
+  mines.setTile(6, 5, createTile(TileType.Hole));
+  mines.setTile(6, 6, createTile(TileType.Hole));
+  assert.ok(mines.isChasm(6, 5));
+  assert.ok(!mines.getClipBBs(6 * TILE_WIDTH + 16, 4 * TILE_WIDTH + 16, 7, 7).some((b) => b.contains(6 * TILE_WIDTH + 16, 5 * TILE_WIDTH + 20)),
+    'nothing stops a body at a mine\'s drop');
+  assert.ok(!overHole(mines, { position: { x: 6 * TILE_WIDTH + 16, y: 5 * TILE_WIDTH + 12 }, radius: { x: 7, y: 7 } }), 'feet on its rim stand');
+  assert.ok(overHole(mines, { position: { x: 6 * TILE_WIDTH + 16, y: 6 * TILE_WIDTH + 8 }, radius: { x: 7, y: 7 } }), 'past it, a body falls');
+  const castle = new Level(12, 10, 'castle2');
+  castle.setTile(6, 5, createTile(TileType.Hole));
+  assert.ok(castle.getClipBBs(6 * TILE_WIDTH + 16, 4 * TILE_WIDTH + 16, 7, 7).some((b) => b.contains(6 * TILE_WIDTH + 16, 5 * TILE_WIDTH + 29)),
+    'the isometric castle\'s chasm is still a gap nobody steps into');
+
+  // A hole a body's size: whoever's feet are over its dark falls in; beside it, nobody does.
+  const hole = { x: 3, y: 3, shape: 'hole', lobes: 0 };
+  mines.setTile(3, 3, createTile(TileType.Hole));
+  mines.addPit(hole);
+  const at = holeArtOffset(MINE_HOLES[0]);
+  const [x0, y0, x1, y1] = MINE_HOLES[0].open[0];
+  const mid = { x: 3 * TILE_WIDTH + at.x + (x0 + x1) / 2, y: 3 * TILE_WIDTH + at.y + (y0 + y1) / 2 };
+  assert.equal(mines.pitAt(mid.x, mid.y), hole);
+  assert.ok(overHole(mines, { position: mid, radius: { x: 7, y: 7 } }), 'feet over the hole fall in');
+  assert.ok(!overHole(mines, { position: { x: 3 * TILE_WIDTH + 1, y: 3 * TILE_WIDTH + 30 }, radius: { x: 7, y: 7 } }), 'feet at its tile\'s corner do not');
+  const drop = dropPoint(hole, mid.x + 3, mid.y, { x: 0, y: 0 });
+  assert.ok(mines.pitAt(drop.x, drop.y) === hole, 'a faller drops inside its dark');
+  assert.ok(validPitDetail('hole', MINE_HOLES.length - 1) && !validPitDetail('hole', MINE_HOLES.length), 'a hole is one of the set\'s');
+  const layout = { level: mines, rooms: [], playerSpawn: { x: 40, y: 40 }, torchPositions: [], props: [], campfires: [],
+    exitButtonPos: { x: 0, y: 0 }, shopPos: { x: 0, y: 0 }, dummyPos: { x: 0, y: 0 }, safeDoor: { tiles: [], boundaryX: 0 },
+    leverPos: { x: 0, y: 0 }, exitDoor: { tiles: [], boundaryX: 0 }, exitLeverPos: { x: 0, y: 0 } };
+  const back = decodeLevelMap(JSON.parse(JSON.stringify(encodeLevelMap(layout))));
+  assert.deepEqual(back.level.pits, [hole], 'a hole goes to co-op guests');
+});
+
+test('the point of a spur, where two slants meet back to back, pushes a body back as each slant does', () => {
+  // A spur of rock jutting north out of a south wall (rows 5 and down): its point between tiles (5,4) and (6,4).
+  const level = new Level(12, 10, 'mines');
+  for (let y = 5; y < 10; y++) for (let x = 0; x < 12; x++) level.setTile(x, y, createTile(TileType.Wall));
+  for (const x of [5, 6]) level.setTile(x, 4, createTile(TileType.Wall));
+  level.slopes.set(5 + 4 * 12, { corner: 'se', major: true });
+  level.slopes.set(4 + 4 * 12, { corner: 'se', major: false });
+  level.slopes.set(6 + 4 * 12, { corner: 'sw', major: true });
+  level.slopes.set(7 + 4 * 12, { corner: 'sw', major: false });
+  const pos = { x: 6 * TILE_WIDTH, y: 3 * TILE_WIDTH + 16 };
+  // Walking straight down onto the point, a step at a time.
+  for (let i = 0; i < 40; i++) {
+    pos.y += 2;
+    level.pushOutOfSlopes(pos, 7, 7);
+  }
+  // Feet reach WALL_SINK behind a south slant's rim, as behind a south wall's, but no further: not into the rock below.
+  assert.ok(pos.y + 7 < 5 * TILE_WIDTH, `the body stays out of the rock (feet at ${pos.y + 7})`);
+  assert.ok(Math.abs(pos.x - 6 * TILE_WIDTH) < 1, 'pushed straight back, the two slants evening out');
+});
+
+test('the mines\' stones block as far back as their bulk stands, thin timbers never clear, and flames flicker', async () => {
+  const { PROPS, MINE_STONES, MINE_BIG_ROCKS, MINE_POSTS, propBlockRect, PROP_GROUND } = await load('level/Props');
+  const { createProp } = await load('entities/DungeonFactory');
+  assert.ok(MINE_STONES.length > 0 && MINE_STONES.every((k) => PROPS[k].solid), 'small stones and heaps of rubble are walked round');
+  for (const kind of MINE_BIG_ROCKS) {
+    const def = PROPS[kind];
+    const block = propBlockRect(def);
+    const rows = def.footprint?.h ?? 1;
+    const across = def.footprint?.w ?? 1;
+    assert.ok(block.y0 >= PROP_GROUND - rows * TILE_WIDTH, `${kind}'s base lies within the tiles it takes`);
+    assert.ok(block.x0 >= TILE_WIDTH / 2 - (across * TILE_WIDTH) / 2 && block.x1 <= TILE_WIDTH / 2 + (across * TILE_WIDTH) / 2, `${kind} across`);
+  }
+  assert.ok(MINE_BIG_ROCKS.some((k) => (PROPS[k].footprint?.h ?? 1) > 1), 'a great rock blocks into the tile behind its foot');
+  assert.ok(MINE_POSTS.every((k) => PROPS[k].solid && !PROPS[k].seeThrough), 'posts stop bodies but never clear');
+  world.clear();
+  const lantern = createProp({ kind: 'mine_lantern', tx: 2, ty: 2 });
+  const crystal = createProp({ kind: 'crystal_blue_00', tx: 4, ty: 4 });
+  const candle = createProp({ kind: 'candle', tx: 6, ty: 6 });
+  assert.ok(lantern.glow.cool && lantern.glow.flicker !== undefined, 'a lantern\'s green flame flickers');
+  assert.ok(candle.glow.flicker !== undefined, 'so does a candle');
+  assert.equal(crystal.glow.flicker, undefined, 'a crystal shines steadily');
+  world.clear();
 });
 
 test('in the isometric castle, faces and slanted faces are drawn in front of whoever stands behind them, and a chasm\'s side rims reach its top', async () => {

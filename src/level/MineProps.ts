@@ -2,23 +2,25 @@ import type { PropDef } from './Props';
 
 /**
  * The forgotten mines' props, cut to their sprite bounds from the cave set in /caves2 (RPGFW Set 2): other_decoratives.png
- * (mushroom tables, flowers, reeds, bracket fungi, holes, pebbles, cobwebs, roots), rocks_stones.png (rock formations,
- * rubble, stalagmites) and wood_el.png (the pit timbering: frames, posts, lantern posts and lanterns, fences, logs).
+ * (mushroom tables, flowers, reeds, bracket fungi, pebbles, cobwebs, roots; its holes are pits, MineTiles.ts),
+ * rocks_stones.png (rock formations, rubble, stalagmites) and wood_el.png (the pit timbering: frames, posts, lantern
+ * posts and lanterns, fences, a trestle). Of the timbering only whole pieces are used: the sheet's beam heads, braces
+ * and lengths of log are parts meant to be joined, and never match the posts beside them.
  * Spread into PROPS (Props.ts); the groups the dresser picks from are there too.
  */
 
 type Box = readonly [number, number, number, number];
-/** How much of its foot a solid prop blocks: `w` wide, `d` deep. */
-type BlockSize = { w: number; d: number };
+/** How much of its foot a solid prop blocks: `w` wide, `d` deep, its middle `dx` off the tile's (PropDef.base). */
+type Base = { w: number; d: number; dx?: number };
 
 const rect = ([x, y, w, h]: Box) => ({ x, y, w, h });
 
-/** Lying on the floor, walked over (pebbles, flowers, reeds). */
+/** Lying on the floor, walked over (small pebbles, flowers, reeds, the thinnest stalagmites). */
 function loose(image: 'mine_decor' | 'mine_rocks', box: Box): PropDef {
   return { image, rect: rect(box), mount: 'floor' };
 }
 
-/** Flat on the floor, under everything (holes, roots, cracks). */
+/** Flat on the floor, under everything (roots). */
 function flat(box: Box): PropDef {
   return { image: 'mine_decor', rect: rect(box), mount: 'floor', flat: true };
 }
@@ -28,26 +30,41 @@ function hung(box: Box, hang: number): PropDef {
   return { image: 'mine_decor', rect: rect(box), mount: 'wall', hang };
 }
 
+/** Things this tall (px) clear over whoever stands behind them. */
+const TALL = 56;
 /**
- * Standing in the way: only its base blocks (a strip `base` at its foot, over the `across` tiles of its footprint), and a
- * tall one clears over whoever stands behind it.
+ * Floor props stand PROP_GROUND (28 px) down their tile, so a base deeper than this reaches into the tile behind, and
+ * none is deeper than two tiles' worth.
  */
-function solid(image: 'mine_decor' | 'mine_rocks' | 'mine_wood', box: Box, across: number, base: BlockSize): PropDef {
-  const tall = box[3] >= TALL;
-  const def: PropDef = { image, rect: rect(box), mount: 'floor', solid: true, base };
-  if (tall) def.seeThrough = true;
-  if (across > 1) def.footprint = { w: across, h: 1 };
+const ONE_ROW_BASE = 26;
+const MAX_BASE_DEPTH = 56;
+
+/**
+ * Standing in the way (stones of every size, stalagmites): only its base blocks, measured from the art's outline (as
+ * wide as the stone near the ground, and as deep as its bulk would stand, so nobody stands inside it from behind), the
+ * tiles it takes worked out from that; a tall one clears over whoever stands behind it.
+ */
+function solid(image: 'mine_decor' | 'mine_rocks', box: Box, base: Base): PropDef {
+  const d = Math.min(base.d, MAX_BASE_DEPTH);
+  const half = base.w / 2 + Math.abs(base.dx ?? 0);
+  const across = 2 * Math.ceil(Math.max(0, half - TILE / 2) / TILE) + 1;
+  const def: PropDef = { image, rect: rect(box), mount: 'floor', solid: true, base: { ...base, d } };
+  if (box[3] >= TALL) def.seeThrough = true;
+  if (across > 1 || d > ONE_ROW_BASE) def.footprint = { w: across, h: d > ONE_ROW_BASE ? 2 : 1 };
   return def;
 }
 
-/** Things this tall (px) clear over whoever stands behind them. */
-const TALL = 56;
-/** A small rock or stalagmite's base, a medium one's, a great formation's. */
-const SMALL_BASE = { w: 14, d: 8 };
-const MID_BASE = { w: 26, d: 12 };
-const BIG_BASE = { w: 76, d: 18 };
-const HUGE_BASE = { w: 92, d: 24 };
-/** A lantern's cold green light, hung on a post or the rock. */
+/** A tile's size (TILE_WIDTH), kept here so this table needs nothing from the modules that spread it. */
+const TILE = 32;
+/** A pit prop's foot: a timber is thin, so it never clears over anyone (whoever is behind still shows round it). */
+const POST_BASE = { w: 12, d: 8 };
+
+/** A pit prop standing on the floor, alone or with a lantern hung from it. */
+function post(box: Box): PropDef {
+  return { image: 'mine_wood', rect: rect(box), mount: 'floor', solid: true, base: POST_BASE };
+}
+
+/** A lantern's green flame, hung on a post or the rock: cold light, but a flame's, so it flickers. */
 const LANTERN_GLOW = 84;
 const HUNG_LANTERN_GLOW = 56;
 /** How high on the rock face (above its foot) webs, fungi and lanterns hang. */
@@ -55,10 +72,20 @@ const WEB_HANG = 118;
 const FUNGUS_HANG = 70;
 const LANTERN_HANG = 64;
 
+/** A lantern on its post. */
+function lanternPost(box: Box): PropDef {
+  return { ...post(box), glow: LANTERN_GLOW, coolGlow: true, flame: true };
+}
+
+/** A lantern hung on the rock. */
+function lantern(box: Box): PropDef {
+  return { image: 'mine_wood', rect: rect(box), mount: 'wall', hang: LANTERN_HANG, glow: HUNG_LANTERN_GLOW, coolGlow: true, flame: true };
+}
+
 export const MINE_PROPS = {
   // ── other_decoratives.png ──
-  mine_shroom_table:  solid('mine_decor', [2, 0, 29, 30], 1, { w: 22, d: 8 }),
-  mine_shroom_table2: solid('mine_decor', [33, 32, 29, 30], 1, { w: 22, d: 8 }),
+  mine_shroom_table:  solid('mine_decor', [2, 0, 29, 30], { w: 22, d: 8 }),
+  mine_shroom_table2: solid('mine_decor', [33, 32, 29, 30], { w: 22, d: 8 }),
   mine_shroom_stool:  loose('mine_decor', [38, 11, 14, 13]),
   mine_shroom_stool2: loose('mine_decor', [8, 40, 14, 13]),
   mine_flower_00: loose('mine_decor', [75, 9, 14, 17]),
@@ -93,38 +120,22 @@ export const MINE_PROPS = {
   mine_fungus_brown_5: hung([355, 100, 24, 22], FUNGUS_HANG - 4),
   mine_fungus_brown_6: hung([391, 104, 18, 18], FUNGUS_HANG + 8),
   mine_fungus_brown_7: hung([420, 102, 24, 20], FUNGUS_HANG - 18),
-  mine_hole_00: flat([449, 1, 77, 63]),
-  mine_hole_01: flat([498, 193, 77, 63]),
-  mine_hole_02: flat([470, 139, 65, 42]),
-  mine_hole_03: flat([489, 331, 65, 42]),
-  mine_hole_04: flat([551, 11, 18, 12]),
-  mine_hole_05: flat([546, 40, 26, 18]),
-  mine_hole_06: flat([512, 70, 30, 19]),
-  mine_hole_07: flat([553, 74, 21, 12]),
-  mine_hole_08: flat([452, 99, 57, 25]),
-  mine_hole_09: flat([521, 97, 45, 28]),
-  mine_hole_10: flat([455, 203, 18, 12]),
-  mine_hole_11: flat([452, 232, 26, 18]),
-  mine_hole_12: flat([450, 266, 21, 12]),
-  mine_hole_13: flat([482, 262, 30, 19]),
-  mine_hole_14: flat([458, 289, 45, 28]),
-  mine_hole_15: flat([515, 291, 57, 25]),
   mine_pebble_00: loose('mine_decor', [7, 72, 9, 8]),
   mine_pebble_01: loose('mine_decor', [44, 72, 7, 5]),
   mine_pebble_02: loose('mine_decor', [64, 72, 12, 11]),
-  mine_pebble_03: loose('mine_decor', [97, 74, 18, 14]),
+  mine_pebble_03: solid('mine_decor', [97, 74, 18, 14], { w: 15, d: 8, dx: -1 }),
   mine_pebble_04: loose('mine_decor', [135, 73, 10, 8]),
-  mine_pebble_05: loose('mine_decor', [166, 72, 21, 16]),
+  mine_pebble_05: solid('mine_decor', [166, 72, 21, 16], { w: 18, d: 10, dx: 1 }),
   mine_pebble_06: loose('mine_decor', [199, 72, 21, 19]),
   mine_pebble_07: loose('mine_decor', [235, 77, 9, 7]),
-  mine_pebble_08: loose('mine_decor', [264, 71, 17, 18]),
-  mine_pebble_09: loose('mine_decor', [0, 98, 24, 25]),
-  mine_pebble_10: loose('mine_decor', [39, 103, 17, 18]),
+  mine_pebble_08: solid('mine_decor', [264, 71, 17, 18], { w: 13, d: 11 }),
+  mine_pebble_09: solid('mine_decor', [0, 98, 24, 25], { w: 20, d: 15, dx: -1 }),
+  mine_pebble_10: solid('mine_decor', [39, 103, 17, 18], { w: 13, d: 11 }),
   mine_pebble_11: loose('mine_decor', [76, 109, 9, 7]),
   mine_pebble_12: loose('mine_decor', [100, 104, 21, 19]),
-  mine_pebble_13: loose('mine_decor', [133, 104, 21, 16]),
+  mine_pebble_13: solid('mine_decor', [133, 104, 21, 16], { w: 18, d: 10, dx: -1 }),
   mine_pebble_14: loose('mine_decor', [175, 105, 10, 8]),
-  mine_pebble_15: loose('mine_decor', [205, 106, 18, 14]),
+  mine_pebble_15: solid('mine_decor', [205, 106, 18, 14], { w: 15, d: 8, dx: 1 }),
   mine_pebble_16: loose('mine_decor', [244, 104, 12, 11]),
   mine_pebble_17: loose('mine_decor', [269, 104, 7, 5]),
   mine_pebble_18: loose('mine_decor', [304, 104, 9, 8]),
@@ -194,44 +205,44 @@ export const MINE_PROPS = {
   mine_root_47: flat([428, 393, 13, 15]),
 
   // ── rocks_stones.png ──
-  mine_rock_s_0: solid('mine_rocks', [77, 0, 39, 64], 1, MID_BASE),
-  mine_rock_s_1: solid('mine_rocks', [130, 18, 28, 46], 1, SMALL_BASE),
-  mine_rock_s_2: solid('mine_rocks', [290, 338, 28, 46], 1, SMALL_BASE),
-  mine_rock_m_0: solid('mine_rocks', [2, 3, 61, 60], 1, MID_BASE),
-  mine_rock_m_1: solid('mine_rocks', [172, 5, 67, 59], 1, MID_BASE),
-  mine_rock_m_2: solid('mine_rocks', [262, 10, 50, 49], 1, MID_BASE),
-  mine_rock_m_3: solid('mine_rocks', [136, 330, 50, 49], 1, MID_BASE),
-  mine_rock_m_4: solid('mine_rocks', [209, 325, 67, 59], 1, MID_BASE),
-  mine_rock_m_5: solid('mine_rocks', [385, 323, 61, 60], 1, MID_BASE),
-  mine_rock_l_0: solid('mine_rocks', [13, 79, 83, 78], 3, BIG_BASE),
-  mine_rock_l_1: solid('mine_rocks', [109, 75, 69, 78], 3, BIG_BASE),
-  mine_rock_l_2: solid('mine_rocks', [336, 143, 97, 73], 3, BIG_BASE),
-  mine_rock_l_3: solid('mine_rocks', [270, 395, 69, 78], 3, BIG_BASE),
-  mine_rock_l_4: solid('mine_rocks', [352, 399, 83, 78], 3, BIG_BASE),
-  mine_rock_l_5: solid('mine_rocks', [15, 463, 97, 73], 3, BIG_BASE),
-  mine_rock_l_6: solid('mine_rocks', [14, 548, 103, 92], 3, BIG_BASE),
-  mine_rock_xl_0: solid('mine_rocks', [320, 7, 127, 111], 3, HUGE_BASE),
-  mine_rock_xl_1: solid('mine_rocks', [195, 71, 119, 121], 3, HUGE_BASE),
-  mine_rock_xl_2: solid('mine_rocks', [3, 171, 154, 140], 5, HUGE_BASE),
-  mine_rock_xl_3: solid('mine_rocks', [167, 192, 132, 128], 5, HUGE_BASE),
-  mine_rock_xl_4: solid('mine_rocks', [1, 327, 127, 111], 3, HUGE_BASE),
-  mine_rock_xl_5: solid('mine_rocks', [134, 391, 119, 121], 3, HUGE_BASE),
-  mine_rock_xl_6: solid('mine_rocks', [291, 491, 154, 140], 5, HUGE_BASE),
-  mine_rock_xl_7: solid('mine_rocks', [149, 512, 132, 128], 5, HUGE_BASE),
-  mine_rubble_s_0: loose('mine_rocks', [455, 80, 48, 34]),
-  mine_rubble_s_1: loose('mine_rocks', [512, 102, 61, 23]),
-  mine_rubble_s_2: loose('mine_rocks', [544, 128, 32, 32]),
-  mine_rubble_s_3: loose('mine_rocks', [521, 400, 48, 34]),
-  mine_rubble_s_4: loose('mine_rocks', [451, 422, 61, 23]),
-  mine_rubble_s_5: loose('mine_rocks', [448, 448, 32, 32]),
-  mine_rubble_0: solid('mine_rocks', [451, 12, 56, 42], 1, MID_BASE),
-  mine_rubble_1: solid('mine_rocks', [517, 332, 56, 42], 1, MID_BASE),
-  mine_rubble_2: solid('mine_rocks', [450, 135, 90, 52], 3, BIG_BASE),
-  mine_rubble_3: solid('mine_rocks', [449, 198, 78, 57], 3, BIG_BASE),
-  mine_rubble_4: solid('mine_rocks', [462, 258, 71, 62], 3, BIG_BASE),
-  mine_rubble_5: solid('mine_rocks', [484, 455, 90, 52], 3, BIG_BASE),
-  mine_rubble_6: solid('mine_rocks', [465, 518, 78, 57], 3, BIG_BASE),
-  mine_rubble_7: solid('mine_rocks', [459, 578, 71, 62], 3, BIG_BASE),
+  mine_rock_s_0: solid('mine_rocks', [77, 0, 39, 64], { w: 27, d: 16 }),
+  mine_rock_s_1: solid('mine_rocks', [130, 18, 28, 46], { w: 19, d: 11, dx: -1 }),
+  mine_rock_s_2: solid('mine_rocks', [290, 338, 28, 46], { w: 19, d: 11, dx: 1 }),
+  mine_rock_m_0: solid('mine_rocks', [2, 3, 61, 60], { w: 42, d: 24, dx: -4 }),
+  mine_rock_m_1: solid('mine_rocks', [172, 5, 67, 59], { w: 46, d: 27, dx: -3 }),
+  mine_rock_m_2: solid('mine_rocks', [262, 10, 50, 49], { w: 34, d: 20, dx: -3 }),
+  mine_rock_m_3: solid('mine_rocks', [136, 330, 50, 49], { w: 34, d: 20, dx: 3 }),
+  mine_rock_m_4: solid('mine_rocks', [209, 325, 67, 59], { w: 46, d: 27, dx: 3 }),
+  mine_rock_m_5: solid('mine_rocks', [385, 323, 61, 60], { w: 42, d: 24, dx: 4 }),
+  mine_rock_l_0: solid('mine_rocks', [13, 79, 83, 78], { w: 69, d: 40, dx: -4 }),
+  mine_rock_l_1: solid('mine_rocks', [109, 75, 69, 78], { w: 45, d: 26, dx: -7 }),
+  mine_rock_l_2: solid('mine_rocks', [336, 143, 97, 73], { w: 79, d: 37, dx: -7 }),
+  mine_rock_l_3: solid('mine_rocks', [270, 395, 69, 78], { w: 45, d: 26, dx: 7 }),
+  mine_rock_l_4: solid('mine_rocks', [352, 399, 83, 78], { w: 69, d: 40, dx: 4 }),
+  mine_rock_l_5: solid('mine_rocks', [15, 463, 97, 73], { w: 79, d: 37, dx: 7 }),
+  mine_rock_l_6: solid('mine_rocks', [14, 548, 103, 92], { w: 76, d: 44, dx: 8 }),
+  mine_rock_xl_0: solid('mine_rocks', [320, 7, 127, 111], { w: 99, d: 58, dx: -15 }),
+  mine_rock_xl_1: solid('mine_rocks', [195, 71, 119, 121], { w: 97, d: 57, dx: -8 }),
+  mine_rock_xl_2: solid('mine_rocks', [3, 171, 154, 140], { w: 122, d: 72, dx: -8 }),
+  mine_rock_xl_3: solid('mine_rocks', [167, 192, 132, 128], { w: 73, d: 43, dx: -21 }),
+  mine_rock_xl_4: solid('mine_rocks', [1, 327, 127, 111], { w: 99, d: 58, dx: 15 }),
+  mine_rock_xl_5: solid('mine_rocks', [134, 391, 119, 121], { w: 97, d: 57, dx: 8 }),
+  mine_rock_xl_6: solid('mine_rocks', [291, 491, 154, 140], { w: 122, d: 72, dx: 8 }),
+  mine_rock_xl_7: solid('mine_rocks', [149, 512, 132, 128], { w: 73, d: 43, dx: 21 }),
+  mine_rubble_s_0: solid('mine_rocks', [455, 80, 48, 34], { w: 36, d: 21, dx: -2 }),
+  mine_rubble_s_1: solid('mine_rocks', [512, 102, 61, 23], { w: 43, d: 13 }),
+  mine_rubble_s_2: solid('mine_rocks', [544, 128, 32, 32], { w: 16, d: 10, dx: 3 }),
+  mine_rubble_s_3: solid('mine_rocks', [521, 400, 48, 34], { w: 36, d: 21, dx: 2 }),
+  mine_rubble_s_4: solid('mine_rocks', [451, 422, 61, 23], { w: 43, d: 13 }),
+  mine_rubble_s_5: solid('mine_rocks', [448, 448, 32, 32], { w: 16, d: 10, dx: -3 }),
+  mine_rubble_0: solid('mine_rocks', [451, 12, 56, 42], { w: 41, d: 24, dx: 2 }),
+  mine_rubble_1: solid('mine_rocks', [517, 332, 56, 42], { w: 41, d: 24, dx: -2 }),
+  mine_rubble_2: solid('mine_rocks', [450, 135, 90, 52], { w: 63, d: 34, dx: -15 }),
+  mine_rubble_3: solid('mine_rocks', [449, 198, 78, 57], { w: 54, d: 32, dx: 9 }),
+  mine_rubble_4: solid('mine_rocks', [462, 258, 71, 62], { w: 42, d: 24, dx: 1 }),
+  mine_rubble_5: solid('mine_rocks', [484, 455, 90, 52], { w: 63, d: 34, dx: 15 }),
+  mine_rubble_6: solid('mine_rocks', [465, 518, 78, 57], { w: 54, d: 32, dx: -9 }),
+  mine_rubble_7: solid('mine_rocks', [459, 578, 71, 62], { w: 42, d: 24, dx: -1 }),
   mine_stalagmite_xs_0: loose('mine_rocks', [555, 165, 12, 24]),
   mine_stalagmite_xs_1: loose('mine_rocks', [555, 201, 10, 19]),
   mine_stalagmite_xs_2: loose('mine_rocks', [584, 201, 13, 15]),
@@ -246,44 +257,41 @@ export const MINE_PROPS = {
   mine_stalagmite_xs_11: loose('mine_rocks', [555, 555, 10, 36]),
   mine_stalagmite_xs_12: loose('mine_rocks', [584, 590, 10, 38]),
   mine_stalagmite_xs_13: loose('mine_rocks', [552, 616, 13, 15]),
-  mine_stalagmite_0: solid('mine_rocks', [592, 4, 32, 57], 1, SMALL_BASE),
-  mine_stalagmite_1: solid('mine_rocks', [592, 69, 34, 58], 1, SMALL_BASE),
-  mine_stalagmite_2: solid('mine_rocks', [615, 140, 21, 45], 1, SMALL_BASE),
-  mine_stalagmite_3: solid('mine_rocks', [580, 145, 25, 36], 1, SMALL_BASE),
-  mine_stalagmite_4: solid('mine_rocks', [591, 291, 32, 57], 1, SMALL_BASE),
-  mine_stalagmite_5: solid('mine_rocks', [589, 356, 34, 58], 1, SMALL_BASE),
-  mine_stalagmite_6: solid('mine_rocks', [579, 427, 21, 45], 1, SMALL_BASE),
-  mine_stalagmite_7: solid('mine_rocks', [610, 432, 25, 36], 1, SMALL_BASE),
-  mine_stalagmites_0: solid('mine_rocks', [648, 14, 40, 70], 1, MID_BASE),
-  mine_stalagmites_1: solid('mine_rocks', [652, 109, 40, 70], 1, MID_BASE),
-  mine_stalagmites_2: solid('mine_rocks', [640, 192, 49, 80], 1, MID_BASE),
-  mine_stalagmites_3: solid('mine_rocks', [655, 288, 49, 80], 1, MID_BASE),
-  mine_stalagmites_4: solid('mine_rocks', [640, 401, 46, 79], 1, MID_BASE),
-  mine_stalagmites_5: solid('mine_rocks', [658, 497, 46, 79], 1, MID_BASE),
-  mine_stalagmites_6: solid('mine_rocks', [608, 576, 64, 59], 3, BIG_BASE),
+  mine_stalagmite_0: solid('mine_rocks', [592, 4, 32, 57], { w: 18, d: 12, dx: 3 }),
+  mine_stalagmite_1: solid('mine_rocks', [592, 69, 34, 58], { w: 22, d: 14, dx: -1 }),
+  mine_stalagmite_2: solid('mine_rocks', [615, 140, 21, 45], { w: 12, d: 8 }),
+  mine_stalagmite_3: solid('mine_rocks', [580, 145, 25, 36], { w: 15, d: 10 }),
+  mine_stalagmite_4: solid('mine_rocks', [591, 291, 32, 57], { w: 18, d: 12, dx: -3 }),
+  mine_stalagmite_5: solid('mine_rocks', [589, 356, 34, 58], { w: 22, d: 14, dx: 1 }),
+  mine_stalagmite_6: solid('mine_rocks', [579, 427, 21, 45], { w: 12, d: 8 }),
+  mine_stalagmite_7: solid('mine_rocks', [610, 432, 25, 36], { w: 15, d: 10 }),
+  mine_stalagmites_0: solid('mine_rocks', [648, 14, 40, 70], { w: 30, d: 14, dx: 1 }),
+  mine_stalagmites_1: solid('mine_rocks', [652, 109, 40, 70], { w: 30, d: 14, dx: -1 }),
+  mine_stalagmites_2: solid('mine_rocks', [640, 192, 49, 80], { w: 30, d: 14, dx: 9 }),
+  mine_stalagmites_3: solid('mine_rocks', [655, 288, 49, 80], { w: 30, d: 14, dx: -9 }),
+  mine_stalagmites_4: solid('mine_rocks', [640, 401, 46, 79], { w: 27, d: 14, dx: 6 }),
+  mine_stalagmites_5: solid('mine_rocks', [658, 497, 46, 79], { w: 27, d: 14, dx: -6 }),
+  mine_stalagmites_6: solid('mine_rocks', [608, 576, 64, 59], { w: 50, d: 14 }),
 
   // ── wood_el.png: the pit timbering ──
   mine_frame:      { image: 'mine_wood', rect: rect([289, 0, 62, 110]), mount: 'foot' },
   mine_frame_wide: { image: 'mine_wood', rect: rect([352, 0, 128, 110]), mount: 'foot' },
   mine_frame_door: { image: 'mine_wood', rect: rect([640, 0, 96, 110]), mount: 'foot' },
-  mine_support:    { image: 'mine_wood', rect: rect([287, 128, 62, 170]), mount: 'foot' },
-  mine_support2:   { image: 'mine_wood', rect: rect([419, 128, 61, 170]), mount: 'foot' },
-  mine_post:        solid('mine_wood', [487, 0, 18, 110], 1, SMALL_BASE),
-  mine_post2:       solid('mine_wood', [340, 193, 12, 106], 1, SMALL_BASE),
-  mine_post3:       solid('mine_wood', [73, 337, 14, 111], 1, SMALL_BASE),
-  mine_post_broken: solid('mine_wood', [359, 131, 24, 167], 1, SMALL_BASE),
-  mine_post_broken2: solid('mine_wood', [384, 131, 25, 167], 1, SMALL_BASE),
-  mine_lantern_post:  { ...solid('mine_wood', [426, 192, 22, 106], 1, SMALL_BASE), glow: LANTERN_GLOW, coolGlow: true },
-  mine_lantern_post2: { ...solid('mine_wood', [704, 192, 26, 106], 1, SMALL_BASE), glow: LANTERN_GLOW, coolGlow: true },
-  mine_lantern_post3: { ...solid('mine_wood', [742, 192, 26, 106], 1, SMALL_BASE), glow: LANTERN_GLOW, coolGlow: true },
-  mine_lantern:  { image: 'mine_wood', rect: rect([779, 211, 10, 33]), mount: 'wall', hang: LANTERN_HANG, glow: HUNG_LANTERN_GLOW, coolGlow: true },
-  mine_lantern2: { image: 'mine_wood', rect: rect([587, 275, 10, 33]), mount: 'wall', hang: LANTERN_HANG, glow: HUNG_LANTERN_GLOW, coolGlow: true },
-  mine_lantern3: { image: 'mine_wood', rect: rect([618, 279, 10, 29]), mount: 'wall', hang: LANTERN_HANG, glow: HUNG_LANTERN_GLOW, coolGlow: true },
-  mine_lantern4: { image: 'mine_wood', rect: rect([778, 279, 10, 29]), mount: 'wall', hang: LANTERN_HANG, glow: HUNG_LANTERN_GLOW, coolGlow: true },
+  mine_post:  post([487, 0, 18, 110]),
+  mine_post2: post([340, 193, 12, 106]),
+  mine_post3: post([73, 337, 14, 111]),
+  mine_lantern_post:  lanternPost([426, 192, 22, 106]),
+  mine_lantern_post2: lanternPost([704, 192, 26, 106]),
+  mine_lantern_post3: lanternPost([742, 192, 26, 106]),
+  mine_lantern:  lantern([779, 211, 10, 33]),
+  mine_lantern2: lantern([587, 275, 10, 33]),
+  mine_lantern3: lantern([618, 279, 10, 29]),
+  mine_lantern4: lantern([778, 279, 10, 29]),
+  // A fence on the floor behind a drop's edge stands at the foot of its tile; one guarding a drop from the south stands at
+  // the top of the floor below its lip ('foot', as against a wall), so both stand on the edge they guard.
   mine_fence:      { image: 'mine_wood', rect: rect([93, 14, 32, 38]), mount: 'floor' },
   mine_fence_post: { image: 'mine_wood', rect: rect([93, 14, 7, 38]), mount: 'floor' },
-  mine_fence_side: { image: 'mine_wood', rect: rect([12, 92, 12, 32]), mount: 'floor' },
-  mine_trestle: solid('mine_wood', [111, 432, 66, 39], 3, BIG_BASE),
-  mine_log:     { image: 'mine_wood', rect: rect([83, 448, 32, 23]), mount: 'floor' },
-  mine_log2:    { image: 'mine_wood', rect: rect([97, 481, 37, 31]), mount: 'floor' },
+  mine_fence_front:      { image: 'mine_wood', rect: rect([93, 14, 32, 38]), mount: 'foot' },
+  mine_fence_front_post: { image: 'mine_wood', rect: rect([93, 14, 7, 38]), mount: 'foot' },
+  mine_trestle: { image: 'mine_wood', rect: rect([111, 432, 66, 39]), mount: 'floor', solid: true, base: { w: 60, d: 14 }, footprint: { w: 3, h: 1 } },
 } as const satisfies Record<string, PropDef>;

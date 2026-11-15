@@ -2,7 +2,7 @@ import { Level, isWallDecor } from './Level';
 import type { WallDecor } from './Level';
 import { createTile, TileType } from './TileType';
 import { PROPS } from './Props';
-import { ALL_LOBES, PIT_SHAPES } from './PitShapes';
+import { PIT_SHAPES, validPitDetail } from './PitShapes';
 import { LEVEL_THEMES } from './Theme';
 import { MAX_FLOOR_TONES, POOL_KINDS } from './Level';
 import { SLOPE_CODES, slopeCode, slopeOf } from './Slopes';
@@ -23,7 +23,7 @@ import { gunzipJson, gzipText } from '../core/compression';
  */
 
 export const MAP_FORMAT = 'dungeons-and-goblins/map';
-export const MAP_VERSION = 9;
+export const MAP_VERSION = 10;
 /** A tile's byte: its type in the high bits, its image variant (0–15) in the low four. */
 const VARIANT_BITS = 4;
 const VARIANT_MASK = (1 << VARIANT_BITS) - 1;
@@ -33,7 +33,7 @@ const MAX_UNPACKED = 4_000_000;
 const TILE_TYPES: readonly TileType[] = [TileType.Floor, TileType.Wall, TileType.BreakableWall, TileType.Hole, TileType.Obstacle];
 
 type Pair = [number, number];
-/** A pit: [tile x, tile y, shape (index in PIT_SHAPES), lobes (bits)]. */
+/** A pit: [tile x, tile y, shape (index in PIT_SHAPES), lobes (bits; for a mine's hole, which one)]. */
 type PitRow = [number, number, number, number];
 const ROOM_TYPES: readonly RoomType[] = ['safe', 'dungeon', 'exit'];
 /** A room: [id, type, cave hall (1) or not (0), x, y, w, h, centre x, centre y]. */
@@ -149,7 +149,7 @@ export function encodeLevelMap(layout: DungeonLayout): LevelMap {
 const isPair = (v: unknown): v is Pair => Array.isArray(v) && v.length === 2 && v.every(isFiniteNumber);
 const isPoolRow = (v: unknown) => Array.isArray(v) && v.length === 3 && v.every(Number.isInteger) && v[2] >= 0 && v[2] < POOL_KINDS.length;
 const isPitRow = (v: unknown): v is PitRow => Array.isArray(v) && v.length === 4 && v.every(Number.isInteger)
-  && v[2] >= 0 && v[2] < PIT_SHAPES.length && v[3] >= 0 && v[3] <= ALL_LOBES;
+  && v[2] >= 0 && v[2] < PIT_SHAPES.length && validPitDetail(PIT_SHAPES[v[2]], v[3]);
 const isList = (v: unknown, item: (x: unknown) => boolean): v is unknown[] => Array.isArray(v) && v.every(item);
 const isPropKind = (v: unknown): v is PropKind => typeof v === 'string' && hasKey(PROPS, v);
 const isRoomRow = (v: unknown): v is RoomRow => Array.isArray(v) && v.length === 9 && ROOM_TYPES.some((t) => t === v[1])

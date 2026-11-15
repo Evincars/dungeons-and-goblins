@@ -1,4 +1,5 @@
 import type { IsoRect, SlantStrip } from './IsoTiles';
+import { TILE_HEIGHT, TILE_WIDTH } from './TileType';
 
 /**
  * Where the forgotten mines' terrain comes from (Theme 'mines', the cave art of /caves2): the rock faces, rims, chasm
@@ -70,3 +71,42 @@ export const MINE_FLOOR_TONES = 4;
 export const MINE_GROUND_BLOCKS: readonly IsoRect[] = [
   { x: 384, y: 0, w: 128, h: 128 }, { x: 384, y: 128, w: 128, h: 128 }, { x: 384, y: 256, w: 128, h: 128 }, { x: 896, y: 0, w: 128, h: 128 },
 ];
+
+// ── Holes in the floor (other_decoratives.png) ────────────────────────────────
+
+/** The sheet the holes are cut from. */
+export const MINE_DECOR = 'mine_decor';
+
+/** A box of a hole's open dark, in px from its art's top-left. */
+type OpenBox = readonly [number, number, number, number];
+
+/**
+ * A hole in a mine's floor (a Pit of shape 'hole', its `lobes` saying which): its art, centred on the `w`×`h` Hole tiles
+ * it is dug on, and its open dark as boxes round the black of its art (feet over them fall in), from small ones a body's
+ * size to great ragged ones.
+ */
+export type MineHole = { art: IsoRect; w: number; h: number; open: readonly OpenBox[] };
+
+/** The other way round: a hole's art drawn the other way, and its open dark mirrored with it. */
+const mirrored = (open: readonly OpenBox[], w: number): OpenBox[] => open.map(([x0, y0, x1, y1]) => [w - x1, y0, w - x0, y1]);
+
+const GREAT_OPEN: readonly OpenBox[] = [[18, 3, 35, 14], [20, 14, 68, 28], [22, 28, 48, 35], [7, 35, 38, 48], [8, 48, 22, 53]];
+const WIDE_OPEN: readonly OpenBox[] = [[4, 3, 23, 14], [7, 14, 55, 27], [19, 27, 40, 34]];
+
+export const MINE_HOLES: readonly MineHole[] = [
+  { art: { x: 546, y: 40, w: 26, h: 18 }, w: 1, h: 1, open: [[7, 2, 21, 14]] },
+  { art: { x: 512, y: 70, w: 30, h: 19 }, w: 1, h: 1, open: [[7, 2, 25, 15]] },
+  { art: { x: 452, y: 232, w: 26, h: 18 }, w: 1, h: 1, open: [[5, 2, 19, 14]] },
+  { art: { x: 482, y: 262, w: 30, h: 19 }, w: 1, h: 1, open: [[5, 2, 23, 15]] },
+  { art: { x: 521, y: 97, w: 45, h: 28 }, w: 2, h: 1, open: [[3, 3, 23, 10], [6, 10, 36, 20]] },
+  { art: { x: 458, y: 289, w: 45, h: 28 }, w: 2, h: 1, open: [[22, 3, 42, 10], [9, 10, 39, 20]] },
+  { art: { x: 470, y: 139, w: 65, h: 42 }, w: 2, h: 2, open: WIDE_OPEN },
+  { art: { x: 489, y: 331, w: 65, h: 42 }, w: 2, h: 2, open: mirrored(WIDE_OPEN, 65) },
+  { art: { x: 449, y: 1, w: 77, h: 63 }, w: 3, h: 2, open: GREAT_OPEN },
+  { art: { x: 498, y: 193, w: 77, h: 63 }, w: 3, h: 2, open: mirrored(GREAT_OPEN, 77) },
+];
+
+/** Where a hole's art is drawn on its tiles: centred on them (in px from their top-left). */
+export function holeArtOffset(hole: MineHole): { x: number; y: number } {
+  return { x: Math.floor((hole.w * TILE_WIDTH - hole.art.w) / 2), y: Math.floor((hole.h * TILE_HEIGHT - hole.art.h) / 2) };
+}

@@ -70,7 +70,7 @@ const THEME_CONFIG: Readonly<Record<LevelTheme, Partial<DungeonConfig>>> = {
   catacomb: {},
   castle: {},
   castle2: {},
-  mines: { mapWidth: 100, mapHeight: 56, minRoomSize: 8, maxRoomSize: 18, hallMaxSize: 26, hallMinSize: 12, northMargin: 4 },
+  mines: { mapWidth: 112, mapHeight: 64, minRoomSize: 8, maxRoomSize: 15, hallMaxSize: 22, hallMinSize: 12, northMargin: 4 },
 };
 
 /** The generator's settings for a level of this theme. */
@@ -88,7 +88,7 @@ export const SLANTED_CORRIDOR_CHANCE = { catacomb: 0.35, castle: 0.35, castle2: 
  * Rooms joined along the BSP tree seldom lie diagonally from each other, so this many more corridors down the slant are
  * added between any two rooms that do (and have nothing in between): ways round, as well as slants to see.
  */
-export const SLANTED_EXTRA_CORRIDORS = { catacomb: 1, castle: 1, castle2: 3, mines: 4 } as const satisfies Record<LevelTheme, number>;
+export const SLANTED_EXTRA_CORRIDORS = { catacomb: 1, castle: 1, castle2: 3, mines: 8 } as const satisfies Record<LevelTheme, number>;
 /** Chance a corner a catacomb or castle room loses is cut off on the slant rather than squared off, and how deep. */
 export const SLANTED_CORNER_SHARE = 0.45;
 export const SLANTED_CORNER_DEPTH = [1, 2] as const;

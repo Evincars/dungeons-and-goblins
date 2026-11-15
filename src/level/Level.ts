@@ -7,6 +7,7 @@ import type { BlockRect } from './Props';
 import { insidePit, pitTileBounds } from './PitShapes';
 import type { Pit } from './PitShapes';
 import type { LevelTheme } from './Theme';
+import { OPEN_CHASMS } from './Theme';
 import { isSouthSlope, slopeBlocks, slopeClearance, slopePush, slopeSupport } from './Slopes';
 import type { Slope } from './Slopes';
 
@@ -185,8 +186,8 @@ export class Level {
   }
 
   /**
-   * Whether a tile is part of a chasm: a Hole that belongs to no pit. Nobody can step into a chasm (it is no trap to
-   * fall in, only a gap), but sight, spells and arrows cross it.
+   * Whether a tile is part of a chasm: a Hole that belongs to no pit. Sight, spells and arrows cross it; whether anyone
+   * can step into it (and fall) or it is only a gap depends on the theme (Theme.ts OPEN_CHASMS).
    */
   isChasm(tx: number, ty: number): boolean {
     return this.getTile(tx, ty)?.type === TileType.Hole && !this.hasPit(tx, ty);
@@ -221,19 +222,31 @@ export class Level {
     }
   }
 
-  /** One corner of a body's box: if a slant decides its tile, faces it and the corner is past it, back it out. */
+  /**
+   * One corner of a body's box: if a slant decides its tile and the corner is past it, back it out. The corner facing the
+   * wall reaches deepest into a slant, so another corner is measured only where that one finds no part of the same slant
+   * under it: at the point of a spur, where two slants meet back to back and each corner of the box lies over the other's.
+   */
   private pushCornerOut(pos: { x: number; y: number }, rx: number, ry: number, cornerX: number, cornerY: number): void {
     const tx = Math.floor(cornerX / TILE_WIDTH);
     const ty = this.slopeRow(tx, Math.floor(cornerY / TILE_HEIGHT));
     const slope = ty < 0 ? undefined : this.slopes.get(tx + ty * this.width);
     if (!slope) return;
     slopeSupport(slope, pos.x, pos.y, rx, ry, slopeScratch);
-    if (slopeScratch.x !== cornerX || slopeScratch.y !== cornerY) return;
+    const facing = slopeScratch.x === cornerX && slopeScratch.y === cornerY;
+    if (!facing && this.slopeAt(slopeScratch.x, slopeScratch.y)?.corner === slope.corner) return;
     const clearance = slopeClearance(slope, tx, ty, cornerX, cornerY);
     if (clearance >= 0) return;
     slopePush(slope, -clearance, slopeScratch);
     pos.x += slopeScratch.x;
     pos.y += slopeScratch.y;
+  }
+
+  /** The slope whose slant decides where the wall begins at a world point, if any. */
+  private slopeAt(worldX: number, worldY: number): Slope | undefined {
+    const tx = Math.floor(worldX / TILE_WIDTH);
+    const ty = this.slopeRow(tx, Math.floor(worldY / TILE_HEIGHT));
+    return ty < 0 ? undefined : this.slopes.get(tx + ty * this.width);
   }
 
   markSafeZone(tx: number, ty: number): void {
@@ -388,10 +401,11 @@ export class Level {
    */
   private readonly addTileClip = (tx: number, ty: number): void => {
     const tile = this.getTile(tx, ty);
-    // Slanted walls push bodies back themselves (pushOutOfSlopes); nobody steps into a chasm, but feet reach over its
-    // north rim as over a wall's.
+    // Slanted walls push bodies back themselves (pushOutOfSlopes); nobody steps into a chasm that is only a gap, but feet
+    // reach over its north rim as over a wall's. One that is a drop stops nobody: whoever walks out over it falls.
     if (this.slopeRow(tx, ty) >= 0) return;
     if (this.isChasm(tx, ty)) {
+      if (OPEN_CHASMS[this.theme]) return;
       const rim = this.getTile(tx, ty - 1)?.type === TileType.Floor ? WALL_SINK : 0;
       this.clipBoxes.push(this.clipPool.between(tx * TILE_WIDTH, ty * TILE_HEIGHT + rim, (tx + 1) * TILE_WIDTH, (ty + 1) * TILE_HEIGHT));
       return;

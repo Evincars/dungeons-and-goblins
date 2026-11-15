@@ -202,15 +202,25 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   the slant than in the other themes). Its stairs (`level.stairs`: the U-shaped block of `mainlevbuild1.png` is stairs, never
   face decor) lie only across straight north–south corridors two tiles wide (its middle, the steps; for now never in an
   east–west one). The fourth theme, the forgotten mines (`mines`, `/dungeon mines`), is built from the cave set of `public/caves2`
-  alone, on a bigger map (`THEME_CONFIG`): its caverns (`generators/MineDresser.ts`) have their corners cut on the slant and spurs
-  of rock jutting from their north and south walls (`cutSlantSpur`, `generators/Slants.ts`), so the walls zigzag; their faces
+  alone, on a bigger map of smaller caverns joined by many corridors down the slant (`THEME_CONFIG`): no cavern is a rectangle
+  (`generators/MineDresser.ts`): its corners are cut on the slant, spurs of rock jut from its north and south walls
+  (`cutSlantSpur`, `generators/Slants.ts`), the rock steps forward along them and bulges from its sides, outcrops stand in the
+  bigger ones, and nothing (rock, drop, fence) may cut a part of it off from the rest (`keepWhole`, Yuka BFS); their faces
   (`MineTerrain.ts`) stand four tiles tall over the black rock tops, cut short under the rim of whatever lies close behind; patches
-  of other earth lie about (a `FloorZone` with `patch`, a ragged ellipse, its edges blended); an abyss with a rock bridge, or a
-  great pit, is fenced round, old pit props sinking into its dark; the old timbering stands against the faces, lanterns of cold
-  light (no torches) on posts and hung on the rock with cobwebs and bracket fungi, and rocks, rubble, stalagmites, mushroom
-  tables, reeds, holes and roots strew the floor (wall props hang as high as `PropDef.hang` says). Soft edges between kinds of ground (`GroundBlend.ts`, baked
+  of other earth lie about (a `FloorZone` with `patch`, a ragged ellipse, its edges blended); an abyss with ragged edges and a
+  rock bridge, or a great ragged pit grown up to a ledge a tile wide along the rock, is a drop anyone falls into (`OPEN_CHASMS`,
+  `Theme.ts`: no box stops them), fenced only along stretches of its straight brinks (a fence blocks the strip at its foot), old
+  pit props sinking into its dark; holes a body's size and bigger open in the floor (pits of shape `hole`, `PitShapes.ts`, their art
+  and open dark in `MINE_HOLES`, `MineTiles.ts`; feet over the dark fall in); the old timbering (whole frames only, never the
+  sheet's loose beam heads and lengths) stands against faces of full height, lanterns of cold light that flicker (no torches) on
+  posts and hung on the rock with cobwebs and bracket fungi, and rocks, stones and rubble (their bases measured from the art, as
+  deep as their bulk stands, so nobody stands inside one), stalagmites, mushroom tables, reeds and roots strew the floor (wall
+  props hang as high as `PropDef.hang` says). Where two slants meet back to back (a spur's point) each corner of a body is pushed
+  back by the slant it lies over (`Level.pushOutOfSlopes`). Soft edges between kinds of ground (`GroundBlend.ts`, baked
   into one atlas by `render/BlendAtlas.ts`), fog of war (`FogRenderer.ts`: per-corner fading buffer, blurred, with
-  drifting mist), lighting, and `LevelMap.ts` (a generated level as validated JSON, gzipped to send or save).
+  drifting mist), lighting (`LightRenderer.ts`: a dim ambient multiplied over the scene; every flame, the torch each hero carries
+  included, breathes in reach and brightness on three out-of-step waves; crystals shine steadily), and `LevelMap.ts` (a generated
+  level as validated JSON, gzipped to send or save).
 - Animated decor stored one frame per file (`public/catacombs` torches and candles) is padded to one height with the base
   at the bottom, so only the flame moves.
 - `src/characters/` — side-view `CharacterDef`s (`Heroes.ts`: the main characters from `public/main-characters`; clips may

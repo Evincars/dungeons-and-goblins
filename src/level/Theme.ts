@@ -28,6 +28,13 @@ export function tilesetKey(theme: LevelTheme): string {
 export const SOUTH_WALL_RAISE = { catacomb: 8, castle: 8, castle2: 8, mines: 8 } as const satisfies Record<LevelTheme, number>;
 
 /**
+ * Whether a theme's chasms (holes that belong to no pit) are drops anyone who walks out over them falls down (the mines'
+ * abysses and great pits, with only a fence here and there along them), or gaps nobody can step into (the isometric
+ * castle's).
+ */
+export const OPEN_CHASMS = { catacomb: false, castle: false, castle2: false, mines: true } as const satisfies Record<LevelTheme, boolean>;
+
+/**
  * The colour of the dark beyond a level's walls and off its map: the same as the void the theme's tileset draws in its
  * wall tops, so nowhere shows a seam between the dark drawn and the dark beyond it.
  */

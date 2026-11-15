@@ -33,10 +33,14 @@ function holeAt(level: Level, x: number, y: number): boolean {
   return !onRim;
 }
 
-/** Feet can overhang an edge while any part of their small support box has floor under it. */
+/**
+ * Feet can overhang an edge while any part of their small support box has floor under it; but a mine's hole is no wider
+ * than a body, so whoever's feet are over its dark falls in.
+ */
 export function overHole(level: Level, entity: Entity): boolean {
   const p = entity.position;
   if (!p) return false;
+  if (level.pitAt(p.x, p.y)?.shape === 'hole') return true;
   const rx = Math.min(SUPPORT_HALF, entity.radius?.x ?? 0);
   const ry = Math.min(SUPPORT_HALF, entity.radius?.y ?? 0);
   return holeAt(level, p.x - rx, p.y - ry) && holeAt(level, p.x - rx, p.y + ry)

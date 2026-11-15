@@ -4,15 +4,27 @@ import { GAME_WIDTH, VIEW_HEIGHT, camera } from '../render/Camera';
 import { context2d, createCanvas } from '../render/canvas';
 
 const FLICKER_SPEED = 0.05;
-const FLICKER_AMOUNT = 5;
-/** Frequencies of the two waves a torch flickers with, and the smallest a flickering light gets. */
+/**
+ * A flame breathes: its reach swells and shrinks by up to these shares of its radius on three out-of-step waves (a slow
+ * sway, a flutter and a quick shiver), so no two flames, nor two moments of one, look alike.
+ */
+const FLICKER_SWAY = 0.06;
+const FLICKER_FLUTTER = 0.05;
+const FLICKER_SHIVER = 0.03;
+/** Frequencies of those waves. */
+const FLICKER_SLOW = 1.3;
 const FLICKER_FAST = 3.7;
 const FLICKER_FASTER = 7.1;
+/** And its brightness dips with them, to as low as this share of full (a gust bending the flame). */
+const FLICKER_DIM = 0.72;
 const MIN_FLICKER_RADIUS = 20;
-/** Light level everywhere before torches/lantern add to it (multiplied over the scene). */
-const AMBIENT = 0x9a94a2;
+/**
+ * Light level everywhere before torches and lanterns add to it (multiplied over the scene): dim, so the dungeon is dark
+ * beyond the flames but its walls and floors can still be made out.
+ */
+const AMBIENT = 0x6a6676;
 
-/** Cached Pixi Textures keyed by radius (positive = torch, negative = player). */
+/** Cached Pixi Textures keyed by radius (positive = warm, negative = cold); a flickering light scales its own. */
 const lightTexCache = new Map<number, Texture>();
 
 function makeLightTexture(radius: number, warm: boolean): Texture {
@@ -50,8 +62,9 @@ export type LightSource = {
   x: number;
   y: number;
   radius: number;
-  /** 0 = torch (warm), 1 = player lantern */
+  /** 0 = firelight (warm), 1 = cold light (crystals, the mines' lanterns). */
   kind: 0 | 1;
+  /** Phase of a flame's flicker; a light without one shines steadily. */
   flicker?: number;
 };
 
@@ -73,19 +86,31 @@ export class LightRenderer {
     this.overlay.texture = this.lightmap;
     this.ambientGfx = new Graphics();
     this.lightContainer = new Container();
-    // Pre-warm common radii so there's no stutter on first torch render
-    for (const r of [110, 115, 120, 125]) {
-      getLightTexture(r, true);
-      getLightTexture(r, false);
-    }
+    // Pre-warm the common radii (sconces and campfires, wall torches, the heroes' torches) so the first frame doesn't stutter.
+    for (const r of [96, 120, 150]) getLightTexture(r, true);
   }
 
-  /** A torch's radius this frame: two out-of-step sine waves make the flame breathe. */
-  private flickeredRadius(light: LightSource): number {
-    if (light.kind !== 0 || light.flicker === undefined) return light.radius;
-    const flick = Math.sin(this.flickerTime * FLICKER_FAST + light.flicker) * FLICKER_AMOUNT
-      + Math.sin(this.flickerTime * FLICKER_FASTER + light.flicker * 2) * (FLICKER_AMOUNT / 2);
-    return Math.max(MIN_FLICKER_RADIUS, light.radius + flick);
+  /** How far a flame's breath has it this frame, from -1 (shrunk, dim) to 1 (swollen, bright); 0 for a steady light. */
+  private breath(light: LightSource): number {
+    const phase = light.flicker;
+    if (phase === undefined) return 0;
+    const t = this.flickerTime;
+    const sway = Math.sin(t * FLICKER_SLOW + phase) * FLICKER_SWAY;
+    const flutter = Math.sin(t * FLICKER_FAST + phase * 2) * FLICKER_FLUTTER;
+    const shiver = Math.sin(t * FLICKER_FASTER + phase * 3) * FLICKER_SHIVER;
+    return (sway + flutter + shiver) / (FLICKER_SWAY + FLICKER_FLUTTER + FLICKER_SHIVER);
+  }
+
+  /** A light's radius this frame: a flame's swells and shrinks with its breath. */
+  private flickeredRadius(light: LightSource, breath: number): number {
+    if (breath === 0) return light.radius;
+    const share = (FLICKER_SWAY + FLICKER_FLUTTER + FLICKER_SHIVER) * breath;
+    return Math.max(MIN_FLICKER_RADIUS, light.radius * (1 + share));
+  }
+
+  /** A light's brightness this frame: a flame dims as it shrinks. */
+  private static flickeredAlpha(breath: number): number {
+    return 1 - ((1 - breath) / 2) * (1 - FLICKER_DIM);
   }
 
   /** The pooled additive sprite for the i-th light drawn this frame. */
@@ -118,11 +143,14 @@ export class LightRenderer {
       const sx = light.x - camera.x;
       const sy = light.y - camera.y;
       if (!LightRenderer.onScreen(sx, sy, light.radius)) continue;
-      const rounded = Math.round(this.flickeredRadius(light));
+      const breath = this.breath(light);
+      const reach = this.flickeredRadius(light, breath);
       const sprite = this.lightSprite(used++);
-      sprite.texture = getLightTexture(rounded, light.kind === 0);
-      sprite.x = Math.round(sx - rounded);
-      sprite.y = Math.round(sy - rounded);
+      sprite.texture = getLightTexture(Math.round(light.radius), light.kind === 0);
+      sprite.setSize(reach * 2);
+      sprite.x = Math.round(sx - reach);
+      sprite.y = Math.round(sy - reach);
+      sprite.alpha = LightRenderer.flickeredAlpha(breath);
       sprite.visible = true;
     }
     for (let i = used; i < this.lightSprites.length; i++) this.lightSprites[i].visible = false;

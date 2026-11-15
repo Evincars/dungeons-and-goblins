@@ -617,12 +617,12 @@ export function groundAt(level: Level, tx: number, ty: number): Ground | null {
     return { ...floor, sheet: CASTLE_TILESET };
   }
   // The isometric castle's tones meet at hard edges: all of it is one kind of ground, so nothing blends.
-  if (level.theme === 'iso') return { kind: 'stone', ...isoFloorSource(level, tx, ty), sheet: ISO_FLOORS };
+  if (level.theme === 'castle2') return { kind: 'stone', ...isoFloorSource(level, tx, ty), sheet: ISO_FLOORS };
   return caveGround(level, tx, ty) ?? stoneGround(level, t, tx, ty);
 }
 
 export function buildTerrainPieces(level: Level): TerrainPiece[] {
-  if (level.theme === 'iso') return buildIsoTerrain(level);
+  if (level.theme === 'castle2') return buildIsoTerrain(level);
   return new TerrainBuilder(level).build();
 }
 

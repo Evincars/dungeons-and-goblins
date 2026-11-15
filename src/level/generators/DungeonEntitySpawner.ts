@@ -67,7 +67,7 @@ function populateRoom(level: Level, room: RoomData, cfg: DungeonConfig): void {
   const pick = () => floors.splice(Math.floor(Math.random() * floors.length), 1)[0];
 
   const enemyCount = Math.max(1, Math.round(floors.length * cfg.enemyDensity / 100));
-  const mix = level.theme === 'iso' ? ISO_ENEMY_MIX : ENEMY_MIX;
+  const mix = level.theme === 'castle2' ? ISO_ENEMY_MIX : ENEMY_MIX;
   for (let i = 0; i < enemyCount && floors.length; i++) {
     const t = pick();
     createMob(level, randomEnemy(mix), t.x, t.y);

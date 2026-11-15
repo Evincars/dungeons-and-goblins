@@ -13,7 +13,7 @@ import type { PropDef, PropKind, PropPlacement } from '../Props';
 import type { Keep, RoomData, TileChange, TilePos } from './DungeonBuilder';
 
 /**
- * Dresses the rooms of the isometric castle (Theme 'iso'), on the layout DungeonBuilder carved: corners cut off on
+ * Dresses the rooms of the isometric castle (Theme 'castle2'), on the layout DungeonBuilder carved: corners cut off on
  * the slant, galleries raised along a room's north side with stairs down their face, chasms with a bridge over them,
  * pits sunk in the floor, halls of great columns, libraries; decor set into the faces (windows, statues, shelves,
  * crystal panes, a door, an alcove of stairs), crystal braziers and candles to light them, pots, books and wreckage,

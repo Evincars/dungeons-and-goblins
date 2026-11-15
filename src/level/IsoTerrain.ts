@@ -12,7 +12,7 @@ import type { IsoDecorArt, IsoRect, SlantStrip } from './IsoTiles';
 import type { Slope } from './Slopes';
 
 /**
- * Autotiles the isometric castle (Theme 'iso') on its 32 px tiles, from the art mapped in IsoTiles.ts. What a tile
+ * Autotiles the isometric castle (Theme 'castle2') on its 32 px tiles, from the art mapped in IsoTiles.ts. What a tile
  * shows follows from what is round it:
  * - floor: its tone's slabs (and under the slants, whose art covers the wall's part of the tile);
  * - a wall with floor below it is the foot of a face two tiles tall (the stone, its cap, its ends and pilasters);

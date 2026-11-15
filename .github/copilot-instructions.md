@@ -168,14 +168,14 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   or plain hall with a colonnade and floor grates — with brick or cobblestone walls, `level.cobbleWalls`), shaped pits (`PitShapes.ts`: square, lobed or quatrefoil on 2×2
   Hole tiles; `level.overPit` tests the drawn shape, for falling in, keeping enemies out and hiding a faller), terrain
   autotiling and rendering (`TerrainAutotile.ts`, from `public/catacombs/mainlevbuild.png`). A level is built as the
-  catacombs or a castle (`Theme.ts`, `level.theme`, `run.theme`; the ~ console's `/dungeon castle|catacomb` rebuilds the
+  catacombs or a castle (`Theme.ts`, `level.theme`, `run.theme`; the ~ console's `/dungeon catacomb | castle | castle2` rebuilds the
   level as either): a castle uses only `public/castle` — its tileset's pieces are mapped in `CastleTiles.ts` (stone faces
   with pilasters (also framing each decorated stretch), windows and arrow slits, arched alcoves (candles stand lit in them),
   ornate panels and gothic windows (candelabras beside them) as `wallDecor`, the great arch over passages, its legs on the
   walls beside them, stairs across north–south passages, its floors, pools `level.pools` and 4×2 spike pits), its decor
   are the `castle_*` props (flags hang on square columns, mount `front`), and wall candles and candelabras (lightB,
-  lightA) light it in place of torches and candles; its safe and exit rooms keep their own design. The third theme, `iso`
-  (`/dungeon iso`), is the isometric castle of `public/castle-izometric` alone: its art is mapped in `IsoTiles.ts` and laid
+  lightA) light it in place of torches and candles; its safe and exit rooms keep their own design. The third theme
+  (`castle2`, `/dungeon castle2`), is the isometric castle of `public/castle-izometric` alone: its art is mapped in `IsoTiles.ts` and laid
   by `IsoTerrain.ts` (a wall with floor below shows its face two tiles tall; north corners cut off on the 2:1 slant show
   their face on the slant, south ones a rim; every other edge of the dark is rimmed, chasms more darkly, with columns sinking
   into the dark under the rims), its rooms dressed by `generators/IsoDresser.ts` (slanted corners `level.slopes`, galleries

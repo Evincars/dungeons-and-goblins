@@ -347,7 +347,7 @@ export class DungeonBuilder {
     this.usedTiles.clear();
     const keepIfReachable = (apply: () => TileChange[]) => this.tryFeature(playerTile, anchors, apply);
     for (const room of dungeonRooms) {
-      if (cfg.theme === 'iso') {
+      if (cfg.theme === 'castle2') {
         this.iso.dressRoom(room, props, keepIfReachable);
         continue;
       }
@@ -375,9 +375,9 @@ export class DungeonBuilder {
     }
 
     // The isometric castle has no torches on its walls: crystal braziers stand on its floors instead.
-    const torchTiles = cfg.theme === 'iso' ? [] : this.placeTorches();
-    if (cfg.theme !== 'iso') this.placeHangings(torchTiles, props);
-    if (cfg.theme === 'iso') for (const room of [safe, exit]) this.level.floorZones.push({ x: room.x, y: room.y, w: room.w, h: room.h, tone: GATHERING_TONE });
+    const torchTiles = cfg.theme === 'castle2' ? [] : this.placeTorches();
+    if (cfg.theme !== 'castle2') this.placeHangings(torchTiles, props);
+    if (cfg.theme === 'castle2') for (const room of [safe, exit]) this.level.floorZones.push({ x: room.x, y: room.y, w: room.w, h: room.h, tone: GATHERING_TONE });
     const shopTile = { x: safe.x + Math.floor(safe.w / 2), y: safe.y + 1 };
     const dummyTile = { x: safe.x + 2, y: safe.y + safe.h - 3 };
     this.usedTiles.add(dummyTile.x + dummyTile.y * W);
@@ -1107,8 +1107,8 @@ export class DungeonBuilder {
     for (const fire of lit) {
       for (const x of [fire.x - 1, fire.x + 1]) this.placeCandle(x, fire.y + 1, props);
     }
-    const kit = this.cfg.theme === 'iso' ? ISO_GATHERING_KIT : GATHERING_KIT;
-    if (this.cfg.theme !== 'iso') this.hangBanners(room, torches, props);
+    const kit = this.cfg.theme === 'castle2' ? ISO_GATHERING_KIT : GATHERING_KIT;
+    if (this.cfg.theme !== 'castle2') this.hangBanners(room, torches, props);
     const corners: Array<[number, number]> = [
       [room.x, room.y], [room.x + room.w - 1, room.y], [room.x, room.y + room.h - 1], [room.x + room.w - 1, room.y + room.h - 1],
     ];
@@ -1249,7 +1249,7 @@ export class DungeonBuilder {
   private placeCandle(tx: number, ty: number, props: PropPlacement[]): void {
     if (!this.free(tx, ty) || this.rng() >= CANDLE_CHANCE) return;
     this.claim(tx, ty);
-    const iso = this.cfg.theme === 'iso';
+    const iso = this.cfg.theme === 'castle2';
     const lit: PropKind = this.rng() < 0.5 ? (iso ? 'iso_candles' : 'candles') : (iso ? 'iso_candle' : 'candle');
     // The isometric castle's candles all burn (it has no burnt-out ones of its own).
     props.push({ kind: this.rng() < COLD_CANDLE_SHARE && !iso ? this.pick(COLD_CANDLES) : lit, tx, ty });

@@ -738,7 +738,7 @@
   "coop.roster_host_tag": " (host)",
   "coop.your_hero": "Your hero: {hero}",
   "console.header": "Dungeons & Goblins console\nType commands with a slash in front, like /this\nIf in doubt, type /help",
-  "console.help": "All commands\n------------\n/help : this list\n/money <amount> : adds coins to your purse (also /give money <amount>)\n/god [on|off] : toggles taking no harm\n/xp <amount> : adds experience (levels up as it goes)\n/additem <id> : puts an item in your bag, e.g. /additem weapon_axe_001\n/items [filter] : lists item ids\n/dungeon <castle|catacomb> : builds this level again as a castle or the catacombs",
+  "console.help": "All commands\n------------\n/help : this list\n/money <amount> : adds coins to your purse (also /give money <amount>)\n/god [on|off] : toggles taking no harm\n/xp <amount> : adds experience (levels up as it goes)\n/additem <id> : puts an item in your bag, e.g. /additem weapon_axe_001\n/items [filter] : lists item ids\n/dungeon <catacomb | castle | castle2> : builds this level again as the catacombs, the castle or the isometric castle",
   "console.slash": "Type commands with a slash in front, like /help",
   "console.unknown": "Unknown command: /{name}. If in doubt, type /help",
   "console.coop": "The console is not available in co-op",

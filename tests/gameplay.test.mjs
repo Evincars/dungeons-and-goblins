@@ -3174,8 +3174,8 @@ test('the isometric castle is built of its own pieces: slanted corners, gallerie
   let stairs = 0;
   for (const seed of [7, 11, 23, 31]) {
     world.clear();
-    const { layout, level } = buildDungeon(seed, true, 'iso');
-    assert.equal(level.theme, 'iso');
+    const { layout, level } = buildDungeon(seed, true, 'castle2');
+    assert.equal(level.theme, 'castle2');
     assert.ok(level.slopes.size > 0, 'corners cut off on the slant');
     assert.ok(level.floorZones.length > 0, 'floors laid in tones');
     assert.deepEqual(layout.torchPositions, [], 'no torches: crystal braziers light it');
@@ -3191,7 +3191,7 @@ test('the isometric castle is built of its own pieces: slanted corners, gallerie
     stairs += level.stairs.length;
     for (const s of level.stairs) assert.equal(level.getTile(s.x, s.y).type, TileType.Floor, 'stairs are walked down');
     const back = decodeLevelMap(JSON.parse(JSON.stringify(encodeLevelMap(layout))));
-    assert.equal(back.level.theme, 'iso');
+    assert.equal(back.level.theme, 'castle2');
     assert.deepEqual([...back.level.slopes], [...level.slopes]);
     assert.deepEqual(back.level.floorZones, level.floorZones);
     assert.deepEqual(back.level.stairs, level.stairs);
@@ -3202,7 +3202,7 @@ test('the isometric castle is built of its own pieces: slanted corners, gallerie
 
 test('a slanted wall pushes a body back over its slant (it slides along it); a chasm stops bodies, not shots or sight', async () => {
   const { slopeClearance } = await load('level/Slopes');
-  const level = new Level(12, 10, 'iso');
+  const level = new Level(12, 10, 'castle2');
   // A north-west corner cut off on the slant across tiles (2,2) and (3,2): the slant runs from (2,3) up to (4,2).
   level.setTile(2, 2, createTile(TileType.Wall));
   level.slopes.set(2 + 2 * 12, { corner: 'nw', major: true });
@@ -3232,8 +3232,10 @@ test('a slanted wall pushes a body back over its slant (it slides along it); a c
 test('the console\'s /dungeon builds the level as the isometric castle too', async () => {
   const { runCommand } = await load('game/Console');
   const asked = [];
-  runCommand('/dungeon iso', { player: playerAt(2, 2), allowed: true, rebuild: (theme) => asked.push(theme) });
-  assert.deepEqual(asked, ['iso']);
+  const ctx = { player: playerAt(2, 2), allowed: true, rebuild: (theme) => asked.push(theme) };
+  runCommand('/dungeon castle2', ctx);
+  assert.deepEqual(asked, ['castle2']);
+  assert.match(runCommand('/dungeon', ctx)[0], /<catacomb \| castle \| castle2>/, 'the usage lists every kind, spaced');
 });
 
 test('rooms are not all rectangles: some lose a corner to the wall', () => {

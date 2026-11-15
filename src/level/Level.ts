@@ -126,7 +126,7 @@ export class Level {
       this.tileStacks[i] = [createTile(TileType.Floor, Math.floor(Math.random() * FLOOR_VARIANTS))];
     }
     this.seen = new Array((width + 1) * (height + 1)).fill(false);
-    this.wallSink = theme === 'iso' ? ISO_WALL_SINK : WALL_SINK;
+    this.wallSink = theme === 'castle2' ? ISO_WALL_SINK : WALL_SINK;
   }
 
   /** Packed index of a tile, as the tile graph numbers it. */

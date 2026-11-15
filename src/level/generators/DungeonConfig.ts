@@ -58,3 +58,18 @@ export const DEFAULT_CONFIG: DungeonConfig = {
   hallMaxSize:  24,
   hallMinSize:  10,
 };
+
+/**
+ * Chance two rooms that share no row or column are joined by a corridor down the slant (two tiles across for every tile
+ * down, generators/Slants.ts) rather than an L, where there is room for one: often in the isometric castle, now and then
+ * in the others.
+ */
+export const SLANTED_CORRIDOR_CHANCE = { catacomb: 0.35, castle: 0.35, castle2: 0.8 } as const satisfies Record<LevelTheme, number>;
+/**
+ * Rooms joined along the BSP tree seldom lie diagonally from each other, so this many more corridors down the slant are
+ * added between any two rooms that do (and have nothing in between): ways round, as well as slants to see.
+ */
+export const SLANTED_EXTRA_CORRIDORS = { catacomb: 1, castle: 1, castle2: 3 } as const satisfies Record<LevelTheme, number>;
+/** Chance a corner a catacomb or castle room loses is cut off on the slant rather than squared off, and how deep. */
+export const SLANTED_CORNER_SHARE = 0.45;
+export const SLANTED_CORNER_DEPTH = [1, 2] as const;

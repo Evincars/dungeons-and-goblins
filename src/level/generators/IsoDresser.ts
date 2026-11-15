@@ -1,8 +1,10 @@
-import type { Level } from '../Level';
-import { FLOOR_TONES, STAIRS_H, STAIRS_W } from '../Level';
+import type { Level, StairDir } from '../Level';
+import { FLOOR_TONES, STAIRS_PASSAGE, STAIRS_ROWS, STAIRS_SPAN } from '../Level';
 import { TileType, TILE_HEIGHT, TILE_WIDTH } from '../TileType';
 import { forEachTile, someTile } from '../Grid';
-import type { Slope, SlopeCorner } from '../Slopes';
+import type { SlopeCorner } from '../Slopes';
+import { cutSlantCorner, slantFits, slantTile } from './Slants';
+import type { SlantCorner, SlantSite } from './Slants';
 import { FRONT_DECOR_SMALL, ISO_DECOR, SLANT_DECOR } from '../IsoTiles';
 import type { IsoDecor } from '../IsoTiles';
 import {
@@ -14,22 +16,17 @@ import type { Keep, RoomData, TileChange, TilePos } from './DungeonBuilder';
 
 /**
  * Dresses the rooms of the isometric castle (Theme 'castle2'), on the layout DungeonBuilder carved: corners cut off on
- * the slant, galleries raised along a room's north side with stairs down their face, chasms with a bridge over them,
- * pits sunk in the floor, halls of great columns, libraries; decor set into the faces (windows, statues, shelves,
- * crystal panes, a door, an alcove of stairs), crystal braziers and candles to light them, pots, books and wreckage,
- * stains and moss on the floor. Every change that could cut a way off goes through `keep`.
+ * the slant (long slants in big rooms), chasms with a bridge over them, pits sunk in the floor, halls of great columns,
+ * libraries; decor set into the faces (windows, statues, shelves, crystal panes, a door), kept off their ends; crystal
+ * braziers and candles to light them, pots, books and wreckage, stains and moss on the floor; and stairs in the straight
+ * corridors between the rooms. Every change that could cut a way off goes through `keep`.
  */
 
 /** What the builder lends the dresser: its level, its seeded generator and its ways of setting things down. */
-export type IsoSite = {
-  readonly level: Level;
+export type IsoSite = SlantSite & {
   rng(): number;
   randInt(min: number, max: number): number;
-  free(tx: number, ty: number): boolean;
-  claim(tx: number, ty: number): void;
-  isWall(tx: number, ty: number): boolean;
   isFloor(tx: number, ty: number): boolean;
-  setTiles(cells: Array<[number, number]>, type: TileType): TileChange[];
   placeSolid(cells: Array<[number, number]>, kinds: PropKind[], props: PropPlacement[], keep: Keep): boolean;
   scatterSolid(room: RoomData, open: TilePos[], kinds: readonly PropKind[], props: PropPlacement[], keep: Keep): void;
   scatterLoose(open: TilePos[], kinds: readonly PropKind[], count: number, props: PropPlacement[]): void;
@@ -38,30 +35,23 @@ export type IsoSite = {
   pickProp(kinds: readonly PropKind[]): PropKind;
 };
 
-type RoomKind = 'gallery' | 'chasm' | 'sinkhole' | 'hall' | 'library' | 'ruin' | 'plain';
+type RoomKind = 'chasm' | 'sinkhole' | 'hall' | 'library' | 'ruin' | 'plain';
 
 /** How a room is dressed, by a roll: each kind up to its share (if the room is big enough), else plain. */
 const KIND_SHARES: ReadonlyArray<[RoomKind, number]> = [
-  ['gallery', 0.28], ['chasm', 0.5], ['sinkhole', 0.62], ['hall', 0.76], ['library', 0.86], ['ruin', 0.93],
+  ['chasm', 0.3], ['sinkhole', 0.46], ['hall', 0.66], ['library', 0.8], ['ruin', 0.92],
 ];
 /** The tones a room's floor is laid in (dark slate, oxblood, teal), by weight. */
 const TONE_WEIGHTS = [0.4, 0.38, 0.22];
-/** Chance a north corner is cut off on the slant, and a south one; slants are 1 or 2 tiles deep (2 in big rooms). */
+/**
+ * Chance a north corner is cut off on the slant, and a south one. A slant is as deep as the room allows, up to
+ * SLANT_DEPTH_MAX tiles (twice that across), or a tile less.
+ */
 const NORTH_SLANT_CHANCE = 0.8;
-const SOUTH_SLANT_CHANCE = 0.45;
-const DEEP_SLANT_MIN_W = 10;
-const DEEP_SLANT_MIN_H = 8;
-/** A room needs this much more than its slants across and down to have them (its middle stays open). */
-const SLANT_ROOM_SPARE_W = 2;
-const SLANT_ROOM_SPARE_H = 3;
-/** A gallery is 2 or 3 tiles deep over a face two tiles tall, leaves this much floor below, and needs this width. */
-const GALLERY_DEPTH = [2, 3] as const;
+const SOUTH_SLANT_CHANCE = 0.5;
+const SLANT_DEPTH_MAX = 3;
+/** A face is two tiles tall. */
 const FACE_ROWS = 2;
-const GALLERY_FLOOR_BELOW = 4;
-const GALLERY_MIN_W = 7;
-/** A gallery this wide gets two flights of stairs, and keeps its stairs this far in from its ends. */
-const TWO_FLIGHTS_W = 12;
-const STAIRS_INSET = 1;
 /**
  * A chasm across a room is 2 to 4 tiles deep, with this much floor kept above and below it, and one or two bridges.
  * Where a corridor comes in at the side, a ledge a tile wide runs along each wall past it (and a bridge only by chance).
@@ -92,11 +82,14 @@ const DAIS_MIN = 3;
 const FACE_DECOR_CHANCE = 0.5;
 const FACE_BRAZIER_CHANCE = 0.45;
 const BRAZIER_GAP = 3;
-/** Chance a slanted face gets decor, of decor being the big crystal pane or a door, and of the stair alcove. */
-const SLANT_DECOR_CHANCE = 0.75;
+/**
+ * Chance a slanted face gets decor, and of a straight face's decor being the big crystal pane or a door. Decor keeps
+ * DECOR_END_GAP tiles from the ends of its face, so nothing set into it reaches round a corner.
+ */
+const SLANT_DECOR_CHANCE = 0.85;
 const CRYSTAL_CHANCE = 0.12;
-const DOOR_CHANCE = 0.05;
-const ALCOVE_CHANCE = 0.35;
+const DOOR_CHANCE = 0.06;
+const DECOR_END_GAP = 1;
 /** Chance a candle (or a cluster) stands in front of a window or statue, and how many more burn about the room. */
 const DECOR_CANDLE_CHANCE = 0.45;
 const ROOM_CANDLES = [1, 3] as const;
@@ -110,8 +103,14 @@ const RUIN_WRECKS = [2, 4] as const;
 const ROOM_STAINS = [0, 2] as const;
 const ROOM_MOSS = [2, 5] as const;
 const FLAT_TRIES = 12;
+/**
+ * Stairs in the corridors: a straight stretch of corridor two tiles wide, walled both sides, at least STAIRS_RUN_MIN
+ * tiles long, gets a flight in its middle; up to STAIRS_PER_LEVEL flights a level, the stretches picked at random.
+ */
+const STAIRS_RUN_MIN = 5;
+const STAIRS_PER_LEVEL = 4;
 
-type Corner = { corner: SlopeCorner; depth: number };
+type Corner = SlantCorner;
 
 function isSolid(kind: PropKind): boolean {
   const def: PropDef = PROPS[kind];
@@ -155,10 +154,10 @@ export class IsoDresser {
     const tone = this.pickTone();
     this.level.floorZones.push({ x: room.x, y: room.y, w: room.w, h: room.h, tone });
     const corners = this.cutCorners(room, keep);
-    const kind = this.buildKind(room, tone, props, keep);
+    const kind = this.buildKind(room, props, keep);
     if ((kind === 'plain' || kind === 'hall') && this.site.rng() < DAIS_CHANCE) this.dais(room, tone);
-    this.decorateNorthFace(room, room.y, kind === 'library' || kind === 'gallery', props, keep);
-    for (const c of corners) this.decorateSlant(room, c);
+    this.decorateNorthFace(room, room.y, kind === 'library', props, keep);
+    for (const c of corners) this.decorateSlant(c, room);
     this.clutter(room, kind, props, keep);
   }
 
@@ -166,20 +165,19 @@ export class IsoDresser {
    * Builds the room's kind: the one the roll picks, or if the room has no room for it, the kinds after it in turn (so a
    * small room still gets something); a roll past every share leaves it plain.
    */
-  private buildKind(room: RoomData, tone: number, props: PropPlacement[], keep: Keep): RoomKind {
+  private buildKind(room: RoomData, props: PropPlacement[], keep: Keep): RoomKind {
     const roll = this.site.rng();
     const first = KIND_SHARES.findIndex(([, share]) => roll < share);
     if (first < 0) return 'plain';
     for (let i = 0; i < KIND_SHARES.length; i++) {
       const kind = KIND_SHARES[(first + i) % KIND_SHARES.length][0];
-      if (this.build(kind, room, tone, props, keep)) return kind;
+      if (this.build(kind, room, props, keep)) return kind;
     }
     return 'plain';
   }
 
-  private build(kind: RoomKind, room: RoomData, tone: number, props: PropPlacement[], keep: Keep): boolean {
+  private build(kind: RoomKind, room: RoomData, props: PropPlacement[], keep: Keep): boolean {
     switch (kind) {
-      case 'gallery': return this.gallery(room, tone, props, keep);
       case 'chasm': return this.chasm(room, keep);
       case 'sinkhole': return this.sinkhole(room, keep);
       case 'hall': return this.hall(room, props, keep);
@@ -191,109 +189,37 @@ export class IsoDresser {
 
   // ── Slanted corners ──────────────────────────────────────────────────────────
 
-  /** Cuts the room's corners off on the slant, each by its chance; returns the corners cut. */
+  /** Cuts the room's corners off on the slant, each by its chance, as deep as it allows; returns the corners cut. */
   private cutCorners(room: RoomData, keep: Keep): Corner[] {
-    const depth = room.w >= DEEP_SLANT_MIN_W && room.h >= DEEP_SLANT_MIN_H ? 2 : 1;
+    let deepest = SLANT_DEPTH_MAX;
+    while (deepest > 1 && !slantFits(room, deepest)) deepest--;
     const cut: Corner[] = [];
     for (const corner of ['nw', 'ne', 'sw', 'se'] satisfies SlopeCorner[]) {
       const chance = corner === 'nw' || corner === 'ne' ? NORTH_SLANT_CHANCE : SOUTH_SLANT_CHANCE;
-      if (this.site.rng() < chance && this.cutCorner(room, corner, depth, keep)) cut.push({ corner, depth });
+      const depth = this.site.randInt(Math.max(1, deepest - 1), deepest);
+      if (this.site.rng() < chance && cutSlantCorner(this.site, room, corner, depth, keep)) cut.push({ corner, depth });
     }
     return cut;
   }
 
   /**
-   * Cuts one corner off on the slant, `depth` tiles down and twice that across: the tiles beyond the slant become wall,
-   * and the two tiles it crosses in each row are marked as slopes (Slopes.ts). Not where a corridor comes in.
+   * Decor set into a north slanted face, by its chance, in its middle and clear of both its ends (so nothing reaches
+   * round onto the straight face or the side wall): any that fits there.
    */
-  private cutCorner(room: RoomData, corner: SlopeCorner, depth: number, keep: Keep): boolean {
-    const across = depth * 2;
-    if (room.w < across * 2 + SLANT_ROOM_SPARE_W || room.h < depth * 2 + SLANT_ROOM_SPARE_H) return false;
-    const left = corner === 'nw' || corner === 'sw';
-    const top = corner === 'nw' || corner === 'ne';
-    const x0 = left ? room.x : room.x + room.w - across;
-    const y0 = top ? room.y : room.y + room.h - depth;
-    const outside = (x: number, y: number): boolean => x < room.x || y < room.y || x >= room.x + room.w || y >= room.y + room.h;
-    if (someTile(x0 - 1, y0 - 1, x0 + across, y0 + depth, (x, y) => outside(x, y) && !this.site.isWall(x, y))) return false;
-    if (someTile(x0, y0, x0 + across - 1, y0 + depth - 1, (x, y) => !this.site.free(x, y))) return false;
-    const walls: Array<[number, number]> = [];
-    const slopes: Array<[number, Slope]> = [];
-    forEachTile(0, 0, across - 1, depth - 1, (j, k) => {
-      const x = left ? room.x + j : room.x + room.w - 1 - j;
-      const y = top ? room.y + k : room.y + room.h - 1 - k;
-      // In row k from the corner, the slant crosses columns lx (mostly wall) and lx + 1 (a corner of wall).
-      const lx = 2 * (depth - 1 - k);
-      if (j <= lx) walls.push([x, y]);
-      if (j === lx || j === lx + 1) slopes.push([x + y * this.level.width, { corner, major: j === lx }]);
-    });
-    if (!keep(() => this.site.setTiles(walls, TileType.Wall))) return false;
-    for (const [i, slope] of slopes) this.level.slopes.set(i, slope);
-    forEachTile(x0, y0, x0 + across - 1, y0 + depth - 1, (x, y) => this.site.claim(x, y));
-    return true;
-  }
-
-  /** The slope tile a slanted corner's slant crosses in its column `j` (counted from the corner). */
-  private slantTile(room: RoomData, c: Corner, j: number): TilePos {
-    const left = c.corner === 'nw' || c.corner === 'sw';
-    const top = c.corner === 'nw' || c.corner === 'ne';
-    const k = c.depth - 1 - Math.floor(j / 2);
-    return { x: left ? room.x + j : room.x + room.w - 1 - j, y: top ? room.y + k : room.y + room.h - 1 - k };
-  }
-
-  /** Decor set into a north slanted face, by its chance: the biggest that fits, or a smaller one. */
-  private decorateSlant(room: RoomData, c: Corner): void {
+  private decorateSlant(c: Corner, room: RoomData): void {
     if (c.corner !== 'nw' && c.corner !== 'ne') return;
-    if (this.site.rng() >= SLANT_DECOR_CHANCE) return;
-    const fits = SLANT_DECOR[c.corner].filter((decor) => ISO_DECOR[decor].span <= c.depth * 2);
+    const columns = c.depth * 2;
+    const fits = SLANT_DECOR[c.corner].filter((decor) => ISO_DECOR[decor].span <= columns - DECOR_END_GAP * 2);
+    if (!fits.length || this.site.rng() >= SLANT_DECOR_CHANCE) return;
     const decor = this.pick(fits);
-    // Decor is keyed by the slope tile of its leftmost column: the slant's first on the west, its span-th on the east.
     const span = ISO_DECOR[decor].span;
-    const at = this.slantTile(room, c, c.corner === 'nw' ? 0 : span - 1);
+    // Columns counted from the corner; decor is keyed by the slope tile of its leftmost column.
+    const first = Math.floor((columns - span) / 2);
+    const at = slantTile(room, c, c.corner === 'nw' ? first : first + span - 1);
     this.level.wallDecor.set(at.x + at.y * this.level.width, decor);
   }
 
   // ── Kinds of room ────────────────────────────────────────────────────────────
-
-  /**
-   * A gallery raised along the room's north side: its floor (another tone) over a face two tiles tall, with one or
-   * two flights of stairs down it, braziers at its foot either side of each flight.
-   */
-  private gallery(room: RoomData, tone: number, props: PropPlacement[], keep: Keep): boolean {
-    const depth = this.countIn(GALLERY_DEPTH);
-    const faceY = room.y + depth;
-    if (room.w < GALLERY_MIN_W || room.h - depth - FACE_ROWS < GALLERY_FLOOR_BELOW) return false;
-    // A corridor coming in from the side at the face's rows would end against it.
-    const sideOpen = (x: number): boolean => someTile(x, faceY, x, faceY + FACE_ROWS - 1, (tx, ty) => !this.site.isWall(tx, ty));
-    if (sideOpen(room.x - 1) || sideOpen(room.x + room.w)) return false;
-    const faceRow = (x: number): boolean => this.site.free(x, faceY) && this.site.free(x, faceY + 1);
-    if (someTile(room.x, faceY, room.x + room.w - 1, faceY, (x) => !faceRow(x))) return false;
-    const flights = this.flightsFor(room);
-    const onStairs = (x: number): boolean => flights.some((sx) => x >= sx && x < sx + STAIRS_W);
-    const cells: Array<[number, number]> = [];
-    forEachTile(room.x, faceY, room.x + room.w - 1, faceY + FACE_ROWS - 1, (x, y) => {
-      if (!onStairs(x)) cells.push([x, y]);
-    });
-    if (!keep(() => this.site.setTiles(cells, TileType.Wall))) return false;
-    this.level.floorZones.push({ x: room.x, y: room.y, w: room.w, h: depth, tone: this.otherTone(tone) });
-    for (const sx of flights) this.layFlight(sx, faceY, props, keep);
-    return true;
-  }
-
-  /** Where a gallery's flights of stairs start: one off the middle, or two at a quarter and three quarters across. */
-  private flightsFor(room: RoomData): number[] {
-    const lo = room.x + STAIRS_INSET;
-    const hi = room.x + room.w - STAIRS_INSET - STAIRS_W;
-    if (room.w < TWO_FLIGHTS_W) return [Math.min(hi, Math.max(lo, room.x + Math.floor((room.w - STAIRS_W) / 2) + this.site.randInt(-1, 1)))];
-    return [lo + Math.floor((hi - lo) / 4), lo + Math.ceil(((hi - lo) * 3) / 4)];
-  }
-
-  /** A flight of stairs down the face at column sx: its tiles kept clear (and the landing above and below), braziers by its foot. */
-  private layFlight(sx: number, faceY: number, props: PropPlacement[], keep: Keep): void {
-    this.level.stairs.push({ x: sx, y: faceY });
-    forEachTile(sx, faceY - 1, sx + STAIRS_W - 1, faceY + STAIRS_H, (x, y) => this.site.claim(x, y));
-    const foot = faceY + STAIRS_H;
-    for (const x of [sx - 1, sx + STAIRS_W]) this.site.placeSolid([[x, foot]], [this.site.pickProp(ISO_BRAZIERS)], props, keep);
-  }
 
   /**
    * A chasm across the whole room, wall to wall, two or three tiles deep, with one or two bridges over it (a chasm is no
@@ -387,22 +313,24 @@ export class IsoDresser {
   }
 
   /**
-   * Whether `span` faces from x over floor row y are all plain; for decor rising above the face (`tall`), with the dark
-   * above them too (not the floor of a gallery or a room behind).
+   * Whether `span` faces from x over floor row y are all plain, and the face runs on plain for DECOR_END_GAP tiles either
+   * side (decor is kept off a face's ends); for decor rising above the face (`tall`), with the dark above them too (not
+   * the floor of a room behind).
    */
   private faceRun(x: number, y: number, span: number, tall = false): boolean {
-    for (let i = 0; i < span; i++) if (!this.plainFace(x + i, y) || (tall && !this.site.isWall(x + i, y - FACE_ROWS - 1))) return false;
+    for (let i = -DECOR_END_GAP; i < span + DECOR_END_GAP; i++) {
+      if (!this.plainFace(x + i, y)) return false;
+      if (tall && i >= 0 && i < span && !this.site.isWall(x + i, y - FACE_ROWS - 1)) return false;
+    }
     return true;
   }
 
   /**
    * Along the face over the room's floor row `y`, left to right: decor set into it now and then (in a library, shelves;
-   * now and then a crystal pane, the stair alcove, a door), braziers in front of the bare stretches, candles before
-   * windows and statues.
+   * now and then a crystal pane or a door), braziers in front of the bare stretches, candles before windows and statues.
    */
   private decorateNorthFace(room: RoomData, y: number, library: boolean, props: PropPlacement[], keep: Keep): void {
     let lastBrazier = -Infinity;
-    this.maybeAlcove(room, y);
     for (let x = room.x; x < room.x + room.w; x++) {
       if (!this.plainFace(x, y)) continue;
       const decor = this.site.rng() < FACE_DECOR_CHANCE ? this.faceDecorAt(x, y, library) : null;
@@ -416,24 +344,13 @@ export class IsoDresser {
     }
   }
 
-  /** The stair alcove in the middle of the face, by its chance, where four tiles of plain face are free for it. */
-  private maybeAlcove(room: RoomData, y: number): void {
-    const span = ISO_DECOR.isoAlcove.span;
-    const x = room.x + Math.floor((room.w - span) / 2);
-    if (this.site.rng() >= ALCOVE_CHANCE || !this.faceRun(x, y, span, true)) return;
-    if (someTile(x, y, x + span - 1, y, (tx, ty) => !this.site.free(tx, ty))) return;
-    this.level.wallDecor.set(x + (y - 1) * this.level.width, 'isoAlcove');
-    // The steps come out onto the floor: nothing stands on them.
-    forEachTile(x, y, x + span - 1, y, (tx, ty) => this.site.claim(tx, ty));
-  }
-
   /** Decor for the face at x over floor row y, if one fits there. */
   private faceDecorAt(x: number, y: number, library: boolean): IsoDecor | null {
     const roll = this.site.rng();
     if (roll < DOOR_CHANCE && this.faceRun(x, y, ISO_DECOR.isoDoor.span, true)) return 'isoDoor';
     if (roll < DOOR_CHANCE + CRYSTAL_CHANCE && this.faceRun(x, y, ISO_DECOR.isoCrystal.span, true)) return 'isoCrystal';
-    if (library) return 'isoShelf';
-    return this.pick(FRONT_DECOR_SMALL);
+    if (!this.faceRun(x, y, 1)) return null;
+    return library ? 'isoShelf' : this.pick(FRONT_DECOR_SMALL);
   }
 
   /** Sets decor into the face over floor tile (x, y), and maybe a candle in front of a window or statue. */
@@ -500,12 +417,68 @@ export class IsoDresser {
     return !someTile(x0, y0, x1, y1, (x, y) => !this.openGround(x, y));
   }
 
-  /** Floor (or a prop's tile) with no slant, stairs or face decor coming down onto it. */
+  /** Floor (or a prop's tile) with no slant or face decor coming down onto it. */
   private openGround(x: number, y: number): boolean {
     const type = this.level.getTile(x, y)?.type;
     if (type !== TileType.Floor && type !== TileType.Obstacle) return false;
     const W = this.level.width;
-    if (this.level.slopes.has(x + y * W) || this.level.wallDecor.has(x + (y - 1) * W)) return false;
-    return !this.level.stairs.some((s) => x >= s.x && x < s.x + STAIRS_W && y >= s.y && y < s.y + STAIRS_H);
+    return !this.level.slopes.has(x + y * W) && !this.level.wallDecor.has(x + (y - 1) * W);
+  }
+
+  // ── Stairs in the corridors ──────────────────────────────────────────────────
+
+  /**
+   * Flights of stairs in the corridors between the rooms: across a north–south stretch (steps), or seen from the side in
+   * an east–west one (rising one way or the other), each in the middle of a straight stretch walled both sides.
+   */
+  layCorridorStairs(): void {
+    const spots: Array<{ x: number; y: number; dir: StairDir }> = [];
+    const { level } = this;
+    forEachTile(1, 1, level.width - 2, level.height - 2, (x, y) => {
+      if (this.startsRun(x, y, 0, 1)) this.middleOfRun(x, y, 0, 1, spots);
+      if (this.startsRun(x, y, 1, 0)) this.middleOfRun(x, y, 1, 0, spots);
+    });
+    for (let i = 0; i < STAIRS_PER_LEVEL && spots.length; i++) {
+      const spot = spots.splice(Math.floor(this.site.rng() * spots.length), 1)[0];
+      if (this.stairsNear(spot.x, spot.y)) continue;
+      level.stairs.push(spot);
+      const [w, h] = spot.dir === 'across' ? [STAIRS_PASSAGE, STAIRS_ROWS] : [STAIRS_SPAN, STAIRS_PASSAGE];
+      forEachTile(spot.x, spot.y, spot.x + w - 1, spot.y + h - 1, (x, y) => this.site.claim(x, y));
+    }
+  }
+
+  /**
+   * Whether (x, y) is a slice of a straight corridor two tiles wide, running along (dx, dy): both its tiles plain floor
+   * (no slant, no safe room), with plain wall either side of it.
+   */
+  private passage(x: number, y: number, dx: number, dy: number): boolean {
+    const W = this.level.width;
+    const open = (tx: number, ty: number): boolean => this.site.isFloor(tx, ty) && !this.level.slopes.has(tx + ty * W) && !this.level.isSafeZone(tx, ty);
+    const wall = (tx: number, ty: number): boolean => this.site.isWall(tx, ty) && !this.level.slopes.has(tx + ty * W);
+    // Across the corridor: its two tiles, and the walls beyond them.
+    const ax = dy, ay = dx;
+    return open(x, y) && open(x + ax, y + ay) && wall(x - ax, y - ay) && wall(x + STAIRS_PASSAGE * ax, y + STAIRS_PASSAGE * ay);
+  }
+
+  /** Whether a straight corridor slice starts at (x, y) (none just before it). */
+  private startsRun(x: number, y: number, dx: number, dy: number): boolean {
+    return this.passage(x, y, dx, dy) && !this.passage(x - dx, y - dy, dx, dy);
+  }
+
+  /** The middle of the straight stretch starting at (x, y), if it is long enough, as a spot for stairs. */
+  private middleOfRun(x: number, y: number, dx: number, dy: number, out: Array<{ x: number; y: number; dir: StairDir }>): void {
+    let n = 1;
+    while (this.passage(x + n * dx, y + n * dy, dx, dy)) n++;
+    if (n < STAIRS_RUN_MIN) return;
+    if (dy === 1) {
+      out.push({ x, y: y + Math.floor((n - STAIRS_ROWS) / 2), dir: 'across' });
+      return;
+    }
+    out.push({ x: x + Math.floor((n - STAIRS_SPAN) / 2), y, dir: 'over' });
+  }
+
+  /** Whether stairs already stand within a few tiles (two flights side by side would read as one muddle). */
+  private stairsNear(x: number, y: number): boolean {
+    return this.level.stairs.some((s) => Math.abs(s.x - x) + Math.abs(s.y - y) < STAIRS_RUN_MIN);
   }
 }

@@ -16,6 +16,10 @@ import type { StepCost } from '../TileGraph';
 import { reachableTiles } from '../TileSearch';
 import { StateError } from '../../core/errors';
 import type { DungeonConfig } from './DungeonConfig';
+import { SLANTED_CORNER_DEPTH, SLANTED_CORNER_SHARE, SLANTED_CORRIDOR_CHANCE, SLANTED_EXTRA_CORRIDORS } from './DungeonConfig';
+import { cutSlantCorner, planSlantedRun, slantedRunFits, slantedStarts } from './Slants';
+import type { SlantedRun } from './Slants';
+import type { SlopeCorner } from '../Slopes';
 import { bspTree, bspLeaves, type BspNode } from './BSPSplit';
 import { isPillarColumn } from '../TerrainAutotile';
 import {
@@ -269,6 +273,8 @@ export class DungeonBuilder {
   private readonly usedTiles = new Set<number>();
   /** Dresses the isometric castle's rooms, through the builder's own ways of setting things down. */
   private readonly iso = new IsoDresser(this.isoSite());
+  /** Room pairs to be joined down the slant once every other corridor is in (so none cuts across a slant). */
+  private readonly slantedPairs: Array<[RoomData, RoomData]> = [];
 
   constructor(cfg: DungeonConfig) {
     this.cfg = cfg;
@@ -290,6 +296,7 @@ export class DungeonBuilder {
     const cw = cfg.corridorW;
     this.rng = mulberry32(seed);
     this.roomIdSeq = 0;
+    this.slantedPairs.length = 0;
     this.level = new Level(W, H, cfg.theme);
     this.fill(0, 0, W, H, TileType.Wall);
 
@@ -323,6 +330,8 @@ export class DungeonBuilder {
     const exitDoorY = exit.y + Math.floor((exit.h - cw) / 2);
     const lastRoom = this.nearestRoom(dungeonRooms, exitDoorX, exitDoorY + cw / 2);
     this.corridorFromPoint(exitDoorX, exitDoorY, lastRoom, -1);
+    for (const [a, b] of this.slantedPairs) if (!this.slantedCorridor(a, b)) this.lCorridor(a, b);
+    this.extraSlantedCorridors(dungeonRooms, SLANTED_EXTRA_CORRIDORS[cfg.theme]);
 
     const doorTiles: Array<{ x: number; y: number }> = [];
     const exitDoorTiles: Array<{ x: number; y: number }> = [];
@@ -366,6 +375,7 @@ export class DungeonBuilder {
       else this.furnish(room, structured, props, keepIfReachable);
     }
     if (cfg.theme === 'castle') this.castleFaces(dungeonRooms, props, keepIfReachable);
+    if (cfg.theme === 'castle2') this.iso.layCorridorStairs();
 
     if (cfg.theme === 'catacomb') this.wallMaterials(dungeonRooms);
 
@@ -548,8 +558,18 @@ export class DungeonBuilder {
     }
   }
 
-  /** Walls up one corner of the room (the right or left one, at its bottom or top), if nothing comes in there. */
+  /**
+   * Walls up one corner of the room (the right or left one, at its bottom or top), if nothing comes in there: by
+   * SLANTED_CORNER_SHARE cut off on the slant, else squared off.
+   */
   private cutCorner(room: RoomData, right: boolean, bottom: boolean, keep: Keep): boolean {
+    const corner: SlopeCorner = bottom ? (right ? 'se' : 'sw') : (right ? 'ne' : 'nw');
+    const depth = this.randInt(SLANTED_CORNER_DEPTH[0], SLANTED_CORNER_DEPTH[1]);
+    if (this.rng() < SLANTED_CORNER_SHARE && cutSlantCorner(this.isoSite(), room, corner, depth, keep)) return true;
+    return this.squareCorner(room, right, bottom, keep);
+  }
+
+  private squareCorner(room: RoomData, right: boolean, bottom: boolean, keep: Keep): boolean {
     const w = this.randInt(CORNER_MIN, Math.floor(room.w / CORNER_MAX_SHARE));
     const h = this.randInt(CORNER_MIN, Math.floor(room.h / CORNER_MAX_SHARE));
     const x0 = right ? room.x + room.w - w : room.x;
@@ -600,6 +620,13 @@ export class DungeonBuilder {
       this.fill(x, y0, cw, Math.max(0, btm.y - y0), TileType.Floor);
       return;
     }
+    if (this.rng() < SLANTED_CORRIDOR_CHANCE[this.cfg.theme]) this.slantedPairs.push([a, b]);
+    else this.lCorridor(a, b);
+  }
+
+  /** An L of two straight corridors between two rooms, turning at a random corner. */
+  private lCorridor(a: RoomData, b: RoomData): void {
+    const cw = this.cfg.corridorW;
     const px = this.randInt(a.x, a.x + a.w - cw);
     const py = this.randInt(a.y, a.y + a.h - cw);
     const qx = this.randInt(b.x, b.x + b.w - cw);
@@ -610,6 +637,46 @@ export class DungeonBuilder {
     } else {
       this.fill(px, Math.min(py, qy), cw, Math.abs(qy - py) + cw, TileType.Floor);
       this.fill(Math.min(px, qx), qy, Math.abs(qx - px) + cw, cw, TileType.Floor);
+    }
+  }
+
+  /**
+   * A corridor down the slant from the upper room's bottom rows to the lower room's top rows (generators/Slants.ts), if
+   * the rows between them are deep enough and nothing else is in its way; returns whether it was carved.
+   */
+  private slantedCorridor(a: RoomData, b: RoomData): boolean {
+    const [top, bottom] = a.y < b.y ? [a, b] : [b, a];
+    const starts = slantedStarts(top, bottom, this.cfg.corridorW);
+    const site = this.isoSite();
+    // Every place the band could start, in random order, until one is clear.
+    while (starts.length) {
+      const x0 = starts.splice(Math.floor(this.rng() * starts.length), 1)[0];
+      const run = planSlantedRun(top, bottom, this.cfg.corridorW, x0);
+      if (!run || !slantedRunFits(site, run, top, bottom)) continue;
+      this.carveSlantedRun(run);
+      return true;
+    }
+    return false;
+  }
+
+  /** Up to `count` more corridors down the slant, between rooms (tried in random order) that lie diagonally apart. */
+  private extraSlantedCorridors(rooms: readonly RoomData[], count: number): void {
+    const pairs: Array<[RoomData, RoomData]> = [];
+    for (let i = 0; i < rooms.length; i++) {
+      for (let j = i + 1; j < rooms.length; j++) pairs.push([rooms[i], rooms[j]]);
+    }
+    let left = count;
+    while (left > 0 && pairs.length) {
+      const [a, b] = pairs.splice(Math.floor(this.rng() * pairs.length), 1)[0];
+      if (this.slantedCorridor(a, b)) left--;
+    }
+  }
+
+  private carveSlantedRun(run: SlantedRun): void {
+    for (const [x, y] of [...run.straight, ...run.band]) this.fillTile(x, y, TileType.Floor);
+    for (const [x, y, slope] of run.slopes) {
+      if (!slope.major) this.fillTile(x, y, TileType.Floor);
+      this.level.slopes.set(x + y * this.level.width, slope);
     }
   }
 
@@ -646,9 +713,14 @@ export class DungeonBuilder {
     return changed;
   }
 
-  /** A wall tile with open floor both north and south of it (a lone post is one of those too). */
+  /**
+   * A wall tile with open floor both north and south of it (a lone post is one of those too). A slant's tiles are wall
+   * here: the wall under or over one is the slant's own.
+   */
   private isSliver(tx: number, ty: number): boolean {
-    return this.isWall(tx, ty) && !this.isWall(tx, ty - 1) && !this.isWall(tx, ty + 1);
+    const W = this.cfg.mapWidth;
+    const open = (y: number): boolean => !this.isWall(tx, y) && !this.level.slopes.has(tx + y * W);
+    return this.isWall(tx, ty) && !this.level.slopes.has(tx + ty * W) && open(ty - 1) && open(ty + 1);
   }
 
   // ── Room features ───────────────────────────────────────────────────────────
@@ -666,8 +738,14 @@ export class DungeonBuilder {
     return this.level.getTile(tx, ty)?.type === TileType.Floor;
   }
 
+  /** Floor nothing stands on yet, and no slanted wall crosses. */
   private free(tx: number, ty: number): boolean {
-    return this.isFloor(tx, ty) && !this.usedTiles.has(tx + ty * this.cfg.mapWidth);
+    return this.plainFloor(tx, ty) && !this.usedTiles.has(tx + ty * this.cfg.mapWidth);
+  }
+
+  /** A floor tile no slanted wall crosses. */
+  private plainFloor(tx: number, ty: number): boolean {
+    return this.isFloor(tx, ty) && !this.level.slopes.has(tx + ty * this.cfg.mapWidth);
   }
 
   private claim(tx: number, ty: number): void {
@@ -975,10 +1053,12 @@ export class DungeonBuilder {
   private decorFits(tx: number, ty: number, len: number, kind: CastleFaceDecor): boolean {
     const rows = kind === 'gothic' ? 3 : 2;
     const W = this.cfg.mapWidth;
-    const plainFace = (x: number): boolean => this.isFloor(x, ty) && !isPillarColumn(x) && !this.level.wallDecor.has(x + (ty - 1) * W)
+    const plainFace = (x: number): boolean => this.plainFloor(x, ty) && !isPillarColumn(x) && !this.level.wallDecor.has(x + (ty - 1) * W)
       && !someTile(x, ty - rows, x, ty - 1, (wx, wy) => !this.isWall(wx, wy));
     for (let x = tx; x < tx + len; x++) if (!plainFace(x)) return false;
-    return this.isWall(tx - 1, ty - 1) && this.isWall(tx + len, ty - 1);
+    // Not right against a slanted wall either: its face stands out from the straight one.
+    const sloped = (x: number): boolean => this.level.slopes.has(x + ty * W);
+    return this.isWall(tx - 1, ty - 1) && this.isWall(tx + len, ty - 1) && !sloped(tx - 1) && !sloped(tx + len);
   }
 
   // ── Centrepieces and large props ────────────────────────────────────────────
@@ -1336,7 +1416,8 @@ export class DungeonBuilder {
   /** A plain stretch of full-height brick face above floor tile (tx, ty), free for wall fixtures. */
   private mountable(tx: number, ty: number): boolean {
     const W = this.cfg.mapWidth;
-    return this.isFloor(tx, ty)
+    const sloped = (x: number): boolean => this.level.slopes.has(x + ty * W);
+    return this.plainFloor(tx, ty) && !sloped(tx - 1) && !sloped(tx + 1)
       && this.isWall(tx, ty - 1) && this.isWall(tx, ty - 2)
       && this.isWall(tx - 1, ty - 1) && this.isWall(tx + 1, ty - 1)
       && !isPillarColumn(tx) && !this.level.wallDecor.has(tx + (ty - 1) * W) && !this.besideCastleDecor(tx, ty - 1);

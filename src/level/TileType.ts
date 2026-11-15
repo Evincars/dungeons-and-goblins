@@ -13,6 +13,14 @@ export const FOG_REVEAL_TILES = 5;
 export const TILE_WIDTH  = 32;
 export const TILE_HEIGHT = 32;
 
+/**
+ * A wall with walkable floor directly north of it lets characters step this far
+ * into its tile; that wall row is drawn over them, so they appear to stand
+ * behind it with only their upper body showing, as in Catacomb Snatch. A slanted
+ * wall along a room's south side lets them reach as far past its slant.
+ */
+export const WALL_SINK = 26;
+
 export type TileData = {
   type: TileType;
   solid: boolean;

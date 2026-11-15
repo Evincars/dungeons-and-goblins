@@ -7,11 +7,11 @@
 export const PROP_IMAGES = {
   decorative: '/catacombs/decorative.png',
   // The catacomb tileset itself, for its free-standing columns.
-  mainlev: '/catacombs/mainlevbuild.png',
+  mainlev: '/catacombs/mainlevbuild-isometric.png',
   // The castle: its decor (banners, bones, pots, rubble, rugs) and its tileset (for the columns), and its two lights,
   // a standing candelabra and a wall candle, three frames each, one file per frame.
   castle_decor: '/castle/decorative.png',
-  castle_main: '/castle/mainlevbuild.png',
+  castle_main: '/castle/mainlevbuild-isometric.png',
   light_a_1: '/castle/lightA01.png',
   light_a_2: '/castle/lightA02.png',
   light_a_3: '/castle/lightA03.png',

@@ -9,8 +9,11 @@ import {
 } from './CastleTiles';
 import type { CastleFaceStyle } from './CastleTiles';
 import type { Pit } from './PitShapes';
-import { buildIsoTerrain, isoFloorSource } from './IsoTerrain';
+import { buildIsoTerrain, isoFloorSource, slantFootY, slantRimDepth, voidColumn } from './IsoTerrain';
 import { ISO_FLOORS } from './IsoTiles';
+import { CASTLE_SLANTS, CATACOMB_SLANTS, northCorner } from './SlantTiles';
+import type { SlantArt, SlantSet } from './SlantTiles';
+import type { Slope } from './Slopes';
 
 /**
  * One textured quad: draw tileset rect (sx,sy,w,h) at world (dx,dy). Pieces with
@@ -189,6 +192,12 @@ const STAIRS_DOUBLE_RUN = 7;
 const STAIRS_SKIP = 3;
 /** The void that covers characters behind a wall row sorts just under the wall row itself. */
 const VOID_BELOW_WALL = 0.5;
+/**
+ * Arched pieces on slanted faces (SlantTiles.ts), placed by hash and never at a slant's ends: one slope tile in
+ * SLANT_WIDE_EVERY starts a two-tile one (a niche, an alcove), one in SLANT_NARROW_EVERY holds a one-tile window.
+ */
+const SLANT_WIDE_EVERY = 3;
+const SLANT_NARROW_EVERY = 3;
 
 type FaceStyle = 'left' | 'right' | 'mid' | 'pillarL' | 'pillarR' | 'window' | 'slit' | 'cracked' | 'niche' | 'decor';
 type Src = readonly [number, number];
@@ -225,10 +234,12 @@ class TerrainBuilder {
   /** A castle (its own tileset and pieces), or the catacombs. */
   private readonly castle: boolean;
   private readonly top: WallTop;
+  private readonly slants: SlantSet;
 
   constructor(private readonly level: Level) {
     this.castle = level.theme === 'castle';
     this.top = this.castle ? CASTLE_TOP : CATACOMB_TOP;
+    this.slants = this.castle ? CASTLE_SLANTS : CATACOMB_SLANTS;
     this.W = level.width * 2;
     this.H = level.height * 2;
     this.faceK = new Int8Array(this.W * this.H);
@@ -242,6 +253,7 @@ class TerrainBuilder {
     for (const g of this.level.grates) this.addGrate(g);
     for (const pool of this.level.pools) this.overlayPieces.push(poolPiece(pool));
     forEachTile(0, 0, this.W - 1, this.H - 1, this.addSubTile);
+    for (const index of this.level.slopes.keys()) this.addSlant(index % this.level.width, Math.floor(index / this.level.width));
     forEachTile(0, 0, this.W - 3, this.H - 1, this.addArch);
     if (this.castle) forEachTile(1, 1, this.level.width - 3, this.level.height - 2, this.addStairs);
     return [...this.floorPieces, ...this.wallPieces, ...this.overlayPieces];
@@ -253,9 +265,14 @@ class TerrainBuilder {
     return sx < 0 || sy < 0 || sx >= this.W || sy >= this.H ? null : this.level.getTile(sx >> 1, sy >> 1);
   }
 
+  /** A wall sub-tile, or one of a slanted wall's tiles (drawn whole by addSlant: nothing else is drawn on or for it). */
   private solid(sx: number, sy: number): boolean {
     const t = this.tileAt(sx, sy);
-    return !t || t.type === TileType.Wall || t.type === TileType.BreakableWall;
+    return !t || t.type === TileType.Wall || t.type === TileType.BreakableWall || this.sloped(sx, sy);
+  }
+
+  private sloped(sx: number, sy: number): boolean {
+    return this.level.slopes.has((sx >> 1) + (sy >> 1) * this.level.width);
   }
 
   private hole(sx: number, sy: number): boolean {
@@ -276,9 +293,10 @@ class TerrainBuilder {
   // ── Faces: up to 4 solid sub-tiles directly above an open one ──────────────
 
   private readonly markFace = (sx: number, sy: number): void => {
-    if (this.solid(sx, sy) || !this.solid(sx, sy - 1)) return;
+    // Floor under a slanted wall has its face on the slant (addSlant), not a straight one.
+    if (this.solid(sx, sy) || !this.solid(sx, sy - 1) || this.sloped(sx, sy - 1)) return;
     let t = 0;
-    while (t < FACE_MAX && this.solid(sx, sy - 1 - t)) t++;
+    while (t < FACE_MAX && this.solid(sx, sy - 1 - t) && !this.sloped(sx, sy - 1 - t)) t++;
     for (let k = 1; k <= t; k++) {
       const y = sy - k;
       if (y < 0) break;
@@ -387,6 +405,7 @@ class TerrainBuilder {
   private readonly addSubTile = (sx: number, sy: number): void => {
     const dx = sx * SUB;
     const dy = sy * SUB;
+    if (this.sloped(sx, sy)) return;
     if (!this.solid(sx, sy)) {
       this.addOpenSubTile(sx, sy, dx, dy);
       return;
@@ -520,6 +539,63 @@ class TerrainBuilder {
     if (z !== undefined) this.overlayPieces.push({ dx, dy, sx: t.void[0], sy: t.void[1], w: SUB, h: SUB, z: z - VOID_BELOW_WALL });
   }
 
+  // ── Slanted walls (Slopes.ts), from the slanted pieces of the tileset's -isometric copy (SlantTiles.ts) ──
+
+  /**
+   * A slanted wall's tile: its column of the slanted face (north corners) — now and then an arched piece set into it — or
+   * of the rim along the slant (south ones), drawn over whoever stands behind it with the dark under it.
+   */
+  private addSlant(tx: number, ty: number): void {
+    const slope = this.level.slopes.get(tx + ty * this.level.width);
+    if (!slope) return;
+    const dx = tx * TILE_WIDTH;
+    const footLeft = slantFootY(slope, tx, ty, false);
+    const corner = slope.corner;
+    if (!northCorner(corner)) {
+      const rim = this.slants.rim[corner];
+      const z = slantRimDepth(slope, tx, ty);
+      this.overlayPieces.push(slantPiece(rim, dx, footLeft, z));
+      voidColumn(this.overlayPieces, this.slants.void, dx, footLeft - rim.footLeft + rim.h, z, z);
+      return;
+    }
+    const art = this.slantFaceArt(slope, corner, tx, ty);
+    if (art) this.wallPieces.push(slantPiece(art, dx, footLeft));
+  }
+
+  /** The art a north slope tile shows: an arched piece starting there, its plain face, or none (a wide piece's second tile). */
+  private slantFaceArt(slope: Slope, corner: 'nw' | 'ne', tx: number, ty: number): SlantArt | null {
+    const before = this.slantNeighbour(slope, tx, ty, -1);
+    if (before >= 0 && this.wideStarts(slope, tx - 1, before)) return null;
+    if (this.wideStarts(slope, tx, ty)) return this.slants.wide[corner];
+    const after = this.slantNeighbour(slope, tx, ty, 1);
+    const inner = before >= 0 && after >= 0 && !this.wideStarts(slope, tx + 1, after);
+    if (inner && (tx & 1) === 1 && hash(tx, ty) % SLANT_NARROW_EVERY === 0) return this.slants.narrow[corner];
+    const cobble = this.level.cobbleWalls.has(tx + ty * this.level.width) || this.level.cobbleWalls.has(tx + (ty - 1) * this.level.width);
+    const set = cobble && this.slants.cobble ? this.slants.cobble : this.slants.face;
+    return set[corner][tx & 1];
+  }
+
+  /**
+   * Whether a two-tile arched piece starts at slope tile (tx, ty): an even column, by hash, with the slant running on a
+   * tile before it and after it (it never reaches a slant's end) and no other one just before it.
+   */
+  private wideStarts(slope: Slope, tx: number, ty: number): boolean {
+    if ((tx & 1) !== 0 || hash(tx, ty) % SLANT_WIDE_EVERY !== 0) return false;
+    const second = this.slantNeighbour(slope, tx, ty, 1);
+    const before = this.slantNeighbour(slope, tx, ty, -1);
+    if (second < 0 || before < 0 || this.slantNeighbour(slope, tx + 1, second, 1) < 0) return false;
+    const twoBefore = this.slantNeighbour(slope, tx - 1, before, -1);
+    return twoBefore < 0 || (tx - 2) % 2 !== 0 || hash(tx - 2, twoBefore) % SLANT_WIDE_EVERY !== 0;
+  }
+
+  /** The row of the slope tile of the same slant in the column `dx` from tx (it lies a row up, level or down), or -1. */
+  private slantNeighbour(slope: Slope, tx: number, ty: number, dx: number): number {
+    for (let y = ty - 1; y <= ty + 1; y++) {
+      if (this.level.slopes.get(tx + dx + y * this.level.width)?.corner === slope.corner) return y;
+    }
+    return -1;
+  }
+
   // ── Arches over openings: corridors through a south face, or out of a room's bottom wall ──
 
   private readonly addArch = (sx: number, sy: number): void => {
@@ -567,7 +643,8 @@ class TerrainBuilder {
 
   /** Whether tiles tx and tx + 1 of row ty are a passage two tiles wide: open floor between walls. */
   private passageRow(tx: number, ty: number): boolean {
-    const open = (x: number): boolean => this.level.getTile(x, ty)?.type === TileType.Floor && !this.level.isSafeZone(x, ty);
+    const open = (x: number): boolean => this.level.getTile(x, ty)?.type === TileType.Floor && !this.level.isSafeZone(x, ty)
+      && !this.level.slopes.has(x + ty * this.level.width);
     return open(tx) && open(tx + 1) && this.solid(tx * 2 - 1, ty * 2) && this.solid((tx + 2) * 2, ty * 2);
   }
 
@@ -580,6 +657,13 @@ class TerrainBuilder {
     }
     quad(out, x1 * SUB, y, LINTEL_RIGHT, SUB, LINTEL_END_H, z);
   }
+}
+
+/** A slanted piece laid along the slant whose foot crosses its tile's left edge at `footLeft` (world y). */
+function slantPiece(art: SlantArt, dx: number, footLeft: number, z?: number): TerrainPiece {
+  const piece: TerrainPiece = { dx, dy: footLeft - art.footLeft, sx: art.x, sy: art.y, w: art.w, h: art.h };
+  if (z !== undefined) piece.z = z;
+  return piece;
 }
 
 /** In a cave hall, patches of the floor are cave ground: bare, pebbly or grassy. */
@@ -611,7 +695,9 @@ export function groundAt(level: Level, tx: number, ty: number): Ground | null {
   const t = level.getTile(tx, ty);
   // A pit's own tiles are floored too: a quatrefoil leaves their corners open ground, and the pit art covers the rest.
   const pitFloor = t?.type === TileType.Hole && level.hasPit(tx, ty);
-  if (!t || (t.type !== TileType.Floor && t.type !== TileType.Obstacle && !pitFloor)) return null;
+  // A slanted wall's tiles are floored too: its art covers the wall's side of the slant.
+  const sloped = level.slopes.has(tx + ty * level.width);
+  if (!t || (t.type !== TileType.Floor && t.type !== TileType.Obstacle && !pitFloor && !sloped)) return null;
   if (level.theme === 'castle') {
     const floor = castleFloor(level, tx, ty, noise(tx, ty, FLOOR_NOISE_SCALE));
     return { ...floor, sheet: CASTLE_TILESET };

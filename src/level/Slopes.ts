@@ -1,11 +1,13 @@
-import { TILE_HEIGHT, TILE_WIDTH } from './TileType';
+import { TILE_HEIGHT, TILE_WIDTH, WALL_SINK } from './TileType';
 
 /**
- * Slanted walls. The isometric castle's rooms have their corners cut off on the slant its art is drawn at: two
- * tiles across for every tile down. A slant crosses two tiles in each tile row it passes through; the one nearer
- * the corner it cuts off is mostly wall (`major`, three quarters of it: a Wall tile), the other has only a corner of
- * wall in it (`minor`: a Floor tile). Bodies are kept out of the wall's side of the slant by pushing them back over
- * it (so they slide along it), not by boxes, which would leave a staircase to snag on.
+ * Slanted walls, at the slant the isometric castle's art is drawn at: two tiles across for every tile down (rooms'
+ * corners cut off, corridors running down the slant; generators/Slants.ts). A slant crosses two tiles in each tile row
+ * it passes through; the one nearer the corner it cuts off is mostly wall (`major`, three quarters of it: a Wall tile),
+ * the other has only a corner of wall in it (`minor`: a Floor tile). Bodies are kept out of the wall's side of the slant
+ * by pushing them back over it (so they slide along it), not by boxes, which would leave a staircase to snag on. A
+ * slant with the wall below it (a south one) lets feet reach WALL_SINK past it, as a wall with floor north of it does,
+ * into the wall tile under its tile too; the rim along it is drawn over whoever stands there.
  */
 
 /** The corner of the room a slant cuts off: the wall lies that side of it. */
@@ -35,16 +37,23 @@ const PUSH_DOWN = 4 / 5;
 const flipsX = (corner: SlopeCorner): boolean => corner === 'ne' || corner === 'se';
 const flipsY = (corner: SlopeCorner): boolean => corner === 'sw' || corner === 'se';
 
+/** Whether a slant has the wall below it (it cuts off a room's south corner, or runs under a corridor). */
+export function isSouthSlope(slope: Slope): boolean {
+  return flipsY(slope.corner);
+}
+
 /**
  * How far a world point is on the open side of a slope tile's slant, in pixels down the tile (negative: inside the
  * wall). Worked in the north-west corner's frame, the others mirrored onto it: there the wall is above the line
- * v = off − u/2, off being the whole tile for the major tile and half of it for the minor.
+ * v = off − u/2, off being the whole tile for the major tile and half of it for the minor. A south slant's wall starts
+ * WALL_SINK further in; points in the tile under it are measured against it too.
  */
 export function slopeClearance(slope: Slope, tx: number, ty: number, x: number, y: number): number {
   const u = flipsX(slope.corner) ? (tx + 1) * TILE_WIDTH - x : x - tx * TILE_WIDTH;
   const v = flipsY(slope.corner) ? (ty + 1) * TILE_HEIGHT - y : y - ty * TILE_HEIGHT;
   const off = slope.major ? TILE_HEIGHT : TILE_HEIGHT / 2;
-  return v + u * SLANT - off;
+  const sink = flipsY(slope.corner) ? WALL_SINK : 0;
+  return v + u * SLANT - off + sink;
 }
 
 /** Whether a world point inside a slope tile lies on the wall's side of its slant. */

@@ -3167,11 +3167,12 @@ test('the console\'s /dungeon builds the level again as a castle or the catacomb
   assert.match(runCommand('/dungeon moon', ctx)[0], /Usage/);
 });
 
-test('the isometric castle is built of its own pieces: slanted corners, galleries, chasms, its props and foes; its map keeps them', async () => {
+test('the isometric castle is built of its own pieces: slanted corners and corridors, chasms, stairs, its props and foes; its map keeps them', async () => {
   const { isIsoProp } = await load('level/Props');
   const { encodeLevelMap, decodeLevelMap } = await load('level/LevelMap');
   let chasms = 0;
   let stairs = 0;
+  let slantedCorridors = 0;
   for (const seed of [7, 11, 23, 31]) {
     world.clear();
     const { layout, level } = buildDungeon(seed, true, 'castle2');
@@ -3183,13 +3184,28 @@ test('the isometric castle is built of its own pieces: slanted corners, gallerie
     assert.ok(layout.props.some((p) => p.kind.startsWith('iso_brazier')), 'braziers');
     const foes = [...world.with('mobType')].map((m) => m.mobType);
     assert.ok(foes.length > 0 && foes.every((t) => t === 'shade' || t === 'grick'), 'haunted by its own foes');
+    const inRoom = (x, y) => layout.rooms.some((r) => x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h);
     for (const [i, slope] of level.slopes) {
-      const type = level.getTile(i % level.width, Math.floor(i / level.width)).type;
-      assert.equal(type, slope.major ? TileType.Wall : TileType.Floor, 'a slant\'s major tile is wall, its minor one floor');
+      const x = i % level.width;
+      const y = Math.floor(i / level.width);
+      assert.equal(level.getTile(x, y).type, slope.major ? TileType.Wall : TileType.Floor, 'a slant\'s major tile is wall, its minor one floor');
+      const south = slope.corner === 'sw' || slope.corner === 'se';
+      if (south && !level.slopes.has(i + level.width)) assert.equal(level.getTile(x, y + 1).type, TileType.Wall, 'wall under a south slant');
+      if (!inRoom(x, y)) slantedCorridors++;
     }
     for (let i = 0; i < level.width * level.height; i++) chasms += level.isChasm(i % level.width, Math.floor(i / level.width)) ? 1 : 0;
     stairs += level.stairs.length;
-    for (const s of level.stairs) assert.equal(level.getTile(s.x, s.y).type, TileType.Floor, 'stairs are walked down');
+    const floor = (x, y) => level.getTile(x, y).type === TileType.Floor && !level.slopes.has(x + y * level.width);
+    const wall = (x, y) => level.getTile(x, y).type === TileType.Wall;
+    for (const s of level.stairs) {
+      // Only in a straight corridor two tiles wide: across a north–south one, or up and over an east–west one.
+      if (s.dir === 'across') {
+        for (const y of [s.y, s.y + 1]) assert.ok(floor(s.x, y) && floor(s.x + 1, y) && wall(s.x - 1, y) && wall(s.x + 2, y), 'stairs across a corridor');
+      } else {
+        for (const x of [s.x, s.x + 1, s.x + 2]) assert.ok(floor(x, s.y) && floor(x, s.y + 1) && wall(x, s.y - 1) && wall(x, s.y + 2), 'stairs along a corridor');
+      }
+    }
+    assert.ok(![...level.wallDecor.values()].includes('isoAlcove'), 'the stairs art is never set into a face');
     const back = decodeLevelMap(JSON.parse(JSON.stringify(encodeLevelMap(layout))));
     assert.equal(back.level.theme, 'castle2');
     assert.deepEqual([...back.level.slopes], [...level.slopes]);
@@ -3197,7 +3213,8 @@ test('the isometric castle is built of its own pieces: slanted corners, gallerie
     assert.deepEqual(back.level.stairs, level.stairs);
   }
   assert.ok(chasms > 0, 'some rooms are cut by chasms or sunk in pits');
-  assert.ok(stairs > 0, 'some rooms have galleries with stairs down');
+  assert.ok(stairs > 0, 'some corridors have stairs');
+  assert.ok(slantedCorridors > 0, 'some corridors run down the slant');
 });
 
 test('a slanted wall pushes a body back over its slant (it slides along it); a chasm stops bodies, not shots or sight', async () => {
@@ -3221,12 +3238,43 @@ test('a slanted wall pushes a body back over its slant (it slides along it); a c
 
   level.setTile(6, 5, createTile(TileType.Hole));
   assert.ok(level.isChasm(6, 5));
-  assert.ok(level.getClipBBs(6 * TILE_WIDTH + 16, 4 * TILE_WIDTH + 16, 4, 4).some((b) => b.contains(6 * TILE_WIDTH + 16, 5 * TILE_WIDTH + 16)),
+  assert.ok(level.getClipBBs(6 * TILE_WIDTH + 16, 4 * TILE_WIDTH + 16, 4, 4).some((b) => b.contains(6 * TILE_WIDTH + 16, 5 * TILE_WIDTH + 28)),
     'a chasm is a box nobody walks into');
   assert.ok(!level.blocksPoint(6 * TILE_WIDTH + 16, 5 * TILE_WIDTH + 16), 'shots fly over it');
   assert.ok(level.checkLineOfSight(5 * TILE_WIDTH + 16, 5 * TILE_WIDTH + 16, 8 * TILE_WIDTH + 16, 5 * TILE_WIDTH + 16), 'and sight crosses it');
   assert.ok(!level.canHold(6 * TILE_WIDTH + 16, 5 * TILE_WIDTH + 16), 'nothing is set down in it');
-  assert.equal(level.wallSink, 6, 'feet reach only just onto a south rim');
+  const { WALL_SINK } = await load('level/Level');
+  assert.ok(level.getClipBBs(6 * TILE_WIDTH + 16, 4 * TILE_WIDTH + 16, 4, 4).every((b) => !b.contains(6 * TILE_WIDTH + 16, 5 * TILE_WIDTH + WALL_SINK - 2)),
+    'feet reach over its north rim as over a wall\'s');
+});
+
+test('a south slant lets feet reach behind its rim as a south wall does, into the tile under it, and no further', () => {
+  const level = new Level(12, 10, 'catacomb');
+  // A south-east corner cut off on the slant across tiles (5,4) (major) and (4,4) (minor); wall under both.
+  for (let x = 0; x < 12; x++) level.setTile(x, 5, createTile(TileType.Wall));
+  level.setTile(5, 4, createTile(TileType.Wall));
+  level.slopes.set(5 + 4 * 12, { corner: 'se', major: true });
+  level.slopes.set(4 + 4 * 12, { corner: 'se', major: false });
+  // The minor tile's slant runs from its bottom-left corner up to the middle of its right edge.
+  const left = 4 * TILE_WIDTH + 2;
+  assert.ok(!level.blocksPoint(left, 5 * TILE_WIDTH + 20), 'feet reach past the slant into the wall tile under it');
+  assert.ok(level.blocksPoint(left, 5 * TILE_WIDTH + 30), 'but no further than a wall lets them');
+  assert.ok(!level.getClipBBs(left, 5 * TILE_WIDTH, 4, 4).some((b) => b.contains(left, 5 * TILE_WIDTH + 10)), 'the tile under the slant has no box of its own');
+  const pos = { x: left + 6, y: 5 * TILE_WIDTH + 20 };
+  level.pushOutOfSlopes(pos, 4, 4);
+  assert.ok(pos.y < 5 * TILE_WIDTH + 20 && pos.x < left + 6, 'a body pushed back out of it, up and to the left');
+  // A straight south wall beside it lets feet in just as far.
+  assert.ok(!level.blocksPoint(2 * TILE_WIDTH + 16, 5 * TILE_WIDTH + 20) && level.blocksPoint(2 * TILE_WIDTH + 16, 5 * TILE_WIDTH + 30));
+});
+
+test('spells and arrows fly over a castle pool, which nobody wades into', () => {
+  const level = new Level(12, 10, 'castle');
+  for (let y = 3; y < 6; y++) for (let x = 3; x < 7; x++) level.setTile(x, y, createTile(TileType.Obstacle));
+  level.addPool({ x: 3, y: 3, kind: 'water' });
+  assert.ok(!level.blocksPoint(4 * TILE_WIDTH + 16, 4 * TILE_WIDTH + 16), 'shots cross it');
+  assert.ok(level.getClipBBs(4 * TILE_WIDTH + 16, 2 * TILE_WIDTH + 16, 4, 4).some((b) => b.contains(4 * TILE_WIDTH + 16, 3 * TILE_WIDTH + 16)), 'bodies do not');
+  level.setTile(8, 4, createTile(TileType.Obstacle));
+  assert.ok(level.blocksPoint(8 * TILE_WIDTH + 16, 4 * TILE_WIDTH + 16), 'other furniture still stops them');
 });
 
 test('the console\'s /dungeon builds the level as the isometric castle too', async () => {
@@ -3238,7 +3286,7 @@ test('the console\'s /dungeon builds the level as the isometric castle too', asy
   assert.match(runCommand('/dungeon', ctx)[0], /<catacomb \| castle \| castle2>/, 'the usage lists every kind, spaced');
 });
 
-test('rooms are not all rectangles: some lose a corner to the wall', () => {
+test('rooms are not all rectangles: some lose a corner to the wall, squared off or on the slant', () => {
   let cut = 0;
   for (const [seed, theme] of [[11, 'catacomb'], [22, 'catacomb'], [33, 'castle'], [44, 'castle']]) {
     const { layout, level } = buildDungeon(seed, true, theme);
@@ -3250,10 +3298,30 @@ test('rooms are not all rectangles: some lose a corner to the wall', () => {
   assert.ok(cut > 0);
 });
 
+test('the catacombs and the castle have slanted walls now and then, drawn from their tilesets\' slanted pieces', async () => {
+  const { buildTerrainPieces } = await load('level/TerrainAutotile');
+  const { CATACOMB_SLANTS, CASTLE_SLANTS } = await load('level/SlantTiles');
+  for (const [theme, set] of [['catacomb', CATACOMB_SLANTS], ['castle', CASTLE_SLANTS]]) {
+    let slopes = 0;
+    let slantArt = 0;
+    for (const seed of [7, 23, 31]) {
+      const { level } = buildDungeon(seed, true, theme);
+      slopes += level.slopes.size;
+      // The slanted pieces lie in the band the -isometric copy adds under the original art.
+      slantArt += buildTerrainPieces(level).filter((p) => p.sy >= set.void.y && !p.sheet).length;
+      for (const [i, slope] of level.slopes) {
+        assert.equal(level.getTile(i % level.width, Math.floor(i / level.width)).type, slope.major ? TileType.Wall : TileType.Floor);
+      }
+    }
+    assert.ok(slopes > 0, `${theme}: some slanted corners or corridors`);
+    assert.ok(slantArt > 0, `${theme}: drawn with the slanted pieces`);
+  }
+});
+
 test('in a castle, lit candles stand in the arched alcoves and flags hang only on square columns', () => {
   let candles = 0;
   let flags = 0;
-  for (const seed of [4242, 77, 1234, 9, 31, 5150]) {
+  for (const seed of [4242, 77, 1234, 9, 31, 5150, 1, 4, 6]) {
     const { layout, level } = buildDungeon(seed, true, 'castle');
     for (const p of layout.props) {
       if (p.kind === 'castle_candle') {

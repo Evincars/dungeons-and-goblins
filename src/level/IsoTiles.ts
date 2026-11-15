@@ -14,6 +14,9 @@ export const ISO_FLOORS = 'iso_floors';
 
 export type IsoRect = { readonly x: number; readonly y: number; readonly w: number; readonly h: number };
 
+/** A tile of plain black (the square at the sheet's top left): the dark of a wall top, laid over whoever is behind it. */
+export const ISO_VOID: IsoRect = { x: 16, y: 16, w: 32, h: 32 };
+
 // ── Faces (mainlevbuild1) ─────────────────────────────────────────────────────
 
 /** A face is two tiles tall: cap molding over stone, from this row of the long north wall at the top of the sheet. */
@@ -69,8 +72,8 @@ export const CHASM_LIP_S: IsoRect[] = [544, 576, 608, 640].map((x) => ({ x, y: 9
 export const CHASM_RIM_W: IsoRect = { x: 416, y: 736, w: 8, h: 32 };
 export const CHASM_RIM_E: IsoRect = { x: 792, y: 736, w: 8, h: 32 };
 /**
- * Columns that hold up the floor's edge, sinking into the dark below it: under a rim with deep dark below (a chasm, or
- * the wall tops south of a room), now and then.
+ * Columns sinking into the dark, their pointed tops catching the light: under a rim with deep dark below (a chasm, or
+ * the wall tops south of a room) holding up the floor's edge, or standing on their own out in the dark.
  */
 export const SUNKEN_COLUMNS: IsoRect[] = [832, 880, 936, 984].map((x) => ({ x, y: 624, w: 32, h: 112 }));
 
@@ -82,15 +85,20 @@ export const SUNKEN_COLUMNS: IsoRect[] = [832, 880, 936, 984].map((x) => ({ x, y
  */
 export const FLOOR_BLOCKS: IsoRect[] = [16, 384, 704].map((x) => ({ x, y: 16, w: 256, h: 128 }));
 
-// ── Stairs (mainlevbuild1) ────────────────────────────────────────────────────
+// ── Stairs (mainlevbuild1: the U-shaped block at 848, 512) ────────────────────
 
 /**
- * Four steps (80 wide, a tile tall), and the stone cheeks either side of a flight: the lower part of the art's stepped
- * cheeks, so they rise only a little above the face they are cut into.
+ * Its middle: four steps a tile tall, laid across a north–south corridor (the 64 px middle of the 80 px flight, its
+ * ends being hidden under the corridor's rims).
  */
-export const STEPS: IsoRect = { x: 880, y: 592, w: 80, h: 32 };
-export const STAIR_CHEEK_LEFT: IsoRect = { x: 848, y: 536, w: 32, h: 72 };
-export const STAIR_CHEEK_RIGHT: IsoRect = { x: 960, y: 536, w: 32, h: 72 };
+export const STEPS: IsoRect = { x: 888, y: 592, w: 64, h: 32 };
+/**
+ * Its sides: stairs seen from the side, four steps a tile across, each step's front below its tread: the left side
+ * climbs to the east (its tallest step at its right), the right side to the west. Side by side they make a flight up and
+ * over in an east–west corridor, their feet on its south edge, their treads reaching across it.
+ */
+export const SIDE_STAIRS_EAST: IsoRect = { x: 848, y: 512, w: 32, h: 96 };
+export const SIDE_STAIRS_WEST: IsoRect = { x: 960, y: 512, w: 32, h: 96 };
 
 // ── Wall decor (mainlevbuild1) ────────────────────────────────────────────────
 
@@ -108,7 +116,6 @@ export const ISO_DECOR = {
   isoShelf:   { x: 112, y: 928, w: 32, h: 48, span: 1, lift: 2 },
   isoCrystal: { x: 20, y: 885, w: 74, h: 94, span: 2, lift: 4 },
   isoDoor:    { x: 928, y: 672, w: 80, h: 108, span: 2, lift: 0 },
-  isoAlcove:  { x: 848, y: 512, w: 144, h: 112, span: 4, lift: -8 },
   isoWindowNW:  { x: 249, y: 817, w: 32, h: 58, span: 1, lift: 3, slant: 'nw' },
   isoStatueNW:  { x: 249, y: 881, w: 32, h: 58, span: 1, lift: 3, slant: 'nw' },
   isoMirrorNW:  { x: 231, y: 945, w: 64, h: 72, span: 2, lift: 1, slant: 'nw' },
@@ -126,7 +133,7 @@ export function isIsoDecor(decor: WallDecor): decor is WallDecor & IsoDecor {
   return decor in ISO_DECOR;
 }
 
-/** The front decor for straight faces, one tile wide (the rest are picked on purpose: shelves, crystals, alcoves). */
+/** The front decor for straight faces, one tile wide (the rest are picked on purpose: shelves, crystals, doors). */
 export const FRONT_DECOR_SMALL = ['isoWindow', 'isoWindow2', 'isoStatue', 'isoStatue2'] as const satisfies readonly IsoDecor[];
 /** The decor of a slanted face, by its corner, by how many tiles of slant it needs. */
 export const SLANT_DECOR = {

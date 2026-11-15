@@ -176,12 +176,12 @@ function propSheets(): SpriteSheet[] {
 // ── Everything else ───────────────────────────────────────────────────────────
 
 const UI_SHEETS = [
-  // Terrain tiles (16×16 base tile, used via tilesetRect())
-  new SpriteSheet('tileset', '/catacombs/mainlevbuild.png', { grid: { frameWidth: 16, frameHeight: 16 } }),
+  // Terrain tiles (16×16 base tile, used via tilesetRect()); the -isometric copies add slanted walls (scripts/iso-sheets.py)
+  new SpriteSheet('tileset', '/catacombs/mainlevbuild-isometric.png', { grid: { frameWidth: 16, frameHeight: 16 } }),
 
   // Cave tileset: its ground tiles floor the cave halls (see level/TerrainAutotile.ts)
   new SpriteSheet('cave_ground', '/caves/MainLev2.0.png'),
-  new SpriteSheet('castle_tileset', '/castle/mainlevbuild.png'),
+  new SpriteSheet('castle_tileset', '/castle/mainlevbuild-isometric.png'),
   // The isometric castle (level/IsoTiles.ts): its walls, faces, rims, stairs and wall decor; its floors and chasms.
   new SpriteSheet('iso_walls', '/castle-izometric/mainlevbuild1.png'),
   new SpriteSheet('iso_floors', '/castle-izometric/mainlevbuild2.png'),

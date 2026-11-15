@@ -1,5 +1,5 @@
 import type { Rectangle } from 'pixi.js';
-import { createTile, TileType, TILE_WIDTH, TILE_HEIGHT } from './TileType';
+import { createTile, TileType, TILE_WIDTH, TILE_HEIGHT, WALL_SINK } from './TileType';
 import type { TileData } from './TileType';
 import { BoxPool } from '../core/geometry';
 import { forEachTile } from './Grid';
@@ -7,17 +7,12 @@ import type { BlockRect } from './Props';
 import { insidePit, pitTileBounds } from './PitShapes';
 import type { Pit } from './PitShapes';
 import type { LevelTheme } from './Theme';
-import { slopeBlocks, slopeClearance, slopePush, slopeSupport } from './Slopes';
+import { isSouthSlope, slopeBlocks, slopeClearance, slopePush, slopeSupport } from './Slopes';
 import type { Slope } from './Slopes';
 
 export type SpawnPoint = { x: number; y: number };
 
-/**
- * A wall with walkable floor directly north of it lets characters step this far
- * into its tile; that wall row is drawn over them, so they appear to stand
- * behind it with only their upper body showing, as in Catacomb Snatch.
- */
-export const WALL_SINK = 26;
+export { WALL_SINK } from './TileType';
 
 /** Floor tiles come in this many image variants. */
 const FLOOR_VARIANTS = 4;
@@ -29,7 +24,7 @@ export const WALL_DECORS = [
   'door0', 'door1', 'glass0', 'glass1', 'ornate0', 'ornate1', 'ornate2', 'ornate3', 'gothic0', 'gothic1', 'gothic2',
   // The isometric castle's (level/IsoTiles.ts ISO_DECOR), each keyed by its first tile: the face's foot tile on a
   // straight face, the slope tile of its first column on a slanted one.
-  'isoWindow', 'isoWindow2', 'isoStatue', 'isoStatue2', 'isoShelf', 'isoCrystal', 'isoDoor', 'isoAlcove',
+  'isoWindow', 'isoWindow2', 'isoStatue', 'isoStatue2', 'isoShelf', 'isoCrystal', 'isoDoor',
   'isoWindowNW', 'isoStatueNW', 'isoMirrorNW', 'isoCrystalNW', 'isoGroupNW',
   'isoWindowNE', 'isoStatueNE', 'isoMirrorNE', 'isoCrystalNE', 'isoGroupNE',
 ] as const;
@@ -51,12 +46,15 @@ export const FLOOR_TONES = 3;
 export type FloorZone = { x: number; y: number; w: number; h: number; tone: number };
 /**
  * Stairs in a straight corridor two tiles wide: `across` a north–south one (steps two tiles wide, STAIRS_ROWS tall), or
- * seen from the side in an east–west one, rising to the `east` or the `west` (a tile across, the corridor's height).
+ * `over` an east–west one (seen from the side: up from the west, a landing, and down to the east, STAIRS_SPAN tiles).
  */
-export const STAIR_DIRS = ['across', 'east', 'west'] as const;
+export const STAIR_DIRS = ['across', 'over'] as const;
 export type StairDir = (typeof STAIR_DIRS)[number];
 export type Stairs = { x: number; y: number; dir: StairDir };
 export const STAIRS_ROWS = 2;
+export const STAIRS_SPAN = 3;
+/** The corridors stairs are laid in are this many tiles wide (the side stairs fill an east–west one's rows). */
+export const STAIRS_PASSAGE = 2;
 
 /** A tile box as forEachTile's arguments. */
 function boundsArgs(b: { x0: number; y0: number; x1: number; y1: number }): [number, number, number, number] {
@@ -192,12 +190,22 @@ export class Level {
     return this.getTile(tx, ty)?.type === TileType.Hole && !this.hasPit(tx, ty);
   }
 
+  /**
+   * The row of the slope tile whose slant decides where a tile's wall begins: the tile's own, or for the wall tile under
+   * a south slant (which feet reach into, Slopes.ts) the one above it; -1 for a tile no slant crosses.
+   */
+  slopeRow(tx: number, ty: number): number {
+    if (this.slopes.has(tx + ty * this.width)) return ty;
+    const above = this.slopes.get(tx + (ty - 1) * this.width);
+    return above && isSouthSlope(above) && isWallType(this.getTile(tx, ty)) ? ty - 1 : -1;
+  }
+
   /** Whether a world point lies on the wall's side of a slanted wall (Slopes.ts); false off the slants. */
   inSlopeWall(worldX: number, worldY: number): boolean {
     const tx = Math.floor(worldX / TILE_WIDTH);
-    const ty = Math.floor(worldY / TILE_HEIGHT);
-    const slope = this.slopes.get(tx + ty * this.width);
-    return !!slope && slopeBlocks(slope, tx, ty, worldX, worldY);
+    const sy = this.slopeRow(tx, Math.floor(worldY / TILE_HEIGHT));
+    const slope = sy < 0 ? undefined : this.slopes.get(tx + sy * this.width);
+    return !!slope && slopeBlocks(slope, tx, sy, worldX, worldY);
   }
 
   /**
@@ -211,11 +219,11 @@ export class Level {
     }
   }
 
-  /** One corner of a body's box: if it lies in a slope tile whose wall faces it and is past the slant, back it out. */
+  /** One corner of a body's box: if a slant decides its tile, faces it and the corner is past it, back it out. */
   private pushCornerOut(pos: { x: number; y: number }, rx: number, ry: number, cornerX: number, cornerY: number): void {
     const tx = Math.floor(cornerX / TILE_WIDTH);
-    const ty = Math.floor(cornerY / TILE_HEIGHT);
-    const slope = this.slopes.get(tx + ty * this.width);
+    const ty = this.slopeRow(tx, Math.floor(cornerY / TILE_HEIGHT));
+    const slope = ty < 0 ? undefined : this.slopes.get(tx + ty * this.width);
     if (!slope) return;
     slopeSupport(slope, pos.x, pos.y, rx, ry, slopeScratch);
     if (slopeScratch.x !== cornerX || slopeScratch.y !== cornerY) return;
@@ -337,8 +345,7 @@ export class Level {
     const ty = Math.floor(worldY / TILE_HEIGHT);
     const tile = this.getTile(tx, ty);
     if (!tile) return true;
-    const slope = this.slopes.get(tx + ty * this.width);
-    if (slope) return slopeBlocks(slope, tx, ty, worldX, worldY);
+    if (this.slopeRow(tx, ty) >= 0) return this.inSlopeWall(worldX, worldY);
     if (tile.passable || this.poolTiles.has(tx + ty * this.width)) return false;
     const inX = worldX - tx * TILE_WIDTH;
     const inY = worldY - ty * TILE_HEIGHT;
@@ -381,7 +388,7 @@ export class Level {
     const tile = this.getTile(tx, ty);
     // Slanted walls push bodies back themselves (pushOutOfSlopes); nobody steps into a chasm, but feet reach over its
     // north rim as over a wall's.
-    if (this.slopes.has(tx + ty * this.width)) return;
+    if (this.slopeRow(tx, ty) >= 0) return;
     if (this.isChasm(tx, ty)) {
       const rim = this.getTile(tx, ty - 1)?.type === TileType.Floor ? WALL_SINK : 0;
       this.clipBoxes.push(this.clipPool.between(tx * TILE_WIDTH, ty * TILE_HEIGHT + rim, (tx + 1) * TILE_WIDTH, (ty + 1) * TILE_HEIGHT));

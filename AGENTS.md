@@ -110,7 +110,9 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - Tuning tables live together: sword and spell in `src/entities/WeaponStats.ts`; mobs in
   `src/entities/MobFactory.ts` (`MOB_CONFIGS`); gold from kills and from searching openable props (`KILL_GOLD`,
   `STASH_FINDS`) in `src/entities/LootFactory.ts`, and which props open in `src/entities/DungeonFactory.ts`; dungeon generation in
-  `src/level/generators/DungeonConfig.ts` (the isometric castle's room dressing in `src/level/generators/IsoDresser.ts`); enemy AI knobs (sight, squad sizes, flanking, trail
+  `src/level/generators/DungeonConfig.ts` (corridors and corners on the slant there too; the isometric castle's room dressing in
+  `src/level/generators/IsoDresser.ts`); the slanted wall pieces of the catacombs' and the castle's tilesets in `src/level/SlantTiles.ts`,
+  made by `scripts/iso-sheets.py` into each tileset's `mainlevbuild-isometric.png` copy (keep the two in step); enemy AI knobs (sight, squad sizes, flanking, trail
   following) in `src/ai/constants.ts`; the D&D rules tables (SRD weapons and armour) in `src/rules/WeaponTable.ts`
   and `src/rules/ArmorTable.ts`; hero classes (abilities, hit points, proficiencies, features) in
   `src/data/classes.json`; enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`;
@@ -162,25 +164,35 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `StateMachine` states, squad tactics by Yuka `Think`, each squad member's place in a ring round its target,
   `surround.ts`) → `execution/` (Yuka steering).
 - `src/level/` — `Level` tiles, `TileGraph`/`TileSearch` (Yuka graph search), procedural generation
-  (`generators/`: BSP rooms, some with a corner or two cut back into the wall, each dressed by theme — crypt, storeroom
-  or plain hall with a colonnade and floor grates — with brick or cobblestone walls, `level.cobbleWalls`), shaped pits (`PitShapes.ts`: square, lobed or quatrefoil on 2×2
+  (`generators/`: BSP rooms, some with a corner or two cut back into the wall, squared off or on the slant, each dressed by
+  theme — crypt, storeroom or plain hall with a colonnade and floor grates — with brick or cobblestone walls,
+  `level.cobbleWalls`; now and then a corridor runs down the slant between two rooms lying diagonally apart,
+  `generators/Slants.ts`), shaped pits (`PitShapes.ts`: square, lobed or quatrefoil on 2×2
   Hole tiles; `level.overPit` tests the drawn shape, for falling in, keeping enemies out and hiding a faller), terrain
-  autotiling and rendering (`TerrainAutotile.ts`, from `public/catacombs/mainlevbuild.png`). A level is built as the
+  autotiling and rendering (`TerrainAutotile.ts`, from `public/catacombs/mainlevbuild-isometric.png`: the original tileset
+  with slanted faces, rims and arched pieces added under it, `SlantTiles.ts`). Slanted walls (`level.slopes`, `Slopes.ts`, in
+  every theme: two tiles across for every tile down) push bodies back over the slant (`Level.pushOutOfSlopes`) rather than
+  blocking whole tiles; a north one shows its face on the slant, a south one a rim that feet reach WALL_SINK behind (into the
+  wall tile under it, `Level.slopeRow`) and that is drawn over them, as a straight south wall is. A level is built as the
   catacombs or a castle (`Theme.ts`, `level.theme`, `run.theme`; the ~ console's `/dungeon catacomb | castle | castle2` rebuilds the
-  level as either): a castle uses only `public/castle` — its tileset's pieces are mapped in `CastleTiles.ts` (stone faces
+  level as either): a castle uses only `public/castle` (its tileset's `-isometric` copy) — its tileset's pieces are mapped in `CastleTiles.ts` (stone faces
   with pilasters (also framing each decorated stretch), windows and arrow slits, arched alcoves (candles stand lit in them),
   ornate panels and gothic windows (candelabras beside them) as `wallDecor`, the great arch over passages, its legs on the
-  walls beside them, stairs across north–south passages, its floors, pools `level.pools` and 4×2 spike pits), its decor
+  walls beside them, stairs across north–south passages, its floors, pools `level.pools` (nobody wades in; spells and arrows
+  fly over them) and 4×2 spike pits), its decor
   are the `castle_*` props (flags hang on square columns, mount `front`), and wall candles and candelabras (lightB,
   lightA) light it in place of torches and candles; its safe and exit rooms keep their own design. The third theme
   (`castle2`, `/dungeon castle2`), is the isometric castle of `public/castle-izometric` alone: its art is mapped in `IsoTiles.ts` and laid
-  by `IsoTerrain.ts` (a wall with floor below shows its face two tiles tall; north corners cut off on the 2:1 slant show
-  their face on the slant, south ones a rim; every other edge of the dark is rimmed, chasms more darkly, with columns sinking
-  into the dark under the rims), its rooms dressed by `generators/IsoDresser.ts` (slanted corners `level.slopes`, galleries
-  raised over a face with stairs down it `level.stairs`, chasms and pits of `Hole` tiles that belong to no pit — nobody steps
-  in, sight and shots cross — floor tones `level.floorZones`, decor set into the faces as `wallDecor`, crystal braziers and
-  candles for light, its own foes `shade` and `grick`, `characters/IsoFoes.ts`); slanted walls push bodies back over the slant
-  (`Slopes.ts`, `Level.pushOutOfSlopes`) rather than blocking whole tiles. Soft edges between kinds of ground (`GroundBlend.ts`, baked
+  by `IsoTerrain.ts` (a wall with floor below shows its face two tiles tall; north slants show their face on the slant, south
+  ones a rim; every other edge of the dark is rimmed, chasms more darkly; the rims along a room's south side and a chasm's
+  north rim are drawn over the feet of whoever steps up to them; columns sink into the deep dark, under a rim now and then
+  but never at its corner, and out in the dark on their own, never behind a face), its rooms dressed by
+  `generators/IsoDresser.ts` (long slanted corners, chasms and pits of `Hole` tiles that belong to no pit — nobody steps in,
+  sight and shots cross — floor tones `level.floorZones`, decor set into the faces as `wallDecor`, kept off a face's ends,
+  crystal braziers and candles for light, its own foes `shade` and `grick`, `characters/IsoFoes.ts`; more corridors run down
+  the slant than in the other themes). Its stairs (`level.stairs`: the U-shaped block of `mainlevbuild1.png` is stairs, never
+  face decor) lie only in straight corridors two tiles wide: steps across a north–south one, and in an east–west one the
+  block's sides, up, a landing and down. Soft edges between kinds of ground (`GroundBlend.ts`, baked
   into one atlas by `render/BlendAtlas.ts`), fog of war (`FogRenderer.ts`: per-corner fading buffer, blurred, with
   drifting mist), lighting, and `LevelMap.ts` (a generated level as validated JSON, gzipped to send or save).
 - Animated decor stored one frame per file (`public/catacombs` torches and candles) is padded to one height with the base

@@ -82,16 +82,29 @@ function refile(walls: SeeThroughWalls, levelWidth: number): void {
   if (filedCount !== tallProps.size) fileTallProps(levelWidth);
 }
 
-/** A figure near the hero followed: the walls and tall props drawn over it, and its ellipse. */
+/** How wide (its half-width, px) the ellipse cleared round a figure this tall is. */
+export function revealHalfWidth(height: number): number {
+  return Math.max(ELLIPSE_MIN_RX, height * ELLIPSE_RX);
+}
+
+/**
+ * The walls drawn over a figure (feet at x, y; this tall) across its ellipse's width, added to `out`: a wall broken into
+ * pieces at several depths, as along a slant, clears as one instead of leaving the pieces beside the figure standing.
+ */
+export function wallsOverFigure(walls: SeeThroughWalls, x: number, y: number, height: number, out: Screen[]): void {
+  const rx = revealHalfWidth(height);
+  walls.collect(x - rx, y - height, x + rx, y, y, out);
+}
+
+/** A figure near the hero followed: its ellipse, the walls over it (wallsOverFigure), and the tall props over it. */
 function lookAt(entity: Figure, walls: SeeThroughWalls): void {
   const { x, y } = entity.position;
   const height = figureHeight(entity);
   const half = Math.max(FIGURE_HALF_WIDTH, entity.radius?.x ?? 0);
   over.length = 0;
-  walls.collect(x - half, y - height, x + half, y, y, over);
+  wallsOverFigure(walls, x, y, height, over);
   collectIn(tallCells, tallColumns, x - half, y - height, x + half, y, y, over);
-  const rx = Math.max(ELLIPSE_MIN_RX, height * ELLIPSE_RX);
-  revealer.figure(entity, x, y - height * ELLIPSE_MIDDLE, rx, height * ELLIPSE_RY, over);
+  revealer.figure(entity, x, y - height * ELLIPSE_MIDDLE, revealHalfWidth(height), height * ELLIPSE_RY, over);
 }
 
 /**

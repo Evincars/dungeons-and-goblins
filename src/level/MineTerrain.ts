@@ -1,30 +1,36 @@
-import type { FloorZone, Level } from './Level';
+import type { Level } from './Level';
+import { mineBaseTone, mineFloorSource, mineGroundBase } from './MineGround';
 import type { TerrainPiece } from './TerrainAutotile';
 import { TileType, TILE_HEIGHT, TILE_WIDTH, UNDER_WALL_INSET } from './TileType';
 import { forEachTile, tileHash } from './Grid';
 import {
-  FACE_FOOT, FACE_H, MINE_CHASM_E, MINE_CHASM_LIP_S, MINE_CHASM_N, MINE_CHASM_W, MINE_FACE_END_LEFT, MINE_FACE_END_RIGHT,
-  MINE_FACES, MINE_GROUND, MINE_GROUND_BLOCKS, MINE_RIM_E, MINE_RIM_N, MINE_RIM_NE, MINE_RIM_NW, MINE_RIM_SLANT, MINE_RIM_W,
-  MINE_SLANT_FACES, MINE_SUNKEN_POSTS, MINE_VOID, MINE_DECOR, holeArtOffset,
+  BRINK_LINE, CLIFF_FADES, CLIFF_ROWS, FACE_ROWS, FACE_SHADOW, MINE_BRINK_E, MINE_BRINK_KNOTS, MINE_BRINK_S, MINE_BRINK_W,
+  MINE_CLIFFS, MINE_CUT_FACES, MINE_CUT_SLANT_FACES, MINE_DECOR, MINE_FACE_END_LEFT, MINE_FACE_END_RIGHT, MINE_FACES,
+  MINE_FILL, MINE_GROUND, MINE_KNOT, MINE_RIM_E, MINE_RIM_N, MINE_RIM_SLANT, MINE_RIM_W, MINE_SLANT_FACES,
+  MINE_SUNKEN_POSTS, RIM_DEPTH, RIM_INSET, THORN_H, holeArtOffset,
 } from './MineTiles';
+import type { CliffFade } from './MineTiles';
 import { mineHole } from './PitShapes';
 import type { Pit } from './PitShapes';
 import type { IsoRect, SlantStrip } from './IsoTiles';
 import type { Slope } from './Slopes';
 import { isSouthSlope } from './Slopes';
-import { faceDepth, slantFootY, slantRimDepth, voidColumn } from './IsoTerrain';
+import { faceDepth, slantFootY, slantRimDepth } from './IsoTerrain';
 import { SOUTH_WALL_RAISE } from './Theme';
 
 /**
  * Autotiles the forgotten mines (Theme 'mines') on its 32 px tiles, from the art mapped in MineTiles.ts, as the
  * isometric castle is (IsoTerrain.ts), but with the caves' own rock:
- * - floor: its tone's earth, with patches of other earth lying on it in ragged ellipses (a FloorZone with `patch`),
- *   their edges spilling softly over the earth round them (GroundBlend.ts);
+ * - floor: its tone's earth, with patches of other earth lying on it in ragged ellipses (a FloorZone with `patch`), the
+ *   tones running into each other along ragged edges that wander across the tiles (MineGround.ts);
+ * - rock is dark with faint cobbles (its pieces cut by world position, so they run on whatever lies between them),
+ *   rimmed with rings of stone on every side floor touches, the rims turning round its corners;
  * - a wall with floor below it is the foot of a tall rock face (its stone four tiles high under the black rock top),
- *   cut short where the rock behind it is thinner (a corridor or room close behind), its rim drawn over the cut;
+ *   cut short where the rock behind it is thinner (a corridor or room close behind): its lip kept, the rim of the rock
+ *   behind it over the cut;
  * - a wall cutting a north corner off on the slant shows the face on the slant, a south one the rim along it;
- * - every other wall is black, scalloped where floor touches it; a chasm's north edge drops away as a dark cliff into
- *   the black, old pit props rising out of it now and then;
+ * - a chasm's brinks are pebbles, dark thorns standing over the floor along its north one, from which a cliff of grey-blue
+ *   cobbles falls away into the black, old pit props rising out of it now and then;
  * - a hole in the floor (a pit of shape 'hole') is its art from the set's decorations, centred on its tiles.
  * Faces stand behind whoever is in front of them; the rims along a room's south side and a chasm's north edge are
  * drawn over the feet of whoever steps up to them, as in the other themes.
@@ -33,12 +39,6 @@ import { SOUTH_WALL_RAISE } from './Theme';
 /** Ground under foot, a wall (or off the map), a chasm, or a slanted wall's tile. */
 type Cell = 'ground' | 'wall' | 'chasm' | 'slope';
 
-/** A face reaches over its foot row and this many rows above it, when the rock is that deep. */
-const FACE_ROWS = 5;
-/** A face cut short starts this far below the top of its highest wall row: under the rim drawn there over the cut. */
-const CUT_UNDER_RIM = 16;
-/** A chasm's cliff falls over at most this many of its rows. */
-const CLIFF_ROWS = MINE_CHASM_N[0].h / TILE_HEIGHT;
 /** One chasm rim tile in this many (by hash), where the rim runs on both sides, has a pit prop rising under it. */
 const POST_EVERY = 4;
 /** The dark under it must run this many tiles deep; the post's top is this far below the rim's top. */
@@ -46,67 +46,18 @@ const POST_DEPTH = 3;
 const POST_TOP = 6;
 /** A post stands up to this far either way off its tile's middle (by hash). */
 const POST_JITTER = 6;
-/**
- * A patch of earth fills an ellipse in its zone, its rim eaten away by up to this share of the radius (by hash) so no
- * two patches have the same outline.
- */
-const PATCH_RAGGED = 0.45;
+/** Where two runs of rim meet at a corner, the ring laid over the joint sits this far in from it along each side. */
+const KNOT_IN = 1;
 
-function piece(r: IsoRect, dx: number, dy: number, h = r.h, z?: number, sy = r.y): TerrainPiece {
-  return z === undefined ? { dx, dy, sx: r.x, sy, w: r.w, h } : { dx, dy, sx: r.x, sy, w: r.w, h, z };
-}
-
-/**
- * The tone (MINE_GROUND_BLOCKS index) a tile's ground is laid in: the last patch whose ragged ellipse holds it, else the
- * last whole zone holding it.
- */
-export function mineFloorTone(level: Level, tx: number, ty: number): number {
-  return minePatchAt(level, tx, ty)?.tone ?? mineBaseTone(level, tx, ty);
-}
-
-/** The tone of the last whole zone (not a patch) holding a tile. */
-function mineBaseTone(level: Level, tx: number, ty: number): number {
-  for (let i = level.floorZones.length - 1; i >= 0; i--) {
-    const z = level.floorZones[i];
-    if (!z.patch && inZone(z, tx, ty)) return z.tone;
-  }
-  return 0;
-}
-
-/** The last patch zone whose ragged ellipse holds a tile, if any. */
-export function minePatchAt(level: Level, tx: number, ty: number): FloorZone | null {
-  const zones = level.floorZones;
-  for (let i = zones.length - 1; i >= 0; i--) {
-    if (zones[i].patch && inPatchShape(zones[i], tx, ty)) return zones[i];
-  }
-  return null;
-}
-
-/** Where in the ground sheet a tile's earth is: its tone's block, laid by position so it runs on. */
-export function mineFloorSource(level: Level, tx: number, ty: number, tone = mineFloorTone(level, tx, ty)): { sx: number; sy: number } {
-  const block = MINE_GROUND_BLOCKS[tone] ?? MINE_GROUND_BLOCKS[0];
-  return { sx: block.x + ((tx * TILE_WIDTH) % block.w), sy: block.y + ((ty * TILE_HEIGHT) % block.h) };
-}
-
-function inZone(z: FloorZone, tx: number, ty: number): boolean {
-  return tx >= z.x && ty >= z.y && tx < z.x + z.w && ty < z.y + z.h;
-}
-
-/** Whether a tile lies inside a patch zone's ragged ellipse. */
-function inPatchShape(z: FloorZone, tx: number, ty: number): boolean {
-  if (!inZone(z, tx, ty)) return false;
-  const nx = (tx + 0.5 - (z.x + z.w / 2)) / (z.w / 2);
-  const ny = (ty + 0.5 - (z.y + z.h / 2)) / (z.h / 2);
-  const ragged = ((tileHash(tx, ty) >>> 3) % 100) / 100 * PATCH_RAGGED;
-  return nx * nx + ny * ny <= 1 - ragged;
+/** A piece of the walls' sheet: r (or the h rows of it from sy, the w columns from sx) at (dx, dy), sorted at z if given. */
+function piece(r: IsoRect, dx: number, dy: number, h = r.h, z?: number, sy = r.y, sx = r.x, w = r.w): TerrainPiece {
+  return z === undefined ? { dx, dy, sx, sy, w, h } : { dx, dy, sx, sy, w, h, z };
 }
 
 class MineTerrainBuilder {
   private readonly floors: TerrainPiece[] = [];
   private readonly walls: TerrainPiece[] = [];
   private readonly over: TerrainPiece[] = [];
-  /** Rims drawn over the cut top of a face (after it, at its depth). */
-  private readonly overFaces: TerrainPiece[] = [];
   private readonly raise: number;
 
   constructor(private readonly level: Level) {
@@ -117,7 +68,7 @@ class MineTerrainBuilder {
     const { level } = this;
     forEachTile(0, 0, level.width - 1, level.height - 1, this.addTile);
     for (const pit of level.pits) this.addHole(pit);
-    return [...this.floors, ...this.walls, ...this.over, ...this.overFaces];
+    return [...this.floors, ...this.walls, ...this.over];
   }
 
   /** A hole in the floor: its art centred on its tiles, over the ground they are floored with. */
@@ -182,115 +133,216 @@ class MineTerrainBuilder {
   };
 
   private addWall(tx: number, ty: number): void {
-    if (this.faceFoot(tx, ty)) this.addFace(tx, ty);
-    const covered = this.faceFoot(tx, ty) ? faceDepth(ty) : this.faceBelow(tx, ty);
-    if (covered < 0) {
-      this.addWallTop(tx, ty);
-      return;
-    }
-    // The top of a face cut short: the rim of the rock behind it drawn over the cut.
-    if (this.ground(tx, ty - 1)) this.overFaces.push(piece(MINE_RIM_N[tx % MINE_RIM_N.length], tx * TILE_WIDTH, ty * TILE_HEIGHT - this.raise, MINE_RIM_N[0].h, covered));
+    const foot = this.faceFoot(tx, ty);
+    const covered = foot ? faceDepth(ty) : this.faceBelow(tx, ty);
+    // The top of a face cut short: the rock behind it, its rim, drawn first so the face's lip lies over its dark.
+    if (covered >= 0 && this.ground(tx, ty - 1)) this.addRockTop(tx, ty, covered, (ty + 1) * TILE_HEIGHT);
+    if (foot) this.addFace(tx, ty);
+    // Under a face, the rock's dark (showing only where the face's art leaves a gap, as over its top row's first pixels).
+    if (covered >= 0 && !this.ground(tx, ty - 1)) this.fill(tx * TILE_WIDTH, ty * TILE_HEIGHT, (tx + 1) * TILE_WIDTH, (ty + 1) * TILE_HEIGHT);
+    if (covered >= 0) return;
+    // A room's south edge is drawn over whoever steps up to it; any other rock top lies under everyone.
+    this.addRockTop(tx, ty, this.ground(tx, ty - 1) ? (ty + 1) * TILE_HEIGHT : undefined, (ty + 1) * TILE_HEIGHT);
   }
 
   private addFloor(tx: number, ty: number): void {
-    const { sx, sy } = mineFloorSource(this.level, tx, ty);
-    this.floors.push({ dx: tx * TILE_WIDTH, dy: ty * TILE_HEIGHT, sx, sy, w: TILE_WIDTH, h: TILE_HEIGHT, sheet: MINE_GROUND, floor: true });
+    this.floors.push(...mineGroundBase(this.level, tx, ty));
   }
 
-  /** The earth of the room north of a south wall, run on under it: what shows where the wall clears over someone. */
-  private addFloorUnderWall(tx: number, ty: number): void {
-    const slope = this.level.slopes.get(tx + (ty - 1) * this.level.width);
-    const southSlant = !!slope && isSouthSlope(slope);
-    if (!southSlant && !this.ground(tx, ty - 1)) return;
-    const reach = slope && southSlant ? Math.min(TILE_HEIGHT, slantRimDepth(slope, tx, ty - 1) - ty * TILE_HEIGHT) : TILE_HEIGHT;
-    const h = reach - UNDER_WALL_INSET;
-    if (h <= 0) return;
-    const { sx, sy } = mineFloorSource(this.level, tx, ty, mineBaseTone(this.level, tx, ty - 1));
-    this.floors.push({ dx: tx * TILE_WIDTH, dy: ty * TILE_HEIGHT, sx, sy, w: TILE_WIDTH, h, sheet: MINE_GROUND, floor: true });
+  /** A tile's earth (h rows of it from its top) in a tone, laid by position so it runs on. */
+  private earth(tx: number, ty: number, tone: number, h: number): TerrainPiece {
+    const { sx, sy } = mineFloorSource(this.level, tx, ty, tone);
+    return { dx: tx * TILE_WIDTH, dy: ty * TILE_HEIGHT, sx, sy, w: TILE_WIDTH, h, sheet: MINE_GROUND, floor: true };
   }
 
   /**
-   * A face from its foot tile up, as tall as the rock behind it allows (cut under the rim of whatever lies behind), its
-   * rock outline down whichever end it ends at. Drawn among the entities, in front of whoever stands behind it.
+   * The earth under a wall tile: run on under a south wall from the room north of it (what shows where the wall clears
+   * over someone), and under a rock top floor touches at its side (showing between the rings of its rim).
+   */
+  private addFloorUnderWall(tx: number, ty: number): void {
+    const slope = this.level.slopes.get(tx + (ty - 1) * this.level.width);
+    const southSlant = !!slope && isSouthSlope(slope);
+    const beside = this.faceOver(tx, ty) ? null : this.besideFloor(tx, ty);
+    if (!southSlant && !this.ground(tx, ty - 1) && beside === null) return;
+    const reach = slope && southSlant ? Math.min(TILE_HEIGHT, slantRimDepth(slope, tx, ty - 1) - ty * TILE_HEIGHT) : TILE_HEIGHT;
+    const h = beside !== null ? TILE_HEIGHT : reach - UNDER_WALL_INSET;
+    if (h <= 0) return;
+    const from = beside ?? [tx, ty - 1];
+    this.floors.push(this.earth(tx, ty, mineBaseTone(this.level, from[0], from[1]), h));
+  }
+
+  /** Whether a face stands over a wall tile (its foot, or a face rising from below reaches it). */
+  private faceOver(tx: number, ty: number): boolean {
+    return this.faceFoot(tx, ty) || this.faceBelow(tx, ty) >= 0;
+  }
+
+  /** The floor tile beside a wall tile (west, east, or at a corner) whose earth shows round its rim, if any. */
+  private besideFloor(tx: number, ty: number): [number, number] | null {
+    for (const [ox, oy] of NEIGHBOURS) {
+      if (this.ground(tx + ox, ty + oy)) return [tx + ox, ty + oy];
+    }
+    return null;
+  }
+
+  // ── Rock tops ────────────────────────────────────────────────────────────────
+
+  /**
+   * The rock's dark over a box, cut from the fill by world position so it runs on from every other piece of it, in tile
+   * windows; sorted at z (drawn over whoever stands behind it) or under everyone.
+   */
+  private fill(x0: number, y0: number, x1: number, y1: number, z?: number): void {
+    const out = z === undefined ? this.walls : this.over;
+    for (let y = y0; y < y1; y = nextTileEdge(y, TILE_HEIGHT, y1)) {
+      for (let x = x0; x < x1; x = nextTileEdge(x, TILE_WIDTH, x1)) {
+        const w = nextTileEdge(x, TILE_WIDTH, x1) - x;
+        const h = nextTileEdge(y, TILE_HEIGHT, y1) - y;
+        out.push(piece(MINE_FILL, x, y, h, z, MINE_FILL.y + mod(y, TILE_HEIGHT), MINE_FILL.x + mod(x, TILE_WIDTH), w));
+      }
+    }
+  }
+
+  /**
+   * A rock top's tile, down to `bottom`: its dark, and its rim of rings along each side floor touches (the north one
+   * raised over the floor a little, SOUTH_WALL_RAISE), turning round where two sides meet and knotted where the floor
+   * only touches a corner.
+   */
+  private addRockTop(tx: number, ty: number, z: number | undefined, bottom: number): void {
+    const dx = tx * TILE_WIDTH;
+    const north = this.ground(tx, ty - 1);
+    const west = this.ground(tx - 1, ty);
+    const east = this.ground(tx + 1, ty);
+    const top = ty * TILE_HEIGHT - (north ? this.raise : 0);
+    const out = z === undefined ? this.walls : this.over;
+    const left = dx + (west ? RIM_INSET : 0);
+    const right = dx + TILE_WIDTH - (east ? RIM_INSET : 0);
+    this.fill(left, top + (north ? RIM_INSET : 0), right, bottom, z);
+    const cutW = west && north ? RIM_DEPTH : 0;
+    const cutE = east && north ? RIM_DEPTH : 0;
+    if (north) {
+      const rim = MINE_RIM_N[mod(tx, MINE_RIM_N.length)];
+      out.push(piece(rim, dx + cutW, top, rim.h, z, rim.y, rim.x + cutW, rim.w - cutW - cutE));
+    }
+    if (west) this.sideRim(out, MINE_RIM_W[mod(-ty, MINE_RIM_W.length)], dx, top + cutW, bottom, z);
+    if (east) this.sideRim(out, MINE_RIM_E[mod(ty, MINE_RIM_E.length)], dx + TILE_WIDTH - RIM_DEPTH, top + cutE, bottom, z);
+    if (west && north) out.push(piece(MINE_KNOT, dx + KNOT_IN, top + KNOT_IN, MINE_KNOT.h, z));
+    if (east && north) out.push(piece(MINE_KNOT, dx + TILE_WIDTH - MINE_KNOT.w - KNOT_IN, top + KNOT_IN, MINE_KNOT.h, z));
+    this.cornerKnots(out, tx, ty, { north, west, east }, z);
+  }
+
+  /** A west or east rim from `top` down to `bottom`, in strips a tile tall (its art repeats every tile). */
+  private sideRim(out: TerrainPiece[], rim: IsoRect, dx: number, top: number, bottom: number, z: number | undefined): void {
+    for (let y = top; y < bottom; y += rim.h) {
+      out.push(piece(rim, dx, y, Math.min(rim.h, bottom - y), z, rim.y + mod(y, rim.h)));
+    }
+  }
+
+  /** Where floor only touches a rock top's north corner (the rims of the rock either side meet there), a knot of rim. */
+  private cornerKnots(out: TerrainPiece[], tx: number, ty: number, sides: { north: boolean; west: boolean; east: boolean }, z: number | undefined): void {
+    if (sides.north) return;
+    const dx = tx * TILE_WIDTH;
+    const dy = ty * TILE_HEIGHT;
+    const half = Math.floor(MINE_KNOT.w / 2);
+    if (!sides.west && this.ground(tx - 1, ty - 1)) out.push(piece(MINE_KNOT, dx - half + RIM_INSET / 2, dy - half + RIM_INSET / 2, MINE_KNOT.h, z));
+    if (!sides.east && this.ground(tx + 1, ty - 1)) out.push(piece(MINE_KNOT, dx + TILE_WIDTH - half - RIM_INSET / 2, dy - half + RIM_INSET / 2, MINE_KNOT.h, z));
+  }
+
+  // ── Faces ────────────────────────────────────────────────────────────────────
+
+  /**
+   * A face from its foot tile up, as tall as the rock behind it allows (cut short, its lip kept, under the rim of whatever
+   * lies behind), the rock's outline down whichever end of it meets the floor. Drawn among the entities, in front of
+   * whoever stands behind it.
    */
   private addFace(tx: number, ty: number): void {
     const dx = tx * TILE_WIDTH;
     const z = faceDepth(ty);
-    const art = MINE_FACES[tx % MINE_FACES.length];
     const rows = this.rockAbove(tx, ty, true);
-    const { dy, h, sy } = this.cut((ty + 1) * TILE_HEIGHT - FACE_FOOT, FACE_H, art.y, ty - rows + 1, rows);
-    this.over.push(piece(art, dx, dy, h, z, sy));
-    if (!this.faceFoot(tx - 1, ty)) this.addFaceEnd(MINE_FACE_END_LEFT, dx - MINE_FACE_END_LEFT.w, ty, rows, z);
-    if (!this.faceFoot(tx + 1, ty)) this.addFaceEnd(MINE_FACE_END_RIGHT, dx + TILE_WIDTH, ty, rows, z);
-  }
-
-  private addFaceEnd(art: IsoRect, dx: number, ty: number, rows: number, z: number): void {
-    const { dy, h, sy } = this.cut((ty + 1) * TILE_HEIGHT - FACE_FOOT, FACE_H, art.y, ty - rows + 1, rows);
-    this.over.push(piece(art, dx, dy, h, z, sy));
+    const art = rows >= FACE_ROWS ? MINE_FACES[mod(tx, MINE_FACES.length)] : MINE_CUT_FACES[rows - 1][mod(tx, MINE_FACES.length)];
+    const dy = (ty + 1) * TILE_HEIGHT + FACE_SHADOW - art.h;
+    this.over.push(piece(art, dx, dy, art.h, z));
+    if (this.faceEnds(tx - 1, ty)) this.addFaceEnd(MINE_FACE_END_LEFT, dx, dy, art.h, z);
+    if (this.faceEnds(tx + 1, ty)) this.addFaceEnd(MINE_FACE_END_RIGHT, dx + TILE_WIDTH - MINE_FACE_END_RIGHT.w, dy, art.h, z);
   }
 
   /**
-   * A piece standing at `dy` (h tall, cut from sheet row `sy`), cut down to start under the rim of the rock's highest row
-   * `topRow` when the rock is not FACE_ROWS deep.
+   * Whether a face ends against the tile beside its foot: no face runs on into it, straight or slanted (a slanted face
+   * runs on from the slope tile beside the foot, or from the one under it).
    */
-  private cut(dy: number, h: number, sy: number, topRow: number, rows: number): { dy: number; h: number; sy: number } {
-    if (rows >= FACE_ROWS) return { dy, h, sy };
-    const top = topRow * TILE_HEIGHT + CUT_UNDER_RIM;
-    if (dy >= top) return { dy, h, sy };
-    return { dy: top, h: h - (top - dy), sy: sy + (top - dy) };
+  private faceEnds(tx: number, ty: number): boolean {
+    return !this.faceFoot(tx, ty) && this.cell(tx, ty) !== 'slope' && !this.northSlope(tx, ty + 1);
   }
+
+  /** The rock's outline down a face's end, as tall as the face (its lower part when the face is cut short). */
+  private addFaceEnd(art: IsoRect, dx: number, dy: number, h: number, z: number): void {
+    this.over.push(piece(art, dx, dy, h, z, art.y + art.h - h));
+  }
+
+  // ── Chasms ───────────────────────────────────────────────────────────────────
 
   /**
-   * A wall top: black, with the scalloped rim on each side floor touches and where two rims meet. One with floor north
-   * of it is a room's south edge: drawn over whoever steps up to it, raised a little over the floor (SOUTH_WALL_RAISE).
-   */
-  private addWallTop(tx: number, ty: number): void {
-    const dx = tx * TILE_WIDTH;
-    const dy = ty * TILE_HEIGHT;
-    const north = this.ground(tx, ty - 1);
-    const z = north ? (ty + 1) * TILE_HEIGHT : undefined;
-    const lift = north ? this.raise : 0;
-    const top = dy - lift;
-    const west = this.ground(tx - 1, ty);
-    const east = this.ground(tx + 1, ty);
-    const out = z === undefined ? this.walls : this.over;
-    const westH = MINE_RIM_W.h + lift - (this.raisedSlantBelow(tx - 1, ty) ? this.raise : 0);
-    const eastH = MINE_RIM_E.h + lift - (this.raisedSlantBelow(tx + 1, ty) ? this.raise : 0);
-    if (north) out.push(piece(MINE_RIM_N[tx % MINE_RIM_N.length], dx, top, MINE_RIM_N[0].h, z));
-    if (lift > 0) out.push(piece(MINE_VOID, dx, dy + TILE_HEIGHT - lift, lift, z));
-    if (west) out.push(piece(MINE_RIM_W, dx, top, westH, z));
-    if (east) out.push(piece(MINE_RIM_E, dx + TILE_WIDTH - MINE_RIM_E.w, top, eastH, z));
-    if (north && west) this.over.push(piece(MINE_RIM_NW, dx, top, MINE_RIM_NW.h, z));
-    if (north && east) this.over.push(piece(MINE_RIM_NE, dx + TILE_WIDTH - MINE_RIM_NE.w, top, MINE_RIM_NE.h, z));
-  }
-
-  /** Whether the tile under (tx, ty) lies on a south slant, whose rim is drawn raised. */
-  private raisedSlantBelow(tx: number, ty: number): boolean {
-    const slope = this.level.slopes.get(tx + (ty + 1) * this.level.width);
-    return this.raise > 0 && !!slope && isSouthSlope(slope);
-  }
-
-  /**
-   * A chasm tile: where floor lies north, its lip and the dark cliff falling away under it (as deep as the chasm runs),
-   * drawn over the feet of whoever stands at its edge; rims at its sides, the floor's lip where floor lies south.
+   * A chasm tile: where floor lies north, its pebbles, thorns over the floor and the cliff falling away under it (as
+   * deep as the chasm runs), drawn over the feet of whoever stands at its edge; pebbles along its other brinks, knotted
+   * where two brinks meet.
    */
   private addChasm(tx: number, ty: number): void {
     const dx = tx * TILE_WIDTH;
     const dy = ty * TILE_HEIGHT;
     const north = this.ground(tx, ty - 1);
+    const west = this.ground(tx - 1, ty);
+    const east = this.ground(tx + 1, ty);
+    const south = this.ground(tx, ty + 1);
     const z = north ? (ty + 1) * TILE_HEIGHT : undefined;
-    const sides = north ? this.over : this.walls;
+    const out = north ? this.over : this.walls;
     if (north) {
       const rows = this.chasmBelow(tx, ty, CLIFF_ROWS);
-      this.over.push(piece(MINE_CHASM_N[tx % MINE_CHASM_N.length], dx, dy, rows * TILE_HEIGHT, z));
+      const cliff = MINE_CLIFFS[CLIFF_FADES.indexOf(this.cliffFade(tx, ty))][mod(tx, MINE_CLIFFS[0].length)];
+      this.over.push(piece(cliff, dx, dy - THORN_H, THORN_H + rows * TILE_HEIGHT, z));
       this.addPost(tx, ty, z);
     }
-    if (this.ground(tx, ty + 1)) {
-      const lip = MINE_CHASM_LIP_S[tx % MINE_CHASM_LIP_S.length];
-      this.walls.push(piece(lip, dx, dy + TILE_HEIGHT - lip.h));
+    if (south) {
+      const brink = MINE_BRINK_S[mod(tx, MINE_BRINK_S.length)];
+      this.walls.push(piece(brink, dx, dy + TILE_HEIGHT - BRINK_LINE, brink.h));
     }
-    if (this.ground(tx - 1, ty)) sides.push(piece(MINE_CHASM_W, dx, dy, MINE_CHASM_W.h, z));
-    if (this.ground(tx + 1, ty)) sides.push(piece(MINE_CHASM_E, dx + TILE_WIDTH - MINE_CHASM_E.w, dy, MINE_CHASM_E.h, z));
+    if (west) this.brinkSide(out, MINE_BRINK_W[mod(ty, MINE_BRINK_W.length)], dx - BRINK_LINE, dy, z);
+    if (east) this.brinkSide(out, MINE_BRINK_E[mod(ty, MINE_BRINK_E.length)], dx + TILE_WIDTH - MINE_BRINK_E[0].w + BRINK_LINE, dy, z);
+    this.brinkKnots(out, tx, ty, { north, west, east, south }, z);
+  }
+
+  private brinkSide(out: TerrainPiece[], art: IsoRect, dx: number, dy: number, z: number | undefined): void {
+    out.push(piece(art, dx, dy, art.h, z));
+  }
+
+  /** A knot of pebbles at each corner of a chasm tile where two brinks meet, or where floor only touches the corner. */
+  private brinkKnots(out: TerrainPiece[], tx: number, ty: number, sides: { north: boolean; west: boolean; east: boolean; south: boolean }, z: number | undefined): void {
+    for (const [ox, oy] of CORNERS) {
+      const alongX = ox < 0 ? sides.west : sides.east;
+      const alongY = oy < 0 ? sides.north : sides.south;
+      const meets = alongX && alongY;
+      const touches = !alongX && !alongY && this.ground(tx + ox, ty + oy);
+      if (!meets && !touches) continue;
+      const knot = MINE_BRINK_KNOTS[tileHash(tx + ox, ty + oy) % MINE_BRINK_KNOTS.length];
+      const cx = (tx + (ox > 0 ? 1 : 0)) * TILE_WIDTH;
+      const cy = (ty + (oy > 0 ? 1 : 0)) * TILE_HEIGHT;
+      out.push(piece(knot, cx - knot.w / 2, cy - knot.h / 2, knot.h, z));
+    }
+  }
+
+  /** Which sides of the cliff under a north brink fade out: those where the dark beside it has no cliff of its own. */
+  private cliffFade(tx: number, ty: number): CliffFade {
+    const left = this.cell(tx - 1, ty) === 'chasm' && !this.underCliff(tx - 1, ty);
+    const right = this.cell(tx + 1, ty) === 'chasm' && !this.underCliff(tx + 1, ty);
+    if (left && right) return 'both';
+    if (left) return 'left';
+    return right ? 'right' : 'none';
+  }
+
+  /** Whether a chasm tile lies within CLIFF_ROWS under a north brink (its cliff falls past it). */
+  private underCliff(tx: number, ty: number): boolean {
+    for (let k = 0; k < CLIFF_ROWS; k++) {
+      if (this.ground(tx, ty - k - 1)) return true;
+      if (this.cell(tx, ty - k - 1) !== 'chasm') return false;
+    }
+    return false;
   }
 
   /** How many chasm rows run down from (tx, ty), up to `most`. */
@@ -312,9 +364,12 @@ class MineTerrainBuilder {
     this.over.push(piece(post, tx * TILE_WIDTH + shift, ty * TILE_HEIGHT + POST_TOP, Math.min(post.h, depth * TILE_HEIGHT - POST_TOP), z));
   }
 
+  // ── Slants ───────────────────────────────────────────────────────────────────
+
   /**
    * A slanted wall's tile: its column of the slanted face (north corners), as tall as the rock behind it allows, or of
-   * the rim along the slant (south), drawn over whoever stands behind it with the black under it as deep as feet reach.
+   * the rim along the slant (south), drawn over whoever stands behind it with the rock's dark under it as deep as feet
+   * reach.
    */
   private addSlant(tx: number, ty: number): void {
     const slope = this.level.slopes.get(tx + ty * this.level.width);
@@ -326,20 +381,35 @@ class MineTerrainBuilder {
       return;
     }
     const strips = MINE_RIM_SLANT[slope.corner === 'sw' ? 'sw' : 'se'];
-    const strip: SlantStrip = strips[tx % strips.length];
+    const strip: SlantStrip = strips[mod(tx, strips.length)];
     const top = footLeft - strip.footLeft - this.raise;
     const z = slantRimDepth(slope, tx, ty);
     this.over.push(piece(strip, dx, top, strip.h, z));
-    voidColumn(this.over, MINE_VOID, dx, top + strip.h, z, z);
+    this.fill(dx, top + strip.h, dx + TILE_WIDTH, z, z);
   }
 
   private addSlantFace(slope: Slope, tx: number, ty: number, footLeft: number): void {
-    const strips = MINE_SLANT_FACES[slope.corner === 'nw' ? 'nw' : 'ne'];
-    const strip: SlantStrip = strips[tx % strips.length];
-    const rows = this.rockAbove(tx, ty, false);
-    const { dy, h, sy } = this.cut(footLeft - strip.footLeft, strip.h, strip.y, ty - rows, rows + 1);
-    this.over.push(piece(strip, tx * TILE_WIDTH, dy, h, faceDepth(ty), sy));
+    const corner = slope.corner === 'nw' ? 'nw' : 'ne';
+    const rows = this.rockAbove(tx, ty, false) + 1;
+    const strips = rows >= FACE_ROWS ? MINE_SLANT_FACES[corner] : MINE_CUT_SLANT_FACES[rows - 1][corner];
+    const strip: SlantStrip = strips[mod(tx, strips.length)];
+    this.over.push(piece(strip, tx * TILE_WIDTH, footLeft - strip.footLeft, strip.h, faceDepth(ty)));
   }
+}
+
+/** The sides and corners of a tile, in the order their floor is looked for under a rock top's rim. */
+const NEIGHBOURS = [[-1, 0], [1, 0], [-1, -1], [1, -1]] as const;
+/** A tile's four corners, as the offsets of the tile diagonally beyond each. */
+const CORNERS = [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const;
+
+/** n mod m, never negative. */
+function mod(n: number, m: number): number {
+  return ((n % m) + m) % m;
+}
+
+/** The next multiple of `step` after v, but no further than `end`. */
+function nextTileEdge(v: number, step: number, end: number): number {
+  return Math.min(end, (Math.floor(v / step) + 1) * step);
 }
 
 /** Every piece of a mine level's terrain, floors first. */

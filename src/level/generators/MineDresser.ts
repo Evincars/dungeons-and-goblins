@@ -13,7 +13,8 @@ import {
 import type { PropKind, PropPlacement } from '../Props';
 import { placeFlat } from './IsoDresser';
 import type { IsoSite } from './IsoDresser';
-import type { Keep, RoomData, TileChange } from './DungeonBuilder';
+import type { Keep, RoomData, TileChange, TilePos } from './DungeonBuilder';
+import { mineFloorTone } from '../MineGround';
 import { tileGraphOf } from '../TileGraph';
 import type { StepCost } from '../TileGraph';
 import { reachableTiles } from '../TileSearch';
@@ -127,14 +128,21 @@ const WEB_CHANCE = 0.12;
 const FUNGUS_CHANCE = 0.15;
 /** Lantern posts standing in a cavern (at least one lights every cavern). */
 const LANTERN_POSTS = [1, 2] as const;
-/** The clutter of a cavern floor. */
-const PEBBLES = [4, 9] as const;
+/** The clutter of a cavern floor: stones and tables strewn about, the rest in clumps (CLUMP_SIZE each). */
 const STONES = [2, 5] as const;
-const PLANTS = [3, 8] as const;
 const SHROOM_TABLES = [0, 2] as const;
 const ROOTS = [3, 8] as const;
-const SMALL_STALAGMITES = [2, 5] as const;
 const STALAGMITES = [1, 3] as const;
+/**
+ * Reeds, flowers and mushrooms grow in clumps where something breaks the floor: along the brink of a drop or a hole, at
+ * the rock's feet, at the edge of a patch of other earth. Pebbles and small stalagmites gather at the rock's feet.
+ */
+const PLANT_CLUMPS = [2, 4] as const;
+const PEBBLE_CLUMPS = [2, 3] as const;
+const STALAGMITE_CLUMPS = [1, 2] as const;
+const CLUMP_SIZE = [2, 5] as const;
+/** A clump's members sit up to this far (px) either way off their tiles' middles, so they don't line up. */
+const CLUMP_JITTER = 7;
 const ROCKS = [1, 3] as const;
 /** Chance a trestle stands in a cavern. */
 const TRESTLE_CHANCE = 0.3;
@@ -695,9 +703,47 @@ export class MineDresser {
     solid(STALAGMITES, MINE_STALAGMITES);
     solid(SHROOM_TABLES, MINE_SHROOM_TABLES);
     if (this.site.rng() < TRESTLE_CHANCE) this.site.scatterSolid(room, open, ['mine_trestle'], props, keep);
-    this.site.scatterLoose(open, MINE_SMALL_STALAGMITES, this.countIn(SMALL_STALAGMITES), props);
-    this.site.scatterLoose(open, MINE_PEBBLES, this.countIn(PEBBLES), props);
-    this.site.scatterLoose(open, MINE_PLANTS, this.countIn(PLANTS), props);
+    this.clumps(open, MINE_PLANTS, PLANT_CLUMPS, props, (x, y) => this.byDrop(x, y) || this.byRock(x, y) || this.byOtherEarth(x, y));
+    this.clumps(open, MINE_PEBBLES, PEBBLE_CLUMPS, props, (x, y) => this.byRock(x, y));
+    this.clumps(open, MINE_SMALL_STALAGMITES, STALAGMITE_CLUMPS, props, (x, y) => this.byRock(x, y));
     for (let i = this.countIn(ROOTS); i > 0; i--) placeFlat(this.site, room, this.site.pickProp(MINE_ROOTS), props);
+  }
+
+  /** Clumps of walk-through props, each grown from a free tile where `grows` (the clump spreads to the tiles round it). */
+  private clumps(open: TilePos[], kinds: readonly PropKind[], count: readonly [number, number], props: PropPlacement[], grows: (x: number, y: number) => boolean): void {
+    const seeds = open.filter((t) => grows(t.x, t.y));
+    for (let i = this.countIn(count); i > 0 && seeds.length > 0; i--) {
+      const [seed] = seeds.splice(Math.floor(this.site.rng() * seeds.length), 1);
+      this.clump(seed, kinds, this.countIn(CLUMP_SIZE), props);
+    }
+  }
+
+  /** One clump: its first prop on the seed, the rest on free tiles round it (in a random order), each nudged off-centre. */
+  private clump(seed: TilePos, kinds: readonly PropKind[], size: number, props: PropPlacement[]): void {
+    const round = RING.map(([dx, dy]) => ({ x: seed.x + dx, y: seed.y + dy })).sort(() => this.site.rng() - 0.5);
+    let placed = 0;
+    for (const spot of [seed, ...round]) {
+      if (placed >= size || !this.site.free(spot.x, spot.y)) continue;
+      this.site.claim(spot.x, spot.y);
+      const dx = Math.round((this.site.rng() * 2 - 1) * CLUMP_JITTER);
+      props.push({ kind: this.site.pickProp(kinds), tx: spot.x, ty: spot.y, dx });
+      placed++;
+    }
+  }
+
+  /** Whether a tile lies beside a drop or a hole in the floor. */
+  private byDrop(x: number, y: number): boolean {
+    return RING.some(([dx, dy]) => this.level.getTile(x + dx, y + dy)?.type === TileType.Hole);
+  }
+
+  /** Whether a tile lies at the rock's feet (the rock beside it, or a slanted wall). */
+  private byRock(x: number, y: number): boolean {
+    return STEPS.some(([dx, dy]) => this.site.isWall(x + dx, y + dy) || this.level.slopes.has(x + dx + (y + dy) * this.level.width));
+  }
+
+  /** Whether a tile lies at the edge of a patch of other earth (a neighbour's earth is another tone). */
+  private byOtherEarth(x: number, y: number): boolean {
+    const tone = mineFloorTone(this.level, x, y);
+    return STEPS.some(([dx, dy]) => this.site.isFloor(x + dx, y + dy) && mineFloorTone(this.level, x + dx, y + dy) !== tone);
   }
 }

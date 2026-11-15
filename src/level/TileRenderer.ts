@@ -6,6 +6,8 @@ import { tilesetRect } from '../render/Sheets';
 import { StaticTileLayer } from '../render/StaticTileLayer';
 import { groundBlends } from './GroundBlend';
 import { blendTexture, commitBlendAtlas } from '../render/BlendAtlas';
+import { mineGroundOverlays } from './MineGround';
+import { commitMineGroundAtlas, mineOverlayTexture } from '../render/MineGroundAtlas';
 import { THEME_VOID, tilesetKey } from './Theme';
 import { SeeThroughWalls } from '../render/SeeThrough';
 import { TILE_HEIGHT, TILE_WIDTH } from './TileType';
@@ -82,7 +84,9 @@ export function buildLevelView(level: Level): LevelView {
     if (seesThrough(p)) seeThrough.addPiece(layer, p.z, p.dx, p.dy, p.w, p.h);
   }
   for (const blend of groundBlends(level)) blends.addTile(blendTexture(blend), blend.dx, blend.dy);
+  for (const cut of mineGroundOverlays(level)) blends.addTile(mineOverlayTexture(cut), cut.dx, cut.dy);
   commitBlendAtlas();
+  commitMineGroundAtlas();
   const container = new Container();
   container.addChild(voidBackdrop(level), cave, floors, blends, base);
   return { base: container, occluders: [...byZ.values()], seeThrough };

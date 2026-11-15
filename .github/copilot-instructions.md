@@ -183,7 +183,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   north of them; a slanted face that ends with no face running on gets a straight face's end column. Walls, columns and
   rock spires (`PropDef.seeThrough`; only their base stops bodies, so one walks on behind them) clear in a soft ellipse
   over the heroes and foes standing behind them near the hero followed (`render/SeeThrough.ts`, `render/RevealFilter.ts`,
-  `systems/SeeThroughSystem.ts`), easing in and out; the floor runs on under south walls so it shows there, and the dark
+  `systems/SeeThroughSystem.ts`; every wall piece the ellipse spans clears, so a slant's pieces at their several depths clear
+  as one), easing in and out; the floor runs on under south walls so it shows there, and the dark
   beyond the walls and off the map is the theme's void colour (`THEME_VOID`). Feet over a chasm's north rim stand on it. A level is built as the
   catacombs or a castle (`Theme.ts`, `level.theme`, `run.theme`; the ~ console's `/dungeon catacomb | castle | castle2 | mines` rebuilds the
   level as either): a castle uses only `public/castle` (its tileset's `-isometric` copy) — its tileset's pieces are mapped in `CastleTiles.ts` (stone faces
@@ -208,16 +209,23 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   (`generators/MineDresser.ts`): its corners are cut on the slant, spurs of rock jut from its north and south walls
   (`cutSlantSpur`, `generators/Slants.ts`), the rock steps forward along them and bulges from its sides, outcrops stand in the
   bigger ones, and nothing (rock, drop, fence) may cut a part of it off from the rest (`keepWhole`, Yuka BFS); their faces
-  (`MineTerrain.ts`) stand four tiles tall over the black rock tops, cut short under the rim of whatever lies close behind; patches
-  of other earth lie about (a `FloorZone` with `patch`, a ragged ellipse, its edges blended); an abyss with ragged edges and a
+  (`MineTerrain.ts`) stand four tiles tall over the dark rock tops, cut short where whatever lies close behind leaves less rock
+  (the lip of the face kept, the rim of the rock behind it over the cut; no end drawn where a face runs on into a slanted one);
+  the rock tops are the set's faint dark cobbles, cut by world position so every piece of them runs on (`MINE_FILL`), rimmed
+  with rings of stone on every side floor touches (the west and east rims the north one turned), knotted where rims meet;
+  patches of other earth lie about (a `FloorZone` with `patch`, a ragged ellipse), and where tones of earth meet the edge wanders
+  across the tiles (`MineGround.ts`: a dual grid of cells between tile middles, each tone's share fading from its corners and
+  moved by world-position noise; the cuts baked into one atlas by `render/MineGroundAtlas.ts`); an abyss with ragged edges and a
   rock bridge, or a great ragged pit grown up to a ledge a tile wide along the rock, is a drop anyone falls into (`OPEN_CHASMS`,
-  `Theme.ts`: no box stops them), fenced only along stretches of its straight brinks (a fence blocks the strip at its foot), old
-  pit props sinking into its dark; holes a body's size and bigger open in the floor (pits of shape `hole`, `PitShapes.ts`, their art
+  `Theme.ts`: no box stops them), drawn as the set's pit is (pebbles round its brinks, dark thorns over the floor along the north
+  one, a cliff of grey-blue cobbles under it fading into the dark, and out at a side where no cliff runs on), fenced only along
+  stretches of its straight brinks (a fence blocks the strip at its foot), old pit props sinking into its dark; holes a body's size and bigger open in the floor (pits of shape `hole`, `PitShapes.ts`, their art
   and open dark in `MINE_HOLES`, `MineTiles.ts`; feet over the dark fall in); the old timbering (whole frames only, never the
   sheet's loose beam heads and lengths) stands against faces of full height, lanterns of cold light that flicker (no torches) on
   posts and hung on the rock with cobwebs and bracket fungi, and rocks, stones and rubble (their bases measured from the art, as
-  deep as their bulk stands, so nobody stands inside one), stalagmites, mushroom tables, reeds and roots strew the floor (wall
-  props hang as high as `PropDef.hang` says). Where two slants meet back to back (a spur's point) each corner of a body is pushed
+  deep as their bulk stands, so nobody stands inside one), stalagmites, mushroom tables and roots strew the floor, reeds, flowers
+  and mushrooms grow in clumps by the brinks of drops and holes, the rock's feet and the edges of other earth, pebbles and small
+  stalagmites gather at the rock's feet (wall props hang as high as `PropDef.hang` says). Where two slants meet back to back (a spur's point) each corner of a body is pushed
   back by the slant it lies over (`Level.pushOutOfSlopes`). Soft edges between kinds of ground (`GroundBlend.ts`, baked
   into one atlas by `render/BlendAtlas.ts`), fog of war (`FogRenderer.ts`: per-corner fading buffer, blurred, with
   drifting mist), lighting (`LightRenderer.ts`: a dim ambient multiplied over the scene; every flame, the torch each hero carries

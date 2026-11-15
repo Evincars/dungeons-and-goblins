@@ -3332,7 +3332,7 @@ test('every theme\'s south walls are drawn raised over the floor', async () => {
 
 test('the mines are built as caverns: tall faces cut short under thin rock, spurs, fenced drops, lanterns', async () => {
   const { buildTerrainPieces } = await load('level/TerrainAutotile');
-  const { FACE_FOOT, MINE_FACES, MINE_RIM_N } = await load('level/MineTiles');
+  const { FACE_FOOT, MINE_FACES, MINE_CUT_FACES, MINE_RIM_N } = await load('level/MineTiles');
   const { dungeonConfig } = await load('level/generators/DungeonConfig');
   const { PROPS } = await load('level/Props');
   const { encodeLevelMap, decodeLevelMap } = await load('level/LevelMap');
@@ -3343,14 +3343,18 @@ test('the mines are built as caverns: tall faces cut short under thin rock, spur
     level.setTile(x, y, createTile(open ? TileType.Floor : TileType.Wall));
   }
   const pieces = buildTerrainPieces(level);
-  const faceAt = (x) => pieces.find((p) => p.dx === x * TILE_WIDTH && p.sx === MINE_FACES[x % 3].x && p.sy >= MINE_FACES[0].y && p.sy < MINE_FACES[0].y + MINE_FACES[0].h && p.z === 5 * TILE_WIDTH);
-  const full = faceAt(2);
+  const isArt = (p, art) => p.sx === art.x && p.sy === art.y && p.w === art.w && p.h === art.h;
+  const full = pieces.find((p) => p.dx === 2 * TILE_WIDTH && p.z === 5 * TILE_WIDTH && isArt(p, MINE_FACES[2]));
   assert.ok(full, 'a face stands over the room');
   assert.equal(full.dy + FACE_FOOT, 6 * TILE_WIDTH, 'its foot on the room\'s top edge');
-  const cut = faceAt(8);
-  assert.ok(cut && cut.dy > full.dy && cut.h < full.h, 'the face under the corridor is cut short');
+  // Two rows of rock behind it: the face cut to them, its lip kept over its lowest stones.
+  const cutIndex = pieces.findIndex((p) => p.dx === 8 * TILE_WIDTH && p.z === 5 * TILE_WIDTH && isArt(p, MINE_CUT_FACES[1][8 % 3]));
+  const cut = pieces[cutIndex];
+  assert.ok(cut, 'the face under the corridor is cut short, from the art of a face two rows tall');
+  assert.equal(cut.dy + FACE_FOOT - (MINE_FACES[0].h - cut.h), 6 * TILE_WIDTH, 'its foot where a whole face\'s would be');
   assert.ok(cut.dy >= 4 * TILE_WIDTH, 'and stays off the corridor\'s floor');
-  assert.ok(pieces.some((p) => p.dx === 8 * TILE_WIDTH && p.sy === MINE_RIM_N[0].y && p.z === cut.z), 'the corridor\'s rim is drawn over the cut');
+  const rimIndex = pieces.findIndex((p) => p.dx === 8 * TILE_WIDTH && p.sy === MINE_RIM_N[0].y && p.sx === MINE_RIM_N[8 % 3].x && p.z === cut.z);
+  assert.ok(rimIndex >= 0 && rimIndex < cutIndex, 'the corridor\'s rim is drawn over the cut, before the face so its lip lies over the rock\'s dark');
 
   // Whole levels: bigger maps, caverns with spurs on the slant, drops fenced here and there, lit by lanterns, no torches.
   const cfg = dungeonConfig('mines', 7);
@@ -3407,6 +3411,133 @@ test('mine caverns: holes and drops to fall into, fenced only in part, timbering
   }
   assert.ok(holes > 0, 'holes open in the floor');
   assert.ok(fenced > 0 && unfenced > fenced, 'drops are fenced along stretches, not all round');
+});
+
+test('mine rock is rimmed on every side floor touches, its dark cut by world position, faces running on into slanted ones', async () => {
+  const { buildTerrainPieces } = await load('level/TerrainAutotile');
+  const { MINE_FILL, MINE_RIM_N, MINE_RIM_W, MINE_KNOT, RIM_DEPTH, RIM_INSET, MINE_FACE_END_LEFT, MINE_FACE_END_RIGHT } = await load('level/MineTiles');
+  const { SOUTH_WALL_RAISE } = await load('level/Theme');
+  const { dungeonConfig } = await load('level/generators/DungeonConfig');
+  // A hall along the top, a corridor down the west side, rock everywhere else (no face: the rock runs to the map's foot).
+  const level = new Level(10, 10, 'mines');
+  for (let y = 0; y < 10; y++) for (let x = 0; x < 10; x++) {
+    const open = (y >= 1 && y <= 2 && x >= 1 && x <= 8) || (x >= 1 && x <= 2 && y >= 3 && y <= 8);
+    level.setTile(x, y, createTile(open ? TileType.Floor : TileType.Wall));
+  }
+  const pieces = buildTerrainPieces(level);
+  const at = (tx, ty) => pieces.filter((p) => p.dx >= tx * TILE_WIDTH && p.dx < (tx + 1) * TILE_WIDTH && p.dy >= ty * TILE_WIDTH - 16 && p.dy < (ty + 1) * TILE_WIDTH && !p.floor);
+  const isFill = (p) => p.sx >= MINE_FILL.x && p.sx + p.w <= MINE_FILL.x + MINE_FILL.w && p.sy >= MINE_FILL.y && p.sy + p.h <= MINE_FILL.y + MINE_FILL.h && p.sy < MINE_RIM_N[0].y + 64 && p.sx < 64;
+  // The rock's corner by the hall and the corridor: rims north and west, turning round the corner with a knot.
+  const corner = at(3, 3);
+  const raise = SOUTH_WALL_RAISE.mines;
+  const north = corner.find((p) => p.sy === MINE_RIM_N[0].y && p.sx === MINE_RIM_N[3 % 3].x + RIM_DEPTH);
+  assert.ok(north && north.dy === 3 * TILE_WIDTH - raise && north.z === 4 * TILE_WIDTH, 'its north rim, raised over the hall and drawn over feet');
+  assert.ok(corner.some((p) => p.sx === MINE_RIM_W[(3 - (3 % 3)) % 3].x && p.dx === 3 * TILE_WIDTH), 'its west rim');
+  assert.ok(corner.some((p) => p.sx === MINE_KNOT.x && p.sy === MINE_KNOT.y), 'a knot of rim where the two meet');
+  // Down the corridor: the west rim runs on, the earth showing between its rings, the rock's dark inside it.
+  const side = at(3, 6);
+  assert.ok(side.some((p) => p.sx === MINE_RIM_W[(3 - (6 % 3)) % 3].x && p.z === undefined), 'the west rim lies under everyone');
+  assert.ok(pieces.some((p) => p.floor && p.dx === 3 * TILE_WIDTH && p.dy === 6 * TILE_WIDTH), 'earth under the rock beside the corridor');
+  const fills = pieces.filter((p) => !p.floor && p.sx < 64 && p.sy < 64 && p.w <= 32 && p.h <= 32 && !(p.sx === MINE_KNOT.x && p.sy === MINE_KNOT.y));
+  assert.ok(fills.some((p) => p.dx === 3 * TILE_WIDTH + RIM_INSET && p.dy === 6 * TILE_WIDTH), 'the dark starts inside the rim');
+  for (const p of fills) {
+    assert.ok(isFill(p), 'the dark is cut from its window');
+    assert.equal(p.sx - MINE_FILL.x, ((p.dx % 32) + 32) % 32, 'by world position across');
+    assert.equal(p.sy - MINE_FILL.y, ((p.dy % 32) + 32) % 32, 'and down, so every piece of it runs on');
+  }
+
+  // In whole levels, a face running on into a slanted one has no end drawn between them.
+  for (const seed of [7, 11]) {
+    const L = new DungeonBuilder(dungeonConfig('mines', seed)).build().level;
+    const all = buildTerrainPieces(L);
+    const W = L.width;
+    const northSlope = (x, y) => { const s = L.slopes.get(x + y * W); return !!s && (s.corner === 'nw' || s.corner === 'ne'); };
+    let checked = 0;
+    for (let y = 1; y < L.height - 1; y++) for (let x = 1; x < W - 1; x++) {
+      const foot = L.getTile(x, y).type === TileType.Wall && !L.slopes.has(x + y * W) && L.getTile(x, y + 1).type === TileType.Floor && !L.slopes.has(x + (y + 1) * W);
+      if (!foot) continue;
+      for (const [end, side] of [[MINE_FACE_END_LEFT, -1], [MINE_FACE_END_RIGHT, 1]]) {
+        if (!northSlope(x + side, y + 1)) continue;
+        checked++;
+        assert.ok(!all.some((p) => p.sx === end.x && p.z === y * TILE_WIDTH && Math.abs(p.dx - x * TILE_WIDTH) < TILE_WIDTH), `no end between the face at ${x},${y} and the slant beside it`);
+      }
+    }
+    assert.ok(checked > 0, 'faces meet slanted ones');
+  }
+});
+
+test('mine chasms: a cliff under the north brink, as deep as the drop, fading where none runs on beside it; pebbles round the rest', async () => {
+  const { buildTerrainPieces } = await load('level/TerrainAutotile');
+  const { MINE_CLIFFS, CLIFF_FADES, THORN_H, MINE_BRINK_S, MINE_BRINK_W, MINE_BRINK_E, MINE_BRINK_KNOTS } = await load('level/MineTiles');
+  const level = new Level(10, 10, 'mines');
+  for (let y = 0; y < 10; y++) for (let x = 0; x < 10; x++) {
+    const inside = x >= 1 && x <= 8 && y >= 1 && y <= 8;
+    const chasm = (x >= 3 && x <= 5 && y >= 4 && y <= 5) || (x === 6 && y >= 1 && y <= 5);
+    level.setTile(x, y, createTile(!inside ? TileType.Wall : chasm ? TileType.Hole : TileType.Floor));
+  }
+  const pieces = buildTerrainPieces(level);
+  const cliffAt = (tx) => pieces.find((p) => p.dx === tx * TILE_WIDTH && p.dy === 4 * TILE_WIDTH - THORN_H && MINE_CLIFFS.some((v) => v.some((c) => c.x === p.sx && c.y === p.sy)));
+  const fadeOf = (p) => CLIFF_FADES[MINE_CLIFFS.findIndex((v) => v.some((c) => c.x === p.sx))];
+  for (const tx of [3, 4, 5]) {
+    const cliff = cliffAt(tx);
+    assert.ok(cliff, `a cliff under the brink at ${tx}`);
+    assert.equal(cliff.h, THORN_H + 2 * TILE_WIDTH, 'cut off where the drop ends, under its far brink');
+    assert.equal(cliff.z, 5 * TILE_WIDTH, 'drawn over the feet of whoever stands at the brink');
+  }
+  assert.equal(fadeOf(cliffAt(3)), 'none', 'floor beside it: its pebbles cover the cliff\'s side');
+  assert.equal(fadeOf(cliffAt(5)), 'right', 'the dark beside it has no cliff of its own: the cliff fades out there');
+  assert.ok(pieces.some((p) => MINE_BRINK_S.some((b) => b.x === p.sx && b.y === p.sy) && p.dy > 5 * TILE_WIDTH), 'pebbles along the far brink');
+  assert.ok(pieces.some((p) => MINE_BRINK_W.some((b) => b.x === p.sx && b.y === p.sy) && p.dx < 3 * TILE_WIDTH), 'down the west brink');
+  assert.ok(pieces.some((p) => MINE_BRINK_E.some((b) => b.x === p.sx && b.y === p.sy) && p.dx > 6 * TILE_WIDTH), 'down the east brink of the narrow drop');
+  assert.ok(pieces.some((p) => MINE_BRINK_KNOTS.some((b) => b.x === p.sx && b.y === p.sy)), 'knotted where brinks meet');
+});
+
+test('mine earth: where tones meet, the edge wanders across the tiles; one tone lies whole; plants grow in clumps by edges', async () => {
+  const { mineGroundOverlays, mineGroundBase, overlayCovers, groundNoise, NOISE_PERIOD } = await load('level/MineGround');
+  const { dungeonConfig } = await load('level/generators/DungeonConfig');
+  const { MINE_PLANTS } = await load('level/Props');
+  const level = new Level(12, 8, 'mines');
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 12; x++) level.setTile(x, y, createTile(x === 0 || y === 0 || x === 11 || y === 7 ? TileType.Wall : TileType.Floor));
+  level.floorZones.push({ x: 0, y: 0, w: 6, h: 8, tone: 0 }, { x: 6, y: 0, w: 6, h: 8, tone: 2 });
+  // Away from the edge, a tile is one piece of its own tone; at it, quarters of the lower tone with the higher laid over.
+  assert.equal(mineGroundBase(level, 2, 3).length, 1);
+  assert.equal(mineGroundBase(level, 5, 3).length, 4);
+  const overlays = mineGroundOverlays(level);
+  assert.ok(overlays.length > 0 && overlays.every((o) => o.tone === 2 && Math.abs(o.dx + o.w / 2 - 6 * TILE_WIDTH) <= TILE_WIDTH), 'the higher tone over the lower, only near the edge');
+  // Along the rows, the edge wanders: not one straight line down the tiles' sides.
+  const edges = new Set();
+  for (let y = TILE_WIDTH + 4; y < 6 * TILE_WIDTH; y += 3) {
+    for (let x = 5 * TILE_WIDTH; x < 7 * TILE_WIDTH; x++) {
+      const o = overlays.find((q) => q.dx <= x && x < q.dx + q.w && q.dy <= y && y < q.dy + q.h);
+      if (o && overlayCovers(o.corners, o.px, o.py, o.sx + x - o.dx, o.sy + y - o.dy)) { edges.add(x); break; }
+    }
+  }
+  assert.ok(edges.size > 3, 'the edge wanders');
+  assert.ok([...edges].every((x) => Math.abs(x - 6 * TILE_WIDTH) <= TILE_WIDTH / 2), 'within half a tile of where the tones meet');
+  for (let k = 0; k < 64; k++) {
+    assert.ok(overlayCovers(15, 16, 48, k % 32, Math.floor(k / 2) % 32), 'a cell all of the tone is covered');
+    assert.ok(!overlayCovers(0, 16, 48, k % 32, Math.floor(k / 2) % 32), 'one with none of it is not');
+    assert.equal(groundNoise(k * 3, k * 5), groundNoise(k * 3 + NOISE_PERIOD, k * 5 - NOISE_PERIOD), 'the noise repeats as the ground does');
+  }
+
+  // Plants grow in clumps where something breaks the floor: a drop or a hole, the rock, other earth.
+  for (const seed of [3, 7]) {
+    const layout = new DungeonBuilder(dungeonConfig('mines', seed)).build();
+    const L = layout.level;
+    const W = L.width;
+    const { mineFloorTone } = await load('level/MineGround');
+    const edgy = (x, y) => L.getTile(x, y)?.type === TileType.Hole || L.getTile(x, y)?.type === TileType.Wall || L.slopes.has(x + y * W);
+    const plants = layout.props.filter((p) => MINE_PLANTS.includes(p.kind));
+    assert.ok(plants.length > 0);
+    for (const p of plants) {
+      let near = false;
+      for (let dy = -2; dy <= 2 && !near; dy++) for (let dx = -2; dx <= 2 && !near; dx++) {
+        near = edgy(p.tx + dx, p.ty + dy) || mineFloorTone(L, p.tx + dx, p.ty + dy) !== mineFloorTone(L, p.tx, p.ty);
+      }
+      assert.ok(near, `the plant at ${p.tx},${p.ty} grows by an edge`);
+      assert.ok(Math.abs(p.dx ?? 0) <= 7, 'nudged a little off its tile\'s middle');
+    }
+  }
 });
 
 test('in the mines, whoever walks out over a drop or a hole falls; the castle\'s chasms stay gaps', async () => {
@@ -3537,6 +3668,20 @@ test('a wall clears in a soft ellipse over a figure behind it, easing in and bac
   assert.equal(layer.filters?.length, 1, 'the clearing eases out, not off at once');
   for (let i = 0; i < 30; i++) frame(7 * TILE_WIDTH);
   assert.equal(layer.filters, null, 'and is gone once it has');
+});
+
+test('along a slant, the rim\'s pieces at their several depths all clear round a figure, not just the one over its feet', async () => {
+  const { SeeThroughWalls } = await load('render/SeeThrough');
+  const { wallsOverFigure, revealHalfWidth } = await load('systems/SeeThroughSystem');
+  const walls = new SeeThroughWalls(640);
+  // A south slant's rim: a tile's column each, each sorted a little deeper than the one before.
+  const columns = [0, 1, 2, 3].map((k) => ({ filters: null, k }));
+  columns.forEach((layer, k) => walls.addPiece(layer, 6 * TILE_WIDTH + 16 * k, (4 + k) * TILE_WIDTH, 5 * TILE_WIDTH + 16 * k - 8, 32, 48));
+  const over = [];
+  // Feet in the second column, behind all of them.
+  wallsOverFigure(walls, 5 * TILE_WIDTH + 16, 6 * TILE_WIDTH - 4, 40, over);
+  assert.ok(revealHalfWidth(40) > 16, 'the ellipse is wider than a figure');
+  assert.deepEqual(over.map((s) => s.target.k).sort(), [0, 1, 2], 'every column the ellipse spans clears, not only the one over the feet');
 });
 
 test('a hero sinking over a chasm\'s north rim stands on it; one stepping onto a loose hole falls', async () => {

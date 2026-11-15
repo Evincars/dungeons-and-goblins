@@ -11,8 +11,27 @@ import { TILE_HEIGHT, TILE_WIDTH } from './TileType';
 export const MINE_WALLS = 'mine_walls';
 export const MINE_GROUND = 'mine_ground';
 
-/** A tile of the rock tops' black. */
-export const MINE_VOID: IsoRect = { x: 0, y: 0, w: 32, h: 32 };
+// ── Rock tops ─────────────────────────────────────────────────────────────────
+
+/**
+ * The rock tops' dark: the faint cobbles of the set's block tops, repeating every tile with no seam, laid out two tiles
+ * square so a tile's window of it can be cut at any offset (MineTerrain.ts cuts it by world position, so every piece of
+ * it, whatever lies over or under it, runs on).
+ */
+export const MINE_FILL: IsoRect = { x: 0, y: 0, w: 64, h: 64 };
+/** How deep the scalloped rim is, and how far in from its edge the dark under it starts. */
+export const RIM_DEPTH = 16;
+export const RIM_INSET = 8;
+/** The rim along a rock top's north edge (floor north of it): rings of stone over the dark, a tile across, three that run on. */
+export const MINE_RIM_N: readonly IsoRect[] = [128, 160, 192].map((x) => ({ x, y: 0, w: 32, h: RIM_DEPTH }));
+/**
+ * The same rim turned to run down a rock top's west edge (floor west of it) and its east edge, a tile down each. Turned
+ * from the north rim, the west strips run on upward (row ty takes strip (3 - ty % 3) % 3), the east ones downward.
+ */
+export const MINE_RIM_W: readonly IsoRect[] = [224, 240, 256].map((x) => ({ x, y: 0, w: RIM_DEPTH, h: 32 }));
+export const MINE_RIM_E: readonly IsoRect[] = [272, 288, 304].map((x) => ({ x, y: 0, w: RIM_DEPTH, h: 32 }));
+/** One ring of the rim, cut round: laid where two runs of rim meet at a corner, so it turns round instead of squaring off. */
+export const MINE_KNOT: IsoRect = { x: 64, y: 0, w: 14, h: 14 };
 
 // ── Faces ─────────────────────────────────────────────────────────────────────
 
@@ -22,46 +41,87 @@ export const MINE_VOID: IsoRect = { x: 0, y: 0, w: 32, h: 32 };
  */
 export const FACE_H = 160;
 export const FACE_FOOT = 152;
-export const MINE_FACES: readonly IsoRect[] = [0, 32, 64].map((x) => ({ x, y: 32, w: 32, h: FACE_H }));
-/** The rock's outline down either end of a face, standing just outside it. */
-export const MINE_FACE_END_LEFT: IsoRect = { x: 96, y: 32, w: 8, h: FACE_H };
-export const MINE_FACE_END_RIGHT: IsoRect = { x: 104, y: 32, w: 8, h: FACE_H };
+export const FACE_SHADOW = FACE_H - FACE_FOOT;
+/** A face reaches over its foot row and this many rows above it, when the rock is that deep. */
+export const FACE_ROWS = 5;
+/** A face cut short (rock thinner than FACE_ROWS) starts this far below the top of its highest row, under the rim drawn there. */
+export const CUT_UNDER_RIM = 16;
+export const MINE_FACES: readonly IsoRect[] = [0, 32, 64].map((x) => ({ x, y: 64, w: 32, h: FACE_H }));
+/** The rock's outline down either end of a face, drawn over the face's end column. */
+export const MINE_FACE_END_LEFT: IsoRect = { x: 96, y: 64, w: 8, h: FACE_H };
+export const MINE_FACE_END_RIGHT: IsoRect = { x: 104, y: 64, w: 8, h: FACE_H };
+
+/** How tall a face cut short over `rows` rows of rock is: from under the rim of its highest row down past its foot. */
+export function cutFaceHeight(rows: number): number {
+  return rows * TILE_HEIGHT - CUT_UNDER_RIM + FACE_SHADOW;
+}
+
+/** The cuts made, by rows of rock (1 up to FACE_ROWS - 1). */
+const CUT_ROWS = [1, 2, 3, 4] as const;
+
+/**
+ * Faces cut short, by rows of rock less one (each the three columns): the face's lip kept over its lowest stones, so the
+ * rock's edge shows at its top however few rows it stands over.
+ */
+export const MINE_CUT_FACES: readonly (readonly IsoRect[])[] = CUT_ROWS.map((rows, k) =>
+  [0, 1, 2].map((i) => ({ x: 112 + (k * 3 + i) * 32, y: 64, w: 32, h: cutFaceHeight(rows) })),
+);
 
 /** A slant drops this much across a tile: a slanted strip is this much taller than the straight one it was cut from. */
 const SLANT_DROP = 16;
 
+/** A face of height h turned onto the slant of a north-west or north-east corner, its foot along its bottom. */
+function slantStrip(x: number, y: number, h: number, corner: 'nw' | 'ne'): SlantStrip {
+  const foot = h - FACE_SHADOW;
+  return corner === 'nw'
+    ? { x, y, w: 32, h: h + SLANT_DROP, footLeft: foot + SLANT_DROP, footRight: foot }
+    : { x, y, w: 32, h: h + SLANT_DROP, footLeft: foot, footRight: foot + SLANT_DROP };
+}
+
 /** The face turned onto the slant of a room's north-west and north-east corners, a tile's strip each (three of each). */
 export const MINE_SLANT_FACES: Readonly<Record<'nw' | 'ne', readonly SlantStrip[]>> = {
-  nw: [0, 32, 64].map((x) => ({ x, y: 200, w: 32, h: FACE_H + SLANT_DROP, footLeft: FACE_FOOT + SLANT_DROP, footRight: FACE_FOOT })),
-  ne: [96, 128, 160].map((x) => ({ x, y: 200, w: 32, h: FACE_H + SLANT_DROP, footLeft: FACE_FOOT, footRight: FACE_FOOT + SLANT_DROP })),
+  nw: [0, 1, 2].map((i) => slantStrip(i * 32, 232, FACE_H, 'nw')),
+  ne: [0, 1, 2].map((i) => slantStrip((3 + i) * 32, 232, FACE_H, 'ne')),
 };
 
-// ── Rims of the rock tops ─────────────────────────────────────────────────────
+/** Slanted faces cut short, as MINE_CUT_FACES are. */
+export const MINE_CUT_SLANT_FACES: readonly Readonly<Record<'nw' | 'ne', readonly SlantStrip[]>>[] = CUT_ROWS.map((rows, k) => ({
+  nw: [0, 1, 2].map((i) => slantStrip(192 + (k * 6 + i) * 32, 232, cutFaceHeight(rows), 'nw')),
+  ne: [0, 1, 2].map((i) => slantStrip(192 + (k * 6 + 3 + i) * 32, 232, cutFaceHeight(rows), 'ne')),
+}));
 
-/** The scalloped rim along a rock top's north edge (floor north of it), the black under it, a tile across. */
-export const MINE_RIM_N: readonly IsoRect[] = [0, 32, 64].map((x) => ({ x, y: 384, w: 32, h: 32 }));
-/** The rim down its west edge (floor west of it) and its east edge. */
-export const MINE_RIM_W: IsoRect = { x: 96, y: 384, w: 8, h: 32 };
-export const MINE_RIM_E: IsoRect = { x: 104, y: 384, w: 8, h: 32 };
-/** Where its north rim meets a side's, 16 px square. */
-export const MINE_RIM_NW: IsoRect = { x: 112, y: 384, w: 16, h: 16 };
-export const MINE_RIM_NE: IsoRect = { x: 128, y: 384, w: 16, h: 16 };
-/** The rim along a south slant (a room's south corner cut off), a tile's strip each; its top edge as in SlantStrip. */
+/** The rim along a south slant (a room's south corner cut off), the rock's dark under it, a tile's strip each. */
 export const MINE_RIM_SLANT: Readonly<Record<'sw' | 'se', readonly SlantStrip[]>> = {
-  se: [0, 32, 64].map((x) => ({ x, y: 424, w: 32, h: 48, footLeft: SLANT_DROP, footRight: 0 })),
-  sw: [96, 128, 160].map((x) => ({ x, y: 424, w: 32, h: 48, footLeft: 0, footRight: SLANT_DROP })),
+  se: [0, 32, 64].map((x) => ({ x, y: 416, w: 32, h: 48, footLeft: SLANT_DROP, footRight: 0 })),
+  sw: [96, 128, 160].map((x) => ({ x, y: 416, w: 32, h: 48, footLeft: 0, footRight: SLANT_DROP })),
 };
 
 // ── Chasms ────────────────────────────────────────────────────────────────────
 
-/** A chasm's north edge: the floor's lip, and the dark cliff under it falling away to black over three tiles. */
-export const MINE_CHASM_N: readonly IsoRect[] = [0, 32, 64].map((x) => ({ x, y: 480, w: 32, h: 96 }));
-/** Its west and east rims, and the lip of the floor south of it. */
-export const MINE_CHASM_W: IsoRect = { x: 96, y: 480, w: 8, h: 32 };
-export const MINE_CHASM_E: IsoRect = { x: 104, y: 480, w: 8, h: 32 };
-export const MINE_CHASM_LIP_S: readonly IsoRect[] = [112, 144, 176].map((x) => ({ x, y: 480, w: 32, h: 16 }));
-/** Old pit props rising out of the dark of a chasm (or of the rock below a room's south edge), fading into it. */
-export const MINE_SUNKEN_POSTS: readonly IsoRect[] = [224, 256, 288, 320].map((x) => ({ x, y: 480, w: 32, h: 176 }));
+/** Dark thorns stand this far up over the floor along a chasm's north brink. */
+export const THORN_H = 10;
+/** A chasm's cliff falls over this many rows (fading out over the last of them), cut short where the chasm is shallower. */
+export const CLIFF_ROWS = 3;
+/** Which side of a cliff fades out (no cliff runs on beside it there): MINE_CLIFFS is indexed by it. */
+export const CLIFF_FADES = ['none', 'left', 'right', 'both'] as const;
+export type CliffFade = (typeof CLIFF_FADES)[number];
+/**
+ * A chasm's north brink and the cliff under it, whole or fading out at one side or both (CLIFF_FADES), each the three
+ * columns: the floor's pebbles and the thorns over it, and the grey-blue cobbles fading into the dark below.
+ */
+export const MINE_CLIFFS: readonly (readonly IsoRect[])[] = CLIFF_FADES.map((_, k) =>
+  [0, 1, 2].map((i) => ({ x: (k * 3 + i) * 32, y: 480, w: 32, h: THORN_H + CLIFF_ROWS * TILE_HEIGHT })),
+);
+/** The pebbles down a chasm's west and east brinks (floor beside it), a tile down each; their line lies BRINK_LINE px in. */
+export const MINE_BRINK_W: readonly IsoRect[] = [384, 400, 416].map((x) => ({ x, y: 480, w: 16, h: 32 }));
+export const MINE_BRINK_E: readonly IsoRect[] = [432, 448, 464].map((x) => ({ x, y: 480, w: 16, h: 32 }));
+export const BRINK_LINE = 6;
+/** The pebbles along a chasm's south brink (floor south of it), a tile across each; their line lies BRINK_LINE px down. */
+export const MINE_BRINK_S: readonly IsoRect[] = [480, 512, 544].map((x) => ({ x, y: 480, w: 32, h: 12 }));
+/** Knots of pebbles, laid centred where two brinks meet at a corner. */
+export const MINE_BRINK_KNOTS: readonly IsoRect[] = [576, 592, 608].map((x) => ({ x, y: 480, w: 16, h: 16 }));
+/** Old pit props rising out of the dark of a chasm, fading into it. */
+export const MINE_SUNKEN_POSTS: readonly IsoRect[] = [640, 672, 704, 736].map((x) => ({ x, y: 480, w: 32, h: 176 }));
 
 // ── Ground (g_terrain1.png) ───────────────────────────────────────────────────
 

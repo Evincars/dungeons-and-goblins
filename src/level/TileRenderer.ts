@@ -1,4 +1,4 @@
-import { Container } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import type { Level } from './Level';
 import { buildTerrainPieces, CAVE_GROUND, OVERHEAD_Z } from './TerrainAutotile';
 import type { TerrainPiece } from './TerrainAutotile';
@@ -6,9 +6,9 @@ import { tilesetRect } from '../render/Sheets';
 import { StaticTileLayer } from '../render/StaticTileLayer';
 import { groundBlends } from './GroundBlend';
 import { blendTexture, commitBlendAtlas } from '../render/BlendAtlas';
-import { tilesetKey } from './Theme';
+import { THEME_VOID, tilesetKey } from './Theme';
 import { SeeThroughWalls } from '../render/SeeThrough';
-import { TILE_WIDTH } from './TileType';
+import { TILE_HEIGHT, TILE_WIDTH } from './TileType';
 
 export type LevelView = {
   /** Floors, faces and wall tops that lie beneath every entity. */
@@ -18,7 +18,7 @@ export type LevelView = {
    * a zIndex so it depth-sorts with entities in the game layer.
    */
   occluders: Container[];
-  /** The pieces of those walls that turn see-through over whoever stands behind them. */
+  /** Those wall batches, filed by where their pieces lie, to be cleared over whoever stands behind them. */
   seeThrough: SeeThroughWalls;
 };
 
@@ -44,9 +44,19 @@ function layerFor(piece: TerrainPiece, base: StaticTileLayer, byZ: Map<number, S
   return layer;
 }
 
-/** A piece of a wall someone can stand behind that turns see-through over them: not its rim, nor an arch overhead. */
+/** How far past the map's edges its dark runs (more than a screen, so the camera never sees past it). */
+const VOID_MARGIN = 2048;
+
+/** The dark under everything, the colour of the theme's void, reaching well past the map's edges. */
+function voidBackdrop(level: Level): Graphics {
+  const w = level.width * TILE_WIDTH;
+  const h = level.height * TILE_HEIGHT;
+  return new Graphics().rect(-VOID_MARGIN, -VOID_MARGIN, w + 2 * VOID_MARGIN, h + 2 * VOID_MARGIN).fill(THEME_VOID[level.theme]);
+}
+
+/** A piece of a wall someone can stand behind, cleared over them (render/SeeThrough.ts): not an arch overhead. */
 function seesThrough(p: TerrainPiece): p is TerrainPiece & { z: number } {
-  return p.z !== undefined && p.z < OVERHEAD_Z && !p.edge;
+  return p.z !== undefined && p.z < OVERHEAD_Z;
 }
 
 /**
@@ -68,12 +78,12 @@ export function buildLevelView(level: Level): LevelView {
   const seeThrough = new SeeThroughWalls(level.width * TILE_WIDTH);
   for (const p of buildTerrainPieces(level)) {
     const layer = pieceLayer(p, flat, byZ);
-    const particle = layer.addTile(tilesetRect(p.sx, p.sy, p.w, p.h, p.sheet ?? tileset), p.dx, p.dy);
-    if (seesThrough(p)) seeThrough.add(particle, layer, p.z, p.dx, p.dy, p.w, p.h);
+    layer.addTile(tilesetRect(p.sx, p.sy, p.w, p.h, p.sheet ?? tileset), p.dx, p.dy);
+    if (seesThrough(p)) seeThrough.addPiece(layer, p.z, p.dx, p.dy, p.w, p.h);
   }
   for (const blend of groundBlends(level)) blends.addTile(blendTexture(blend), blend.dx, blend.dy);
   commitBlendAtlas();
   const container = new Container();
-  container.addChild(cave, floors, blends, base);
+  container.addChild(voidBackdrop(level), cave, floors, blends, base);
   return { base: container, occluders: [...byZ.values()], seeThrough };
 }

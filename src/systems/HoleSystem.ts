@@ -1,6 +1,7 @@
 import { world, isPlayer } from '../world';
 import type { Entity } from '../world';
 import type { Level } from '../level/Level';
+import { TileType, TILE_HEIGHT, TILE_WIDTH, WALL_SINK } from '../level/TileType';
 import { dropPoint } from '../level/PitShapes';
 import { spawnExclamation } from '../entities/FxFactory';
 import { characterDef, headAboveFeet } from '../characters/Characters';
@@ -20,9 +21,16 @@ const PULL_RATE = 0.25;
 const grounded = world.with('position', 'health');
 const fallers = world.with('position', 'falling');
 
-/** Whether there is no floor under a point: inside a pit's drawn shape, or on a loose hole tile. */
+/**
+ * Whether there is no floor under a point: inside a pit's drawn shape, or on a loose hole tile, but not in the strip of
+ * a chasm's north edge that feet reach over (as over a wall's, Level's WALL_SINK): they stand on its rim there.
+ */
 function holeAt(level: Level, x: number, y: number): boolean {
-  return level.overPit(x, y);
+  if (!level.overPit(x, y)) return false;
+  const tx = Math.floor(x / TILE_WIDTH);
+  const ty = Math.floor(y / TILE_HEIGHT);
+  const onRim = level.isChasm(tx, ty) && level.getTile(tx, ty - 1)?.type === TileType.Floor && y - ty * TILE_HEIGHT < WALL_SINK;
+  return !onRim;
 }
 
 /** Feet can overhang an edge while any part of their small support box has floor under it. */

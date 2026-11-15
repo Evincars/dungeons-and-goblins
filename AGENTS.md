@@ -176,9 +176,11 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   wall tile under it, `Level.slopeRow`) and that is drawn over them, as a straight south wall is. The castles' south walls
   (straight or slanted) are drawn a little higher over the floor (`SOUTH_WALL_RAISE`, `Theme.ts`; drawing only, not where
   bodies stop), and faces and slanted faces are drawn among the entities (`faceDepth`), in front of the dark of whatever lies
-  north of them. Walls turn see-through over the heroes and foes standing behind them near the hero followed
-  (`render/SeeThrough.ts`, `systems/SeeThroughSystem.ts`): every occluding piece but a wall's rim (`TerrainPiece.edge`)
-  fades. A level is built as the
+  north of them; a slanted face that ends with no face running on gets a straight face's end column. Walls, columns and
+  rock spires (`PropDef.seeThrough`; only their base stops bodies, so one walks on behind them) clear in a soft ellipse
+  over the heroes and foes standing behind them near the hero followed (`render/SeeThrough.ts`, `render/RevealFilter.ts`,
+  `systems/SeeThroughSystem.ts`), easing in and out; the floor runs on under south walls so it shows there, and the dark
+  beyond the walls and off the map is the theme's void colour (`THEME_VOID`). Feet over a chasm's north rim stand on it. A level is built as the
   catacombs or a castle (`Theme.ts`, `level.theme`, `run.theme`; the ~ console's `/dungeon catacomb | castle | castle2` rebuilds the
   level as either): a castle uses only `public/castle` (its tileset's `-isometric` copy) — its tileset's pieces are mapped in `CastleTiles.ts` (stone faces
   with pilasters (also framing each decorated stretch), windows and arrow slits, arched alcoves (candles stand lit in them),

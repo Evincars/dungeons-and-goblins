@@ -1,7 +1,7 @@
 import type { Level, Stairs } from './Level';
 import { STAIRS_ROWS } from './Level';
 import type { TerrainPiece } from './TerrainAutotile';
-import { TileType, TILE_HEIGHT, TILE_WIDTH, WALL_SINK } from './TileType';
+import { TileType, TILE_HEIGHT, TILE_WIDTH, UNDER_WALL_INSET, WALL_SINK } from './TileType';
 import { forEachTile, someTile, tileHash } from './Grid';
 import {
   CHASM_LIP_S, CHASM_RIM_E, CHASM_RIM_N, CHASM_RIM_W, FACE_END_LEFT, FACE_END_RIGHT, FACE_H, FACE_PILASTER, FACE_XS, FACE_Y,
@@ -55,8 +55,6 @@ const LONE_TOP_MIN = 2;
 const LONE_TOP_SPAN = 20;
 /** A slanted face rises over this many tiles above its slope tile (its art is 80 px tall). */
 const SLANT_FACE_ROWS = 3;
-/** How tall the stone of a rim along a dark's north edge is (the rest of its piece is the dark). */
-const RIM_EDGE_H = 8;
 /** A south slant's rim is laid over whoever stands just behind it: sorted a pixel past the deepest feet reach. */
 const RIM_DEPTH_BIAS = 1;
 
@@ -71,26 +69,6 @@ export function faceDepth(ty: number): number {
 /** A piece of the walls' sheet (the level's own tileset) at (dx, dy). */
 function wallPiece(r: IsoRect, dx: number, dy: number, h = r.h, z?: number): TerrainPiece {
   return z === undefined ? { dx, dy, sx: r.x, sy: r.y, w: r.w, h } : { dx, dy, sx: r.x, sy: r.y, w: r.w, h, z };
-}
-
-/** A piece marked as the rim along a wall's top, which stays solid while the wall turns see-through. */
-function edge(piece: TerrainPiece): TerrainPiece {
-  piece.edge = true;
-  return piece;
-}
-
-/**
- * A rim along a dark's north edge with the dark under it, sorted at z: the rim's own strip (RIM_EDGE_H) and the dark
- * below it as two pieces, so the dark can turn see-through while the rim stays.
- */
-function rimOverDark(out: TerrainPiece[], r: IsoRect, dx: number, dy: number, z: number, sheet?: string): void {
-  const rim: TerrainPiece = { dx, dy, sx: r.x, sy: r.y, w: r.w, h: RIM_EDGE_H, z, edge: true };
-  const dark: TerrainPiece = { dx, dy: dy + RIM_EDGE_H, sx: r.x, sy: r.y + RIM_EDGE_H, w: r.w, h: r.h - RIM_EDGE_H, z };
-  if (sheet) {
-    rim.sheet = sheet;
-    dark.sheet = sheet;
-  }
-  out.push(dark, rim);
 }
 
 /** A piece of the floors' sheet (chasm rims, sunken columns) at (dx, dy). */
@@ -110,8 +88,8 @@ export function isoFloorTone(level: Level, tx: number, ty: number): number {
 }
 
 /** Where in the floors' sheet a tile's slab is: its tone's block, laid by position so the diamonds run on. */
-export function isoFloorSource(level: Level, tx: number, ty: number): { sx: number; sy: number } {
-  const block = FLOOR_BLOCKS[isoFloorTone(level, tx, ty)] ?? FLOOR_BLOCKS[0];
+export function isoFloorSource(level: Level, tx: number, ty: number, tone = isoFloorTone(level, tx, ty)): { sx: number; sy: number } {
+  const block = FLOOR_BLOCKS[tone] ?? FLOOR_BLOCKS[0];
   return { sx: block.x + ((tx * TILE_WIDTH) % block.w), sy: block.y + ((ty * TILE_HEIGHT) % block.h) };
 }
 
@@ -200,6 +178,7 @@ class IsoTerrainBuilder {
   private readonly addTile = (tx: number, ty: number): void => {
     const cell = this.cell(tx, ty);
     if (cell === 'ground' || cell === 'slope') this.addFloor(tx, ty);
+    else if (cell === 'wall') this.addFloorUnderWall(tx, ty);
     if (cell === 'slope') this.addSlant(tx, ty);
     else if (cell === 'chasm') this.addChasm(tx, ty);
     else if (cell === 'wall' && this.faceFoot(tx, ty)) this.addFace(tx, ty);
@@ -209,6 +188,22 @@ class IsoTerrainBuilder {
   private addFloor(tx: number, ty: number): void {
     const { sx, sy } = isoFloorSource(this.level, tx, ty);
     this.floors.push({ dx: tx * TILE_WIDTH, dy: ty * TILE_HEIGHT, sx, sy, w: TILE_WIDTH, h: TILE_HEIGHT, sheet: ISO_FLOORS, floor: true });
+  }
+
+  /**
+   * The floor of the room north of a south wall, run on under the wall as far as its dark reaches (the whole tile under a
+   * straight wall, down to the dark's foot under a slanted one): what shows where the wall clears over someone behind
+   * it (render/SeeThrough.ts).
+   */
+  private addFloorUnderWall(tx: number, ty: number): void {
+    const slope = this.level.slopes.get(tx + (ty - 1) * this.level.width);
+    const southSlant = !!slope && isSouthSlope(slope);
+    if (!southSlant && !this.ground(tx, ty - 1)) return;
+    const reach = slope && southSlant ? Math.min(TILE_HEIGHT, slantRimDepth(slope, tx, ty - 1) - ty * TILE_HEIGHT) : TILE_HEIGHT;
+    const h = reach - UNDER_WALL_INSET;
+    if (h <= 0) return;
+    const { sx, sy } = isoFloorSource(this.level, tx, ty, isoFloorTone(this.level, tx, ty - 1));
+    this.floors.push({ dx: tx * TILE_WIDTH, dy: ty * TILE_HEIGHT, sx, sy, w: TILE_WIDTH, h, sheet: ISO_FLOORS, floor: true });
   }
 
   /**
@@ -254,12 +249,12 @@ class IsoTerrainBuilder {
     // A side's rim reaches down past the tile by the lift, or stops short over a raised south slant starting beside it.
     const westH = WALL_RIM_W.h + lift - (this.raisedSlantBelow(tx - 1, ty) ? this.raise : 0);
     const eastH = WALL_RIM_E.h + lift - (this.raisedSlantBelow(tx + 1, ty) ? this.raise : 0);
-    if (z !== undefined) rimOverDark(out, WALL_RIM_N[tx & 3], dx, top, z);
+    if (north) out.push(wallPiece(WALL_RIM_N[tx & 3], dx, top, WALL_RIM_N[0].h, z));
     if (lift > 0) out.push(wallPiece(ISO_VOID, dx, dy + TILE_HEIGHT - lift, lift, z));
-    if (west) out.push(edge(wallPiece(WALL_RIM_W, dx, top, westH, z)));
-    if (east) out.push(edge(wallPiece(WALL_RIM_E, eastX, top, eastH, z)));
-    if (north && west) this.over.push(edge(wallPiece(WALL_RIM_NW, dx, top, WALL_RIM_NW.h, z)));
-    if (north && east) this.over.push(edge(wallPiece(WALL_RIM_NE, dx + TILE_WIDTH - WALL_RIM_NE.w, top, WALL_RIM_NE.h, z)));
+    if (west) out.push(wallPiece(WALL_RIM_W, dx, top, westH, z));
+    if (east) out.push(wallPiece(WALL_RIM_E, eastX, top, eastH, z));
+    if (north && west) this.over.push(wallPiece(WALL_RIM_NW, dx, top, WALL_RIM_NW.h, z));
+    if (north && east) this.over.push(wallPiece(WALL_RIM_NE, dx + TILE_WIDTH - WALL_RIM_NE.w, top, WALL_RIM_NE.h, z));
     // Where floor touches only at a corner, the nub joining the rims round it; none beside a raised south wall, whose
     // rim (drawn higher) meets the side's on its own.
     if (!north && !west && this.ground(tx - 1, ty - 1) && !this.raisedRim(tx - 1, ty)) this.over.push(wallPiece(WALL_NUB_NW, dx, dy));
@@ -292,13 +287,13 @@ class IsoTerrainBuilder {
     const north = this.ground(tx, ty - 1);
     const z = north ? (ty + 1) * TILE_HEIGHT : undefined;
     const sides = north ? this.over : this.walls;
-    if (z !== undefined) rimOverDark(this.over, CHASM_RIM_N[tx & 3], dx, dy, z, ISO_FLOORS);
+    if (north) this.over.push(floorSheetPiece(CHASM_RIM_N[tx & 3], dx, dy, CHASM_RIM_N[0].h, z));
     if (this.ground(tx, ty + 1)) {
       const lip = CHASM_LIP_S[tx & 3];
       this.walls.push(floorSheetPiece(lip, dx, dy + TILE_HEIGHT - lip.h));
     }
-    if (this.ground(tx - 1, ty)) sides.push(edge(floorSheetPiece(CHASM_RIM_W, dx, dy, CHASM_RIM_W.h, z)));
-    if (this.ground(tx + 1, ty)) sides.push(edge(floorSheetPiece(CHASM_RIM_E, dx + TILE_WIDTH - CHASM_RIM_E.w, dy, CHASM_RIM_E.h, z)));
+    if (this.ground(tx - 1, ty)) sides.push(floorSheetPiece(CHASM_RIM_W, dx, dy, CHASM_RIM_W.h, z));
+    if (this.ground(tx + 1, ty)) sides.push(floorSheetPiece(CHASM_RIM_E, dx + TILE_WIDTH - CHASM_RIM_E.w, dy, CHASM_RIM_E.h, z));
     if (north) this.addSunkenColumn(tx, ty, SUNKEN_EVERY_CHASM, z);
     else this.addLoneColumn(tx, ty, LONE_EVERY_CHASM);
   }

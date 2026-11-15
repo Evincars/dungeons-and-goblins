@@ -66,3 +66,9 @@ export function createTile(type: TileType, imageVariant = 0): TileData {
       return base;
   }
 }
+
+/**
+ * The floor run on under a south wall (to show where the wall clears over someone behind it) stops this far short of the
+ * wall's dark, so no sliver of it shows past the dark when the wall is drawn through a filter a pixel off.
+ */
+export const UNDER_WALL_INSET = 2;

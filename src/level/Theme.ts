@@ -24,3 +24,9 @@ export function tilesetKey(theme: LevelTheme): string {
  * further behind it (the catacombs' stand as the tileset draws them). Only the drawing moves, not where bodies stop.
  */
 export const SOUTH_WALL_RAISE = { catacomb: 0, castle: 8, castle2: 8 } as const satisfies Record<LevelTheme, number>;
+
+/**
+ * The colour of the dark beyond a level's walls and off its map: the same as the void the theme's tileset draws in its
+ * wall tops, so nowhere shows a seam between the dark drawn and the dark beyond it.
+ */
+export const THEME_VOID = { catacomb: 0x070707, castle: 0x070707, castle2: 0x000000 } as const satisfies Record<LevelTheme, number>;

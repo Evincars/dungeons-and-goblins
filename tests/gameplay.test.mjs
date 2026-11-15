@@ -672,7 +672,8 @@ test('a hero who steps into a lobe falls, and is drawn down into the pit; an ene
 test('falling into a pit pops a "!" over the player that follows them down', () => {
   const level = arena(8, 6);
   level.setTile(4, 2, createTile(TileType.Hole));
-  const player = playerAt(4, 2);
+  level.setTile(4, 3, createTile(TileType.Hole));
+  const player = playerAt(4, 3);
   updateHoles(level);
   assert.ok(player.falling);
   const mark = world.entities.find((e) => e.visual?.sheet === 'exclamation_mark');
@@ -3348,31 +3349,66 @@ test('in the isometric castle, faces and slanted faces are drawn in front of who
   assert.ok(west > north && north >= 0, 'the west rim runs up over the north rim');
 });
 
-test('walls turn see-through over a figure behind them, and back once it has gone; their rims stay solid', async () => {
-  const { SeeThroughWalls } = await load('render/SeeThrough');
-  const refreshed = [];
-  const layer = { refresh: () => refreshed.push(1) };
-  const dark = { alpha: 1 };
-  const rim = { alpha: 1 };
+test('a wall clears in a soft ellipse over a figure behind it, easing in and back out once it has gone', async () => {
+  const { SeeThroughWalls, Revealer } = await load('render/SeeThrough');
+  const layer = { filters: null, destroyed: false };
+  const cleared = [];
   const walls = new SeeThroughWalls(320);
   // The dark of a south wall over the tile row 5, drawn at the row's foot; a figure's feet sink into it.
-  walls.add(dark, layer, 6 * TILE_WIDTH, 3 * TILE_WIDTH, 5 * TILE_WIDTH + 8, 32, 24);
-  const feetY = 5 * TILE_WIDTH + 20;
-  for (let frame = 0; frame < 20; frame++) {
-    walls.begin();
-    walls.reveal(3 * TILE_WIDTH, feetY - 40, 4 * TILE_WIDTH, feetY, feetY);
-    walls.settle();
+  walls.addPiece(layer, 6 * TILE_WIDTH, 3 * TILE_WIDTH, 5 * TILE_WIDTH - 8, 32, 40);
+  // A stand-in for the filter, noting each ellipse's strength as it is set.
+  const revealer = new Revealer(() => ({ reset() {}, set: (i, x, y, rx, ry, strength) => cleared.push(strength), commit() {} }));
+  const view = { a: 1, d: 1, tx: 0, ty: 0 };
+  const frame = (feetY) => {
+    const over = [];
+    walls.collect(3 * TILE_WIDTH, feetY - 40, 4 * TILE_WIDTH, feetY, feetY, over);
+    revealer.begin();
+    revealer.figure(layer, 3 * TILE_WIDTH + 16, feetY - 18, 24, 27, over);
+    revealer.settle(view);
+    return over.length;
+  };
+  assert.equal(frame(5 * TILE_WIDTH + 20), 1, 'the wall is over the figure behind it');
+  assert.equal(layer.filters?.length, 1, 'and is cleared round it');
+  for (let i = 0; i < 30; i++) frame(5 * TILE_WIDTH + 20);
+  assert.ok(cleared[0] < 0.2 && cleared.at(-1) === 1, 'it eases in, all the way');
+  assert.equal(frame(7 * TILE_WIDTH), 0, 'a figure in front of the wall is not behind it');
+  assert.equal(layer.filters?.length, 1, 'the clearing eases out, not off at once');
+  for (let i = 0; i < 30; i++) frame(7 * TILE_WIDTH);
+  assert.equal(layer.filters, null, 'and is gone once it has');
+});
+
+test('a hero sinking over a chasm\'s north rim stands on it; one stepping onto a loose hole falls', async () => {
+  const level = arena(8, 8);
+  for (let y = 3; y <= 4; y++) for (let x = 2; x <= 5; x++) level.setTile(x, y, createTile(TileType.Hole));
+  const hero = playerAt(3, 2);
+  hero.position.y = 3 * TILE_WIDTH + 18;
+  updateHoles(level);
+  assert.equal(hero.falling, undefined, 'feet over the rim stand on it');
+  hero.position.y = 4 * TILE_WIDTH + 16;
+  updateHoles(level);
+  assert.ok(hero.falling, 'out over the dark, they fall');
+});
+
+test('only a tall prop\'s base stops bodies: from the north one walks on behind its rock or column', async () => {
+  const { PROPS, propBlockRect, PROP_GROUND } = await load('level/Props');
+  for (const kind of ['cave_spires', 'cave_spire', 'iso_column', 'castle_column']) {
+    const def = PROPS[kind];
+    assert.ok(def.seeThrough, `${kind} clears over whoever is behind it`);
+    const block = propBlockRect(def);
+    assert.ok(block.y0 >= PROP_GROUND - 16 && block.y1 === PROP_GROUND, `${kind} blocks only its base`);
   }
-  assert.ok(dark.alpha < 0.5, `the dark clears over the figure (${dark.alpha})`);
-  assert.equal(rim.alpha, 1, 'a rim is never filed');
-  assert.ok(refreshed.length > 0, 'its batch is uploaded afresh');
-  // A figure in front of it (feet below its depth) does not clear it.
-  for (let frame = 0; frame < 20; frame++) {
-    walls.begin();
-    walls.reveal(3 * TILE_WIDTH, 7 * TILE_WIDTH - 40, 4 * TILE_WIDTH, 7 * TILE_WIDTH, 7 * TILE_WIDTH);
-    walls.settle();
+  assert.ok(!PROPS.crystal_blue_00.seeThrough && !PROPS.shelf_narrow.seeThrough, 'decor never clears');
+});
+
+test('the floor runs on under a south wall (straight or slanted), to show where the wall clears', async () => {
+  const { buildTerrainPieces } = await load('level/TerrainAutotile');
+  for (const theme of ['catacomb', 'castle', 'castle2']) {
+    const level = new Level(8, 8, theme);
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) level.setTile(x, y, createTile(x === 0 || y === 0 || x === 7 || y >= 5 ? TileType.Wall : TileType.Floor));
+    const floors = buildTerrainPieces(level).filter((p) => p.floor);
+    assert.ok(floors.some((p) => p.dx === 3 * TILE_WIDTH && p.dy === 5 * TILE_WIDTH), `${theme}: floor under the wall row`);
+    assert.ok(!floors.some((p) => p.dy === 6 * TILE_WIDTH), `${theme}: but not deeper`);
   }
-  assert.equal(dark.alpha, 1, 'solid again once nobody is behind it');
 });
 
 test('rooms are not all rectangles: some lose a corner to the wall, squared off or on the slant', () => {

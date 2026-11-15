@@ -241,6 +241,7 @@ export function createProp(p: PropPlacement): Entity {
     localOnly: true,
     ...propAnimation(sheet, def),
     ...propGlow(def),
+    ...(def.seeThrough ? { seeThrough: true } : {}),
   });
 }
 

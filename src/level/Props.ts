@@ -104,7 +104,12 @@ export type PropDef = {
   mount: 'floor' | 'wall' | 'foot' | 'front';
   /** Occupies its tile as an obstacle (coffins, crates, posts). */
   solid?: boolean;
-  /** Tiles a large solid prop blocks: `w` across (odd, centred on its tile) and `h` up from its tile. */
+  /** A tall thing (a column, a rock spire) that clears over whoever stands behind it (render/SeeThrough.ts). */
+  seeThrough?: boolean;
+  /**
+   * Tiles a large solid prop takes: `w` across (odd, centred on its tile) and `h` up from its tile. Only its base stops
+   * bodies: whoever comes from the north walks on behind the rest of it.
+   */
   footprint?: { w: number; h: number };
   /** How much of its foot a solid prop blocks, when not worked out from its art (`w` wide, `d` deep). */
   base?: { w: number; d: number };
@@ -145,7 +150,7 @@ const ISO_CANDLE_CLUSTER = ['iso_candles_1', 'iso_candles_2', 'iso_candles_3', '
 const BRAZIER_GLOW = 64;
 const ISO_BRAZIER = { image: 'iso_decor', mount: 'floor', solid: true, base: { w: 12, d: 7 }, glow: BRAZIER_GLOW, coolGlow: true } as const;
 /** Its columns: the great square ones, slender ones, round ones and broken stumps. */
-const ISO_COLUMN = { image: 'iso_main', mount: 'floor', solid: true } as const;
+const ISO_COLUMN = { image: 'iso_main', mount: 'floor', solid: true, seeThrough: true } as const;
 const SQUARE_BASE = { w: 26, d: 14 };
 const SLENDER_BASE = { w: 14, d: 9 };
 const ROUND_BASE = { w: 28, d: 12 };
@@ -242,10 +247,10 @@ export const PROPS = {
   shackles:          { image: 'decorative', rect: { x: 113, y: 16, w: 14, h: 22 }, mount: 'wall', weight: 1.5 },
   chain:             { image: 'decorative', rect: { x: 148, y: 16, w: 7, h: 30 }, mount: 'wall', weight: 1.5 },
   // Free-standing stone columns (mainlevbuild.png): two broad, two slender.
-  column:            { image: 'mainlev', rect: { x: 592, y: 135, w: 32, h: 57 }, mount: 'floor', solid: true, base: { w: 28, d: 12 } },
-  column_low:        { image: 'mainlev', rect: { x: 704, y: 144, w: 32, h: 48 }, mount: 'floor', solid: true, base: { w: 28, d: 12 } },
-  column_slender:    { image: 'mainlev', rect: { x: 640, y: 112, w: 16, h: 80 }, mount: 'floor', solid: true, base: { w: 14, d: 10 } },
-  column_slender_low: { image: 'mainlev', rect: { x: 672, y: 144, w: 16, h: 48 }, mount: 'floor', solid: true, base: { w: 14, d: 10 } },
+  column:            { image: 'mainlev', rect: { x: 592, y: 135, w: 32, h: 57 }, mount: 'floor', solid: true, seeThrough: true, base: { w: 28, d: 12 } },
+  column_low:        { image: 'mainlev', rect: { x: 704, y: 144, w: 32, h: 48 }, mount: 'floor', solid: true, seeThrough: true, base: { w: 28, d: 12 } },
+  column_slender:    { image: 'mainlev', rect: { x: 640, y: 112, w: 16, h: 80 }, mount: 'floor', solid: true, seeThrough: true, base: { w: 14, d: 10 } },
+  column_slender_low: { image: 'mainlev', rect: { x: 672, y: 144, w: 16, h: 48 }, mount: 'floor', solid: true, seeThrough: true, base: { w: 14, d: 10 } },
   chain_short:       { image: 'decorative', rect: { x: 132, y: 16, w: 7, h: 22 }, mount: 'wall', weight: 1.5 },
   hook_bracket:      { image: 'decorative', rect: { x: 32, y: 20, w: 16, h: 12 }, mount: 'wall', weight: 1 },
 
@@ -373,12 +378,12 @@ export const PROPS = {
   castle_rug_olive:     { image: 'castle_decor', rect: { x: 208, y: 368, w: 95, h: 64 }, mount: 'floor', flat: true },
   castle_rug_olive_v:   { image: 'castle_decor', rect: { x: 320, y: 368, w: 64, h: 95 }, mount: 'floor', flat: true },
   // Free-standing columns (castle tileset): plain ones for halls, mossy-footed ones for standing in a pool.
-  castle_column:        { image: 'castle_main', rect: { x: 336, y: 208, w: 16, h: 80 }, mount: 'floor', solid: true, base: { w: 14, d: 10 } },
-  castle_column_block:  { image: 'castle_main', rect: { x: 368, y: 208, w: 32, h: 80 }, mount: 'floor', solid: true, base: { w: 28, d: 12 } },
-  castle_column_moss:   { image: 'castle_main', rect: { x: 410, y: 432, w: 29, h: 80 }, mount: 'floor', solid: true, base: { w: 16, d: 10 } },
-  castle_column_moss_block: { image: 'castle_main', rect: { x: 459, y: 432, w: 44, h: 80 }, mount: 'floor', solid: true, base: { w: 30, d: 12 } },
-  castle_column_moss2:  { image: 'castle_main', rect: { x: 410, y: 592, w: 29, h: 80 }, mount: 'floor', solid: true, base: { w: 16, d: 10 } },
-  castle_column_moss_block2: { image: 'castle_main', rect: { x: 459, y: 592, w: 44, h: 80 }, mount: 'floor', solid: true, base: { w: 30, d: 12 } },
+  castle_column:        { image: 'castle_main', rect: { x: 336, y: 208, w: 16, h: 80 }, mount: 'floor', solid: true, seeThrough: true, base: { w: 14, d: 10 } },
+  castle_column_block:  { image: 'castle_main', rect: { x: 368, y: 208, w: 32, h: 80 }, mount: 'floor', solid: true, seeThrough: true, base: { w: 28, d: 12 } },
+  castle_column_moss:   { image: 'castle_main', rect: { x: 410, y: 432, w: 29, h: 80 }, mount: 'floor', solid: true, seeThrough: true, base: { w: 16, d: 10 } },
+  castle_column_moss_block: { image: 'castle_main', rect: { x: 459, y: 432, w: 44, h: 80 }, mount: 'floor', solid: true, seeThrough: true, base: { w: 30, d: 12 } },
+  castle_column_moss2:  { image: 'castle_main', rect: { x: 410, y: 592, w: 29, h: 80 }, mount: 'floor', solid: true, seeThrough: true, base: { w: 16, d: 10 } },
+  castle_column_moss_block2: { image: 'castle_main', rect: { x: 459, y: 592, w: 44, h: 80 }, mount: 'floor', solid: true, seeThrough: true, base: { w: 30, d: 12 } },
   // The lights, which stand in for the catacombs' torches and candles: a candelabra on the floor, a candle on a wall.
   castle_candelabra: {
     image: 'light_a_1', rect: { x: 0, y: 0, w: 16, h: 48 }, mount: 'floor', solid: true, base: { w: 10, d: 6 }, glow: 52,
@@ -531,25 +536,25 @@ export const PROPS = {
 
   // ── Cave decor (/caves/decorative.png): rock spires, crystals and stones for cave halls ──
   // Light spires, then the same set mirrored; the widest block three tiles across.
-  cave_spires:      { image: 'cave_decor', rect: { x: 4, y: 37, w: 84, h: 91 }, mount: 'floor', solid: true, footprint: { w: 3, h: 2 } },
-  cave_spire_twin:  { image: 'cave_decor', rect: { x: 96, y: 50, w: 64, h: 78 }, mount: 'floor', solid: true, footprint: { w: 3, h: 1 } },
-  cave_spire_pair:  { image: 'cave_decor', rect: { x: 161, y: 61, w: 62, h: 67 }, mount: 'floor', solid: true, footprint: { w: 3, h: 1 } },
-  cave_spire:       { image: 'cave_decor', rect: { x: 235, y: 77, w: 49, h: 51 }, mount: 'floor', solid: true },
-  cave_spire_s:     { image: 'cave_decor', rect: { x: 303, y: 80, w: 40, h: 48 }, mount: 'floor', solid: true },
-  cave_spire_xs:    { image: 'cave_decor', rect: { x: 355, y: 103, w: 26, h: 25 }, mount: 'floor', solid: true },
-  cave_spires_b:     { image: 'cave_decor', rect: { x: 296, y: 165, w: 84, h: 91 }, mount: 'floor', solid: true, footprint: { w: 3, h: 2 } },
-  cave_spire_twin_b: { image: 'cave_decor', rect: { x: 224, y: 178, w: 64, h: 78 }, mount: 'floor', solid: true, footprint: { w: 3, h: 1 } },
-  cave_spire_pair_b: { image: 'cave_decor', rect: { x: 161, y: 189, w: 62, h: 67 }, mount: 'floor', solid: true, footprint: { w: 3, h: 1 } },
-  cave_spire_b:      { image: 'cave_decor', rect: { x: 100, y: 205, w: 49, h: 51 }, mount: 'floor', solid: true },
-  cave_spire_s_b:    { image: 'cave_decor', rect: { x: 41, y: 208, w: 40, h: 48 }, mount: 'floor', solid: true },
-  cave_spire_xs_b:   { image: 'cave_decor', rect: { x: 3, y: 231, w: 26, h: 25 }, mount: 'floor', solid: true },
+  cave_spires:      { image: 'cave_decor', rect: { x: 4, y: 37, w: 84, h: 91 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 2 } },
+  cave_spire_twin:  { image: 'cave_decor', rect: { x: 96, y: 50, w: 64, h: 78 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 1 } },
+  cave_spire_pair:  { image: 'cave_decor', rect: { x: 161, y: 61, w: 62, h: 67 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 1 } },
+  cave_spire:       { image: 'cave_decor', rect: { x: 235, y: 77, w: 49, h: 51 }, mount: 'floor', solid: true, seeThrough: true },
+  cave_spire_s:     { image: 'cave_decor', rect: { x: 303, y: 80, w: 40, h: 48 }, mount: 'floor', solid: true, seeThrough: true },
+  cave_spire_xs:    { image: 'cave_decor', rect: { x: 355, y: 103, w: 26, h: 25 }, mount: 'floor', solid: true, seeThrough: true },
+  cave_spires_b:     { image: 'cave_decor', rect: { x: 296, y: 165, w: 84, h: 91 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 2 } },
+  cave_spire_twin_b: { image: 'cave_decor', rect: { x: 224, y: 178, w: 64, h: 78 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 1 } },
+  cave_spire_pair_b: { image: 'cave_decor', rect: { x: 161, y: 189, w: 62, h: 67 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 1 } },
+  cave_spire_b:      { image: 'cave_decor', rect: { x: 100, y: 205, w: 49, h: 51 }, mount: 'floor', solid: true, seeThrough: true },
+  cave_spire_s_b:    { image: 'cave_decor', rect: { x: 41, y: 208, w: 40, h: 48 }, mount: 'floor', solid: true, seeThrough: true },
+  cave_spire_xs_b:   { image: 'cave_decor', rect: { x: 3, y: 231, w: 26, h: 25 }, mount: 'floor', solid: true, seeThrough: true },
   // Dark spires fading to black at the foot (mapped for later; nothing places them yet).
-  cave_dark_spire:     { image: 'cave_decor', rect: { x: 225, y: 267, w: 96, h: 117 }, mount: 'floor', solid: true, footprint: { w: 3, h: 2 } },
-  cave_dark_spire_m:   { image: 'cave_decor', rect: { x: 128, y: 301, w: 64, h: 83 }, mount: 'floor', solid: true, footprint: { w: 3, h: 1 } },
-  cave_dark_spire_s:   { image: 'cave_decor', rect: { x: 67, y: 346, w: 27, h: 38 }, mount: 'floor', solid: true },
-  cave_dark_spire_b:   { image: 'cave_decor', rect: { x: 0, y: 395, w: 96, h: 117 }, mount: 'floor', solid: true, footprint: { w: 3, h: 2 } },
-  cave_dark_spire_m_b: { image: 'cave_decor', rect: { x: 128, y: 429, w: 64, h: 83 }, mount: 'floor', solid: true, footprint: { w: 3, h: 1 } },
-  cave_dark_spire_s_b: { image: 'cave_decor', rect: { x: 225, y: 474, w: 27, h: 38 }, mount: 'floor', solid: true },
+  cave_dark_spire:     { image: 'cave_decor', rect: { x: 225, y: 267, w: 96, h: 117 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 2 } },
+  cave_dark_spire_m:   { image: 'cave_decor', rect: { x: 128, y: 301, w: 64, h: 83 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 1 } },
+  cave_dark_spire_s:   { image: 'cave_decor', rect: { x: 67, y: 346, w: 27, h: 38 }, mount: 'floor', solid: true, seeThrough: true },
+  cave_dark_spire_b:   { image: 'cave_decor', rect: { x: 0, y: 395, w: 96, h: 117 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 2 } },
+  cave_dark_spire_m_b: { image: 'cave_decor', rect: { x: 128, y: 429, w: 64, h: 83 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 1 } },
+  cave_dark_spire_s_b: { image: 'cave_decor', rect: { x: 225, y: 474, w: 27, h: 38 }, mount: 'floor', solid: true, seeThrough: true },
   // Crystal clusters (blue, then green) that glow faintly, and loose stones (two colourings), all walk-through.
   crystal_blue_00: { image: 'cave_decor', rect: { x: 16, y: 594, w: 12, h: 12 }, mount: 'floor', glow: 28, coolGlow: true },
   crystal_blue_01: { image: 'cave_decor', rect: { x: 46, y: 576, w: 14, h: 19 }, mount: 'floor', glow: 28, coolGlow: true },
@@ -678,11 +683,10 @@ export type PropPlacement = { kind: PropKind; tx: number; ty: number; dx?: numbe
 /** The strip at a solid prop's foot that blocks movement (the rest of its tile can be walked through, behind it). */
 export function propBlockRect(def: PropDef): BlockRect {
   const across = def.footprint?.w ?? 1;
-  const up = def.footprint?.h ?? 1;
   const w = def.base?.w ?? Math.min(def.rect.w - 2 * BASE_INSET, across * TILE_WIDTH);
   const d = def.base?.d ?? Math.min(BASE_DEPTH, def.rect.h);
   const cx = TILE_WIDTH / 2;
-  return { x0: cx - w / 2, x1: cx + w / 2, y0: PROP_GROUND - d - (up - 1) * TILE_HEIGHT, y1: PROP_GROUND };
+  return { x0: cx - w / 2, x1: cx + w / 2, y0: PROP_GROUND - d, y1: PROP_GROUND };
 }
 
 /** How often a prop is picked against the others in its group. */

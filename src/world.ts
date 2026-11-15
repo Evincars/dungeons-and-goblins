@@ -637,6 +637,8 @@ export type Entity = {
   removed?: true;
   /** Lies flat on the floor (a rug): drawn under every entity, just over the terrain. */
   flat?: true;
+  /** A tall prop (a column, a rock spire) that clears over whoever stands behind it (render/SeeThrough.ts). */
+  seeThrough?: true;
   /**
    * Built on every machine from the level seed (torches, props, rooms), so it is never sent over the
    * network: each browser makes its own.

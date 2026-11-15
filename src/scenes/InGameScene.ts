@@ -351,12 +351,12 @@ export class InGameScene implements Scene {
     this.noticeDeath(player);
     const view = this.viewOf(player);
     if (view) this.follow(view);
-    // Walls clear over whoever stands behind them near the hero followed (sprites are where this frame draws them).
-    if (!frozen && this.terrain) updateSeeThrough(this.terrain.seeThrough, view?.position);
     this.updateFallen(player);
     this.revealAroundPlayers();
     this.gameLayer.x = -camera.x;
     this.gameLayer.y = -camera.y;
+    // Walls, columns and rocks clear over whoever stands behind them near the hero followed (where this frame draws them).
+    if (this.terrain) updateSeeThrough(this.terrain.seeThrough, view?.position, this.gameLayer, this.level.width * TILE_WIDTH);
 
     this.darkness.update(this.app.renderer, this.level, this.tick);
     this.lights.update(this.app, this.gatherLights(), this.tick);

@@ -16,8 +16,15 @@ const STATIC: ConstructorParameters<typeof ParticleContainer>[0] = {
 export class StaticTileLayer extends Container {
   private readonly bySource = new Map<TextureSource, ParticleContainer>();
 
-  addTile(texture: Texture, x: number, y: number): void {
-    this.layerFor(texture).addParticle(new Particle({ texture, x, y }));
+  addTile(texture: Texture, x: number, y: number): Particle {
+    const particle = new Particle({ texture, x, y });
+    this.layerFor(texture).addParticle(particle);
+    return particle;
+  }
+
+  /** Uploads its tiles afresh after one of them was changed (a wall turned see-through: render/SeeThrough.ts). */
+  refresh(): void {
+    for (const layer of this.bySource.values()) layer.update();
   }
 
   private layerFor(texture: Texture): ParticleContainer {

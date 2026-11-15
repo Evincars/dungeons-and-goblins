@@ -92,13 +92,6 @@ export const FLOOR_BLOCKS: IsoRect[] = [16, 384, 704].map((x) => ({ x, y: 16, w:
  * ends being hidden under the corridor's rims).
  */
 export const STEPS: IsoRect = { x: 888, y: 592, w: 64, h: 32 };
-/**
- * Its sides: stairs seen from the side, four steps a tile across, each step's front below its tread: the left side
- * climbs to the east (its tallest step at its right), the right side to the west. Side by side they make a flight up and
- * over in an east–west corridor, their feet on its south edge, their treads reaching across it.
- */
-export const SIDE_STAIRS_EAST: IsoRect = { x: 848, y: 512, w: 32, h: 96 };
-export const SIDE_STAIRS_WEST: IsoRect = { x: 960, y: 512, w: 32, h: 96 };
 
 // ── Wall decor (mainlevbuild1) ────────────────────────────────────────────────
 

@@ -45,15 +45,12 @@ export const FLOOR_TONES = 3;
 /** A stretch of the isometric castle's floor laid in one tone (tile box; later zones lie over earlier ones). */
 export type FloorZone = { x: number; y: number; w: number; h: number; tone: number };
 /**
- * Stairs in a straight corridor two tiles wide: `across` a north–south one (steps two tiles wide, STAIRS_ROWS tall), or
- * `over` an east–west one (seen from the side: up from the west, a landing, and down to the east, STAIRS_SPAN tiles).
+ * A flight of stairs across a straight north–south corridor two tiles wide: steps STAIRS_PASSAGE tiles across and
+ * STAIRS_ROWS tiles tall, from its top-left tile.
  */
-export const STAIR_DIRS = ['across', 'over'] as const;
-export type StairDir = (typeof STAIR_DIRS)[number];
-export type Stairs = { x: number; y: number; dir: StairDir };
+export type Stairs = { x: number; y: number };
 export const STAIRS_ROWS = 2;
-export const STAIRS_SPAN = 3;
-/** The corridors stairs are laid in are this many tiles wide (the side stairs fill an east–west one's rows). */
+/** The corridors stairs are laid in are this many tiles wide. */
 export const STAIRS_PASSAGE = 2;
 
 /** A tile box as forEachTile's arguments. */

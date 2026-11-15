@@ -16,6 +16,7 @@ import { ATTACK_PERIOD } from '../entities/WeaponStats';
 import { strike } from './Strike';
 import { protectFrom } from './ProtectionSystem';
 import { parried, riposted } from './Reactions';
+import { cheats } from '../game/Cheats';
 
 const PLAYER_HURT_TIME = 25;
 const PLAYER_FREEZE_TIME = 15;
@@ -144,6 +145,8 @@ function missBlow(player: Player, mob: Entity): void {
  */
 export function updateContactDamage(level: Level): void {
   swung.clear();
+  // Enemies frozen by the console (/freeze) strike nobody.
+  if (cheats.foesFrozen) return;
   for (const player of q.players) {
     if (vulnerable(level, player)) swingAt(player);
   }

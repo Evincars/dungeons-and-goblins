@@ -1,13 +1,14 @@
 import { Container } from 'pixi.js';
 import type { Level } from './Level';
-import { buildTerrainPieces } from './TerrainAutotile';
+import { buildTerrainPieces, CAVE_GROUND, OVERHEAD_Z } from './TerrainAutotile';
 import type { TerrainPiece } from './TerrainAutotile';
 import { tilesetRect } from '../render/Sheets';
 import { StaticTileLayer } from '../render/StaticTileLayer';
 import { groundBlends } from './GroundBlend';
 import { blendTexture, commitBlendAtlas } from '../render/BlendAtlas';
 import { tilesetKey } from './Theme';
-import { CAVE_GROUND } from './TerrainAutotile';
+import { SeeThroughWalls } from '../render/SeeThrough';
+import { TILE_WIDTH } from './TileType';
 
 export type LevelView = {
   /** Floors, faces and wall tops that lie beneath every entity. */
@@ -17,6 +18,8 @@ export type LevelView = {
    * a zIndex so it depth-sorts with entities in the game layer.
    */
   occluders: Container[];
+  /** The pieces of those walls that turn see-through over whoever stands behind them. */
+  seeThrough: SeeThroughWalls;
 };
 
 /** The flat batches pieces go to, bottom up. */
@@ -41,6 +44,11 @@ function layerFor(piece: TerrainPiece, base: StaticTileLayer, byZ: Map<number, S
   return layer;
 }
 
+/** A piece of a wall someone can stand behind that turns see-through over them: not its rim, nor an arch overhead. */
+function seesThrough(p: TerrainPiece): p is TerrainPiece & { z: number } {
+  return p.z !== undefined && p.z < OVERHEAD_Z && !p.edge;
+}
+
 /**
  * Batches the autotiled terrain into Pixi v8 ParticleContainers (see StaticTileLayer): the terrain never
  * moves, so it is uploaded once and drawn as a handful of batches instead of thousands of sprites. Bottom
@@ -57,10 +65,15 @@ export function buildLevelView(level: Level): LevelView {
   const tileset = tilesetKey(level.theme);
   const flat = { cave, floors, base };
   // Walls, overlays and the isometric castle's chasm rims may come from another sheet than the level's own.
-  for (const p of buildTerrainPieces(level)) pieceLayer(p, flat, byZ).addTile(tilesetRect(p.sx, p.sy, p.w, p.h, p.sheet ?? tileset), p.dx, p.dy);
+  const seeThrough = new SeeThroughWalls(level.width * TILE_WIDTH);
+  for (const p of buildTerrainPieces(level)) {
+    const layer = pieceLayer(p, flat, byZ);
+    const particle = layer.addTile(tilesetRect(p.sx, p.sy, p.w, p.h, p.sheet ?? tileset), p.dx, p.dy);
+    if (seesThrough(p)) seeThrough.add(particle, layer, p.z, p.dx, p.dy, p.w, p.h);
+  }
   for (const blend of groundBlends(level)) blends.addTile(blendTexture(blend), blend.dx, blend.dy);
   commitBlendAtlas();
   const container = new Container();
   container.addChild(cave, floors, blends, base);
-  return { base: container, occluders: [...byZ.values()] };
+  return { base: container, occluders: [...byZ.values()], seeThrough };
 }

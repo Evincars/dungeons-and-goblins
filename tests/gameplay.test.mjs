@@ -3198,12 +3198,8 @@ test('the isometric castle is built of its own pieces: slanted corners and corri
     const floor = (x, y) => level.getTile(x, y).type === TileType.Floor && !level.slopes.has(x + y * level.width);
     const wall = (x, y) => level.getTile(x, y).type === TileType.Wall;
     for (const s of level.stairs) {
-      // Only in a straight corridor two tiles wide: across a north–south one, or up and over an east–west one.
-      if (s.dir === 'across') {
-        for (const y of [s.y, s.y + 1]) assert.ok(floor(s.x, y) && floor(s.x + 1, y) && wall(s.x - 1, y) && wall(s.x + 2, y), 'stairs across a corridor');
-      } else {
-        for (const x of [s.x, s.x + 1, s.x + 2]) assert.ok(floor(x, s.y) && floor(x, s.y + 1) && wall(x, s.y - 1) && wall(x, s.y + 2), 'stairs along a corridor');
-      }
+      // Only across a straight north–south corridor two tiles wide.
+      for (const y of [s.y, s.y + 1]) assert.ok(floor(s.x, y) && floor(s.x + 1, y) && wall(s.x - 1, y) && wall(s.x + 2, y), 'stairs across a corridor');
     }
     assert.ok(![...level.wallDecor.values()].includes('isoAlcove'), 'the stairs art is never set into a face');
     const back = decodeLevelMap(JSON.parse(JSON.stringify(encodeLevelMap(layout))));
@@ -3284,6 +3280,99 @@ test('the console\'s /dungeon builds the level as the isometric castle too', asy
   runCommand('/dungeon castle2', ctx);
   assert.deepEqual(asked, ['castle2']);
   assert.match(runCommand('/dungeon', ctx)[0], /<catacomb \| castle \| castle2>/, 'the usage lists every kind, spaced');
+});
+
+test('the console\'s /freeze stops every enemy and its blows until switched off; /killall kills them all', async () => {
+  const { runCommand } = await load('game/Console');
+  const { cheats } = await load('game/Cheats');
+  const { updateDeath } = await load('systems/DeathSystem');
+  const level = arena(10, 6);
+  const player = playerAt(4, 2);
+  const mob = mobAt(level, 'goblin', 5, 2);
+  const other = mobAt(level, 'orc', 7, 3);
+  engage(mob, player, 0);
+  const ctx = { player, allowed: true };
+  try {
+    assert.match(runCommand('/freeze', ctx)[0], /frozen/);
+    const at = { ...mob.position };
+    const before = player.health.current;
+    for (let tick = 1; tick <= 180; tick++) {
+      tickWorld(level, tick);
+      updateContactDamage(level);
+    }
+    assert.deepEqual(mob.position, at, 'it stands where it stood');
+    assert.equal(player.health.current, before, 'and strikes nobody');
+    assert.match(runCommand('/freeze off', ctx)[0], /again/);
+    assert.equal(cheats.foesFrozen, false);
+    assert.match(runCommand('/freeze sideways', ctx)[0], /Usage/);
+  } finally {
+    cheats.foesFrozen = false;
+  }
+  assert.match(runCommand('/killall', ctx)[0], /Killed 2/);
+  assert.ok(mob.health.current <= 0 && other.health.current <= 0);
+  updateDeath(level);
+  assert.match(runCommand('/killall', ctx)[0], /Killed 0/, 'the dead are not killed twice');
+});
+
+test('the castles\' south walls are drawn raised over the floor, the catacombs\' as they are', async () => {
+  const { buildTerrainPieces } = await load('level/TerrainAutotile');
+  const { SOUTH_WALL_RAISE } = await load('level/Theme');
+  for (const theme of ['catacomb', 'castle', 'castle2']) {
+    const level = new Level(8, 8, theme);
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) level.setTile(x, y, createTile(x === 0 || y === 0 || x === 7 || y >= 5 ? TileType.Wall : TileType.Floor));
+    const wallTop = 5 * TILE_WIDTH;
+    // The pieces sorted at the south wall's row (they cover whoever steps up to it) reach up over the floor by the raise.
+    const top = Math.min(...buildTerrainPieces(level).filter((p) => p.z === 6 * TILE_WIDTH && p.dx === 3 * TILE_WIDTH).map((p) => p.dy));
+    assert.equal(top, wallTop - SOUTH_WALL_RAISE[theme], theme);
+  }
+  assert.ok(SOUTH_WALL_RAISE.castle > 0 && SOUTH_WALL_RAISE.castle2 > 0 && SOUTH_WALL_RAISE.catacomb === 0);
+});
+
+test('in the isometric castle, faces and slanted faces are drawn in front of whoever stands behind them, and a chasm\'s side rims reach its top', async () => {
+  const { buildTerrainPieces } = await load('level/TerrainAutotile');
+  // A wall only as thick as a face is tall between two floors: the face (rows 3–4) is drawn over feet sinking into row 3.
+  const level = new Level(8, 9, 'castle2');
+  for (let y = 0; y < 9; y++) for (let x = 0; x < 8; x++) level.setTile(x, y, createTile(x === 0 || x === 7 || y === 0 || y === 8 || y === 3 || y === 4 ? TileType.Wall : TileType.Floor));
+  const feet = 3 * TILE_WIDTH + 20;
+  const face = buildTerrainPieces(level).find((p) => p.dx === 3 * TILE_WIDTH && p.dy === 3 * TILE_WIDTH && p.h === 64);
+  assert.ok(face && face.z > feet, 'the face hides the feet of whoever stands at its top');
+  // A chasm: its west and east rims on its top row are laid over its north rim (the same depth, after it).
+  const pit = new Level(8, 8, 'castle2');
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) pit.setTile(x, y, createTile(x === 0 || x === 7 || y === 0 || y === 7 ? TileType.Wall : TileType.Floor));
+  for (let y = 3; y <= 4; y++) for (let x = 2; x <= 5; x++) pit.setTile(x, y, createTile(TileType.Hole));
+  assert.ok(pit.isChasm(2, 3), 'holes that belong to no pit are a chasm');
+  const pieces = buildTerrainPieces(pit);
+  const rowZ = 4 * TILE_WIDTH;
+  const west = pieces.findIndex((p) => p.dx === 2 * TILE_WIDTH && p.dy === 3 * TILE_WIDTH && p.w === 8 && p.z === rowZ);
+  const north = pieces.findIndex((p) => p.dx === 2 * TILE_WIDTH && p.z === rowZ && p.w === 32);
+  assert.ok(west > north && north >= 0, 'the west rim runs up over the north rim');
+});
+
+test('walls turn see-through over a figure behind them, and back once it has gone; their rims stay solid', async () => {
+  const { SeeThroughWalls } = await load('render/SeeThrough');
+  const refreshed = [];
+  const layer = { refresh: () => refreshed.push(1) };
+  const dark = { alpha: 1 };
+  const rim = { alpha: 1 };
+  const walls = new SeeThroughWalls(320);
+  // The dark of a south wall over the tile row 5, drawn at the row's foot; a figure's feet sink into it.
+  walls.add(dark, layer, 6 * TILE_WIDTH, 3 * TILE_WIDTH, 5 * TILE_WIDTH + 8, 32, 24);
+  const feetY = 5 * TILE_WIDTH + 20;
+  for (let frame = 0; frame < 20; frame++) {
+    walls.begin();
+    walls.reveal(3 * TILE_WIDTH, feetY - 40, 4 * TILE_WIDTH, feetY, feetY);
+    walls.settle();
+  }
+  assert.ok(dark.alpha < 0.5, `the dark clears over the figure (${dark.alpha})`);
+  assert.equal(rim.alpha, 1, 'a rim is never filed');
+  assert.ok(refreshed.length > 0, 'its batch is uploaded afresh');
+  // A figure in front of it (feet below its depth) does not clear it.
+  for (let frame = 0; frame < 20; frame++) {
+    walls.begin();
+    walls.reveal(3 * TILE_WIDTH, 7 * TILE_WIDTH - 40, 4 * TILE_WIDTH, 7 * TILE_WIDTH, 7 * TILE_WIDTH);
+    walls.settle();
+  }
+  assert.equal(dark.alpha, 1, 'solid again once nobody is behind it');
 });
 
 test('rooms are not all rectangles: some lose a corner to the wall, squared off or on the slant', () => {

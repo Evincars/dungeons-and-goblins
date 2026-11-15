@@ -175,7 +175,12 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   with slanted faces, rims and arched pieces added under it, `SlantTiles.ts`). Slanted walls (`level.slopes`, `Slopes.ts`, in
   every theme: two tiles across for every tile down) push bodies back over the slant (`Level.pushOutOfSlopes`) rather than
   blocking whole tiles; a north one shows its face on the slant, a south one a rim that feet reach WALL_SINK behind (into the
-  wall tile under it, `Level.slopeRow`) and that is drawn over them, as a straight south wall is. A level is built as the
+  wall tile under it, `Level.slopeRow`) and that is drawn over them, as a straight south wall is. The castles' south walls
+  (straight or slanted) are drawn a little higher over the floor (`SOUTH_WALL_RAISE`, `Theme.ts`; drawing only, not where
+  bodies stop), and faces and slanted faces are drawn among the entities (`faceDepth`), in front of the dark of whatever lies
+  north of them. Walls turn see-through over the heroes and foes standing behind them near the hero followed
+  (`render/SeeThrough.ts`, `systems/SeeThroughSystem.ts`): every occluding piece but a wall's rim (`TerrainPiece.edge`)
+  fades. A level is built as the
   catacombs or a castle (`Theme.ts`, `level.theme`, `run.theme`; the ~ console's `/dungeon catacomb | castle | castle2` rebuilds the
   level as either): a castle uses only `public/castle` (its tileset's `-isometric` copy) — its tileset's pieces are mapped in `CastleTiles.ts` (stone faces
   with pilasters (also framing each decorated stretch), windows and arrow slits, arched alcoves (candles stand lit in them),
@@ -193,8 +198,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   sight and shots cross — floor tones `level.floorZones`, decor set into the faces as `wallDecor`, kept off a face's ends,
   crystal braziers and candles for light, its own foes `shade` and `grick`, `characters/IsoFoes.ts`; more corridors run down
   the slant than in the other themes). Its stairs (`level.stairs`: the U-shaped block of `mainlevbuild1.png` is stairs, never
-  face decor) lie only in straight corridors two tiles wide: steps across a north–south one, and in an east–west one the
-  block's sides, up, a landing and down. Soft edges between kinds of ground (`GroundBlend.ts`, baked
+  face decor) lie only across straight north–south corridors two tiles wide (its middle, the steps; for now never in an
+  east–west one). Soft edges between kinds of ground (`GroundBlend.ts`, baked
   into one atlas by `render/BlendAtlas.ts`), fog of war (`FogRenderer.ts`: per-corner fading buffer, blurred, with
   drifting mist), lighting, and `LevelMap.ts` (a generated level as validated JSON, gzipped to send or save).
 - Animated decor stored one frame per file (`public/catacombs` torches and candles) is padded to one height with the base
@@ -251,7 +256,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   the fallen watch their companions, `Spectate.ts`), resting (`Rest.ts`: short and long rests; in a short rest each hero
   spends the hit dice they chose as they asked or agreed, and one refusal means nobody rests), pausing (`Pause.ts`: in
   co-op the game stops for everyone while anyone has the pause menu open), payments (`Purse.ts`: kills, chests and stashes pay straight into the
-  purse), Need / Pass rolls for rare finds (`LootRoll.ts`) and the ~ console's commands (`Console.ts`). `src/scenes/` — title, settings,
+  purse), Need / Pass rolls for rare finds (`LootRoll.ts`) and the ~ console's commands (`Console.ts`; `/freeze` and `/killall` for testing, the switches in `Cheats.ts`). `src/scenes/` — title, settings,
   key bindings, character select, co-op lobby and the level itself. `src/ui/` — buttons, HUD (health bar, round
   buttons, `HudDialog`, `MinimapView`, `QuickBar`, `RestMenu`, `PartyBanner`, `LootRollPanel`), `PopupMenu`, `HeroPicker`,
   `ConsoleView`, combat log, the inventory's character sheet (`AbilityGrid`, `SheetField`,

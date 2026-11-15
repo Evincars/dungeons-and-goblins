@@ -49,6 +49,7 @@ import { coop } from '../network/CoopSession';
 import { GuestGame, HostGame, pauserName } from '../network/CoopGame';
 import { descend, rebuildLevelAs, restorePlayer, run, startRun } from '../game/Run';
 import { ResultPanel } from '../ui/ResultPanel';
+import { updateSeeThrough } from '../systems/SeeThroughSystem';
 import { attempt, report } from '../core/errors';
 
 /** Tiles revealed around each player when the level starts (every tick after, FOG_REVEAL_TILES). */
@@ -350,6 +351,8 @@ export class InGameScene implements Scene {
     this.noticeDeath(player);
     const view = this.viewOf(player);
     if (view) this.follow(view);
+    // Walls clear over whoever stands behind them near the hero followed (sprites are where this frame draws them).
+    if (!frozen && this.terrain) updateSeeThrough(this.terrain.seeThrough, view?.position);
     this.updateFallen(player);
     this.revealAroundPlayers();
     this.gameLayer.x = -camera.x;

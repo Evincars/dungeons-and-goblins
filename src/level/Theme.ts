@@ -17,3 +17,10 @@ export function tilesetKey(theme: LevelTheme): string {
   if (theme === 'castle2') return 'iso_walls';
   return theme === 'castle' ? 'castle_tileset' : 'tileset';
 }
+
+/**
+ * How far up over the floor north of it a room's south wall (its rim and the dark under it, straight or on the slant)
+ * is drawn, past the wall tile's own top edge: the castles' south walls stand taller, so whoever steps up to one sinks
+ * further behind it (the catacombs' stand as the tileset draws them). Only the drawing moves, not where bodies stop.
+ */
+export const SOUTH_WALL_RAISE = { catacomb: 0, castle: 8, castle2: 8 } as const satisfies Record<LevelTheme, number>;

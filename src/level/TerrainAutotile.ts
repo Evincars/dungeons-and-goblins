@@ -9,11 +9,12 @@ import {
 } from './CastleTiles';
 import type { CastleFaceStyle } from './CastleTiles';
 import type { Pit } from './PitShapes';
-import { buildIsoTerrain, isoFloorSource, slantFootY, slantRimDepth, voidColumn } from './IsoTerrain';
+import { buildIsoTerrain, faceDepth, isoFloorSource, slantFootY, slantRimDepth, voidColumn } from './IsoTerrain';
 import { ISO_FLOORS } from './IsoTiles';
 import { CASTLE_SLANTS, CATACOMB_SLANTS, northCorner } from './SlantTiles';
 import type { SlantArt, SlantSet } from './SlantTiles';
 import type { Slope } from './Slopes';
+import { SOUTH_WALL_RAISE } from './Theme';
 
 /**
  * One textured quad: draw tileset rect (sx,sy,w,h) at world (dx,dy). Pieces with
@@ -29,6 +30,11 @@ export type TerrainPiece = {
   sheet?: string;
   /** A floor tile: drawn under the soft edges where one kind of ground meets another (GroundBlend.ts). */
   floor?: true;
+  /**
+   * The rim along the top of a wall someone can stand behind: it stays solid while the rest of the wall turns
+   * see-through over them (render/SeeThrough.ts), so the wall's outline still shows.
+   */
+  edge?: true;
 };
 
 /**
@@ -235,8 +241,11 @@ class TerrainBuilder {
   private readonly castle: boolean;
   private readonly top: WallTop;
   private readonly slants: SlantSet;
+  /** How far a south wall is drawn up over the floor north of it (Theme.ts). */
+  private readonly raise: number;
 
   constructor(private readonly level: Level) {
+    this.raise = SOUTH_WALL_RAISE[level.theme];
     this.castle = level.theme === 'castle';
     this.top = this.castle ? CASTLE_TOP : CATACOMB_TOP;
     this.slants = this.castle ? CASTLE_SLANTS : CATACOMB_SLANTS;
@@ -411,7 +420,8 @@ class TerrainBuilder {
       return;
     }
     const z = this.occluderZ(sx, sy);
-    if (this.faceK[sx + sy * this.W] === 0) this.addWallTop(sx, sy, dx, dy, z);
+    if (this.faceK[sx + sy * this.W] === 0 && z !== undefined && this.raise > 0) this.addRaisedWallTop(sx, sy, dx, dy, z);
+    else if (this.faceK[sx + sy * this.W] === 0) this.addWallTop(sx, sy, dx, dy, z);
     else if (this.castle) this.addCastleFace(sx, sy, dx, dy, z);
     else quad(this.wallPieces, dx, dy, this.faceSource(sx, sy), SUB, SUB, z);
   };
@@ -515,12 +525,18 @@ class TerrainBuilder {
   /** Wall top: void with a stone outline toward open floor (or a face beside it). */
   private addWallTop(sx: number, sy: number, dx: number, dy: number, z: number | undefined): void {
     const out = this.wallPieces;
+    const first = out.length;
     const t = this.top;
     const openN = !this.solid(sx, sy - 1);
     const sideW = !this.solid(sx - 1, sy) || this.isFace(sx - 1, sy);
     const sideE = !this.solid(sx + 1, sy) || this.isFace(sx + 1, sy);
-    const diagNW = !this.solid(sx - 1, sy - 1);
-    const diagNE = !this.solid(sx + 1, sy - 1);
+    // A corner nub where floor touches only diagonally, unless the wall beside it is a raised south wall (its rim, drawn
+    // higher, meets this side's rim on its own).
+    const diagNW = !this.solid(sx - 1, sy - 1) && !this.raisedRim(sx - 1, sy);
+    const diagNE = !this.solid(sx + 1, sy - 1) && !this.raisedRim(sx + 1, sy);
+    // A side's rim stops short over the raised rim of a south slant starting beside it.
+    const lowW = sideW && !this.raisedSlantBelow(sx - 1, sy);
+    const lowE = sideE && !this.raisedSlantBelow(sx + 1, sy);
 
     // upper-left quarter
     if (sideW && openN) quad(out, dx, dy, t.outerTL, Q, Q, z);
@@ -533,10 +549,45 @@ class TerrainBuilder {
     else if (openN) quad(out, dx + Q, dy, t.edgeTopR, Q, Q, z);
     else if (diagNE) quad(out, dx + Q, dy, t.edgeRight[0], Q, Q, z);
     // lower quarters (south is never open here — that would make this a face)
-    if (sideW) quad(out, dx, dy + Q, t.edgeLeft[1], Q, Q, z);
-    if (sideE) quad(out, dx + Q, dy + Q, t.edgeRight[1], Q, Q, z);
+    if (lowW) quad(out, dx, dy + Q, t.edgeLeft[1], Q, Q, z);
+    if (lowE) quad(out, dx + Q, dy + Q, t.edgeRight[1], Q, Q, z);
+    // Over someone behind it, the outline stays solid while the void below turns see-through.
+    if (z !== undefined) markEdges(out, first);
     // The void itself must also cover anyone standing behind this wall row.
     if (z !== undefined) this.overlayPieces.push({ dx, dy, sx: t.void[0], sy: t.void[1], w: SUB, h: SUB, z: z - VOID_BELOW_WALL });
+  }
+
+  /**
+   * Whether a sub-tile is drawn under a raised rim (SOUTH_WALL_RAISE): the top of a room's south wall (a wall top with
+   * floor north), or a south slant's.
+   */
+  private raisedRim(sx: number, sy: number): boolean {
+    if (this.raise === 0) return false;
+    if (this.sloped(sx, sy)) return this.raisedSlantBelow(sx, sy - 1);
+    return this.solid(sx, sy) && !this.isFace(sx, sy) && !this.solid(sx, sy - 1);
+  }
+
+  /** Whether the sub-tile under (sx, sy) lies on a south slant, whose rim is drawn raised. */
+  private raisedSlantBelow(sx: number, sy: number): boolean {
+    const slope = this.level.slopes.get((sx >> 1) + ((sy + 1) >> 1) * this.level.width);
+    return this.raise > 0 && !!slope && !northCorner(slope.corner);
+  }
+
+  /**
+   * A sub-tile of a room's south wall, drawn SOUTH_WALL_RAISE up over the floor north of it: its outline and dark moved
+   * up, and at the wall tile's foot the dark (and the outline down its sides) run on to fill the gap that leaves.
+   */
+  private addRaisedWallTop(sx: number, sy: number, dx: number, dy: number, z: number): void {
+    const lift = this.raise;
+    this.addWallTop(sx, sy, dx, dy - lift, z);
+    if ((sy & 1) === 0) return;
+    const t = this.top;
+    const y = dy + SUB - lift;
+    quad(this.overlayPieces, dx, y, t.void, SUB, lift, z - VOID_BELOW_WALL);
+    const first = this.wallPieces.length;
+    if (!this.solid(sx - 1, sy) || this.isFace(sx - 1, sy)) quad(this.wallPieces, dx, y, t.edgeLeft[1], Q, lift, z);
+    if (!this.solid(sx + 1, sy) || this.isFace(sx + 1, sy)) quad(this.wallPieces, dx + Q, y, t.edgeRight[1], Q, lift, z);
+    markEdges(this.wallPieces, first);
   }
 
   // ── Slanted walls (Slopes.ts), from the slanted pieces of the tileset's -isometric copy (SlantTiles.ts) ──
@@ -554,12 +605,20 @@ class TerrainBuilder {
     if (!northCorner(corner)) {
       const rim = this.slants.rim[corner];
       const z = slantRimDepth(slope, tx, ty);
-      this.overlayPieces.push(slantPiece(rim, dx, footLeft, z));
-      voidColumn(this.overlayPieces, this.slants.void, dx, footLeft - rim.footLeft + rim.h, z, z);
+      this.overlayPieces.push(slantPiece(rim, dx, footLeft - this.raise, z));
+      voidColumn(this.overlayPieces, this.slants.void, dx, footLeft - this.raise - rim.footLeft + rim.solidH, z, z);
       return;
     }
+    // Drawn among the entities, in front of the dark of whatever lies north of it, a tile's column at a time (an arched
+    // piece two tiles wide may span two rows of the slant).
     const art = this.slantFaceArt(slope, corner, tx, ty);
-    if (art) this.wallPieces.push(slantPiece(art, dx, footLeft));
+    if (!art) return;
+    const top = footLeft - art.footLeft;
+    for (let i = 0; i * TILE_WIDTH < art.w; i++) {
+      const row = i === 0 ? ty : this.slantNeighbour(slope, tx + i - 1, ty, 1);
+      const z = faceDepth(row < 0 ? ty : row);
+      this.wallPieces.push({ dx: dx + i * TILE_WIDTH, dy: top, sx: art.x + i * TILE_WIDTH, sy: art.y, w: TILE_WIDTH, h: art.h, z });
+    }
   }
 
   /** The art a north slope tile shows: an arched piece starting there, its plain face, or none (a wide piece's second tile). */
@@ -657,6 +716,11 @@ class TerrainBuilder {
     }
     quad(out, x1 * SUB, y, LINTEL_RIGHT, SUB, LINTEL_END_H, z);
   }
+}
+
+/** Marks the pieces pushed since `first` as the outline along a wall's top (TerrainPiece.edge). */
+function markEdges(pieces: TerrainPiece[], first: number): void {
+  for (let i = first; i < pieces.length; i++) pieces[i].edge = true;
 }
 
 /** A slanted piece laid along the slant whose foot crosses its tile's left edge at `footLeft` (world y). */

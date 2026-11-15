@@ -1,5 +1,5 @@
-import type { Level, StairDir } from '../Level';
-import { FLOOR_TONES, STAIRS_PASSAGE, STAIRS_ROWS, STAIRS_SPAN } from '../Level';
+import type { Level, Stairs } from '../Level';
+import { FLOOR_TONES, STAIRS_PASSAGE, STAIRS_ROWS } from '../Level';
 import { TileType, TILE_HEIGHT, TILE_WIDTH } from '../TileType';
 import { forEachTile, someTile } from '../Grid';
 import type { SlopeCorner } from '../Slopes';
@@ -104,8 +104,8 @@ const ROOM_STAINS = [0, 2] as const;
 const ROOM_MOSS = [2, 5] as const;
 const FLAT_TRIES = 12;
 /**
- * Stairs in the corridors: a straight stretch of corridor two tiles wide, walled both sides, at least STAIRS_RUN_MIN
- * tiles long, gets a flight in its middle; up to STAIRS_PER_LEVEL flights a level, the stretches picked at random.
+ * Stairs in the corridors: a straight north–south stretch of corridor two tiles wide, walled both sides, at least
+ * STAIRS_RUN_MIN tiles long, gets a flight in its middle; up to STAIRS_PER_LEVEL flights a level, picked at random.
  */
 const STAIRS_RUN_MIN = 5;
 const STAIRS_PER_LEVEL = 4;
@@ -427,54 +427,42 @@ export class IsoDresser {
 
   // ── Stairs in the corridors ──────────────────────────────────────────────────
 
-  /**
-   * Flights of stairs in the corridors between the rooms: across a north–south stretch (steps), or seen from the side in
-   * an east–west one (rising one way or the other), each in the middle of a straight stretch walled both sides.
-   */
+  /** Flights of stairs across the north–south corridors between the rooms, each in the middle of a straight stretch. */
   layCorridorStairs(): void {
-    const spots: Array<{ x: number; y: number; dir: StairDir }> = [];
+    const spots: Stairs[] = [];
     const { level } = this;
     forEachTile(1, 1, level.width - 2, level.height - 2, (x, y) => {
-      if (this.startsRun(x, y, 0, 1)) this.middleOfRun(x, y, 0, 1, spots);
-      if (this.startsRun(x, y, 1, 0)) this.middleOfRun(x, y, 1, 0, spots);
+      if (this.startsRun(x, y)) this.middleOfRun(x, y, spots);
     });
     for (let i = 0; i < STAIRS_PER_LEVEL && spots.length; i++) {
       const spot = spots.splice(Math.floor(this.site.rng() * spots.length), 1)[0];
       if (this.stairsNear(spot.x, spot.y)) continue;
       level.stairs.push(spot);
-      const [w, h] = spot.dir === 'across' ? [STAIRS_PASSAGE, STAIRS_ROWS] : [STAIRS_SPAN, STAIRS_PASSAGE];
-      forEachTile(spot.x, spot.y, spot.x + w - 1, spot.y + h - 1, (x, y) => this.site.claim(x, y));
+      forEachTile(spot.x, spot.y, spot.x + STAIRS_PASSAGE - 1, spot.y + STAIRS_ROWS - 1, (x, y) => this.site.claim(x, y));
     }
   }
 
   /**
-   * Whether (x, y) is a slice of a straight corridor two tiles wide, running along (dx, dy): both its tiles plain floor
-   * (no slant, no safe room), with plain wall either side of it.
+   * Whether row y at x is a slice of a straight north–south corridor two tiles wide: both its tiles plain floor (no
+   * slant, no safe room), with plain wall either side of it.
    */
-  private passage(x: number, y: number, dx: number, dy: number): boolean {
+  private passage(x: number, y: number): boolean {
     const W = this.level.width;
-    const open = (tx: number, ty: number): boolean => this.site.isFloor(tx, ty) && !this.level.slopes.has(tx + ty * W) && !this.level.isSafeZone(tx, ty);
-    const wall = (tx: number, ty: number): boolean => this.site.isWall(tx, ty) && !this.level.slopes.has(tx + ty * W);
-    // Across the corridor: its two tiles, and the walls beyond them.
-    const ax = dy, ay = dx;
-    return open(x, y) && open(x + ax, y + ay) && wall(x - ax, y - ay) && wall(x + STAIRS_PASSAGE * ax, y + STAIRS_PASSAGE * ay);
+    const open = (tx: number): boolean => this.site.isFloor(tx, y) && !this.level.slopes.has(tx + y * W) && !this.level.isSafeZone(tx, y);
+    const wall = (tx: number): boolean => this.site.isWall(tx, y) && !this.level.slopes.has(tx + y * W);
+    return open(x) && open(x + 1) && wall(x - 1) && wall(x + STAIRS_PASSAGE);
   }
 
-  /** Whether a straight corridor slice starts at (x, y) (none just before it). */
-  private startsRun(x: number, y: number, dx: number, dy: number): boolean {
-    return this.passage(x, y, dx, dy) && !this.passage(x - dx, y - dy, dx, dy);
+  /** Whether a straight corridor stretch starts at (x, y) (none just above it). */
+  private startsRun(x: number, y: number): boolean {
+    return this.passage(x, y) && !this.passage(x, y - 1);
   }
 
   /** The middle of the straight stretch starting at (x, y), if it is long enough, as a spot for stairs. */
-  private middleOfRun(x: number, y: number, dx: number, dy: number, out: Array<{ x: number; y: number; dir: StairDir }>): void {
+  private middleOfRun(x: number, y: number, out: Stairs[]): void {
     let n = 1;
-    while (this.passage(x + n * dx, y + n * dy, dx, dy)) n++;
-    if (n < STAIRS_RUN_MIN) return;
-    if (dy === 1) {
-      out.push({ x, y: y + Math.floor((n - STAIRS_ROWS) / 2), dir: 'across' });
-      return;
-    }
-    out.push({ x: x + Math.floor((n - STAIRS_SPAN) / 2), y, dir: 'over' });
+    while (this.passage(x, y + n)) n++;
+    if (n >= STAIRS_RUN_MIN) out.push({ x, y: y + Math.floor((n - STAIRS_ROWS) / 2) });
   }
 
   /** Whether stairs already stand within a few tiles (two flights side by side would read as one muddle). */

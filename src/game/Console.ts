@@ -1,4 +1,5 @@
-import { world } from '../world';
+import { q, world } from '../world';
+import { cheats } from './Cheats';
 import { LEVEL_THEMES, isLevelTheme } from '../level/Theme';
 import type { LevelTheme } from '../level/Theme';
 import type { InventoryItem, Player } from '../world';
@@ -8,8 +9,9 @@ import { text } from '../core/texts';
 import { applyLoadout, freeSquare } from './PlayerActions';
 
 /**
- * The ~ console's commands, for testing (as in Catacomb Snatch Redux): money, god mode, experience and any
- * item by its catalogue id. Lines start with a slash ("/money 500"); each returns what to print.
+ * The ~ console's commands, for testing (as in Catacomb Snatch Redux): money, god mode, experience, any item by its
+ * catalogue id, the kind of dungeon, and freezing or killing every enemy. Lines start with a slash ("/money 500"); each
+ * returns what to print.
  */
 
 /** The most coins or experience one command may give or take. */
@@ -80,6 +82,24 @@ function rebuildAs(theme: string | undefined, ctx: ConsoleContext): string[] {
   return [text('console.dungeon.built', { theme })];
 }
 
+/** /freeze [on|off]: every enemy stands still and attacks nobody (Cheats.ts), or acts again. */
+function freezeFoes(arg: string | undefined): string[] {
+  if (arg !== undefined && arg !== 'on' && arg !== 'off') return [text('console.freeze.usage')];
+  cheats.foesFrozen = arg === undefined ? !cheats.foesFrozen : arg === 'on';
+  return [text(cheats.foesFrozen ? 'console.freeze.on' : 'console.freeze.off')];
+}
+
+/** /killall: every enemy on this level drops dead (dying as if slain: their cries, experience and drops follow). */
+function killAll(): string[] {
+  let killed = 0;
+  for (const mob of q.mobs) {
+    if (mob.removed || mob.health.current <= 0) continue;
+    mob.health.current = 0;
+    killed++;
+  }
+  return [text('console.killall.done', { count: killed })];
+}
+
 /** Item ids containing the filter (all of them without one), a page at a time. */
 function listItems(filter: string | undefined): string[] {
   const wanted = filter ? normaliseId(filter) : '';
@@ -108,6 +128,8 @@ export function runCommand(line: string, ctx: ConsoleContext): string[] {
     case 'xp': case 'exp': case 'addxp': return giveExperience(player, parseAmount(args[0]));
     case 'additem': case 'item': return addItem(player, args[0]);
     case 'dungeon': return rebuildAs(args[0]?.toLowerCase(), ctx);
+    case 'freeze': return freezeFoes(args[0]?.toLowerCase());
+    case 'killall': case 'kill': return killAll();
     default: return [text('console.unknown', { name: command })];
   }
 }

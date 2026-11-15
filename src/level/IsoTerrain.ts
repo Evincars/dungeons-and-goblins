@@ -1,16 +1,17 @@
 import type { Level, Stairs } from './Level';
-import { STAIRS_PASSAGE, STAIRS_ROWS, STAIRS_SPAN } from './Level';
+import { STAIRS_ROWS } from './Level';
 import type { TerrainPiece } from './TerrainAutotile';
 import { TileType, TILE_HEIGHT, TILE_WIDTH, WALL_SINK } from './TileType';
 import { forEachTile, someTile, tileHash } from './Grid';
 import {
   CHASM_LIP_S, CHASM_RIM_E, CHASM_RIM_N, CHASM_RIM_W, FACE_END_LEFT, FACE_END_RIGHT, FACE_H, FACE_PILASTER, FACE_XS, FACE_Y,
-  FLOOR_BLOCKS, ISO_DECOR, ISO_FLOORS, ISO_VOID, SIDE_STAIRS_EAST, SIDE_STAIRS_WEST, SLANT_FACE, STEPS, SUNKEN_COLUMNS, WALL_NUB_NE,
+  FLOOR_BLOCKS, ISO_DECOR, ISO_FLOORS, ISO_VOID, SLANT_FACE, STEPS, SUNKEN_COLUMNS, WALL_NUB_NE,
   WALL_NUB_NW, WALL_RIM_E, WALL_RIM_N, WALL_RIM_NE, WALL_RIM_NW, WALL_RIM_SLANT, WALL_RIM_W, isIsoDecor,
 } from './IsoTiles';
 import type { IsoDecorArt, IsoRect, SlantStrip } from './IsoTiles';
 import type { Slope } from './Slopes';
 import { isSouthSlope } from './Slopes';
+import { SOUTH_WALL_RAISE } from './Theme';
 
 /**
  * Autotiles the isometric castle (Theme 'castle2') on its 32 px tiles, from the art mapped in IsoTiles.ts. What a tile
@@ -54,14 +55,42 @@ const LONE_TOP_MIN = 2;
 const LONE_TOP_SPAN = 20;
 /** A slanted face rises over this many tiles above its slope tile (its art is 80 px tall). */
 const SLANT_FACE_ROWS = 3;
-/** The side stairs' feet stand this far below the corridor's south edge (on the rim's lip, as the art's base rows). */
-const SIDE_STAIRS_FOOT = 0;
+/** How tall the stone of a rim along a dark's north edge is (the rest of its piece is the dark). */
+const RIM_EDGE_H = 8;
 /** A south slant's rim is laid over whoever stands just behind it: sorted a pixel past the deepest feet reach. */
 const RIM_DEPTH_BIAS = 1;
+
+/**
+ * The depth a face (straight or slanted) is drawn at, by the row of its foot tile (or its slope tile): in front of
+ * whoever stands north of that row, behind whoever stands in it or south of it.
+ */
+export function faceDepth(ty: number): number {
+  return ty * TILE_HEIGHT;
+}
 
 /** A piece of the walls' sheet (the level's own tileset) at (dx, dy). */
 function wallPiece(r: IsoRect, dx: number, dy: number, h = r.h, z?: number): TerrainPiece {
   return z === undefined ? { dx, dy, sx: r.x, sy: r.y, w: r.w, h } : { dx, dy, sx: r.x, sy: r.y, w: r.w, h, z };
+}
+
+/** A piece marked as the rim along a wall's top, which stays solid while the wall turns see-through. */
+function edge(piece: TerrainPiece): TerrainPiece {
+  piece.edge = true;
+  return piece;
+}
+
+/**
+ * A rim along a dark's north edge with the dark under it, sorted at z: the rim's own strip (RIM_EDGE_H) and the dark
+ * below it as two pieces, so the dark can turn see-through while the rim stays.
+ */
+function rimOverDark(out: TerrainPiece[], r: IsoRect, dx: number, dy: number, z: number, sheet?: string): void {
+  const rim: TerrainPiece = { dx, dy, sx: r.x, sy: r.y, w: r.w, h: RIM_EDGE_H, z, edge: true };
+  const dark: TerrainPiece = { dx, dy: dy + RIM_EDGE_H, sx: r.x, sy: r.y + RIM_EDGE_H, w: r.w, h: r.h - RIM_EDGE_H, z };
+  if (sheet) {
+    rim.sheet = sheet;
+    dark.sheet = sheet;
+  }
+  out.push(dark, rim);
 }
 
 /** A piece of the floors' sheet (chasm rims, sunken columns) at (dx, dy). */
@@ -120,7 +149,12 @@ class IsoTerrainBuilder {
   private readonly walls: TerrainPiece[] = [];
   private readonly over: TerrainPiece[] = [];
 
-  constructor(private readonly level: Level) {}
+  /** How far a south wall is drawn up over the floor north of it (Theme.ts). */
+  private readonly raise: number;
+
+  constructor(private readonly level: Level) {
+    this.raise = SOUTH_WALL_RAISE[level.theme];
+  }
 
   build(): TerrainPiece[] {
     const { level } = this;
@@ -177,17 +211,22 @@ class IsoTerrainBuilder {
     this.floors.push({ dx: tx * TILE_WIDTH, dy: ty * TILE_HEIGHT, sx, sy, w: TILE_WIDTH, h: TILE_HEIGHT, sheet: ISO_FLOORS, floor: true });
   }
 
-  /** A face from its foot tile up: a plain stretch, ended where the face ends, with a pilaster now and then. */
+  /**
+   * A face from its foot tile up: a plain stretch, ended where the face ends, with a pilaster now and then. It is drawn
+   * among the entities, in front of whoever stands behind it (a room's floor can come right up to its top, where a wall
+   * between two rooms is no thicker than the face is tall).
+   */
   private addFace(tx: number, ty: number): void {
     const dx = tx * TILE_WIDTH;
     const dy = (ty + 1) * TILE_HEIGHT - FACE_H;
-    this.walls.push({ dx, dy, sx: FACE_XS[tx & 3], sy: FACE_Y, w: TILE_WIDTH, h: FACE_H });
+    const z = faceDepth(ty);
+    this.over.push({ dx, dy, sx: FACE_XS[tx & 3], sy: FACE_Y, w: TILE_WIDTH, h: FACE_H, z });
     const endsLeft = !this.faceFoot(tx - 1, ty);
     const endsRight = !this.faceFoot(tx + 1, ty);
-    if (endsLeft) this.over.push(wallPiece(FACE_END_LEFT, dx, dy));
-    if (endsRight) this.over.push(wallPiece(FACE_END_RIGHT, dx + TILE_WIDTH - FACE_END_RIGHT.w, dy));
+    if (endsLeft) this.over.push(wallPiece(FACE_END_LEFT, dx, dy, FACE_END_LEFT.h, z));
+    if (endsRight) this.over.push(wallPiece(FACE_END_RIGHT, dx + TILE_WIDTH - FACE_END_RIGHT.w, dy, FACE_END_RIGHT.h, z));
     const pilaster = !endsLeft && !this.decorAround(tx, ty) && tileHash(tx, ty) % PILASTER_EVERY === 0;
-    if (pilaster) this.over.push(wallPiece(FACE_PILASTER, dx - PILASTER_SHIFT, dy));
+    if (pilaster) this.over.push(wallPiece(FACE_PILASTER, dx - PILASTER_SHIFT, dy, FACE_PILASTER.h, z));
   }
 
   /** Whether decor is set into the face at this foot tile or the one left of it (a pilaster there would cut it). */
@@ -198,41 +237,69 @@ class IsoTerrainBuilder {
 
   /**
    * A wall top: dark, with a rim on each side floor touches, the corners where two rims meet, and columns in the dark.
-   * One with floor north of it is a room's (or corridor's) south edge: drawn over whoever steps up to it.
+   * One with floor north of it is a room's (or corridor's) south edge: drawn over whoever steps up to it, and raised a
+   * little over the floor (SOUTH_WALL_RAISE), the dark and its side rims run on down to the tile's foot.
    */
   private addWallTop(tx: number, ty: number): void {
     const dx = tx * TILE_WIDTH;
     const dy = ty * TILE_HEIGHT;
     const north = this.ground(tx, ty - 1);
     const z = north ? (ty + 1) * TILE_HEIGHT : undefined;
+    const lift = north ? this.raise : 0;
+    const top = dy - lift;
     const west = this.rimmedBeside(tx - 1, ty);
     const east = this.rimmedBeside(tx + 1, ty);
     const out = z === undefined ? this.walls : this.over;
-    if (north) out.push(wallPiece(WALL_RIM_N[tx & 3], dx, dy, WALL_RIM_N[0].h, z));
-    if (west) out.push(wallPiece(WALL_RIM_W, dx, dy, WALL_RIM_W.h, z));
-    if (east) out.push(wallPiece(WALL_RIM_E, dx + TILE_WIDTH - WALL_RIM_E.w, dy, WALL_RIM_E.h, z));
-    if (north && west) this.over.push(wallPiece(WALL_RIM_NW, dx, dy, WALL_RIM_NW.h, z));
-    if (north && east) this.over.push(wallPiece(WALL_RIM_NE, dx + TILE_WIDTH - WALL_RIM_NE.w, dy, WALL_RIM_NE.h, z));
-    if (!north && !west && this.ground(tx - 1, ty - 1)) this.over.push(wallPiece(WALL_NUB_NW, dx, dy));
-    if (!north && !east && this.ground(tx + 1, ty - 1)) this.over.push(wallPiece(WALL_NUB_NE, dx + TILE_WIDTH - WALL_NUB_NE.w, dy));
-    if (north) this.addSunkenColumn(tx, ty, SUNKEN_EVERY, z);
+    const eastX = dx + TILE_WIDTH - WALL_RIM_E.w;
+    // A side's rim reaches down past the tile by the lift, or stops short over a raised south slant starting beside it.
+    const westH = WALL_RIM_W.h + lift - (this.raisedSlantBelow(tx - 1, ty) ? this.raise : 0);
+    const eastH = WALL_RIM_E.h + lift - (this.raisedSlantBelow(tx + 1, ty) ? this.raise : 0);
+    if (z !== undefined) rimOverDark(out, WALL_RIM_N[tx & 3], dx, top, z);
+    if (lift > 0) out.push(wallPiece(ISO_VOID, dx, dy + TILE_HEIGHT - lift, lift, z));
+    if (west) out.push(edge(wallPiece(WALL_RIM_W, dx, top, westH, z)));
+    if (east) out.push(edge(wallPiece(WALL_RIM_E, eastX, top, eastH, z)));
+    if (north && west) this.over.push(edge(wallPiece(WALL_RIM_NW, dx, top, WALL_RIM_NW.h, z)));
+    if (north && east) this.over.push(edge(wallPiece(WALL_RIM_NE, dx + TILE_WIDTH - WALL_RIM_NE.w, top, WALL_RIM_NE.h, z)));
+    // Where floor touches only at a corner, the nub joining the rims round it; none beside a raised south wall, whose
+    // rim (drawn higher) meets the side's on its own.
+    if (!north && !west && this.ground(tx - 1, ty - 1) && !this.raisedRim(tx - 1, ty)) this.over.push(wallPiece(WALL_NUB_NW, dx, dy));
+    if (!north && !east && this.ground(tx + 1, ty - 1) && !this.raisedRim(tx + 1, ty)) {
+      this.over.push(wallPiece(WALL_NUB_NE, dx + TILE_WIDTH - WALL_NUB_NE.w, dy));
+    }
+    if (north) this.addSunkenColumn(tx, ty, SUNKEN_EVERY, z, lift);
     else this.addLoneColumn(tx, ty, LONE_EVERY);
   }
 
-  /** A chasm tile: the darker rims of the great pit, and only the floor's lip where floor lies south of it. */
+  /** Whether a tile is drawn under a raised rim (SOUTH_WALL_RAISE): a room's south wall (ground north of it), or a south slant's. */
+  private raisedRim(tx: number, ty: number): boolean {
+    if (this.cell(tx, ty) === 'slope') return this.raisedSlantBelow(tx, ty - 1);
+    return this.raise > 0 && this.cell(tx, ty) === 'wall' && !this.isFace(tx, ty) && this.ground(tx, ty - 1);
+  }
+
+  /** Whether the tile under (tx, ty) lies on a south slant, whose rim is drawn raised. */
+  private raisedSlantBelow(tx: number, ty: number): boolean {
+    const slope = this.level.slopes.get(tx + (ty + 1) * this.level.width);
+    return this.raise > 0 && !!slope && isSouthSlope(slope);
+  }
+
+  /**
+   * A chasm tile: the darker rims of the great pit, and only the floor's lip where floor lies south of it. Its north rim
+   * hangs over the feet of whoever stands at its edge, as a wall's does; the side rims run up over its ends.
+   */
   private addChasm(tx: number, ty: number): void {
     const dx = tx * TILE_WIDTH;
     const dy = ty * TILE_HEIGHT;
     const north = this.ground(tx, ty - 1);
-    // Its north rim hangs over the feet of whoever stands at its edge, as a wall's does.
-    if (north) this.over.push(floorSheetPiece(CHASM_RIM_N[tx & 3], dx, dy, CHASM_RIM_N[0].h, (ty + 1) * TILE_HEIGHT));
+    const z = north ? (ty + 1) * TILE_HEIGHT : undefined;
+    const sides = north ? this.over : this.walls;
+    if (z !== undefined) rimOverDark(this.over, CHASM_RIM_N[tx & 3], dx, dy, z, ISO_FLOORS);
     if (this.ground(tx, ty + 1)) {
       const lip = CHASM_LIP_S[tx & 3];
       this.walls.push(floorSheetPiece(lip, dx, dy + TILE_HEIGHT - lip.h));
     }
-    if (this.ground(tx - 1, ty)) this.walls.push(floorSheetPiece(CHASM_RIM_W, dx, dy));
-    if (this.ground(tx + 1, ty)) this.walls.push(floorSheetPiece(CHASM_RIM_E, dx + TILE_WIDTH - CHASM_RIM_E.w, dy));
-    if (north) this.addSunkenColumn(tx, ty, SUNKEN_EVERY_CHASM, (ty + 1) * TILE_HEIGHT);
+    if (this.ground(tx - 1, ty)) sides.push(edge(floorSheetPiece(CHASM_RIM_W, dx, dy, CHASM_RIM_W.h, z)));
+    if (this.ground(tx + 1, ty)) sides.push(edge(floorSheetPiece(CHASM_RIM_E, dx + TILE_WIDTH - CHASM_RIM_E.w, dy, CHASM_RIM_E.h, z)));
+    if (north) this.addSunkenColumn(tx, ty, SUNKEN_EVERY_CHASM, z);
     else this.addLoneColumn(tx, ty, LONE_EVERY_CHASM);
   }
 
@@ -240,15 +307,15 @@ class IsoTerrainBuilder {
    * Now and then, under a rim with the dark deep below it, a column sinking from the floor's edge into the dark: only
    * where the rim runs on to either side (never at its corner), a little off the tile's middle.
    */
-  private addSunkenColumn(tx: number, ty: number, every: number, z: number | undefined): void {
+  private addSunkenColumn(tx: number, ty: number, every: number, z: number | undefined, lift = 0): void {
     const v = tileHash(tx, ty);
     if (v % every !== 0 || !this.rimRunsOn(tx, ty)) return;
     const depth = this.darkBelow(tx, ty);
     if (depth < SUNKEN_DEPTH) return;
     const column = SUNKEN_COLUMNS[(v >>> 8) % SUNKEN_COLUMNS.length];
-    const h = Math.min(column.h, depth * TILE_HEIGHT - SUNKEN_TOP);
+    const h = Math.min(column.h, depth * TILE_HEIGHT - SUNKEN_TOP + lift);
     const shift = ((v >>> 4) % (SUNKEN_JITTER * 2 + 1)) - SUNKEN_JITTER;
-    this.over.push(floorSheetPiece(column, tx * TILE_WIDTH + shift, ty * TILE_HEIGHT + SUNKEN_TOP, h, z));
+    this.over.push(floorSheetPiece(column, tx * TILE_WIDTH + shift, ty * TILE_HEIGHT + SUNKEN_TOP - lift, h, z));
   }
 
   /** Whether the rim over (tx, ty) runs on along both neighbours (the same kind of dark, floor north of each). */
@@ -321,11 +388,11 @@ class IsoTerrainBuilder {
     const dx = tx * TILE_WIDTH;
     if (!isSouthSlope(slope)) {
       const strip: SlantStrip = SLANT_FACE[slope.corner === 'nw' ? 'nw' : 'ne'];
-      this.walls.push(wallPiece(strip, dx, footLeft - strip.footLeft));
+      this.over.push(wallPiece(strip, dx, footLeft - strip.footLeft, strip.h, faceDepth(ty)));
       return;
     }
     const strip: SlantStrip = WALL_RIM_SLANT[slope.corner === 'sw' ? 'sw' : 'se'];
-    const top = footLeft - strip.footLeft;
+    const top = footLeft - strip.footLeft - this.raise;
     const z = slantRimDepth(slope, tx, ty);
     this.over.push(wallPiece(strip, dx, top, strip.h, z));
     voidColumn(this.over, ISO_VOID, dx, top + strip.h, z, z);
@@ -333,30 +400,20 @@ class IsoTerrainBuilder {
 
   // ── Stairs and decor ─────────────────────────────────────────────────────────
 
-  /**
-   * A flight of stairs in a corridor: steps across a north–south one (STAIRS_ROWS tiles of them), or up and over an
-   * east–west one, seen from the side (up, a landing, down; as the art's U has them either side of its steps): their feet
-   * on the corridor's south edge, their top steps a little up its north face.
-   */
+  /** A flight of stairs across a north–south corridor: STAIRS_ROWS tiles of steps. */
   private addStairs(s: Stairs): void {
-    const dx = s.x * TILE_WIDTH;
-    if (s.dir === 'across') {
-      for (let row = 0; row < STAIRS_ROWS; row++) this.over.push(wallPiece(STEPS, dx, (s.y + row) * TILE_HEIGHT));
-      return;
-    }
-    const foot = (s.y + STAIRS_PASSAGE) * TILE_HEIGHT + SIDE_STAIRS_FOOT;
-    this.over.push(wallPiece(SIDE_STAIRS_EAST, dx, foot - SIDE_STAIRS_EAST.h));
-    this.over.push(wallPiece(SIDE_STAIRS_WEST, dx + (STAIRS_SPAN - 1) * TILE_WIDTH, foot - SIDE_STAIRS_WEST.h));
+    for (let row = 0; row < STAIRS_ROWS; row++) this.over.push(wallPiece(STEPS, s.x * TILE_WIDTH, (s.y + row) * TILE_HEIGHT));
   }
 
   /**
    * Decor set into a face from tile (tx, ty): centred on its tiles of a straight face, its foot just above the floor;
-   * on a slanted face, its foot following the slant from the decor's first column.
+   * on a slanted face, its foot following the slant from the decor's first column. Either is drawn with its face: a
+   * slanted one a tile's column at a time, each at the depth of the slant in that column.
    */
   private addDecor(tx: number, ty: number, art: IsoDecorArt): void {
     if (!art.slant) {
       const dx = tx * TILE_WIDTH + (art.span * TILE_WIDTH - art.w) / 2;
-      this.over.push(wallPiece(art, Math.round(dx), (ty + 1) * TILE_HEIGHT - art.lift - art.h));
+      this.over.push(wallPiece(art, Math.round(dx), (ty + 1) * TILE_HEIGHT - art.lift - art.h, art.h, faceDepth(ty)));
       return;
     }
     const slope = this.level.slopes.get(tx + ty * this.level.width);
@@ -365,7 +422,19 @@ class IsoTerrainBuilder {
     const lowLeft = slope.corner === 'nw';
     const footLeft = slantFootY(slope, tx, ty, false);
     const foot = lowLeft ? footLeft : footLeft + (art.w * TILE_HEIGHT) / (2 * TILE_WIDTH);
-    this.over.push(wallPiece(art, tx * TILE_WIDTH, foot - art.lift - art.h));
+    const dy = foot - art.lift - art.h;
+    for (let i = 0; i * TILE_WIDTH < art.w; i++) {
+      const row = this.slantRowNear(tx + i, ty, slope.corner);
+      this.over.push({ dx: (tx + i) * TILE_WIDTH, dy, sx: art.x + i * TILE_WIDTH, sy: art.y, w: TILE_WIDTH, h: art.h, z: faceDepth(row) });
+    }
+  }
+
+  /** The row of the slope tile of a slant (by its corner) in column tx, near row ty (ty itself if none is found). */
+  private slantRowNear(tx: number, ty: number, corner: Slope['corner']): number {
+    for (let y = ty - SLANT_FACE_ROWS; y <= ty + SLANT_FACE_ROWS; y++) {
+      if (this.level.slopes.get(tx + y * this.level.width)?.corner === corner) return y;
+    }
+    return ty;
   }
 }
 

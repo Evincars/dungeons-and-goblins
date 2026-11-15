@@ -9,6 +9,11 @@ import type { SlopeCorner } from './Slopes';
 
 /** A piece drawn along a slant: where its foot (the slant) is down the piece at its left and right edges. */
 export type SlantArt = { x: number; y: number; w: number; h: number; footLeft: number; footRight: number };
+/**
+ * A rim along a south slant: solid down to `solidH` in every column; below that, its shearing leaves a corner open
+ * (the dark laid under it starts there, so no floor shows through).
+ */
+export type SlantRim = SlantArt & { solidH: number };
 
 /** A face block is 64 px of face over an 8 px plinth, sheared: a tile's strip drops 16 px across, two tiles 32. */
 const FACE_FOOT = 64;
@@ -37,15 +42,18 @@ function slantDecor(x: number, y: number, tiles: number, corner: 'nw' | 'ne'): S
 }
 
 /** The rim along a south slant (a tile), the dark under it: the south-west one drops to the right, the south-east to the left. */
-function rimStrip(x: number, y: number, corner: 'sw' | 'se'): SlantArt {
-  return { x, y, w: STRIP_W, h: RIM_H, footLeft: corner === 'sw' ? 0 : TILE_DROP, footRight: corner === 'sw' ? TILE_DROP : 0 };
+function rimStrip(x: number, y: number, corner: 'sw' | 'se'): SlantRim {
+  return {
+    x, y, w: STRIP_W, h: RIM_H, solidH: RIM_H - TILE_DROP,
+    footLeft: corner === 'sw' ? 0 : TILE_DROP, footRight: corner === 'sw' ? TILE_DROP : 0,
+  };
 }
 
 export type SlantSet = {
   /** The plain slanted faces, two tiles each, by corner; `cobble` the cobblestone walls' (the castle has none). */
   face: Readonly<Record<'nw' | 'ne', readonly [SlantArt, SlantArt]>>;
   cobble?: Readonly<Record<'nw' | 'ne', readonly [SlantArt, SlantArt]>>;
-  rim: Readonly<Record<'sw' | 'se', SlantArt>>;
+  rim: Readonly<Record<'sw' | 'se', SlantRim>>;
   void: { x: number; y: number; w: number; h: number };
   /** Arched pieces set into slanted faces now and then: a tile wide (a window), and two (a niche, an alcove). */
   narrow: Readonly<Record<'nw' | 'ne', SlantArt>>;

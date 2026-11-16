@@ -798,9 +798,9 @@ test('coins flung at a wall stop at its edge instead of landing on top of it', (
 });
 
 test('the item catalogues load every weapon, shield and armour, each with a name and stats to tune', () => {
-  assert.equal(WEAPONS.length, 160);
+  assert.equal(WEAPONS.length, 72, 'the sprites of /weapons that are basic D&D weapons');
   assert.equal(SHIELDS.length, 140);
-  assert.equal(ARMORS.length, 220);
+  assert.equal(ARMORS.length, 13, 'the twelve D&D armours and a robe');
   for (const item of [...WEAPONS, ...SHIELDS, ...ARMORS]) {
     assert.ok(item.name && item.icon && item.gear && item.stats, item.id);
     assert.ok(validCommand({ kind: 'loadout', inventory: [item], equipped: {} }), `${item.id} passes the network checks`);
@@ -810,6 +810,38 @@ test('the item catalogues load every weapon, shield and armour, each with a name
   assert.equal(EFFECT_COLOURS.length, 9);
 });
 
+test('weapons and armour are D&D\'s own: SRD damage, price and weight, no bonuses; each suit comes in one of four colours', async () => {
+  const { WEAPON_TABLE, isWeaponBase } = await load('rules/WeaponTable');
+  const { ARMOR_TABLE } = await load('rules/ArmorTable');
+  const { freshCopy, randomItem, armorIconRegions, ARMOR_COLOURS } = await load('entities/ItemCatalog');
+  const { catalogIconSources } = await load('entities/ItemCatalog');
+  for (const base of ['pistol', 'musket', 'punch_dagger']) assert.ok(!isWeaponBase(base), `${base} is not a basic D&D weapon`);
+  assert.ok(catalogIconSources().filter((s) => s.key.startsWith('weapon_')).every((s) => s.src.startsWith('/weapons/')), 'weapon art from /weapons only');
+  for (const item of [...WEAPONS, ...ARMORS]) assert.deepEqual(item.stats, {}, `${item.id} adds no ability scores`);
+  const named = (base) => WEAPONS.find((w) => w.base === base);
+  assert.deepEqual([named('longsword').name, named('longsword').value, named('longsword').weight], ['Longsword', 15, 1.5], '15 gp, 3 lb');
+  assert.deepEqual([named('greataxe').value, named('greataxe').weight], [30, 3.5]);
+  assert.equal(named('dart').value, 1, 'a dart\'s 5 cp is paid as a gold piece');
+  assert.deepEqual(WEAPON_TABLE.longbow.distance, [150, 600]);
+  assert.deepEqual([WEAPON_TABLE.warhammer.damage.count, WEAPON_TABLE.warhammer.damage.sides, WEAPON_TABLE.warhammer.versatile.sides], [1, 8, 10]);
+  const plate = ARMORS.find((a) => a.base === 'plate');
+  assert.deepEqual([plate.name, plate.value, plate.weight, ARMOR_TABLE.plate.ac], ['Plate armour', 1500, 32.5, 18]);
+  const robe = ARMORS.find((a) => a.id === 'armor_robe');
+  assert.equal(robe.base, undefined, 'a robe is clothes: no armour');
+  // The suits' art: a column of armors.png, its first four rows the colours.
+  const regions = armorIconRegions();
+  assert.equal(Object.keys(regions).length, ARMORS.length * ARMOR_COLOURS);
+  assert.deepEqual(regions.armor_plate_1, { x: 8 * 32, y: 0, w: 32, h: 32 }, 'plate is the ninth column');
+  assert.deepEqual(regions.armor_splint_4, { x: 15 * 32, y: 3 * 32, w: 32, h: 32 });
+  assert.ok(Object.values(regions).every((r) => r.y < ARMOR_COLOURS * 32), 'only the first four rows');
+  const colours = new Set();
+  for (let i = 0; i < 80; i++) colours.add(freshCopy(plate).icon);
+  assert.deepEqual([...colours].sort(), ['armor_plate_1', 'armor_plate_2', 'armor_plate_3', 'armor_plate_4'], 'each suit made in a colour picked at random');
+  assert.equal(plate.icon, 'armor_plate_1', 'the catalogue entry itself is left as it is');
+  assert.ok(regions[randomItem([robe]).icon], 'every colour handed out has its art');
+  assert.equal(freshCopy(named('dagger')).icon, named('dagger').icon, 'a weapon keeps its one icon');
+});
+
 test('a new run starts with one weapon of every type, a shield and every type of armour in the bag', async () => {
   const { WEAPON_BASES } = await load('rules/WeaponTable');
   const { ARMOR_BASES } = await load('rules/ArmorTable');
@@ -817,9 +849,9 @@ test('a new run starts with one weapon of every type, a shield and every type of
   giveStartingKit(player);
   const bag = player.inventory;
   const bases = new Set(bag.map((i) => i.base));
-  const inCatalogue = new Set([...HAND_WEAPONS, ...SHIELDS, ...ARMORS].map((i) => i.base));
+  const inCatalogue = new Set([...HAND_WEAPONS, ...SHIELDS, ...ARMORS].flatMap((i) => (i.base ? [i.base] : [])));
   for (const base of [...WEAPON_BASES, ...ARMOR_BASES].filter((b) => inCatalogue.has(b))) assert.ok(bases.has(base), `${base} is in the bag`);
-  assert.ok(bases.size >= 39, 'every weapon and armour type the catalogue has');
+  assert.equal(bases.size, inCatalogue.size, 'every weapon and armour type the catalogue has');
   assert.equal(bag.length, bases.size, 'one of each');
   assert.ok(bag.length <= PlayerActions.MAX_INVENTORY, 'and it all fits');
   assert.notEqual(bag[0], HAND_WEAPONS.find((w) => w.base === bag[0].base), 'copies, not the catalogue entries');
@@ -1178,8 +1210,8 @@ test('every catalogue weapon, armour and shield plays as a D&D base, and a guest
   const { isWeaponBase } = await load('rules/WeaponTable');
   const { isArmorBase } = await load('rules/ArmorTable');
   for (const item of HAND_WEAPONS) assert.ok(isWeaponBase(item.base), `${item.id} has a weapon base`);
-  for (const item of [...ARMORS, ...SHIELDS]) assert.ok(isArmorBase(item.base), `${item.id} has an armour base`);
-  assert.ok(HAND_WEAPONS.every((w) => (w.bonus ?? 0) <= 3) && HAND_WEAPONS.some((w) => w.bonus === 3), 'magic up to +3');
+  for (const item of [...ARMORS, ...SHIELDS]) assert.ok(isArmorBase(item.base) || item.id === 'armor_robe', `${item.id} has an armour base`);
+  assert.ok([...HAND_WEAPONS, ...ARMORS].every((w) => w.bonus === undefined), 'no magic yet');
   const sword = HAND_WEAPONS.find((w) => !w.bonus);
   assert.equal(validCommand({ kind: 'loadout', inventory: [{ ...sword, bonus: 4 }], equipped: {} }), false, 'no +4');
   assert.equal(validCommand({ kind: 'loadout', inventory: [{ ...sword, base: 'vorpal_sword' }], equipped: {} }), false);
@@ -2410,7 +2442,7 @@ test('a rare find in co-op is rolled for: Need rolls a d20, ties roll again, the
   const bo = seated(3, 2, 'p2', 'Bo');
   const cy = seated(4, 2, 'p3', 'Cy');
   for (const p of [ana, bo, cy]) p.inventory = [];
-  const sword = { ...WEAPONS.find((w) => (w.bonus ?? 0) >= 2), weight: 1 };
+  const sword = { ...WEAPONS[0], bonus: 2, weight: 1 };
   assert.equal(LootRoll.offerLoot({ ...sword, bonus: 0 }), false, 'a common find just drops');
   assert.equal(LootRoll.offerLoot(sword), true);
   const roll = world.entities.find((e) => e.lootRoll).lootRoll;
@@ -3034,7 +3066,7 @@ test('a guest draws an item on the floor whole, not the top-left corner of it cu
 
 test('a find with a long name keeps the world update valid, so the guest is not dropped from the game', () => {
   const ana = seated(2, 2, 'host', 'Ana');
-  const longest = WEAPONS.reduce((a, b) => (b.name.length > a.name.length ? b : a));
+  const longest = { ...WEAPONS[0], name: 'Rusted Axe of the Goblin King' };
   ana.inventory = [];
   assert.ok(PlayerActions.receiveItem(ana, longest));
   assert.ok(ana.rollLog.at(-1).text.length > 40, 'a line longer than the old limit');

@@ -9,7 +9,7 @@ import { weaponRule } from '../rules/Equipment';
 import { world } from '../world';
 
 /**
- * Archery: a player fighting with a ranged weapon (bow, crossbow, pistol, darts) shoots at the crosshair on
+ * Archery: a player fighting with a ranged weapon (bow, crossbow, darts) shoots at the crosshair on
  * attack instead of swinging. The shot rolls to hit when it strikes; ammunition is never used up.
  */
 

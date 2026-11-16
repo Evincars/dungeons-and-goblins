@@ -116,7 +116,9 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   made by `scripts/mine-sheets.py` into `public/caves2/mines-terrain.png` (keep the two in step)); the slanted wall pieces of the catacombs' and the castle's tilesets in `src/level/SlantTiles.ts`,
   made by `scripts/iso-sheets.py` into each tileset's `mainlevbuild-isometric.png` copy (keep the two in step); enemy AI knobs (sight, squad sizes, flanking, trail
   following) in `src/ai/constants.ts`; the D&D rules tables (SRD weapons and armour) in `src/rules/WeaponTable.ts`
-  and `src/rules/ArmorTable.ts`; hero classes (abilities, hit points, proficiencies, features) in
+  and `src/rules/ArmorTable.ts`; the weapons and armour found and worn in `src/data/weapons.json` (the basic D&D weapons, their art
+  in `public/weapons`) and `src/data/armors.json` (the D&D armours and a robe, their art a column of `public/armors.png`, whose first
+  four rows are the colours, one picked at random for each suit made, `ItemCatalog.ts`), at the SRD's prices and weights, no bonuses yet; hero classes (abilities, hit points, proficiencies, features) in
   `src/data/classes.json`; enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`;
   castable spells (dice, recovery, save, area, effect) in `src/data/spells.json`; the spells the game uses at all
   (only ones that act at once and can be drawn with our effects) and their icons in `src/data/spell-list.json`

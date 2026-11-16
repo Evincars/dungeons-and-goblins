@@ -3,7 +3,7 @@ import { cheats } from './Cheats';
 import { LEVEL_THEMES, isLevelTheme } from '../level/Theme';
 import type { LevelTheme } from '../level/Theme';
 import type { InventoryItem, Player } from '../world';
-import { ARMORS, MEDALS, SHIELDS, WEAPONS } from '../entities/ItemCatalog';
+import { ARMORS, MEDALS, SHIELDS, WEAPONS, freshCopy } from '../entities/ItemCatalog';
 import { grantExperience } from '../systems/DeathSystem';
 import { text } from '../core/texts';
 import { applyLoadout, freeSquare } from './PlayerActions';
@@ -70,7 +70,7 @@ function addItem(player: Player, id: string | undefined): string[] {
   const inventory = [...(player.inventory ?? [])];
   const square = freeSquare(inventory);
   if (square < 0) return [text('console.item.bag_full')];
-  inventory[square] = structuredClone(item);
+  inventory[square] = freshCopy(item);
   applyLoadout(player, { inventory, equipped: player.equipped ?? {} });
   return [text('console.item.added', { name: item.name })];
 }

@@ -1,17 +1,17 @@
 import { q } from '../world';
 import type { LevelTheme } from '../level/Theme';
 import type { Entity, InventoryItem, Player } from '../world';
-import { ARMORS, HAND_WEAPONS, SHIELDS } from '../entities/ItemCatalog';
+import { ARMORS, HAND_WEAPONS, SHIELDS, freshCopy } from '../entities/ItemCatalog';
 import { WEAPON_BASES } from '../rules/WeaponTable';
 import { ARMOR_BASES } from '../rules/ArmorTable';
 import type { ItemBase } from '../rules/Equipment';
 import type { Build } from '../rules/Build';
 
-/** A fresh copy of the first catalogue entry of each of these D&D bases (in that order), skipping any the catalogue lacks. */
+/** A fresh copy (freshCopy) of the first catalogue entry of each of these D&D bases (in that order), skipping any the catalogue lacks. */
 function onePerBase(from: readonly InventoryItem[], bases: readonly ItemBase[]): InventoryItem[] {
   return bases.flatMap((base) => {
     const item = from.find((entry) => entry.base === base);
-    return item ? [structuredClone(item)] : [];
+    return item ? [freshCopy(item)] : [];
   });
 }
 

@@ -1,941 +1,668 @@
 {
-  "$comment": "Weapons: the basic weapons of D&D (5e SRD), their art in /weapons. base is the D&D weapon an item plays as (its damage, properties and range, src/rules/WeaponTable.ts); cost is its price in gold and weight its weight in kg (1 lb = 0.5 kg), both the SRD's. No magic (bonus +1..+3) and no ability stats yet.",
-  "items": [
-    {
-      "id": "weapon_axe_001",
-      "name": "Battleaxe",
-      "icon": "weapon_axe_001",
-      "src": "/weapons/WR_NightBoundSet _Axe_001.png",
-      "kind": "axe",
-      "base": "battleaxe",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 2.0,
-      "cost": 10
+  "$comment": [
+    "The weapons of D&D 5e. Each key is a weapon the rules know; everything the game does with it comes from here.",
+    "name: what it is called. category: simple or martial (who is trained in it, src/data/classes.json). range: melee (STR) or ranged (DEX, shoots at the crosshair).",
+    "cost: price in gold (1 sp = 0.1, 1 cp = 0.01; the game's coins are gold only, so a price is paid rounded up to whole gold). weight: kg.",
+    "damage: dice such as 1d8 or 2d6, a flat number (1), or null for none; damageType: bludgeoning, piercing or slashing.",
+    "distance: [normal, long] range in metres (1.5 m is a 5-foot square of the map): shots fly as far as the long range, rolling with disadvantage past the normal one.",
+    "properties: light (fits the second hand for two-weapon fighting, both weapons light), finesse (STR or DEX, whichever is better), thrown, two_handed (no shield or second weapon), heavy, reach (strikes further), loading (one shot per attack, Extra Attack or not), ammunition, special.",
+    "versatile: the damage dice when held in both hands (the other hand empty).",
+    "art: the item pictures of this weapon in /public/weapons; each is a weapon that can be found. One without art is known to the rules but not found yet."
+  ],
+  "weapons": {
+    "dagger": {
+      "name": "Dagger",
+      "category": "simple",
+      "range": "melee",
+      "cost": 2,
+      "damage": "1d4",
+      "damageType": "piercing",
+      "distance": [
+        4,
+        12
+      ],
+      "properties": [
+        "light",
+        "finesse",
+        "thrown"
+      ],
+      "weight": 0.5,
+      "art": [
+        "/weapons/WR_NightBoundSet_Dagger_001.png",
+        "/weapons/WR_NightBoundSet_Dagger_002.png",
+        "/weapons/WR_NightBoundSet_Dagger_003.png",
+        "/weapons/WR_NightBoundSet_Dagger_004.png",
+        "/weapons/WR_NightBoundSet_Dagger_005.png"
+      ]
     },
-    {
-      "id": "weapon_axe_002",
-      "name": "Battleaxe",
-      "icon": "weapon_axe_002",
-      "src": "/weapons/WR_NightBoundSet _Axe_002.png",
-      "kind": "axe",
-      "base": "battleaxe",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 2.0,
-      "cost": 10
+    "quarterstaff": {
+      "name": "Quarterstaff",
+      "category": "simple",
+      "range": "melee",
+      "cost": 0.2,
+      "damage": "1d6",
+      "damageType": "bludgeoning",
+      "properties": [],
+      "versatile": "1d8",
+      "weight": 2,
+      "art": [
+        "/weapons/WR_NightBoundSet_Staff_001.png",
+        "/weapons/WR_NightBoundSet_Staff_002.png"
+      ]
     },
-    {
-      "id": "weapon_axe_003",
+    "spear": {
+      "name": "Spear",
+      "category": "simple",
+      "range": "melee",
+      "cost": 1,
+      "damage": "1d6",
+      "damageType": "piercing",
+      "distance": [
+        4,
+        12
+      ],
+      "properties": [
+        "thrown"
+      ],
+      "versatile": "1d8",
+      "weight": 1.5,
+      "art": []
+    },
+    "club": {
+      "name": "Club",
+      "category": "simple",
+      "range": "melee",
+      "cost": 0.1,
+      "damage": "1d4",
+      "damageType": "bludgeoning",
+      "properties": [
+        "light"
+      ],
+      "weight": 1,
+      "art": []
+    },
+    "light_hammer": {
+      "name": "Light hammer",
+      "category": "simple",
+      "range": "melee",
+      "cost": 2,
+      "damage": "1d4",
+      "damageType": "bludgeoning",
+      "distance": [
+        4,
+        12
+      ],
+      "properties": [
+        "light",
+        "thrown"
+      ],
+      "weight": 1,
+      "art": []
+    },
+    "javelin": {
+      "name": "Javelin",
+      "category": "simple",
+      "range": "melee",
+      "cost": 0.5,
+      "damage": "1d6",
+      "damageType": "piercing",
+      "distance": [
+        6,
+        24
+      ],
+      "properties": [
+        "thrown"
+      ],
+      "weight": 1,
+      "art": []
+    },
+    "mace": {
+      "name": "Mace",
+      "category": "simple",
+      "range": "melee",
+      "cost": 5,
+      "damage": "1d6",
+      "damageType": "bludgeoning",
+      "properties": [],
+      "weight": 2,
+      "art": [
+        "/weapons/WR_NightBoundSet_Scepter_001.png",
+        "/weapons/WR_NightBoundSet_Scepter_002.png",
+        "/weapons/WR_NightBoundSet_Scepter_003.png"
+      ]
+    },
+    "handaxe": {
       "name": "Handaxe",
-      "icon": "weapon_axe_003",
-      "src": "/weapons/WR_NightBoundSet _Axe_003.png",
-      "kind": "axe",
-      "base": "handaxe",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 5
+      "category": "simple",
+      "range": "melee",
+      "cost": 5,
+      "damage": "1d6",
+      "damageType": "slashing",
+      "distance": [
+        4,
+        12
+      ],
+      "properties": [
+        "light",
+        "thrown"
+      ],
+      "weight": 1,
+      "art": [
+        "/weapons/WR_NightBoundSet_Axe_003.png"
+      ]
     },
-    {
-      "id": "weapon_axe_004",
-      "name": "Battleaxe",
-      "icon": "weapon_axe_004",
-      "src": "/weapons/WR_NightBoundSet _Axe_004.png",
-      "kind": "axe",
-      "base": "battleaxe",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 2.0,
-      "cost": 10
+    "sickle": {
+      "name": "Sickle",
+      "category": "simple",
+      "range": "melee",
+      "cost": 1,
+      "damage": "1d4",
+      "damageType": "slashing",
+      "properties": [
+        "light"
+      ],
+      "weight": 1,
+      "art": []
     },
-    {
-      "id": "weapon_bow_001",
-      "name": "Shortbow",
-      "icon": "weapon_bow_001",
-      "src": "/weapons/WR_NightBoundSet _Bow_001.png",
-      "kind": "bow",
-      "base": "shortbow",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 25
+    "greatclub": {
+      "name": "Greatclub",
+      "category": "simple",
+      "range": "melee",
+      "cost": 0.2,
+      "damage": "1d8",
+      "damageType": "bludgeoning",
+      "properties": [
+        "two_handed"
+      ],
+      "weight": 5,
+      "art": []
     },
-    {
-      "id": "weapon_bow_002",
-      "name": "Longbow",
-      "icon": "weapon_bow_002",
-      "src": "/weapons/WR_NightBoundSet _Bow_002.png",
-      "kind": "bow",
-      "base": "longbow",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 50
+    "whip": {
+      "name": "Whip",
+      "category": "martial",
+      "range": "melee",
+      "cost": 2,
+      "damage": "1d4",
+      "damageType": "slashing",
+      "properties": [
+        "reach",
+        "finesse"
+      ],
+      "weight": 1.5,
+      "art": []
     },
-    {
-      "id": "weapon_bow_003",
-      "name": "Longbow",
-      "icon": "weapon_bow_003",
-      "src": "/weapons/WR_NightBoundSet _Bow_003.png",
-      "kind": "bow",
-      "base": "longbow",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 50
+    "war_pick": {
+      "name": "War pick",
+      "category": "martial",
+      "range": "melee",
+      "cost": 5,
+      "damage": "1d8",
+      "damageType": "piercing",
+      "properties": [],
+      "weight": 1,
+      "art": []
     },
-    {
-      "id": "weapon_bow_004",
-      "name": "Longbow",
-      "icon": "weapon_bow_004",
-      "src": "/weapons/WR_NightBoundSet _Bow_004.png",
-      "kind": "bow",
-      "base": "longbow",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 50
+    "longsword": {
+      "name": "Longsword",
+      "category": "martial",
+      "range": "melee",
+      "cost": 15,
+      "damage": "1d8",
+      "damageType": "slashing",
+      "properties": [],
+      "versatile": "1d10",
+      "weight": 1.5,
+      "art": [
+        "/weapons/WR_NightBoundSet_Longsword_001.png",
+        "/weapons/WR_NightBoundSet_Longsword_002.png",
+        "/weapons/WR_NightBoundSet_Longsword_003.png",
+        "/weapons/WR_NightBoundSet_Longsword_004.png",
+        "/weapons/WR_NightBoundSet_Longsword_005.png"
+      ]
     },
-    {
-      "id": "weapon_bow_005",
-      "name": "Shortbow",
-      "icon": "weapon_bow_005",
-      "src": "/weapons/WR_NightBoundSet _Bow_005.png",
-      "kind": "bow",
-      "base": "shortbow",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 25
+    "lance": {
+      "name": "Lance",
+      "category": "martial",
+      "range": "melee",
+      "cost": 10,
+      "damage": "1d12",
+      "damageType": "piercing",
+      "properties": [
+        "reach",
+        "special"
+      ],
+      "weight": 3,
+      "art": []
     },
-    {
-      "id": "weapon_crossbow_001",
-      "name": "Heavy crossbow",
-      "icon": "weapon_crossbow_001",
-      "src": "/weapons/WR_NightBoundSet _Crossbow_001.png",
-      "kind": "crossbow",
-      "base": "heavy_crossbow",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 9.0,
-      "cost": 50
-    },
-    {
-      "id": "weapon_crossbow_002",
-      "name": "Light crossbow",
-      "icon": "weapon_crossbow_002",
-      "src": "/weapons/WR_NightBoundSet _Crossbow_002.png",
-      "kind": "crossbow",
-      "base": "light_crossbow",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 2.5,
-      "cost": 25
-    },
-    {
-      "id": "weapon_crossbow_003",
-      "name": "Heavy crossbow",
-      "icon": "weapon_crossbow_003",
-      "src": "/weapons/WR_NightBoundSet _Crossbow_003.png",
-      "kind": "crossbow",
-      "base": "heavy_crossbow",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 9.0,
-      "cost": 50
-    },
-    {
-      "id": "weapon_crossbow_004",
-      "name": "Light crossbow",
-      "icon": "weapon_crossbow_004",
-      "src": "/weapons/WR_NightBoundSet _Crossbow_004.png",
-      "kind": "crossbow",
-      "base": "light_crossbow",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 2.5,
-      "cost": 25
-    },
-    {
-      "id": "weapon_dagger_001",
-      "name": "Dagger",
-      "icon": "weapon_dagger_001",
-      "src": "/weapons/WR_NightBoundSet_Dagger_001.png",
-      "kind": "dagger",
-      "base": "dagger",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 0.5,
-      "cost": 2
-    },
-    {
-      "id": "weapon_dagger_002",
-      "name": "Dagger",
-      "icon": "weapon_dagger_002",
-      "src": "/weapons/WR_NightBoundSet_Dagger_002.png",
-      "kind": "dagger",
-      "base": "dagger",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 0.5,
-      "cost": 2
-    },
-    {
-      "id": "weapon_dagger_003",
-      "name": "Dagger",
-      "icon": "weapon_dagger_003",
-      "src": "/weapons/WR_NightBoundSet_Dagger_003.png",
-      "kind": "dagger",
-      "base": "dagger",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 0.5,
-      "cost": 2
-    },
-    {
-      "id": "weapon_dagger_004",
-      "name": "Dagger",
-      "icon": "weapon_dagger_004",
-      "src": "/weapons/WR_NightBoundSet_Dagger_004.png",
-      "kind": "dagger",
-      "base": "dagger",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 0.5,
-      "cost": 2
-    },
-    {
-      "id": "weapon_dagger_005",
-      "name": "Dagger",
-      "icon": "weapon_dagger_005",
-      "src": "/weapons/WR_NightBoundSet_Dagger_005.png",
-      "kind": "dagger",
-      "base": "dagger",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 0.5,
-      "cost": 2
-    },
-    {
-      "id": "weapon_glaive_001",
-      "name": "Glaive",
-      "icon": "weapon_glaive_001",
-      "src": "/weapons/WR_NightBoundSet _Glaive_001.png",
-      "kind": "glaive",
-      "base": "glaive",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 3.0,
-      "cost": 20
-    },
-    {
-      "id": "weapon_glaive_002",
-      "name": "Glaive",
-      "icon": "weapon_glaive_002",
-      "src": "/weapons/WR_NightBoundSet _Glaive_002.png",
-      "kind": "glaive",
-      "base": "glaive",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 3.0,
-      "cost": 20
-    },
-    {
-      "id": "weapon_great_hammer_001",
-      "name": "Maul",
-      "icon": "weapon_great_hammer_001",
-      "src": "/weapons/WR_NightBoundSet _GreatHammer_001.png",
-      "kind": "greathammer",
-      "base": "maul",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 5.0,
-      "cost": 10
-    },
-    {
-      "id": "weapon_great_hammer_002",
-      "name": "Maul",
-      "icon": "weapon_great_hammer_002",
-      "src": "/weapons/WR_NightBoundSet _GreatHammer_002.png",
-      "kind": "greathammer",
-      "base": "maul",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 5.0,
-      "cost": 10
-    },
-    {
-      "id": "weapon_great_hammer_003",
-      "name": "Warhammer",
-      "icon": "weapon_great_hammer_003",
-      "src": "/weapons/WR_NightBoundSet _GreatHammer_003.png",
-      "kind": "greathammer",
-      "base": "warhammer",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 15
-    },
-    {
-      "id": "weapon_great_mace_001",
-      "name": "Morningstar",
-      "icon": "weapon_great_mace_001",
-      "src": "/weapons/WR_NightBoundSet _GreatMace_001.png",
-      "kind": "greatmace",
-      "base": "morningstar",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 2.0,
-      "cost": 15
-    },
-    {
-      "id": "weapon_great_mace_002",
-      "name": "Morningstar",
-      "icon": "weapon_great_mace_002",
-      "src": "/weapons/WR_NightBoundSet _GreatMace_002.png",
-      "kind": "greatmace",
-      "base": "morningstar",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 2.0,
-      "cost": 15
-    },
-    {
-      "id": "weapon_greataxe_001",
-      "name": "Greataxe",
-      "icon": "weapon_greataxe_001",
-      "src": "/weapons/WR_NightBoundSet _Greataxe_001.png",
-      "kind": "greataxe",
-      "base": "greataxe",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 3.5,
-      "cost": 30
-    },
-    {
-      "id": "weapon_greataxe_002",
-      "name": "Greataxe",
-      "icon": "weapon_greataxe_002",
-      "src": "/weapons/WR_NightBoundSet _Greataxe_002.png",
-      "kind": "greataxe",
-      "base": "greataxe",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 3.5,
-      "cost": 30
-    },
-    {
-      "id": "weapon_greataxe_003",
-      "name": "Greataxe",
-      "icon": "weapon_greataxe_003",
-      "src": "/weapons/WR_NightBoundSet _Greataxe_003.png",
-      "kind": "greataxe",
-      "base": "greataxe",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 3.5,
-      "cost": 30
-    },
-    {
-      "id": "weapon_greataxe_004",
-      "name": "Greataxe",
-      "icon": "weapon_greataxe_004",
-      "src": "/weapons/WR_NightBoundSet _Greataxe_004.png",
-      "kind": "greataxe",
-      "base": "greataxe",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 3.5,
-      "cost": 30
-    },
-    {
-      "id": "weapon_greater_axe_001",
+    "halberd": {
       "name": "Halberd",
-      "icon": "weapon_greater_axe_001",
-      "src": "/weapons/WR_NightBoundSet _GreaterAxe_001.png",
-      "kind": "greateraxe",
-      "base": "halberd",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 3.0,
-      "cost": 20
+      "category": "martial",
+      "range": "melee",
+      "cost": 20,
+      "damage": "1d10",
+      "damageType": "slashing",
+      "properties": [
+        "reach",
+        "two_handed",
+        "heavy"
+      ],
+      "weight": 3,
+      "art": [
+        "/weapons/WR_NightBoundSet_GreaterAxe_001.png",
+        "/weapons/WR_NightBoundSet_GreaterAxe_002.png"
+      ]
     },
-    {
-      "id": "weapon_greater_axe_002",
-      "name": "Halberd",
-      "icon": "weapon_greater_axe_002",
-      "src": "/weapons/WR_NightBoundSet _GreaterAxe_002.png",
-      "kind": "greateraxe",
-      "base": "halberd",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 3.0,
-      "cost": 20
+    "shortsword": {
+      "name": "Shortsword",
+      "category": "martial",
+      "range": "melee",
+      "cost": 10,
+      "damage": "1d6",
+      "damageType": "piercing",
+      "properties": [
+        "light",
+        "finesse"
+      ],
+      "weight": 1,
+      "art": [
+        "/weapons/WR_NightBoundSet_Sword_001.png",
+        "/weapons/WR_NightBoundSet_Sword_002.png",
+        "/weapons/WR_NightBoundSet_Sword_003.png",
+        "/weapons/WR_NightBoundSet_Sword_004.png",
+        "/weapons/WR_NightBoundSet_Sword_005.png",
+        "/weapons/WR_NightBoundSet_Sword_006.png",
+        "/weapons/WR_NightBoundSet_Sword_009.png",
+        "/weapons/WR_NightBoundSet_Sword_010.png",
+        "/weapons/WR_NightBoundSet_Sword_011.png",
+        "/weapons/WR_NightBoundSet_Sword_012.png"
+      ]
     },
-    {
-      "id": "weapon_hook_001",
-      "name": "Sickle",
-      "icon": "weapon_hook_001",
-      "src": "/weapons/WR_NightBoundSet_Hook_001.png",
-      "kind": "hook",
-      "base": "sickle",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 1
+    "morningstar": {
+      "name": "Morningstar",
+      "category": "martial",
+      "range": "melee",
+      "cost": 15,
+      "damage": "1d8",
+      "damageType": "piercing",
+      "properties": [],
+      "weight": 2,
+      "art": [
+        "/weapons/WR_NightBoundSet_GreatMace_001.png",
+        "/weapons/WR_NightBoundSet_GreatMace_002.png"
+      ]
     },
-    {
-      "id": "weapon_hook_002",
-      "name": "Sickle",
-      "icon": "weapon_hook_002",
-      "src": "/weapons/WR_NightBoundSet_Hook_002.png",
-      "kind": "hook",
-      "base": "sickle",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 1
+    "glaive": {
+      "name": "Glaive",
+      "category": "martial",
+      "range": "melee",
+      "cost": 20,
+      "damage": "1d10",
+      "damageType": "slashing",
+      "properties": [
+        "reach",
+        "two_handed",
+        "heavy"
+      ],
+      "weight": 3,
+      "art": [
+        "/weapons/WR_NightBoundSet_Glaive_001.png",
+        "/weapons/WR_NightBoundSet_Glaive_002.png"
+      ]
     },
-    {
-      "id": "weapon_hook_003",
-      "name": "Sickle",
-      "icon": "weapon_hook_003",
-      "src": "/weapons/WR_NightBoundSet_Hook_003.png",
-      "kind": "hook",
-      "base": "sickle",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 1
+    "greatsword": {
+      "name": "Greatsword",
+      "category": "martial",
+      "range": "melee",
+      "cost": 50,
+      "damage": "2d6",
+      "damageType": "slashing",
+      "properties": [
+        "two_handed",
+        "heavy"
+      ],
+      "weight": 3,
+      "art": []
     },
-    {
-      "id": "weapon_hook_004",
-      "name": "Sickle",
-      "icon": "weapon_hook_004",
-      "src": "/weapons/WR_NightBoundSet_Hook_004.png",
-      "kind": "hook",
-      "base": "sickle",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 1
+    "greataxe": {
+      "name": "Greataxe",
+      "category": "martial",
+      "range": "melee",
+      "cost": 30,
+      "damage": "1d12",
+      "damageType": "slashing",
+      "properties": [
+        "two_handed",
+        "heavy"
+      ],
+      "weight": 3.5,
+      "art": [
+        "/weapons/WR_NightBoundSet_Greataxe_001.png",
+        "/weapons/WR_NightBoundSet_Greataxe_002.png",
+        "/weapons/WR_NightBoundSet_Greataxe_003.png",
+        "/weapons/WR_NightBoundSet_Greataxe_004.png"
+      ]
     },
-    {
-      "id": "weapon_longsword_001",
-      "name": "Longsword",
-      "icon": "weapon_longsword_001",
-      "src": "/weapons/WR_NightBoundSet _Longsword_001.png",
-      "kind": "longsword",
-      "base": "longsword",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.5,
-      "cost": 15
+    "maul": {
+      "name": "Maul",
+      "category": "martial",
+      "range": "melee",
+      "cost": 10,
+      "damage": "2d6",
+      "damageType": "bludgeoning",
+      "properties": [
+        "two_handed",
+        "heavy"
+      ],
+      "weight": 5,
+      "art": [
+        "/weapons/WR_NightBoundSet_GreatHammer_001.png",
+        "/weapons/WR_NightBoundSet_GreatHammer_002.png"
+      ]
     },
-    {
-      "id": "weapon_longsword_002",
-      "name": "Longsword",
-      "icon": "weapon_longsword_002",
-      "src": "/weapons/WR_NightBoundSet _Longsword_002.png",
-      "kind": "longsword",
-      "base": "longsword",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.5,
-      "cost": 15
+    "pike": {
+      "name": "Pike",
+      "category": "martial",
+      "range": "melee",
+      "cost": 5,
+      "damage": "1d10",
+      "damageType": "piercing",
+      "properties": [
+        "reach",
+        "two_handed",
+        "heavy"
+      ],
+      "weight": 3,
+      "art": []
     },
-    {
-      "id": "weapon_longsword_003",
-      "name": "Longsword",
-      "icon": "weapon_longsword_003",
-      "src": "/weapons/WR_NightBoundSet _Longsword_003.png",
-      "kind": "longsword",
-      "base": "longsword",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.5,
-      "cost": 15
+    "rapier": {
+      "name": "Rapier",
+      "category": "martial",
+      "range": "melee",
+      "cost": 25,
+      "damage": "1d8",
+      "damageType": "piercing",
+      "properties": [
+        "finesse"
+      ],
+      "weight": 1,
+      "art": [
+        "/weapons/WR_NightBoundSet_Sword_007.png",
+        "/weapons/WR_NightBoundSet_Sword_008.png"
+      ]
     },
-    {
-      "id": "weapon_longsword_004",
-      "name": "Longsword",
-      "icon": "weapon_longsword_004",
-      "src": "/weapons/WR_NightBoundSet _Longsword_004.png",
-      "kind": "longsword",
-      "base": "longsword",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.5,
-      "cost": 15
+    "flail": {
+      "name": "Flail",
+      "category": "martial",
+      "range": "melee",
+      "cost": 10,
+      "damage": "1d8",
+      "damageType": "bludgeoning",
+      "properties": [],
+      "weight": 1,
+      "art": []
     },
-    {
-      "id": "weapon_longsword_005",
-      "name": "Longsword",
-      "icon": "weapon_longsword_005",
-      "src": "/weapons/WR_NightBoundSet _Longsword_005.png",
-      "kind": "longsword",
-      "base": "longsword",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.5,
-      "cost": 15
-    },
-    {
-      "id": "weapon_machete_001",
+    "scimitar": {
       "name": "Scimitar",
-      "icon": "weapon_machete_001",
-      "src": "/weapons/WR_NightBoundSet _Machete_001.png",
-      "kind": "machete",
-      "base": "scimitar",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
+      "category": "martial",
+      "range": "melee",
+      "cost": 25,
+      "damage": "1d6",
+      "damageType": "slashing",
+      "properties": [
+        "light",
+        "finesse"
+      ],
       "weight": 1.5,
-      "cost": 25
+      "art": [
+        "/weapons/WR_NightBoundSet_Machete_001.png",
+        "/weapons/WR_NightBoundSet_Machete_002.png",
+        "/weapons/WR_NightBoundSet_Machete_003.png",
+        "/weapons/WR_NightBoundSet_SickleSword_001.png",
+        "/weapons/WR_NightBoundSet_SickleSword_002.png"
+      ]
     },
-    {
-      "id": "weapon_machete_002",
-      "name": "Scimitar",
-      "icon": "weapon_machete_002",
-      "src": "/weapons/WR_NightBoundSet _Machete_002.png",
-      "kind": "machete",
-      "base": "scimitar",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.5,
-      "cost": 25
-    },
-    {
-      "id": "weapon_machete_003",
-      "name": "Scimitar",
-      "icon": "weapon_machete_003",
-      "src": "/weapons/WR_NightBoundSet _Machete_003.png",
-      "kind": "machete",
-      "base": "scimitar",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.5,
-      "cost": 25
-    },
-    {
-      "id": "weapon_scepter_001",
-      "name": "Mace",
-      "icon": "weapon_scepter_001",
-      "src": "/weapons/WR_NightBoundSet _Scepter_001.png",
-      "kind": "scepter",
-      "base": "mace",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 2.0,
-      "cost": 5
-    },
-    {
-      "id": "weapon_scepter_002",
-      "name": "Mace",
-      "icon": "weapon_scepter_002",
-      "src": "/weapons/WR_NightBoundSet _Scepter_002.png",
-      "kind": "scepter",
-      "base": "mace",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 2.0,
-      "cost": 5
-    },
-    {
-      "id": "weapon_scepter_003",
-      "name": "Mace",
-      "icon": "weapon_scepter_003",
-      "src": "/weapons/WR_NightBoundSet _Scepter_003.png",
-      "kind": "scepter",
-      "base": "mace",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 2.0,
-      "cost": 5
-    },
-    {
-      "id": "weapon_scepter_004",
+    "trident": {
       "name": "Trident",
-      "icon": "weapon_scepter_004",
-      "src": "/weapons/WR_NightBoundSet _Scepter_004.png",
-      "kind": "scepter",
-      "base": "trident",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 2.0,
-      "cost": 5
+      "category": "martial",
+      "range": "melee",
+      "cost": 5,
+      "damage": "1d6",
+      "damageType": "piercing",
+      "distance": [
+        4,
+        12
+      ],
+      "properties": [
+        "thrown"
+      ],
+      "versatile": "1d8",
+      "weight": 2,
+      "art": [
+        "/weapons/WR_NightBoundSet_Scepter_004.png"
+      ]
     },
-    {
-      "id": "weapon_shuriken_001",
+    "battleaxe": {
+      "name": "Battleaxe",
+      "category": "martial",
+      "range": "melee",
+      "cost": 10,
+      "damage": "1d8",
+      "damageType": "slashing",
+      "properties": [],
+      "versatile": "1d10",
+      "weight": 2,
+      "art": [
+        "/weapons/WR_NightBoundSet_Axe_001.png",
+        "/weapons/WR_NightBoundSet_Axe_002.png",
+        "/weapons/WR_NightBoundSet_Axe_004.png"
+      ]
+    },
+    "warhammer": {
+      "name": "Warhammer",
+      "category": "martial",
+      "range": "melee",
+      "cost": 15,
+      "damage": "1d8",
+      "damageType": "bludgeoning",
+      "properties": [],
+      "versatile": "1d10",
+      "weight": 1,
+      "art": [
+        "/weapons/WR_NightBoundSet_GreatHammer_003.png"
+      ]
+    },
+    "shortbow": {
+      "name": "Shortbow",
+      "category": "simple",
+      "range": "ranged",
+      "cost": 25,
+      "damage": "1d6",
+      "damageType": "piercing",
+      "distance": [
+        16,
+        64
+      ],
+      "properties": [
+        "two_handed",
+        "ammunition"
+      ],
+      "weight": 1,
+      "art": [
+        "/weapons/WR_NightBoundSet_Bow_001.png",
+        "/weapons/WR_NightBoundSet_Bow_002.png",
+        "/weapons/WR_NightBoundSet_Bow_003.png",
+        "/weapons/WR_NightBoundSet_Bow_004.png",
+        "/weapons/WR_NightBoundSet_Bow_005.png"
+      ]
+    },
+    "light_crossbow": {
+      "name": "Light crossbow",
+      "category": "simple",
+      "range": "ranged",
+      "cost": 25,
+      "damage": "1d8",
+      "damageType": "piercing",
+      "distance": [
+        16,
+        64
+      ],
+      "properties": [
+        "loading",
+        "two_handed",
+        "ammunition"
+      ],
+      "weight": 2.5,
+      "art": [
+        "/weapons/WR_NightBoundSet_Crossbow_001.png",
+        "/weapons/WR_NightBoundSet_Crossbow_002.png",
+        "/weapons/WR_NightBoundSet_Crossbow_003.png",
+        "/weapons/WR_NightBoundSet_Crossbow_004.png"
+      ]
+    },
+    "sling": {
+      "name": "Sling",
+      "category": "simple",
+      "range": "ranged",
+      "cost": 0.1,
+      "damage": "1d4",
+      "damageType": "bludgeoning",
+      "distance": [
+        6,
+        24
+      ],
+      "properties": [
+        "ammunition"
+      ],
+      "weight": 0,
+      "art": []
+    },
+    "dart": {
       "name": "Dart",
-      "icon": "weapon_shuriken_001",
-      "src": "/weapons/WR_NightBoundSet _Shuriken_001.png",
-      "kind": "shuriken",
-      "base": "dart",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 0.125,
-      "cost": 0.05
+      "category": "simple",
+      "range": "ranged",
+      "cost": 0.05,
+      "damage": "1d4",
+      "damageType": "piercing",
+      "distance": [
+        4,
+        12
+      ],
+      "properties": [
+        "thrown",
+        "finesse"
+      ],
+      "weight": 0.1,
+      "art": []
     },
-    {
-      "id": "weapon_shuriken_002",
-      "name": "Dart",
-      "icon": "weapon_shuriken_002",
-      "src": "/weapons/WR_NightBoundSet _Shuriken_002.png",
-      "kind": "shuriken",
-      "base": "dart",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 0.125,
-      "cost": 0.05
+    "longbow": {
+      "name": "Longbow",
+      "category": "martial",
+      "range": "ranged",
+      "cost": 50,
+      "damage": "1d8",
+      "damageType": "piercing",
+      "distance": [
+        30,
+        120
+      ],
+      "properties": [
+        "two_handed",
+        "ammunition",
+        "heavy"
+      ],
+      "weight": 1,
+      "art": [
+        "/weapons/WR_NightBoundSet_Bow_001.png",
+        "/weapons/WR_NightBoundSet_Bow_002.png",
+        "/weapons/WR_NightBoundSet_Bow_003.png",
+        "/weapons/WR_NightBoundSet_Bow_004.png",
+        "/weapons/WR_NightBoundSet_Bow_005.png"
+      ]
     },
-    {
-      "id": "weapon_shuriken_003",
-      "name": "Dart",
-      "icon": "weapon_shuriken_003",
-      "src": "/weapons/WR_NightBoundSet _Shuriken_003.png",
-      "kind": "shuriken",
-      "base": "dart",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 0.125,
-      "cost": 0.05
+    "blowgun": {
+      "name": "Blowgun",
+      "category": "martial",
+      "range": "ranged",
+      "cost": 10,
+      "damage": "1",
+      "damageType": "piercing",
+      "distance": [
+        5,
+        20
+      ],
+      "properties": [
+        "loading",
+        "ammunition"
+      ],
+      "weight": 0.5,
+      "art": []
     },
-    {
-      "id": "weapon_shuriken_004",
-      "name": "Dart",
-      "icon": "weapon_shuriken_004",
-      "src": "/weapons/WR_NightBoundSet _Shuriken_004.png",
-      "kind": "shuriken",
-      "base": "dart",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 0.125,
-      "cost": 0.05
-    },
-    {
-      "id": "weapon_shuriken_005",
-      "name": "Dart",
-      "icon": "weapon_shuriken_005",
-      "src": "/weapons/WR_NightBoundSet _Shuriken_005.png",
-      "kind": "shuriken",
-      "base": "dart",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 0.125,
-      "cost": 0.05
-    },
-    {
-      "id": "weapon_shuriken_006",
-      "name": "Dart",
-      "icon": "weapon_shuriken_006",
-      "src": "/weapons/WR_NightBoundSet _Shuriken_006.png",
-      "kind": "shuriken",
-      "base": "dart",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 0.125,
-      "cost": 0.05
-    },
-    {
-      "id": "weapon_shuriken_007",
-      "name": "Dart",
-      "icon": "weapon_shuriken_007",
-      "src": "/weapons/WR_NightBoundSet _Shuriken_007.png",
-      "kind": "shuriken",
-      "base": "dart",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 0.125,
-      "cost": 0.05
-    },
-    {
-      "id": "weapon_shuriken_008",
-      "name": "Dart",
-      "icon": "weapon_shuriken_008",
-      "src": "/weapons/WR_NightBoundSet _Shuriken_008.png",
-      "kind": "shuriken",
-      "base": "dart",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 0.125,
-      "cost": 0.05
-    },
-    {
-      "id": "weapon_shuriken_009",
-      "name": "Dart",
-      "icon": "weapon_shuriken_009",
-      "src": "/weapons/WR_NightBoundSet _Shuriken_009.png",
-      "kind": "shuriken",
-      "base": "dart",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 0.125,
-      "cost": 0.05
-    },
-    {
-      "id": "weapon_sickle_sword_001",
-      "name": "Scimitar",
-      "icon": "weapon_sickle_sword_001",
-      "src": "/weapons/WR_NightBoundSet _SickleSword_001.png",
-      "kind": "sicklesword",
-      "base": "scimitar",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
+    "hand_crossbow": {
+      "name": "Hand crossbow",
+      "category": "martial",
+      "range": "ranged",
+      "cost": 75,
+      "damage": "1d6",
+      "damageType": "piercing",
+      "distance": [
+        6,
+        24
+      ],
+      "properties": [
+        "light",
+        "loading",
+        "ammunition"
+      ],
       "weight": 1.5,
-      "cost": 25
+      "art": [
+        "/weapons/WR_NightBoundSet_Crossbow_001.png",
+        "/weapons/WR_NightBoundSet_Crossbow_002.png",
+        "/weapons/WR_NightBoundSet_Crossbow_003.png",
+        "/weapons/WR_NightBoundSet_Crossbow_004.png"
+      ]
     },
-    {
-      "id": "weapon_sickle_sword_002",
-      "name": "Scimitar",
-      "icon": "weapon_sickle_sword_002",
-      "src": "/weapons/WR_NightBoundSet _SickleSword_002.png",
-      "kind": "sicklesword",
-      "base": "scimitar",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
+    "net": {
+      "name": "Net",
+      "category": "martial",
+      "range": "ranged",
+      "cost": 1,
+      "damage": null,
+      "damageType": null,
+      "distance": [
+        1,
+        3
+      ],
+      "properties": [
+        "thrown",
+        "special"
+      ],
       "weight": 1.5,
-      "cost": 25
+      "art": []
     },
-    {
-      "id": "weapon_staff_001",
-      "name": "Quarterstaff",
-      "icon": "weapon_staff_001",
-      "src": "/weapons/WR_NightBoundSet _Staff_001.png",
-      "kind": "staff",
-      "base": "quarterstaff",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 2.0,
-      "cost": 0.2
-    },
-    {
-      "id": "weapon_staff_002",
-      "name": "Quarterstaff",
-      "icon": "weapon_staff_002",
-      "src": "/weapons/WR_NightBoundSet _Staff_002.png",
-      "kind": "staff",
-      "base": "quarterstaff",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 2.0,
-      "cost": 0.2
-    },
-    {
-      "id": "weapon_sword_001",
-      "name": "Shortsword",
-      "icon": "weapon_sword_001",
-      "src": "/weapons/WR_NightBoundSet _Sword_001.png",
-      "kind": "sword",
-      "base": "shortsword",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 10
-    },
-    {
-      "id": "weapon_sword_002",
-      "name": "Shortsword",
-      "icon": "weapon_sword_002",
-      "src": "/weapons/WR_NightBoundSet _Sword_002.png",
-      "kind": "sword",
-      "base": "shortsword",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 10
-    },
-    {
-      "id": "weapon_sword_003",
-      "name": "Shortsword",
-      "icon": "weapon_sword_003",
-      "src": "/weapons/WR_NightBoundSet _Sword_003.png",
-      "kind": "sword",
-      "base": "shortsword",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 10
-    },
-    {
-      "id": "weapon_sword_004",
-      "name": "Shortsword",
-      "icon": "weapon_sword_004",
-      "src": "/weapons/WR_NightBoundSet _Sword_004.png",
-      "kind": "sword",
-      "base": "shortsword",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 10
-    },
-    {
-      "id": "weapon_sword_005",
-      "name": "Shortsword",
-      "icon": "weapon_sword_005",
-      "src": "/weapons/WR_NightBoundSet _Sword_005.png",
-      "kind": "sword",
-      "base": "shortsword",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 10
-    },
-    {
-      "id": "weapon_sword_006",
-      "name": "Shortsword",
-      "icon": "weapon_sword_006",
-      "src": "/weapons/WR_NightBoundSet _Sword_006.png",
-      "kind": "sword",
-      "base": "shortsword",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 10
-    },
-    {
-      "id": "weapon_sword_007",
-      "name": "Rapier",
-      "icon": "weapon_sword_007",
-      "src": "/weapons/WR_NightBoundSet _Sword_007.png",
-      "kind": "sword",
-      "base": "rapier",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 25
-    },
-    {
-      "id": "weapon_sword_008",
-      "name": "Rapier",
-      "icon": "weapon_sword_008",
-      "src": "/weapons/WR_NightBoundSet _Sword_008.png",
-      "kind": "sword",
-      "base": "rapier",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 25
-    },
-    {
-      "id": "weapon_sword_009",
-      "name": "Shortsword",
-      "icon": "weapon_sword_009",
-      "src": "/weapons/WR_NightBoundSet _Sword_009.png",
-      "kind": "sword",
-      "base": "shortsword",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 10
-    },
-    {
-      "id": "weapon_sword_010",
-      "name": "Shortsword",
-      "icon": "weapon_sword_010",
-      "src": "/weapons/WR_NightBoundSet _Sword_010.png",
-      "kind": "sword",
-      "base": "shortsword",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 10
-    },
-    {
-      "id": "weapon_sword_011",
-      "name": "Shortsword",
-      "icon": "weapon_sword_011",
-      "src": "/weapons/WR_NightBoundSet _Sword_011.png",
-      "kind": "sword",
-      "base": "shortsword",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 10
-    },
-    {
-      "id": "weapon_sword_012",
-      "name": "Shortsword",
-      "icon": "weapon_sword_012",
-      "src": "/weapons/WR_NightBoundSet _Sword_012.png",
-      "kind": "sword",
-      "base": "shortsword",
-      "type": "weapon",
-      "gear": "weapon",
-      "stats": {},
-      "weight": 1.0,
-      "cost": 10
+    "heavy_crossbow": {
+      "name": "Heavy crossbow",
+      "category": "martial",
+      "range": "ranged",
+      "cost": 50,
+      "damage": "1d10",
+      "damageType": "piercing",
+      "distance": [
+        20,
+        80
+      ],
+      "properties": [
+        "loading",
+        "two_handed",
+        "ammunition",
+        "heavy"
+      ],
+      "weight": 5,
+      "art": [
+        "/weapons/WR_NightBoundSet_Crossbow_001.png",
+        "/weapons/WR_NightBoundSet_Crossbow_002.png",
+        "/weapons/WR_NightBoundSet_Crossbow_003.png",
+        "/weapons/WR_NightBoundSet_Crossbow_004.png"
+      ]
     }
-  ]
+  }
 }

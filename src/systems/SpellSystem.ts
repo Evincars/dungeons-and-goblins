@@ -18,6 +18,7 @@ import type { QuickBinding } from '../rules/Spellbook';
 import type { SpellDef } from '../rules/Spells';
 import { MONSTERS } from '../rules/Monsters';
 import { MIN_HIT_DAMAGE } from '../rules/Combat';
+import type { AttackProfile } from '../rules/Combat';
 import { diceRange, plus, rollCheck, rollDice } from '../rules/Dice';
 import type { Dice } from '../rules/Dice';
 import { spawnFx } from '../entities/FxFactory';
@@ -296,7 +297,17 @@ function boltVictim(bolt: Bolt): Entity | null {
   return null;
 }
 
-/** A projectile meets a body: a magic missile's dart always hits; anything else is rolled against its AC. */
+/** A shot flown past its weapon's normal range (projectile.closeLife). */
+function beyondNormalRange(p: Bolt['projectile']): boolean {
+  return p.closeLife !== undefined && p.life < p.closeLife;
+}
+
+/** The attack rolled with disadvantage (which cancels an advantage instead). */
+function withDisadvantage(attack: AttackProfile): AttackProfile {
+  return { ...attack, mode: attack.mode === 'advantage' ? 'normal' : 'disadvantage' };
+}
+
+/** A projectile meets a body: a magic missile's dart always hits; anything else is rolled against its AC (a shot past its normal range with disadvantage). */
 function strikeWith(bolt: Bolt, victim: Entity): boolean {
   const p = bolt.projectile;
   const shooter = p.owner === undefined ? undefined : world.entity(p.owner);
@@ -307,7 +318,7 @@ function strikeWith(bolt: Bolt, victim: Entity): boolean {
     hitMob(victim, bolt, damage, true);
     return true;
   }
-  const outcome = strike(victim, p.attack, shooter, p.spell);
+  const outcome = strike(victim, beyondNormalRange(p) ? withDisadvantage(p.attack) : p.attack, shooter, p.spell);
   if (outcome.hit) hitMob(victim, bolt, outcome.damage);
   return outcome.hit;
 }

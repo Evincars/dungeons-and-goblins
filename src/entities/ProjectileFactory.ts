@@ -52,11 +52,17 @@ function boltBurst(def: CharacterDef, bolt: BoltDef): ProjectileBurst | undefine
 }
 
 /** An arrow loosed from (x, y) along the unit direction (dx, dy), pointing the way it flies; `owner` is the archer's entity id. */
-export function createArrow(x: number, y: number, dx: number, dy: number, attack: AttackProfile, owner?: number): Entity {
+/** How far a shot flies (px): its weapon's normal range, past which it rolls with disadvantage, and its long range, where it drops. */
+export type ShotReach = { normal: number; long: number };
+
+export function createArrow(x: number, y: number, dx: number, dy: number, attack: AttackProfile, owner?: number, reach?: ShotReach): Entity {
+  const life = reach ? Math.ceil(reach.long / ARROW_STATS.speed) : ARROW_STATS.life;
+  const projectile: NonNullable<Entity['projectile']> = { life, team: Team.Player, arrow: true, attack, owner };
+  if (reach) projectile.closeLife = life - Math.ceil(reach.normal / ARROW_STATS.speed);
   return world.add({
     position: { x: x + dx * ARROW_STATS.spawnOffset, y: y + dy * ARROW_STATS.spawnOffset },
     velocity: { x: dx * ARROW_STATS.speed, y: dy * ARROW_STATS.speed },
-    projectile: { life: ARROW_STATS.life, team: Team.Player, arrow: true, attack, owner },
+    projectile,
     visual: { sheet: 'arrow_projectile', rotation: Math.atan2(dy, dx) },
     yOffset: AIM_HEIGHT,
   });

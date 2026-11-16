@@ -115,10 +115,14 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `src/level/generators/MineDresser.ts`; the mines' props in `src/level/MineProps.ts`, their terrain pieces in `src/level/MineTiles.ts`,
   made by `scripts/mine-sheets.py` into `public/caves2/mines-terrain.png` (keep the two in step)); the slanted wall pieces of the catacombs' and the castle's tilesets in `src/level/SlantTiles.ts`,
   made by `scripts/iso-sheets.py` into each tileset's `mainlevbuild-isometric.png` copy (keep the two in step); enemy AI knobs (sight, squad sizes, flanking, trail
-  following) in `src/ai/constants.ts`; the D&D rules tables (SRD weapons and armour) in `src/rules/WeaponTable.ts`
-  and `src/rules/ArmorTable.ts`; the weapons and armour found and worn in `src/data/weapons.json` (the basic D&D weapons, their art
-  in `public/weapons`) and `src/data/armors.json` (the D&D armours and a robe, their art a column of `public/armors.png`, whose first
-  four rows are the colours, one picked at random for each suit made, `ItemCatalog.ts`), at the SRD's prices and weights, no bonuses yet; hero classes (abilities, hit points, proficiencies, features) in
+  following) in `src/ai/constants.ts`; the D&D weapons in `src/data/weapons.json`
+  (every weapon of both D&D tables: damage, sort, properties, range in metres, versatile dice, price, weight, and its pictures in
+  `public/weapons`, one found weapon each) and the armour, shield and robe in `src/data/armors.json` (AC, DEX cap, the STR needed to
+  put it on at all, stealth, price, weight; a suit's picture a column of `public/armors.png`, whose first four rows are colours picked
+  at random for each suit made; the shield's pictures, the four of `public/weapons`). These two files are the single source:
+  `src/rules/WeaponTable.ts` and `ArmorTable.ts` read and check them, `ItemCatalog.ts` makes the items from them, and every rule in
+  play follows them (finesse, light for two-weapon fighting, two-handed, reach, loading, range and its disadvantage, versatile,
+  heavy armour's STR); no magic bonuses or ability stats on gear yet; hero classes (abilities, hit points, proficiencies, features) in
   `src/data/classes.json`; enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`;
   castable spells (dice, recovery, save, area, effect) in `src/data/spells.json`; the spells the game uses at all
   (only ones that act at once and can be drawn with our effects) and their icons in `src/data/spell-list.json`

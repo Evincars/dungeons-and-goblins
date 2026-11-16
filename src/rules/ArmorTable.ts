@@ -1,51 +1,68 @@
+import { ensure, StateError } from '../core/errors';
+import { hasKey, isRecord } from '../core/guards';
+import data from '../data/armors.json';
+
 /**
- * The armour table of the 5th edition System Reference Document. An item's `base` in src/data/armors.json
- * (or "shield" in shields.json) names one of these; its own magic bonus comes on top.
+ * The armour table of D&D 5e, read from src/data/armors.json (its single source: change an armour there and the game
+ * follows): Armor Class, how much DEX counts, the STR needed to wear it, price and weight. An item's `base` names one of
+ * these (the shield too); its own magic bonus comes on top.
  */
 
+/** Light, medium and heavy armour (who is trained in it), a shield (added on top), or clothes (no armour at all). */
+export const ARMOR_CATEGORIES = ['light', 'medium', 'heavy', 'shield', 'clothes'] as const;
+export type ArmorCategory = (typeof ARMOR_CATEGORIES)[number];
+
 export type ArmorRule = {
-  /** Light armour adds all of DEX, medium at most +2, heavy none; a shield is added on top of armour. */
-  category: 'light' | 'medium' | 'heavy' | 'shield';
+  name: string;
+  category: ArmorCategory;
   /** Armor Class it gives before DEX (for a shield, what it adds). */
   ac: number;
-  /** The most DEX modifier it lets count; null for no limit. */
+  /** The most of the DEX modifier that counts; null for no limit, 0 for none. */
   dexCap: number | null;
-  /** STR score needed to move freely in it (heavy armour only). */
-  strength?: number;
+  /** STR score needed to put it on at all; null when anyone can. */
+  strength: number | null;
   /** Too noisy to sneak in. */
   stealthDisadvantage: boolean;
+  /** Price in gold, weight in kg. */
+  cost: number;
+  weight: number;
+  /** Its picture: a column of the armour sheet (body armour), or its own pictures (a shield). */
+  column: number | null;
+  art: readonly string[];
 };
 
-export const ARMOR_BASES = [
-  'padded', 'leather', 'studded_leather',
-  'hide', 'chain_shirt', 'scale_mail', 'breastplate', 'half_plate',
-  'ring_mail', 'chain_mail', 'splint', 'plate',
-  'shield',
-] as const;
-export type ArmorBase = (typeof ARMOR_BASES)[number];
+export type ArmorBase = Extract<keyof typeof data.armors, string>;
 
 export function isArmorBase(value: unknown): value is ArmorBase {
-  return ARMOR_BASES.some((base) => base === value);
+  return typeof value === 'string' && hasKey(data.armors, value);
 }
 
-/** How far medium armour lets DEX help. */
-const MEDIUM_DEX_CAP = 2;
+const isCategory = (value: unknown): value is ArmorCategory => ARMOR_CATEGORIES.some((c) => c === value);
+const nullOrNumber = (value: unknown): value is number | null => value === null || (typeof value === 'number' && value >= 0);
 
-export const ARMOR_TABLE = {
-  padded: { category: 'light', ac: 11, dexCap: null, stealthDisadvantage: true },
-  leather: { category: 'light', ac: 11, dexCap: null, stealthDisadvantage: false },
-  studded_leather: { category: 'light', ac: 12, dexCap: null, stealthDisadvantage: false },
-  hide: { category: 'medium', ac: 12, dexCap: MEDIUM_DEX_CAP, stealthDisadvantage: false },
-  chain_shirt: { category: 'medium', ac: 13, dexCap: MEDIUM_DEX_CAP, stealthDisadvantage: false },
-  scale_mail: { category: 'medium', ac: 14, dexCap: MEDIUM_DEX_CAP, stealthDisadvantage: true },
-  breastplate: { category: 'medium', ac: 14, dexCap: MEDIUM_DEX_CAP, stealthDisadvantage: false },
-  half_plate: { category: 'medium', ac: 15, dexCap: MEDIUM_DEX_CAP, stealthDisadvantage: true },
-  ring_mail: { category: 'heavy', ac: 14, dexCap: 0, stealthDisadvantage: true },
-  chain_mail: { category: 'heavy', ac: 16, dexCap: 0, strength: 13, stealthDisadvantage: true },
-  splint: { category: 'heavy', ac: 17, dexCap: 0, strength: 15, stealthDisadvantage: true },
-  plate: { category: 'heavy', ac: 18, dexCap: 0, strength: 15, stealthDisadvantage: true },
-  shield: { category: 'shield', ac: 2, dexCap: null, stealthDisadvantage: false },
-} as const satisfies Record<ArmorBase, ArmorRule>;
+/** One entry of the data file, checked: anything missing or misspelt stops the game loading, naming the armour. */
+function readArmor(key: string, raw: unknown): ArmorRule {
+  ensure(isRecord(raw), `Bad armour ${key}`, { key });
+  const { name, category, ac, dexCap, strength, stealthDisadvantage, cost, weight } = raw;
+  ensure(typeof name === 'string' && isCategory(category) && typeof ac === 'number', `Bad armour ${key}`, { key });
+  ensure(nullOrNumber(dexCap) && nullOrNumber(strength) && typeof stealthDisadvantage === 'boolean', `Bad armour rules for ${key}`, { key });
+  ensure(typeof cost === 'number' && cost >= 0 && typeof weight === 'number' && weight >= 0, `Bad cost or weight for armour ${key}`, { key });
+  const column = typeof raw.column === 'number' ? raw.column : null;
+  const art = Array.isArray(raw.art) ? raw.art.filter((s): s is string => typeof s === 'string') : [];
+  return { name, category, ac, dexCap, strength, stealthDisadvantage, cost, weight, column, art };
+}
+
+/** Every armour of the data file, in its order. */
+export const ARMOR_BASES: readonly ArmorBase[] = Object.keys(data.armors).filter(isArmorBase);
+
+const TABLE: ReadonlyMap<ArmorBase, ArmorRule> = new Map(ARMOR_BASES.map((base) => [base, readArmor(base, data.armors[base])]));
+
+/** An armour's entry in the table. */
+export function armorStats(base: ArmorBase): ArmorRule {
+  const rule = TABLE.get(base);
+  if (!rule) throw new StateError(`No armour ${base}`, { base });
+  return rule;
+}
 
 /** Armor Class with no armour on: 10 plus the DEX modifier. */
 export const UNARMORED_AC = 10;

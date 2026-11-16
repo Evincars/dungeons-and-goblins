@@ -40,6 +40,7 @@ function weaponLines(item: InventoryItem): Line[] {
   const magic = magicBonus(item);
   if (magic) lines.push({ text: text('item.tooltip.magic_weapon', { bonus: formatModifier(magic) }), color: THEME.title });
   if (rule.properties.length) lines.push({ text: rule.properties.map(propertyName).join(', '), color: THEME.muted });
+  if (rule.distance) lines.push({ text: text('item.tooltip.distance', { normal: rule.distance[0], long: rule.distance[1] }), color: THEME.muted });
   lines.push({ text: text('item.tooltip.weapon_kind', { base: weaponName(base), category: weaponCategoryName(rule.category), range: rangeName(rule.range) }), color: THEME.muted });
   return lines;
 }
@@ -47,20 +48,24 @@ function weaponLines(item: InventoryItem): Line[] {
 /** How armour sets Armor Class: its base, plus DEX (all, at most +2, or none); a shield simply adds. */
 function armorClassLine(rule: ArmorRule): string {
   if (rule.category === 'shield') return text('item.tooltip.shield_ac', { ac: rule.ac });
-  if (rule.category === 'heavy') return text('item.tooltip.armor_ac', { ac: rule.ac });
+  if (rule.dexCap === 0) return text('item.tooltip.armor_ac', { ac: rule.ac });
   if (rule.dexCap === null) return text('item.tooltip.armor_ac_dex', { ac: rule.ac });
   return text('item.tooltip.armor_ac_dex_max', { ac: rule.ac, cap: rule.dexCap });
 }
 
-/** Armour's or a shield's rules: the AC it gives, its magic, the STR it needs, whether it is noisy, and what sort it is. */
-function armorLines(item: InventoryItem): Line[] {
+/**
+ * Armour's or a shield's rules: the AC it gives, its magic, the STR it needs (flagged when the hero, of STR `strength`,
+ * lacks it and so cannot put it on), whether it is noisy, and what sort it is.
+ */
+function armorLines(item: InventoryItem, strength: number | undefined): Line[] {
   const found = armorRule(item);
   if (!found) return [];
   const { base, rule } = found;
   const lines: Line[] = [{ text: armorClassLine(rule), color: THEME.armorClass }];
   const magic = magicBonus(item);
   if (magic) lines.push({ text: text('item.tooltip.magic_armor', { bonus: formatModifier(magic) }), color: THEME.title });
-  if (rule.strength) lines.push({ text: text('item.tooltip.strength_needed', { score: rule.strength }), color: THEME.muted });
+  const weak = rule.strength !== null && strength !== undefined && strength < rule.strength;
+  if (rule.strength) lines.push({ text: text(weak ? 'item.tooltip.too_weak' : 'item.tooltip.strength_needed', { score: rule.strength }), color: weak ? UNTRAINED_COLOR : THEME.muted });
   if (rule.stealthDisadvantage) lines.push({ text: text('item.tooltip.stealth'), color: THEME.muted });
   lines.push({ text: text('item.tooltip.armor_kind', { base: armorName(base), category: armorCategoryName(rule.category) }), color: THEME.muted });
   return lines;
@@ -80,9 +85,9 @@ function trainingLine(item: InventoryItem, cls: HeroClass | undefined): Line | n
  * The lines under the header: the item's rules (and a warning when `cls` is not trained in it), each stat it
  * adds, how much it weighs and is worth, and what kind of thing it is.
  */
-function detailLines(item: InventoryItem, cls: HeroClass | undefined): Line[] {
+function detailLines(item: InventoryItem, cls: HeroClass | undefined, strength: number | undefined): Line[] {
   const s = item.stats;
-  const rules = [...weaponLines(item), ...armorLines(item)];
+  const rules = [...weaponLines(item), ...armorLines(item, strength)];
   const lines = rules.slice(0, -1);
   const untrained = trainingLine(item, cls);
   if (untrained) lines.push(untrained);
@@ -95,7 +100,8 @@ function detailLines(item: InventoryItem, cls: HeroClass | undefined): Line[] {
 
 /**
  * A tooltip for any item: its name as the header, its picture, and its stats underneath. Show it over an
- * item under the pointer; it keeps itself inside the area it is given.
+ * item under the pointer; it keeps itself inside the area it is given. Given the hero's class and STR score, it
+ * flags gear they are not trained in or not strong enough to wear.
  */
 export class ItemTooltip {
   /** How far from the point it is shown at it sits (down and to the right, off the pointer). */
@@ -115,8 +121,8 @@ export class ItemTooltip {
   }
 
   /** Shows `item` near (x, y), kept inside a `bounds`-sized area starting at 0, 0. */
-  show(item: InventoryItem, x: number, y: number, bounds: { w: number; h: number }, cls?: HeroClass): void {
-    if (this.shown !== item) this.layout(item, cls);
+  show(item: InventoryItem, x: number, y: number, bounds: { w: number; h: number }, cls?: HeroClass, strength?: number): void {
+    if (this.shown !== item) this.layout(item, cls, strength);
     this.shown = item;
     const w = this.frame.width;
     const h = this.frame.height;
@@ -131,7 +137,7 @@ export class ItemTooltip {
   }
 
   /** Lays the tooltip out for an item: header across the top, picture on the left, details beside it. */
-  private layout(item: InventoryItem, cls: HeroClass | undefined): void {
+  private layout(item: InventoryItem, cls: HeroClass | undefined, strength: number | undefined): void {
     this.header.text = item.name;
     this.header.position.set(PAD, PAD);
     const texture = lazyTexture(itemIcon(item));
@@ -139,7 +145,7 @@ export class ItemTooltip {
     this.picture.scale.set(Math.min(PICTURE / Math.max(1, texture.width), PICTURE / Math.max(1, texture.height)));
     this.picture.position.set(PAD + PICTURE / 2, PAD + HEADER_H + PICTURE / 2);
     for (const child of this.lines.removeChildren()) child.destroy();
-    const details = detailLines(item, cls);
+    const details = detailLines(item, cls, strength);
     details.forEach((line, i) => {
       const label = new PixelLabel(line.text, { color: line.color, shadow: true });
       label.position.set(PAD + PICTURE + GAP, PAD + HEADER_H + i * LINE_H);

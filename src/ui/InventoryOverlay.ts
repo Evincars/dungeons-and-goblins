@@ -19,7 +19,7 @@ import { SheetInfoPanel } from './SheetInfoPanel';
 import { text } from '../core/texts';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
-import { INVENTORY_COLS, MAX_CARRY_KG, MAX_INVENTORY, carriedWeight, freeSquare, moveItem, requestDrop, requestGive, requestLoadout } from '../game/PlayerActions';
+import { INVENTORY_COLS, MAX_CARRY_KG, MAX_INVENTORY, carriedWeight, freeSquare, moveWorn, requestDrop, requestGive, requestLoadout } from '../game/PlayerActions';
 import { seatOf } from '../game/Party';
 import { PopupMenu } from './PopupMenu';
 import type { MenuRow } from './PopupMenu';
@@ -704,7 +704,7 @@ export class InventoryOverlay {
   private compare(item: InventoryItem, other: InventoryItem, x: number, y: number): void {
     const bounds = { w: DESIGN_W, h: DESIGN_H };
     this.comparing = true;
-    this.tooltip.show(item, x, y, bounds, this.sheet?.heroClass);
+    this.tooltip.show(item, x, y, bounds, this.sheet?.heroClass, this.sheet?.scores.strength);
     const first = this.tooltip.view;
     const right = first.x + first.width + COMPARE_GAP;
     this.compareTip.show(other, right - ItemTooltip.OFFSET, y, bounds, this.sheet?.heroClass);
@@ -741,13 +741,12 @@ export class InventoryOverlay {
 
   /** Double-click: an item in the bag is put on, replacing whatever is worn there; a worn one goes back in the bag. */
   private quickMove(player: Player, place: ItemPlace): void {
-    const loadout = { inventory: player.inventory ?? [], equipped: player.equipped ?? {} };
     const item = this.itemIn(player, place);
     if (!item) return;
-    const slot = 'bag' in place ? slotFor(loadout.equipped, item, true) : null;
-    const free = freeSquare(loadout.inventory);
+    const slot = 'bag' in place ? slotFor(player.equipped ?? {}, item, true) : null;
+    const free = freeSquare(player.inventory ?? []);
     const to: ItemPlace | null = 'bag' in place ? (slot ? { slot } : null) : (free >= 0 ? { bag: free } : null);
-    const next = to ? moveItem(loadout, place, to) : null;
+    const next = to ? moveWorn(player, place, to) : null;
     if (next) requestLoadout(player, next);
   }
 
@@ -807,7 +806,7 @@ export class InventoryOverlay {
     if (this.comparing) return;
     if (this.activeTab === SKILLS_TAB) this.spells?.hover(p.x, p.y);
     const item = player && square && !this.dragging && !this.itemMenu.open ? this.itemIn(player, square.place) : undefined;
-    if (item) this.tooltip.show(item, p.x, p.y, { w: DESIGN_W, h: DESIGN_H }, this.sheet?.heroClass);
+    if (item) this.tooltip.show(item, p.x, p.y, { w: DESIGN_W, h: DESIGN_H }, this.sheet?.heroClass, this.sheet?.scores.strength);
     else this.tooltip.hide();
     this.updateInfoTip(p.x, p.y);
   }
@@ -856,7 +855,7 @@ export class InventoryOverlay {
     if (!player || !from) return;
     const target = this.dropTarget(e, player, from);
     if (!target || samePlace(from, target)) return;
-    const next = moveItem({ inventory: player.inventory ?? [], equipped: player.equipped ?? {} }, from, target);
+    const next = moveWorn(player, from, target);
     if (next) requestLoadout(player, next);
   }
 

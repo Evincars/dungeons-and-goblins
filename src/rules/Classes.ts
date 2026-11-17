@@ -9,7 +9,7 @@ import { hasKey, isRecord } from '../core/guards';
 import { isDieSides } from './Dice';
 import type { DieSides } from './Dice';
 import type { ArmorRule } from './ArmorTable';
-import { WEAPON_TABLE, isWeaponBase } from './WeaponTable';
+import { isWeaponBase, weaponStats } from './WeaponTable';
 import type { WeaponBase, WeaponRule } from './WeaponTable';
 import { CLASS_FEATURES } from './Features';
 import type { ClassFeature } from './Features';
@@ -44,7 +44,8 @@ export function isHeroClassId(value: unknown): value is HeroClassId {
 /** The class a hero is when nothing says otherwise. */
 export const DEFAULT_CLASS: HeroClassId = 'fighter';
 
-export type ArmorTraining = ArmorRule['category'];
+/** The armour a class can be trained in (clothes need no training). */
+export type ArmorTraining = Exclude<ArmorRule['category'], 'clothes'>;
 export type WeaponTraining = WeaponRule['category'];
 export const ARMOR_TRAININGS = ['light', 'medium', 'heavy', 'shield'] as const satisfies readonly ArmorTraining[];
 export const WEAPON_TRAININGS = ['simple', 'martial'] as const satisfies readonly WeaponTraining[];
@@ -154,11 +155,11 @@ export function spellLevelFor(cls: HeroClass, spell: SpellId): number {
 }
 
 /** Trained in this kind of armour (no disadvantage on attacks while wearing it). */
-export function armorProficient(cls: HeroClass, category: ArmorTraining): boolean {
-  return cls.armor.includes(category);
+export function armorProficient(cls: HeroClass, category: ArmorRule['category']): boolean {
+  return category === 'clothes' || cls.armor.includes(category);
 }
 
 /** Trained in this weapon, by its kind or by name (adds the proficiency bonus to hit); everyone can punch. */
 export function weaponProficient(cls: HeroClass, base: WeaponBase): boolean {
-  return base === 'unarmed' || cls.weapons.includes(WEAPON_TABLE[base].category) || cls.weaponBases.includes(base);
+  return base === 'unarmed' || cls.weapons.includes(weaponStats(base).category) || cls.weaponBases.includes(base);
 }

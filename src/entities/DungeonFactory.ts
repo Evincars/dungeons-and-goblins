@@ -5,6 +5,7 @@ import type { Level } from '../level/Level';
 import { PROPS, PROP_GROUND } from '../level/Props';
 import type { PropDef, PropKind, PropPlacement } from '../level/Props';
 import { stashCoins } from './LootFactory';
+import { ARMORS, HAND_WEAPONS, SHIELDS, catalogueItem } from './ItemCatalog';
 import type { DoorData, RoomData } from '../level/generators/DungeonBuilder';
 
 /**
@@ -55,14 +56,14 @@ const CHEST_HEALTH = 20;
 const CHEST_SCALE = 0.75;
 const CHEST_LIFT = 12;
 
-/** What the shop keeper sells: gear for every slot. */
+/** What the shop keeper sells: gear for every slot, its weapons, shield and armour the D&D ones of the catalogue. */
+const sold = (from: readonly InventoryItem[], bases: readonly string[]): InventoryItem[] => bases.flatMap((base) => catalogueItem(from, base) ?? []);
+
 export const SHOP_ITEMS: readonly InventoryItem[] = [
-  { type: 'weapon', name: 'Short Sword',   value: 50,  gear: 'weapon',  base: 'shortsword', icon: 'item_arms_00', stats: { strength: 2 }, weight: 1.8 },
-  { type: 'weapon', name: 'Long Sword',    value: 120, gear: 'weapon',  base: 'longsword',  icon: 'item_arms_11', stats: { strength: 4 }, weight: 3.0 },
-  { type: 'weapon', name: 'Hand Axe',      value: 70,  gear: 'weapon',  base: 'handaxe',    icon: 'item_arms_13', stats: { strength: 3 }, weight: 2.5 },
-  { type: 'shield', name: 'Wooden Shield', value: 45,  gear: 'offhand', base: 'shield',     icon: 'item_arms_08', stats: { dexterity: 1 }, weight: 4.5 },
+  ...sold(HAND_WEAPONS, ['shortsword', 'longsword', 'handaxe']),
+  ...sold(SHIELDS, ['shield']),
   { type: 'helmet', name: 'Iron Helm',     value: 40,  gear: 'head',    icon: 'prop_armor_bust2', stats: { dexterity: 1 }, weight: 2.0 },
-  { type: 'armor',  name: 'Chain Mail',    value: 80,  gear: 'armor',   base: 'chain_mail', icon: 'prop_armor_bust', stats: { dexterity: 2, constitution: 1 }, weight: 12.0 },
+  ...sold(ARMORS, ['chain_mail']),
   { type: 'ring',   name: 'Copper Ring',   value: 60,  gear: 'trinket', icon: 'icon_ring', stats: { charisma: 2 }, weight: 0.1 },
 ];
 

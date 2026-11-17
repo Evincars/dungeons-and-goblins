@@ -71,7 +71,8 @@ function startSwing(player: Player): void {
   const aim = player.aimVector ?? { x: 0, y: 1 };
   const sheet = characterSheet(player);
   const blows = sheet.attacks;
-  const reach = swingRange(player.playerStats.swordTier) + (lungeReady(player) ? LUNGE_REACH : 0);
+  const long = sheet.attack.rule.properties.includes('reach') ? SWORD_STATS.reachExtra : 0;
+  const reach = swingRange(player.playerStats.swordTier) + long + (lungeReady(player) ? LUNGE_REACH : 0);
   const swing: Swing = {
     delay: firstWindUp(player),
     ticks: SWORD_STATS.swingTicks,

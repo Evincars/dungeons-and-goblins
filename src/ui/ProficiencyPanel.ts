@@ -46,7 +46,7 @@ export class ProficiencyPanel {
     this.view.position.set(x, y);
     this.header = new PixelLabel('', { color: THEME.title, shadow: true });
     this.view.addChild(this.header);
-    this.armorHit = this.addRow(text('proficiency.armor'), ARMOR_TRAININGS, (t: ArmorTraining) => (s) => armorProficient(s.heroClass, t), LINE_H, x, y, w);
+    this.armorHit = this.addRow(text('proficiency.armor'), ARMOR_TRAININGS, (t: ArmorTraining) => (s) => armorProficient(s.heroClass, t) || s.feats.armor.includes(t), LINE_H, x, y, w);
     this.weaponHit = this.addRow(text('proficiency.weapons'), WEAPON_TRAININGS, (t: WeaponTraining) => (s) => s.heroClass.weapons.includes(t), 3 * LINE_H, x, y, w);
     this.extraWeapons = new PixelLabel('', { color: THEME.text, shadow: true });
     this.extraWeapons.y = 5 * LINE_H;

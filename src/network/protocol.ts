@@ -17,6 +17,7 @@ import { isFiniteNumber, isRecord } from '../core/guards';
 import { isItemBase, isMagicBonus } from '../rules/Equipment';
 import { isCatalogSpell, knightListed, MAX_SPELL_LEVEL } from '../rules/Spellbook';
 import { bindingFeatureId, isFeatureId } from '../rules/ClassFeatures';
+import { bindingFeatId } from '../rules/Feats';
 
 /**
  * What co-op peers say to each other, and the checks every incoming message passes before the game
@@ -186,7 +187,7 @@ function isItemSquare(value: unknown): value is ItemSquare {
 
 /** A spell on the quick bar: one of the lists' spells, at a level from 0 to 9. */
 export function validBinding(spell: unknown, level: unknown): boolean {
-  const named = typeof spell === 'string' && bindingFeatureId(spell) !== null ? isFeatureId(bindingFeatureId(spell)) : isCatalogSpell(spell);
+  const named = typeof spell === 'string' && (bindingFeatureId(spell) !== null ? isFeatureId(bindingFeatureId(spell)) : bindingFeatId(spell) !== null || isCatalogSpell(spell));
   return named && Number.isInteger(level) && Number(level) >= 0 && Number(level) <= MAX_SPELL_LEVEL;
 }
 

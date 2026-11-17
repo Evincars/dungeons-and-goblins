@@ -58,7 +58,16 @@ export function wrapLines(content: string, maxWidth: number): string[] {
  * the tooltip stays short and says to hold Alt, and shows the whole story while Alt is held. `icon`: the texture key of
  * a picture shown beside the text (a spell's icon).
  */
-export type TipTopic = { title: string; body: string; detail?: readonly string[]; wide?: boolean; more?: TipTopic; icon?: string };
+export type TipTopic = { title: string; body: string; detail?: readonly TipDetail[]; wide?: boolean; more?: TipTopic; icon?: string };
+
+/** A line of the details: in the usual green, or in a colour of its own (a heading, a requirement met or missed). */
+export type TipDetail = string | { text: string; color: number };
+
+const detailText = (line: TipDetail): string => (typeof line === 'string' ? line : line.text);
+const detailColor = (line: TipDetail): number => (typeof line === 'string' ? DETAIL_COLOR : line.color);
+
+/** One wrapped line of the details, with its colour. */
+type DetailLine = { text: string; color: number };
 
 type Bounds = { w: number; h: number };
 type Anchor = { x: number; y: number; w: number; h: number };
@@ -98,7 +107,8 @@ export class InfoTooltip {
   }
 
   private keyOf(topic: TipTopic): string {
-    return [topic.title, topic.body, ...(topic.detail ?? []), topic.more ? '+' : '', this.full ? 'full' : ''].join('\n');
+    const details = (topic.detail ?? []).map((line) => `${detailColor(line)}:${detailText(line)}`);
+    return [topic.title, topic.body, ...details, topic.more ? '+' : '', this.full ? 'full' : ''].join('\n');
   }
 
   /** Lays the tooltip out for `topic` (its whole story while Alt is held) unless it already shows it; returns whether it was new. */
@@ -163,12 +173,11 @@ export class InfoTooltip {
   }
 
   /** The lines of a text: at the usual width, or for a `wide` one, widened until the whole tooltip fits `bounds`. */
-  private wrap(topic: TipTopic, bounds: { w: number; h: number }): { lines: string[]; details: string[] } {
-    const detail = topic.detail?.length ? topic.detail.join('\n') : '';
+  private wrap(topic: TipTopic, bounds: { w: number; h: number }): { lines: string[]; details: DetailLine[] } {
     let width = topic.wide ? WIDE_W : WRAP_W;
     for (;;) {
       const lines = wrapLines(topic.body, width);
-      const details = detail ? wrapLines(detail, width) : [];
+      const details = wrapDetails(topic.detail ?? [], width);
       const height = 2 * PAD + HEADER_H + (lines.length + details.length) * LINE_H + (details.length ? DETAIL_GAP : 0);
       if (!topic.wide || height <= bounds.h || width + 2 * PAD >= bounds.w) return { lines, details };
       width += WIDEN_STEP;
@@ -184,14 +193,14 @@ export class InfoTooltip {
     const { lines, details } = this.wrap(topic, bounds);
     const body = new PixelLabel(lines.join('\n'), { color: THEME.text, shadow: true });
     body.position.set(left, PAD + HEADER_H);
-    const detail = new PixelLabel(details.join('\n'), { color: DETAIL_COLOR, shadow: true });
+    const detail = detailLabels(details);
     detail.position.set(left, PAD + HEADER_H + lines.length * LINE_H + DETAIL_GAP);
     const linesH = lines.length * LINE_H + (details.length ? DETAIL_GAP + details.length * LINE_H : 0);
     const textH = 2 * PAD + HEADER_H + Math.max(linesH, topic.icon ? PICTURE : 0);
     // A short tooltip with more to tell says how to see it.
     const hint = topic.more ? new PixelLabel(text('spell.tip.more'), { color: HINT_COLOR, shadow: true }) : null;
     hint?.position.set(PAD, textH - PAD + HINT_GAP);
-    const w = Math.max(header.textWidth + PAD, left + Math.max(body.textWidth, detail.textWidth), PAD + (hint?.textWidth ?? 0)) + PAD;
+    const w = Math.max(header.textWidth + PAD, left + Math.max(body.textWidth, detail.width), PAD + (hint?.textWidth ?? 0)) + PAD;
     const h = hint ? textH + HINT_GAP + LINE_H : textH;
     const frame = new Graphics()
       .rect(0, 0, w, h).fill({ color: THEME.panel, alpha: BG_ALPHA })
@@ -214,4 +223,28 @@ export class InfoTooltip {
     };
     reportRejection(requestArt(key).then(show), `Tooltip picture ${key} did not load`, 'render');
   }
+}
+
+/** The details broken into lines no wider than `width`, each keeping its entry's colour. */
+function wrapDetails(detail: readonly TipDetail[], width: number): DetailLine[] {
+  const out: DetailLine[] = [];
+  for (const entry of detail) {
+    const color = detailColor(entry);
+    for (const line of wrapLines(detailText(entry), width)) out.push({ text: line, color });
+  }
+  return out;
+}
+
+/** The details drawn line under line, each in its colour (lines of one colour in a row share a label). */
+function detailLabels(details: readonly DetailLine[]): Container {
+  const box = new Container();
+  let start = 0;
+  for (let i = 1; i <= details.length; i++) {
+    if (i < details.length && details[i].color === details[start].color) continue;
+    const run = new PixelLabel(details.slice(start, i).map((d) => d.text).join('\n'), { color: details[start].color, shadow: true });
+    run.position.set(0, start * LINE_H);
+    box.addChild(run);
+    start = i;
+  }
+  return box;
 }

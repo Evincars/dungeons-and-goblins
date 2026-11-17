@@ -3,7 +3,8 @@
  * Champion takes a second, different one at level 10 (Additional Fighting Style).
  * archery: +2 to attack rolls with ranged weapons.
  * defense: +1 Armor Class while wearing armour.
- * dueling: +2 damage with a melee weapon held in one hand and no other weapon in the other.
+ * dueling: +2 damage with a melee weapon held in one hand and no weapon in the other (a shield is fine); a versatile
+ *   weapon with the other hand empty is held in both, so only beside a shield.
  * great_weapon_fighting: a 1 or 2 on a damage die of a melee weapon held in two hands is rolled again, and the
  *   new roll stands (the weapon must be two-handed or versatile).
  * protection: while carrying a shield, an enemy's attack on an ally beside you is rolled with disadvantage; a

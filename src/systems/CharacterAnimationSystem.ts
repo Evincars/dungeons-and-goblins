@@ -2,6 +2,9 @@ import { q } from '../world';
 import { characterDef, clipAnchorX, clipAnchorY, clipFrameTexture, clipFrames, drawnMirrored, facingRow, stateClip } from '../characters/Characters';
 import type { CharacterComponent } from '../characters/Characters';
 import type { ClipDef } from '../characters/CharacterDef';
+import { isSwing } from '../characters/StateTriggers';
+import type { Entity } from '../world';
+import { attackTempo } from './SwordSystem';
 
 /** Steps a character's clip on by one frame when its time is up, then loops, holds or finishes it. */
 function advance(c: CharacterComponent, clip: ClipDef, frames: number): void {
@@ -17,6 +20,11 @@ function advance(c: CharacterComponent, clip: ClipDef, frames: number): void {
   }
 }
 
+/** How fast a swing clip plays: the tempo of the blow under way, else (an archer's release) Action Surge's. */
+function swingRate(entity: Entity): number {
+  return entity.swordSwing?.tempo ?? attackTempo(entity);
+}
+
 /**
  * Advances each character's clip and shows the current frame from the row for the side it faces;
  * characters drawn facing only one way are mirrored to face the other.
@@ -27,7 +35,13 @@ export function updateCharacterAnimation(): void {
     const def = characterDef(c.def);
     const found = stateClip(def, c.state);
     if (!found) continue;
-    advance(c, found.clip, clipFrames(found.clip, found.sheet));
+    const frames = clipFrames(found.clip, found.sheet);
+    // A swing clip keeps pace with the blow it shows (twice as fast under Action Surge, faster for a long chain).
+    const rate = isSwing(c.state) ? swingRate(entity) : 1;
+    const carried = (c.carry ?? 0) + rate;
+    const steps = Math.floor(carried);
+    c.carry = carried - steps;
+    for (let i = 0; i < steps; i++) advance(c, found.clip, frames);
     const sprite = entity.sprite;
     sprite.texture = clipFrameTexture(found.clip, found.sheet, c.frame, facingRow(def, c.flipX));
     sprite.anchor.set(clipAnchorX(def, found.clip), clipAnchorY(def, found.clip));

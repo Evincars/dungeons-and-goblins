@@ -16,12 +16,21 @@ function showFrame(entity: Effect, frame: number): void {
   if (entity.sprite) setVisualFrame(entity.sprite, entity.visual.sheet, frame, entity.visual.row ?? 0);
 }
 
+/** An aura keeps to the entity it surrounds (and stays where it was if that one is gone). */
+function followOwner(entity: Effect, ownerId: number): void {
+  const owner = world.entity(ownerId)?.position;
+  if (!owner) return;
+  entity.position.x = owner.x;
+  entity.position.y = owner.y;
+}
+
 export function updateFx(): void {
   for (const entity of effects) {
     if (entity.removed) continue;
     const fx = entity.fx;
     showFrame(entity, (fx.first ?? 0) + frameOf(fx));
     if (fx.rise) entity.position.y -= fx.rise;
+    if (fx.follow !== undefined) followOwner(entity, fx.follow);
     if (++fx.age >= fx.duration) world.addComponent(entity, 'removed', true);
   }
 }

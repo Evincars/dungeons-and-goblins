@@ -4,6 +4,7 @@ import { abilityModifier } from './Abilities';
 import { FEATS } from './Feats';
 import { hasFeat } from './Build';
 import type { Build } from './Build';
+import { gainsAt } from './Progression';
 
 /**
  * Hit points as the tabletop rules (SRD 5e) count them: a hero starts with their class's whole hit die plus CON, gains
@@ -18,11 +19,15 @@ export function startingHitPoints(hitDie: DieSides, constitution: number): numbe
   return Math.max(MIN_HIT_POINTS, hitDie + abilityModifier(constitution));
 }
 
-/** The Tough feat's hit points for the level just gained: each level, and all the levels so far on the one it is taken. */
+/**
+ * The Tough feat's hit points for the level just gained: its share of this level, or of every level so far when the class
+ * grants it at this very level. A feat taken in the level panel is picked after the level is gained, so its share of the
+ * levels already gained is added when it is taken (game/Customize.ts).
+ */
 function featHitPoints(cls: HeroClass, level: number, build: Build | undefined): number {
   if (!hasFeat(cls, level, build, 'tough')) return 0;
-  const before = level > 1 && hasFeat(cls, level - 1, build, 'tough');
-  return FEATS.tough.hitPointsPerLevel * (before ? 1 : level);
+  const grantedNow = gainsAt(cls.progression, level).feats.includes('tough') && (level === 1 || !gainsAt(cls.progression, level - 1).feats.includes('tough'));
+  return FEATS.tough.hitPointsPerLevel * (grantedNow ? level : 1);
 }
 
 /** A level gained adds the class's hit die taken at its average (half the die, plus one) plus CON (at least 1), and Tough's share. */

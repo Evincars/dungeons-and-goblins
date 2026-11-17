@@ -50,6 +50,10 @@ export type FxOptions = {
   rise?: number;
   /** The first frame of the strip it plays from. */
   first?: number;
+  /** Moves with this entity (by id) while it plays: an aura. */
+  follow?: number;
+  /** Colours the effect (its white row takes the colour whole). */
+  tint?: number;
 };
 
 /** A one-off effect playing `frames` frames of a sheet across `duration` ticks, then gone (as in Catacomb Snatch Redux). */
@@ -57,10 +61,10 @@ export function spawnFx(x: number, y: number, sheet: string, frames: number, dur
   return world.add({
     position: { x, y },
     yOffset: opts.yOffset ?? 0,
-    visual: { sheet, col: 0, row: opts.row, scale: opts.scale },
+    visual: { sheet, col: 0, row: opts.row, scale: opts.scale, tint: opts.tint },
     fx: {
       age: 0, duration, frames,
-      cycle: opts.cycle, scale: opts.scale, rise: opts.rise, orderId: opts.orderId, orderBias: opts.orderBias, first: opts.first,
+      cycle: opts.cycle, scale: opts.scale, rise: opts.rise, orderId: opts.orderId, orderBias: opts.orderBias, first: opts.first, follow: opts.follow,
     },
   });
 }

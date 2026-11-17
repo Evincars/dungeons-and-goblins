@@ -3,7 +3,13 @@ import type { Player, StatName } from '../world';
 import { coop } from '../network/CoopSession';
 import type { GuestCommand } from '../network/protocol';
 import { heroClass } from '../rules/Classes';
-import { baseScores, chooseFightingStyle, lockBuild, newBuild, saveBuild, setScores, takeArchetype, takeExtraStyle, takeImprovement, takePicks } from '../rules/Build';
+import {
+  baseScores, chooseFightingStyle, grantArchetype, lockBuild, newBuild, saveBuild, setScores, takeArchetype, takeExtraStyle, takeImprovement, takePicks,
+} from '../rules/Build';
+import type { Build } from '../rules/Build';
+import type { HeroClass } from '../rules/Classes';
+import { abilityModifier } from '../rules/Abilities';
+import { FEATS } from '../rules/Feats';
 import type { Improvement, LevelPicks } from '../rules/Build';
 import type { ArchetypeId } from '../rules/Archetypes';
 import type { FightingStyleId } from '../rules/FightingStyles';
@@ -45,10 +51,26 @@ function carryOut(player: Player, command: CustomizeCommand): boolean {
   if (command.kind === 'extra_style') return takeExtraStyle(cls, build, level, command.style);
   if (command.kind === 'archetype') return takeArchetype(cls, build, level, command.archetype);
   if (command.kind === 'pick') return command.level <= level && takePicks(cls, build, command.level, { maneuvers: command.maneuvers, spells: command.spells });
-  if (command.kind === 'improve') return takeImprovement(cls, build, level, command.improvement);
+  if (command.kind === 'improve') return improve(player, cls, build, command.improvement);
   if (command.kind === 'lock_build') return saveBuild(cls, build, level);
   if (!setScores(build, level, command.scores)) return false;
   fitHitPoints(player);
+  return true;
+}
+
+/**
+ * An Improvement taken: hit points follow it at once, for every level the hero has already gained, as the tabletop does
+ * when Constitution rises or the Tough feat is taken (a level gained later adds its own share, src/rules/HitPoints.ts).
+ */
+function improve(player: Player, cls: HeroClass, build: Build, improvement: Improvement): boolean {
+  const level = player.playerStats.level;
+  const conBefore = abilityModifier(baseScores(cls, level, build).constitution);
+  if (!takeImprovement(cls, build, level, improvement)) return false;
+  const conAfter = abilityModifier(baseScores(cls, level, build).constitution);
+  const tough = 'feat' in improvement ? FEATS[improvement.feat].hitPointsPerLevel : 0;
+  const gained = (conAfter - conBefore + tough) * level;
+  player.health.max += gained;
+  player.health.current = Math.max(1, player.health.current + gained);
   return true;
 }
 
@@ -73,7 +95,7 @@ function logChoice(player: Player, command: CustomizeCommand): void {
 }
 
 function logImprovement(player: Player, improvement: Improvement): void {
-  if ('feat' in improvement) recordEvent(player, 'feat', { item: featName(improvement.feat) });
+  if ('feat' in improvement) recordEvent(player, 'feat', { item: featName(improvement.feat) + (improvement.ability ? ` (${text(`stat.${improvement.ability}.short` as const)} +1)` : '') });
   else recordEvent(player, 'improve', { item: improvedAbilities(improvement.stats) });
 }
 
@@ -136,10 +158,18 @@ export function requestImprovement(player: Player, improvement: Improvement): vo
 export function updateBuildLock(level: Level): void {
   for (const player of q.players) {
     const build = player.build;
-    if (!build || build.locked) continue;
+    if (!build) continue;
+    giveArchetype(player, build);
+    if (build.locked) continue;
     const away = run.depth > 1 || !level.isWorldPosSafe(player.position.x, player.position.y);
     if (!away) continue;
     lockBuild(heroClass(player.heroClass), build, player.playerStats.level);
     logBuildSaved(player);
   }
+}
+
+/** Host, each tick: a Fighter who has reached level 3 is made a Champion (the only archetype on offer), and it is logged. */
+function giveArchetype(player: Player, build: Build): void {
+  const given = grantArchetype(heroClass(player.heroClass), build, player.playerStats.level);
+  if (given) recordEvent(player, 'archetype', { item: archetypeName(given) });
 }

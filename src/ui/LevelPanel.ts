@@ -6,26 +6,27 @@ import { statShort } from '../entities/Items';
 import { requestFightingStyle, requestImprovement, requestLock, requestScores } from '../game/Customize';
 import { abilityModifier } from '../rules/Abilities';
 import {
-  archetypeLevel, baseScores, extraStyleLevel, fightingStyleOffered, hasFeat, improvementIndexAt, levelHasChoice, maneuversNeeded, newBuild, picksPending,
-  visibleLevel,
+  archetypeLevel, baseScores, extraStyleLevel, featOpen, fightingStyleOffered, hasFeat, improvementIndexAt, levelHasChoice, maneuversNeeded,
+  meetsRequirement, newBuild, picksPending, visibleLevel,
 } from '../rules/Build';
-import type { Improvement } from '../rules/Build';
+import type { Build, Improvement } from '../rules/Build';
+import { PLAYABLE_ARCHETYPES } from '../rules/Archetypes';
 import { heroClass } from '../rules/Classes';
 import type { HeroClass } from '../rules/Classes';
 import { featuresAt } from '../rules/ClassFeatures';
 import { isManeuver } from '../rules/Maneuvers';
-import { FEAT_IDS } from '../rules/Feats';
-import type { FeatId } from '../rules/Feats';
+import { FEATS, FEAT_IDS, featAbility, featNeedsAbility } from '../rules/Feats';
+import type { FeatId, FeatRequirement } from '../rules/Feats';
 import { FIGHTING_STYLES } from '../rules/FightingStyles';
 import type { FightingStyleId } from '../rules/FightingStyles';
 import { formatModifier } from '../rules/Dice';
 import {
-  featDescription, featName, featureName, fightingStyleDescription, fightingStyleName, spellName,
+  featDescription, featName, featureName, fightingStyleDescription, fightingStyleName, spellName, trainingName,
 } from '../rules/Names';
 import { ABILITY_CAP } from '../rules/Progression';
 import { HUMAN_BONUS, POINT_BUY_BUDGET, canLower, canRaise, pointsLeft, scoreCost } from '../rules/PointBuy';
 import { InfoTooltip, wrapLines } from './InfoTooltip';
-import type { TipTopic } from './InfoTooltip';
+import type { TipDetail, TipTopic } from './InfoTooltip';
 import { LevelChoices } from './LevelChoices';
 import { PixelButton } from './PixelButton';
 import { PixelLabel } from './PixelText';
@@ -50,6 +51,21 @@ const LINE_H = 10;
 const SELECTED_EDGE = 0xe8c66a;
 /** An Ability Score Improvement is this many points. */
 const IMPROVEMENT_POINTS = 2;
+/** On the Improvement page the abilities stand in two columns; their - and + buttons sit this far into a column. */
+const STAT_BUTTONS_X = 100;
+/** The feats are listed two columns of this many rows a page, each row this tall. */
+const FEAT_ROWS = 6;
+const FEATS_PER_PAGE = FEAT_ROWS * 2;
+const FEAT_ROW_H = STYLE_H + 3;
+const NAV_W = 20;
+/** The buttons that pick the ability a feat raises: where they start, and each one's width. */
+const RAISE_LABEL_X = 96;
+const RAISE_X = 120;
+const RAISE_W = 28;
+/** A feat's requirement in its tooltip: green when the hero meets it, red when not; amber for a feat not in the game yet. */
+const REQUIREMENT_MET = 0x7ddc7d;
+const REQUIREMENT_MISSED = 0xe85a4f;
+const NOT_WORKED = 0xe8c66a;
 
 /** A style that has a requirement to tell about when pointed at. */
 const STYLE_DETAILS: Partial<Record<FightingStyleId, 'style.protection.detail' | 'style.two_weapon_fighting.detail'>> = {
@@ -88,6 +104,9 @@ export class LevelPanel {
   /** The points handed out so far for an Ability Score Improvement, or the feat picked in their place (neither is final until Save). */
   private given: Scores = zeroScores();
   private feat: FeatId | null = null;
+  /** The ability the picked feat raises, for a feat that lets the player choose; and the page of the feat list shown. */
+  private featStat: StatName | null = null;
+  private featPage = 0;
   /** What the panel was last drawn from, so it is drawn again only when that changes. */
   private signature = '';
 
@@ -103,6 +122,8 @@ export class LevelPanel {
     this.draft = { ...(player.build ?? newBuild(heroClass(player.heroClass))).scores };
     this.given = zeroScores();
     this.feat = null;
+    this.featStat = null;
+    this.featPage = 0;
     this.choices.reset();
     this.signature = '';
   }
@@ -110,7 +131,9 @@ export class LevelPanel {
   update(player: Player): void {
     const build = player.build;
     if (!build) return;
-    const signature = JSON.stringify([build, player.playerStats.level, this.draft, this.given, this.feat, this.selected, this.choices.signature()]);
+    const signature = JSON.stringify([
+      build, player.playerStats.level, this.draft, this.given, this.feat, this.featStat, this.featPage, this.selected, this.choices.signature(),
+    ]);
     if (signature === this.signature) return;
     this.signature = signature;
     this.draw(player);
@@ -196,14 +219,25 @@ export class LevelPanel {
 
   // ── Which page ──────────────────────────────────────────────────────────────
 
+  /**
+   * The page of a tab: the choice it still asks for, else what it gave. A level may ask for more than one thing (an
+   * Eldritch Knight's level 4 has an Improvement and new spells): each comes in turn, the Improvement first.
+   */
   private drawPage(player: Player, cls: HeroClass, tab: number, current: number): void {
     const build = player.build ?? newBuild(cls);
     if (tab === 1 && !build.locked) this.drawCreation(player, cls, current);
-    else if (improvementIndexAt(cls, tab) >= 0) this.drawImprovementPage(player, cls, tab, current);
-    else if (archetypeLevel(cls, tab) && !build.archetype) this.choices.drawArchetype(player);
+    else if (this.improvementOpen(cls, tab, build)) this.drawImprovementPage(player, cls, tab, current);
+    else if (archetypeLevel(cls, tab) && !build.archetype && PLAYABLE_ARCHETYPES.length > 1) this.choices.drawArchetype(player);
     else if (extraStyleLevel(cls, tab) && build.archetype === 'champion' && !build.extraStyle) this.choices.drawExtraStyle(player);
     else if (picksPending(build, tab)) this.drawPicks(player, tab);
+    else if (improvementIndexAt(cls, tab) >= 0) this.drawImprovementPage(player, cls, tab, current);
     else this.drawRecord(player, cls, tab);
+  }
+
+  /** The tab's level offers an Improvement that has not been taken yet. */
+  private improvementOpen(cls: HeroClass, tab: number, build: Build): boolean {
+    const index = improvementIndexAt(cls, tab);
+    return index >= 0 && !build.improvements[index];
   }
 
   // ── Level 1: point buy, fighting style, Save ───────────────────────────────
@@ -282,15 +316,25 @@ export class LevelPanel {
   private drawImprovementPage(player: Player, cls: HeroClass, tab: number, current: number): void {
     const index = improvementIndexAt(cls, tab);
     const taken = player.build?.improvements[index];
-    if (taken) this.drawTaken(taken, tab);
+    if (taken) this.drawTaken(player, cls, taken, tab);
     else if (index === (player.build?.improvements.length ?? 0)) this.drawImprovement(player, cls, tab, current);
     else this.paragraph(text('level.waiting'), 0);
   }
 
-  private drawTaken(taken: Improvement, level: number): void {
-    const list = 'feat' in taken ? text('level.taken_feat', { feat: featName(taken.feat) }) : this.pointsList(taken.stats);
-    const y = this.paragraph(text('level.taken', { level, list }), 0, THEME.title);
-    if ('feat' in taken) this.paragraph(featDescription(taken.feat), y, THEME.text);
+  /** What the Improvement of this level was spent on, and the rest the level gave. */
+  private drawTaken(player: Player, cls: HeroClass, taken: Improvement, level: number): void {
+    const list = 'feat' in taken ? this.featTaken(taken.feat, taken.ability) : this.pointsList(taken.stats);
+    let y = this.paragraph(text('level.taken', { level, list }), 0, THEME.title);
+    if ('feat' in taken) y = this.paragraph(featDescription(taken.feat), y, THEME.text);
+    const gained = this.gainedList(player, cls, level);
+    if (gained) this.paragraph(text('level.gained', { level, list: gained }), y + 4, THEME.buttonText);
+  }
+
+  /** "the Athlete feat (+1 DEX)": a feat, and the ability it raised. */
+  private featTaken(feat: FeatId, ability: StatName | undefined): string {
+    const raised = featAbility(feat, ability);
+    const name = text('level.taken_feat', { feat: featName(feat) });
+    return raised ? `${name} (${text('level.taken_points', { amount: 1, stat: statShort(raised) })})` : name;
   }
 
   private pointsList(stats: Partial<Record<StatName, number>>): string {
@@ -304,13 +348,18 @@ export class LevelPanel {
     let y = this.paragraph(text('level.improve.hint'), 14);
     this.label(text(this.feat ? 'level.improve.feat_picked' : 'level.improve.points', { points: left }), 0, y, THEME.buttonText);
     y += ROW_H;
-    for (const stat of STAT_NAMES) {
+    STAT_NAMES.forEach((stat, i) => {
       const score = scores[stat] + this.given[stat];
-      this.improveRow(stat, score, y, left > 0 && score < ABILITY_CAP, this.given[stat] > 0);
-      y += ROW_H;
-    }
-    this.drawFeats(player, cls, current, y + 6);
-    this.drawImprovementSave(player, left === 0 || this.feat !== null);
+      this.improveRow(stat, score, (i % 2) * SECOND_COLUMN, y + Math.floor(i / 2) * ROW_H, left > 0 && score < ABILITY_CAP, this.given[stat] > 0);
+    });
+    y += Math.ceil(STAT_NAMES.length / 2) * ROW_H + 2;
+    this.drawFeats(player, cls, current, y);
+    this.drawImprovementSave(player, left === 0 || this.featReady());
+  }
+
+  /** A feat is picked, with the ability it raises when it lets the player choose one. */
+  private featReady(): boolean {
+    return this.feat !== null && (!featNeedsAbility(this.feat) || this.featStat !== null);
   }
 
   /** The Save button, as on the first page: nothing is applied until it is pressed. */
@@ -324,15 +373,16 @@ export class LevelPanel {
     return STAT_NAMES.reduce((sum, stat) => sum + this.given[stat], 0);
   }
 
-  private improveRow(stat: StatName, score: number, y: number, canGive: boolean, canTake: boolean): void {
-    this.label(text('level.scores.row', { stat: statShort(stat), score, modifier: formatModifier(abilityModifier(score)) }), 0, y + 4);
-    this.button('-', POINTS_X, y, SMALL, SMALL, () => this.give(stat, -1), canTake);
-    this.button('+', POINTS_X + SMALL + 4, y, SMALL, SMALL, () => this.give(stat, 1), canGive);
+  private improveRow(stat: StatName, score: number, x: number, y: number, canGive: boolean, canTake: boolean): void {
+    this.label(text('level.scores.row', { stat: statShort(stat), score, modifier: formatModifier(abilityModifier(score)) }), x, y + 4);
+    this.button('-', x + STAT_BUTTONS_X, y, SMALL, SMALL, () => this.give(stat, -1), canTake);
+    this.button('+', x + STAT_BUTTONS_X + SMALL + 4, y, SMALL, SMALL, () => this.give(stat, 1), canGive);
   }
 
   /** Giving points drops a feat that was picked: it is one or the other. */
   private give(stat: StatName, by: 1 | -1): void {
     this.feat = null;
+    this.featStat = null;
     this.given = { ...this.given, [stat]: this.given[stat] + by };
   }
 
@@ -340,12 +390,16 @@ export class LevelPanel {
   private pickFeat(feat: FeatId): void {
     this.given = zeroScores();
     this.feat = this.feat === feat ? null : feat;
+    this.featStat = null;
   }
 
-  /** Save: the feat picked, or the points given, becomes final. */
+  /** Save: the feat picked (with the ability it raises), or the points given, becomes final. */
   private confirm(player: Player): void {
-    requestImprovement(player, this.feat ? { feat: this.feat } : { stats: this.pointsDraft() });
+    const feat = this.feat;
+    const ability = this.featStat;
+    requestImprovement(player, feat ? { feat, ...(ability ? { ability } : {}) } : { stats: this.pointsDraft() });
     this.feat = null;
+    this.featStat = null;
     this.given = zeroScores();
   }
 
@@ -356,15 +410,57 @@ export class LevelPanel {
     return stats;
   }
 
-  /** The feats still to take (one taken at an earlier level is not offered again). */
+  /**
+   * Every feat, a page at a time: one the hero may take is a button, one whose requirement they miss (or that the game does
+   * not play out yet, or that they have) is greyed out, and pointing at any tells what it does and what it asks for. Under
+   * them, the pages, and the ability the picked feat raises.
+   */
   private drawFeats(player: Player, cls: HeroClass, level: number, top: number): void {
-    const offered = FEAT_IDS.filter((feat) => !hasFeat(cls, level, player.build, feat));
-    if (!offered.length) return;
     this.label(text('level.improve.feats'), 0, top, THEME.title);
-    offered.forEach((feat, i) => {
-      const name = featName(feat);
-      const button = this.button(this.feat === feat ? `> ${name} <` : name, (i % 2) * (STYLE_W + STYLE_GAP), top + ROW_H + Math.floor(i / 2) * (STYLE_H + STYLE_GAP), STYLE_W, STYLE_H, () => this.pickFeat(feat));
-      this.explain(button, { title: name, body: featDescription(feat) });
+    const pages = Math.ceil(FEAT_IDS.length / FEATS_PER_PAGE);
+    this.featPage = Math.min(this.featPage, pages - 1);
+    const start = top + ROW_H;
+    FEAT_IDS.slice(this.featPage * FEATS_PER_PAGE, (this.featPage + 1) * FEATS_PER_PAGE).forEach((feat, i) => {
+      this.featButton(player, cls, level, feat, (i % 2) * (STYLE_W + STYLE_GAP), start + Math.floor(i / 2) * FEAT_ROW_H);
+    });
+    const navY = start + FEAT_ROWS * FEAT_ROW_H;
+    this.button(text('level.page_prev'), 0, navY, NAV_W, SMALL, () => { this.featPage = Math.max(0, this.featPage - 1); }, this.featPage > 0);
+    this.label(text('level.page', { page: this.featPage + 1, pages }), NAV_W + 8, navY + 4, THEME.muted);
+    this.button(text('level.page_next'), NAV_W + 50, navY, NAV_W, SMALL, () => { this.featPage = Math.min(pages - 1, this.featPage + 1); }, this.featPage < pages - 1);
+    this.drawFeatAbility(cls, level, player.build, navY);
+  }
+
+  private featButton(player: Player, cls: HeroClass, level: number, feat: FeatId, x: number, y: number): void {
+    const name = featName(feat);
+    const open = featOpen(cls, level, player.build, feat);
+    const button = this.button(this.feat === feat ? `> ${name} <` : name, x, y, STYLE_W, STYLE_H, () => this.pickFeat(feat), open);
+    this.explain(button, { title: name, body: featDescription(feat), detail: this.featDetails(cls, level, player.build, feat), wide: true });
+  }
+
+  /** Under a feat's text: the abilities it raises, its requirement (green when met, red when not), and why it can't be taken. */
+  private featDetails(cls: HeroClass, level: number, build: Build | undefined, feat: FeatId): TipDetail[] {
+    const def = FEATS[feat];
+    const lines: TipDetail[] = [];
+    if (def.abilities.length) lines.push(text('level.feat.raises', { list: def.abilities.map(statShort).join(', ') }));
+    if (def.requires) {
+      const met = meetsRequirement(cls, level, build, def.requires);
+      lines.push({ text: text('level.feat.requires', { requirement: requirementText(def.requires) }), color: met ? REQUIREMENT_MET : REQUIREMENT_MISSED });
+    }
+    if (!def.worked) lines.push({ text: text('level.feat.unworked'), color: NOT_WORKED });
+    if (hasFeat(cls, level, build, feat)) lines.push({ text: text('level.feat.taken'), color: THEME.muted });
+    return lines;
+  }
+
+  /** The picked feat's ability: a button for each it may raise (none above 20), or the one it raises. */
+  private drawFeatAbility(cls: HeroClass, level: number, build: Build | undefined, y: number): void {
+    const feat = this.feat;
+    if (!feat || !FEATS[feat].abilities.length) return;
+    this.label(text('level.feat.raise'), RAISE_LABEL_X, y + 4, THEME.buttonText);
+    const scores = baseScores(cls, level, build);
+    FEATS[feat].abilities.forEach((stat, i) => {
+      const chosen = featAbility(feat, this.featStat ?? undefined) === stat;
+      const name = statShort(stat);
+      this.button(chosen ? `>${name}<` : name, RAISE_X + i * (RAISE_W + 2), y, RAISE_W, SMALL, () => { this.featStat = stat; }, scores[stat] < ABILITY_CAP);
     });
   }
 
@@ -418,4 +514,12 @@ export class LevelPanel {
     this.tip.hide();
     this.view.destroy({ children: true });
   }
+}
+
+/** "medium armour training", "the ability to cast spells", "INT or WIS 13 or higher": what a feat asks for. */
+function requirementText(requires: FeatRequirement): string {
+  if ('armor' in requires) return requires.armor === 'shield' ? text('level.feat.req_shield') : text('level.feat.req_armor', { armor: trainingName(requires.armor) });
+  if ('spellcaster' in requires) return text('level.feat.req_spellcaster');
+  const { abilities, score } = requires.abilityAtLeast;
+  return text('level.feat.req_ability', { abilities: abilities.map(statShort).join(text('level.feat.req_or')), score });
 }

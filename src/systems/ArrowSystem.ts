@@ -9,6 +9,7 @@ import { weaponRule } from '../rules/Equipment';
 import { metresToPx } from '../rules/Scale';
 import type { ShotReach } from '../entities/ProjectileFactory';
 import { world } from '../world';
+import { attackTempo } from './SwordSystem';
 
 /**
  * Archery: a player fighting with a ranged weapon (bow, crossbow, sling, darts) shoots at the crosshair on
@@ -42,8 +43,8 @@ function loose(player: Player, followedBy: number): void {
   const aim = player.aimVector ?? { x: 0, y: 1 };
   createArrow(player.position.x, player.position.y, aim.x, aim.y, characterSheet(player).attack, world.id(player), reachOf(player));
   player.volley = followedBy;
-  // Hold the release pose for a moment (the attack clip plays while attackTime is above the recovery).
-  player.attackTime = ATTACK_RECOVERY + ARROW_STATS.drawTicks;
+  // Hold the release pose for a moment (the attack clip plays while attackTime is above the recovery); half as long under Action Surge.
+  player.attackTime = ATTACK_RECOVERY + Math.ceil(ARROW_STATS.drawTicks / attackTempo(player));
   sound.playSound('bow_shot', player.position.x, player.position.y);
 }
 
@@ -53,8 +54,14 @@ export function shoot(player: Player, followedBy = 0): void {
   loose(player, followedBy);
 }
 
-/** The arrows of a volley of `count` are spread evenly over the attack period. */
-const volleyGap = (count: number): number => Math.floor(ATTACK_PERIOD / Math.max(1, count));
+/**
+ * Ticks between the arrows of a volley of `count`: the archer's own pace (the release pose and its recovery), twice as
+ * fast under Action Surge, and quicker still only if the volley would not fit the attack period.
+ */
+function volleyGap(player: Player, count: number): number {
+  const pace = Math.ceil((ARROW_STATS.drawTicks + ATTACK_RECOVERY) / attackTempo(player));
+  return Math.max(1, Math.min(pace, Math.floor((ATTACK_PERIOD - 1) / Math.max(1, count))));
+}
 
 /** A shot that comes free of the attack key (War Magic, after a spell): one volley, if the hero is not shooting already. */
 export function bonusShot(player: Player): boolean {
@@ -72,7 +79,7 @@ function followVolley(player: Player): void {
     return;
   }
   const count = volleySize(player);
-  const due = ATTACK_PERIOD - Math.max(0, count - left) * volleyGap(count);
+  const due = ATTACK_PERIOD - Math.max(0, count - left) * volleyGap(player, count);
   if ((player.arrowCooldown ?? 0) > due) return;
   loose(player, left - 1);
 }

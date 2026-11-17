@@ -21,7 +21,9 @@ import { text } from '../core/texts';
 import { InfoTooltip } from './InfoTooltip';
 import type { TipTopic } from './InfoTooltip';
 import { PixelLabel } from './PixelText';
-import { featureTopic, spellTopic } from './SpellTopics';
+import { featTopic, featureTopic, spellTopic } from './SpellTopics';
+import { bindingFeatId } from '../rules/Feats';
+import { featName } from '../rules/Names';
 import { THEME } from './Theme';
 
 /** The squares: this big, this far apart, this far up from the bottom edge (the bar shrinks when the screen is too narrow). */
@@ -101,12 +103,16 @@ function featureOfBinding(binding: QuickBinding | null, castWith: Player['heroCl
 
 /** What a binding is called (a spell's or a feature's name). */
 function bindingName(binding: QuickBinding, castWith: Player['heroClass']): string {
+  const feat = bindingFeatId(binding.spell);
+  if (feat) return featName(feat);
   return featureOfBinding(binding, castWith)?.name ?? CATALOG[binding.spell]?.name ?? binding.spell;
 }
 
 /** What a square's spell does, for its tooltip. */
-function slotTopic(binding: QuickBinding | null, heroLevel: number, castWith: Player['heroClass']): TipTopic {
+function slotTopic(binding: QuickBinding | null, heroLevel: number, castWith: Player['heroClass'], featsOn: readonly string[] = []): TipTopic {
   if (!binding) return { title: text('hud.slot.empty'), body: text('hud.slot.empty_body') };
+  const feat = bindingFeatId(binding.spell);
+  if (feat) return featTopic(feat, featsOn.includes(feat));
   const feature = featureOfBinding(binding, castWith);
   if (feature) return featureTopic(feature, false, heroLevel);
   const spell: CatalogSpell = CATALOG[binding.spell];
@@ -310,7 +316,7 @@ export class QuickBar {
     const slot = this.slotAt(this.hovered);
     const shown = this.topic;
     if (!shown || shown.slot !== slot || shown.bound !== view.bound || shown.level !== level) {
-      const tip = slotTopic(quickBinding(player, slot), level, player.heroClass);
+      const tip = slotTopic(quickBinding(player, slot), level, player.heroClass, player.featsOn);
       this.topic = { slot, bound: view.bound, level, tip };
     }
     // Asked for at the bar itself, it is kept inside the area above it: just over the squares.

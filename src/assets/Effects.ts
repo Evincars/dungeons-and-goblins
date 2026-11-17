@@ -299,3 +299,21 @@ export function playEffect(shape: EffectShape, colour: EffectColour, x: number, 
   const spawn = (): Entity => spawnFx(x, y, key, frames, frames * EFFECT_FRAME_TICKS, { row, yOffset: lift, scale });
   reportRejection(requestArt(key).then(spawn), `Effect ${shape} did not load`, 'render');
 }
+
+/** An aura: an effect's white row tinted `tint`, cycling for `ticks` around an entity it follows. */
+export type Aura = { shape: EffectShape; tint: number; ticks: number; lift: number; scale: number };
+
+/** The row of the effect sheets drawn in white: tinted, it takes any colour. */
+const WHITE_ROW = EFFECT_COLOURS.indexOf('white');
+/** An aura is drawn just behind its wearer, so the body stands inside the glow. */
+const AURA_BEHIND = -0.5;
+
+/** Plays `aura` around `owner` (by entity id) at (x, y): it follows them while it lasts. */
+export function playAura(aura: Aura, owner: number, x: number, y: number): void {
+  const key = effectSheetKey(aura.shape);
+  const frames = EFFECT_SHAPES[aura.shape][2];
+  const spawn = (): Entity => spawnFx(x, y, key, frames, aura.ticks, {
+    row: WHITE_ROW, yOffset: aura.lift, scale: aura.scale, cycle: true, follow: owner, orderId: owner, orderBias: AURA_BEHIND, tint: aura.tint,
+  });
+  reportRejection(requestArt(key).then(spawn), `Aura ${aura.shape} did not load`, 'render');
+}

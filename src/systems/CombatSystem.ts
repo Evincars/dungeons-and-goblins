@@ -10,12 +10,12 @@ import { nearby, Sense } from '../ai/perception/spatial';
 import { stateDuration, stateImpact } from '../characters/Characters';
 import { ATTACK_RECOVERY } from '../characters/StateTriggers';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
-import { characterSheet, monsterAttack } from '../rules/CharacterSheet';
+import { characterSheet, heavyArmorReduction, monsterAttack } from '../rules/CharacterSheet';
 import { MIN_HIT_DAMAGE } from '../rules/Combat';
 import { ATTACK_PERIOD } from '../entities/WeaponStats';
 import { strike } from './Strike';
 import { protectFrom } from './ProtectionSystem';
-import { parried, riposted } from './Reactions';
+import { duelistTurnsAside, parried, riposted } from './Reactions';
 import { cheats } from '../game/Cheats';
 
 const PLAYER_HURT_TIME = 25;
@@ -122,13 +122,13 @@ function mobStrike(mob: Entity, player: Player): void {
   }
   const attack = monsterAttack(mob.mobType, mob.mobWeapon);
   const outcome = strike(player, protectFrom(player) ? { ...attack, mode: 'disadvantage' } : attack, mob);
-  if (outcome.hit) landBlow(player, mob, outcome.damage);
+  if (outcome.hit && !duelistTurnsAside(player, outcome)) landBlow(player, mob, outcome.damage);
   else missBlow(player, mob);
 }
 
-/** The blow got past the Armor Class: a readied Parry may take some of it off. */
+/** The blow got past the Armor Class: Heavy Armour Master takes 3 off in heavy armour, and a readied Parry may take some more. */
 function landBlow(player: Player, mob: Entity, damage: number): void {
-  const dealt = parried(player, damage);
+  const dealt = parried(player, Math.max(0, damage - heavyArmorReduction(characterSheet(player))));
   if (dealt > 0) hurtPlayer(player, mob, dealt);
   else sound.playSound(turnedAside(player), player.position.x, player.position.y);
 }

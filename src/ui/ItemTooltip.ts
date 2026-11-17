@@ -8,7 +8,7 @@ import { formatDice, formatModifier } from '../rules/Dice';
 import { armorRule, magicBonus, weaponRule } from '../rules/Equipment';
 import type { ArmorRule } from '../rules/ArmorTable';
 import { armorProficient, weaponProficient } from '../rules/Classes';
-import type { HeroClass } from '../rules/Classes';
+import type { ArmorTraining, HeroClass } from '../rules/Classes';
 import { armorCategoryName, armorName, damageTypeName, propertyName, rangeName, weaponCategoryName, weaponName } from '../rules/Names';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
@@ -73,13 +73,18 @@ function armorLines(item: InventoryItem, strength: number | undefined): Line[] {
   return lines;
 }
 
-/** Untrained gear is called out: armour gives disadvantage on attacks, a weapon loses the proficiency bonus. */
-function trainingLine(item: InventoryItem, cls: HeroClass | undefined): Line | null {
+/**
+ * Untrained gear is called out: armour gives disadvantage on attacks, a weapon loses the proficiency bonus. `featArmor`:
+ * the armour training the hero's feats give on top of their class's.
+ */
+function trainingLine(item: InventoryItem, cls: HeroClass | undefined, featArmor: readonly ArmorTraining[]): Line | null {
   if (!cls) return null;
   const weapon = weaponRule(item);
   if (weapon && !weaponProficient(cls, weapon.base)) return { text: text('item.tooltip.untrained_weapon'), color: UNTRAINED_COLOR };
   const armor = armorRule(item);
-  if (armor && !armorProficient(cls, armor.rule.category)) return { text: text('item.tooltip.untrained_armor'), color: UNTRAINED_COLOR };
+  const category = armor?.rule.category;
+  const trained = !armor || !category || armorProficient(cls, category) || (category !== 'clothes' && featArmor.includes(category));
+  if (!trained) return { text: text('item.tooltip.untrained_armor'), color: UNTRAINED_COLOR };
   return null;
 }
 
@@ -87,11 +92,11 @@ function trainingLine(item: InventoryItem, cls: HeroClass | undefined): Line | n
  * The lines under the header: the item's rules (and a warning when `cls` is not trained in it), each stat it
  * adds, how much it weighs and is worth, and what kind of thing it is.
  */
-function detailLines(item: InventoryItem, cls: HeroClass | undefined, strength: number | undefined): Line[] {
+function detailLines(item: InventoryItem, cls: HeroClass | undefined, strength: number | undefined, featArmor: readonly ArmorTraining[]): Line[] {
   const s = item.stats;
   const rules = [...weaponLines(item), ...armorLines(item, strength)];
   const lines = rules.slice(0, -1);
-  const untrained = trainingLine(item, cls);
+  const untrained = trainingLine(item, cls, featArmor);
   if (untrained) lines.push(untrained);
   if (s) lines.push(...STAT_NAMES.flatMap((stat) => (s[stat] ? [{ text: text('item.tooltip.stat_bonus', { amount: s[stat] ?? 0, stat: statShort(stat) }), color: 0x8fd18f }] : [])));
   if (item.weight !== undefined) lines.push({ text: text('item.tooltip.weight', { kg: item.weight }), color: THEME.text });
@@ -142,9 +147,12 @@ export class ItemTooltip {
   }
 
   /** Shows `item` near (x, y), kept inside a `bounds`-sized area starting at 0, 0. */
-  show(item: InventoryItem, x: number, y: number, bounds: { w: number; h: number }, cls?: HeroClass, strength?: number, matched: readonly number[] = []): void {
+  show(
+    item: InventoryItem, x: number, y: number, bounds: { w: number; h: number }, cls?: HeroClass, strength?: number, matched: readonly number[] = [],
+    featArmor: readonly ArmorTraining[] = [],
+  ): void {
     const key = matched.join();
-    if (this.shown !== item || this.matched !== key) this.layout(item, cls, strength, matched);
+    if (this.shown !== item || this.matched !== key) this.layout(item, cls, strength, matched, featArmor);
     this.matched = key;
     this.shown = item;
     const w = this.frame.width;
@@ -160,7 +168,7 @@ export class ItemTooltip {
   }
 
   /** Lays the tooltip out for an item: header across the top, picture on the left, details beside it. */
-  private layout(item: InventoryItem, cls: HeroClass | undefined, strength: number | undefined, matched: readonly number[]): void {
+  private layout(item: InventoryItem, cls: HeroClass | undefined, strength: number | undefined, matched: readonly number[], featArmor: readonly ArmorTraining[]): void {
     this.setHeader(item.name, matched);
     this.header.position.set(PAD, PAD);
     const texture = lazyTexture(itemIcon(item));
@@ -168,7 +176,7 @@ export class ItemTooltip {
     this.picture.scale.set(Math.min(PICTURE / Math.max(1, texture.width), PICTURE / Math.max(1, texture.height)));
     this.picture.position.set(PAD + PICTURE / 2, PAD + HEADER_H + PICTURE / 2);
     for (const child of this.lines.removeChildren()) child.destroy();
-    const details = detailLines(item, cls, strength);
+    const details = detailLines(item, cls, strength, featArmor);
     details.forEach((line, i) => {
       const label = new PixelLabel(line.text, { color: line.color, shadow: true });
       label.position.set(PAD + PICTURE + GAP, PAD + HEADER_H + i * LINE_H);

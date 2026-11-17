@@ -37,7 +37,7 @@ export const UPCAST_COOLDOWN_SECONDS = 2.5;
 /** A warlock's pact slots stop at this spell level; the higher spells it learns are cast only at their own level. */
 const PACT_SLOT_CAP = 5;
 /** Feet in one step of the map's scale: 5 feet are 48 pixels (the data's `px` is already worked out). */
-export const PX_PER_FIVE_FEET = 48;
+export { PX_PER_FIVE_FEET } from './Scale';
 
 export type SpellEffectKind = 'damage' | 'heal';
 

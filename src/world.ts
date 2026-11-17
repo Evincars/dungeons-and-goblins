@@ -468,6 +468,8 @@ export type Entity = {
     spell?: SpellId; autoHit?: boolean; impact?: SpellEffect;
     /** Ticks it waits in the caster's hand before it flies: a magic missile's darts go one after another. */
     wait?: number;
+    /** A shot's `life` once it has flown past its weapon's normal range: below it, the shot rolls with disadvantage. */
+    closeLife?: number;
   };
 
   /** Point light this entity emits (spell bolts, …). */

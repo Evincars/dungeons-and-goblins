@@ -16,6 +16,11 @@ export type SwordStats = {
   /** Reach of a tier-0 swing in pixels, and how much each tier adds. */
   rangeBase: number;
   rangePerTier: number;
+  /**
+   * How much further a weapon with the `reach` property (a glaive, a halberd, a pike, a whip, a lance) strikes: D&D's
+   * extra 5 feet, in step with the swing's own reach rather than the map's scale.
+   */
+  reachExtra: number;
   /** Ticks between swings (the whole chain of blows is over within them). */
   cooldown: number;
   /** Cosine of half the swing's arc: ±60° either side of the aim. */
@@ -28,6 +33,7 @@ export const SWORD_STATS = {
   swingTicks: 8,
   rangeBase: 19,
   rangePerTier: 3,
+  reachExtra: 16,
   cooldown: ATTACK_PERIOD,
   arcCos: 0.5,
   knockback: 4,

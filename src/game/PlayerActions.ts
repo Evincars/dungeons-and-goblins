@@ -24,6 +24,8 @@ import type { FeatId } from '../rules/Feats';
 import { passiveFeats } from '../rules/Build';
 import { heroClass } from '../rules/Classes';
 import { chooseDeparture } from '../systems/ExitSystem';
+import { characterSheet } from '../rules/CharacterSheet';
+import { needsBothHands, strengthNeeded, strongEnough } from '../rules/Equipment';
 
 /**
  * What players do from the shop and inventory panels. In a lone game or on the host it happens at once;
@@ -179,6 +181,41 @@ export function moveItem(loadout: Loadout, from: ItemPlace, to: ItemPlace): Load
     : ('bag' in to ? slotToBag(next, from.slot, to.bag, item) : slotToSlot(next, from.slot, to.slot, item));
   if (moved) trimmed(moved.inventory);
   return moved;
+}
+
+/**
+ * Why a new arrangement of the worn gear can't be: a weapon that needs both hands with something in the other hand, or
+ * armour put on by a hero without the STR it asks for (src/data/armors.json `strength`); null when it can. Only what is
+ * newly put on is held to the STR it asks, so a hero who has grown weaker can still take theirs off and move things round it.
+ */
+export function wearRefusal(before: Loadout['equipped'], after: Loadout['equipped'], strength: number): string | null {
+  const { primary, secondary } = after;
+  if ((needsBothHands(primary) && secondary) || (needsBothHands(secondary) && primary)) {
+    return text('roll.both_hands', { item: (needsBothHands(primary) ? primary : secondary)?.name ?? '' });
+  }
+  const worn = new Set(Object.values(before).flatMap((item) => (item ? [itemKey(item)] : [])));
+  const weak = Object.values(after).find((item) => item && !worn.has(itemKey(item)) && !strongEnough(item, strength));
+  return weak ? text('roll.too_weak', { item: weak.name, score: strengthNeeded(weak) }) : null;
+}
+
+/** A hero's STR score, gear and all. */
+function strengthOf(player: Player): number {
+  return characterSheet(player).scores.strength;
+}
+
+/**
+ * The inventory screen's move (a drag, a double-click) for this hero: the new arrangement, or null when it is not allowed
+ * (it doesn't fit, or wearRefusal: then the hero says why).
+ */
+export function moveWorn(player: Player, from: ItemPlace, to: ItemPlace): Loadout | null {
+  const loadout: Loadout = { inventory: player.inventory ?? [], equipped: player.equipped ?? {} };
+  const next = moveItem(loadout, from, to);
+  if (!next) return null;
+  const refusal = wearRefusal(loadout.equipped, next.equipped, strengthOf(player));
+  if (!refusal) return next;
+  logLine(player, refusal, 'miss');
+  sound.playSound('fail', player.position.x, player.position.y);
+  return null;
 }
 
 /** The player sitting in a room seat, if it is in the world. */
@@ -386,5 +423,6 @@ export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): voi
   }
   const current: Loadout = { inventory: player.inventory ?? [], equipped: player.equipped ?? {} };
   const proposed: Loadout = { inventory: command.inventory.slice(0, MAX_INVENTORY), equipped: command.equipped };
-  if (sameItems(current, proposed) && slotsFit(proposed.equipped)) applyLoadout(player, proposed);
+  const wearable = wearRefusal(current.equipped, proposed.equipped, strengthOf(player)) === null;
+  if (sameItems(current, proposed) && slotsFit(proposed.equipped) && wearable) applyLoadout(player, proposed);
 }

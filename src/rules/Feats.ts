@@ -54,7 +54,8 @@ export function bindingFeatId(spell: string): FeatId | null {
 
 export const featBinding = (id: FeatId): string => `${FEAT_PREFIX}${id}`;
 
-type ArmorCategory = ArmorRule['category'];
+/** Armour that takes training: clothes (a robe) need none. */
+type ArmorCategory = Exclude<ArmorRule['category'], 'clothes'>;
 const ARMOR_CATEGORIES = ['light', 'medium', 'heavy', 'shield'] as const satisfies readonly ArmorCategory[];
 const isArmorCategory = (v: unknown): v is ArmorCategory => ARMOR_CATEGORIES.some((c) => c === v);
 

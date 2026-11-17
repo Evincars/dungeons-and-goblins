@@ -1,5 +1,7 @@
 import { text } from '../core/texts';
+import { armorStats } from './ArmorTable';
 import type { ArmorBase, ArmorRule } from './ArmorTable';
+import { weaponStats } from './WeaponTable';
 import type { WeaponBase, WeaponProperty, WeaponRule } from './WeaponTable';
 import type { DamageType } from './DamageTypes';
 import type { FightingStyleId } from './FightingStyles';
@@ -10,12 +12,14 @@ import type { SpellId } from './Spells';
 
 /** How the rules' terms read on screen (from src/data/texts.json). */
 
+/** A weapon's name, as src/data/weapons.json gives it. */
 export function weaponName(base: WeaponBase): string {
-  return text(`rules.weapon.${base}` as const);
+  return weaponStats(base).name;
 }
 
+/** An armour's name, as src/data/armors.json gives it. */
 export function armorName(base: ArmorBase): string {
-  return text(`rules.armor.${base}` as const);
+  return armorStats(base).name;
 }
 
 export function armorCategoryName(category: ArmorRule['category']): string {

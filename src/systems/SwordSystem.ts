@@ -97,7 +97,8 @@ function startSwing(player: Player, fromKey = true): void {
   const sheet = characterSheet(player);
   const blows = sheet.attacks + earnedAttack(player, fromKey);
   const timing = blowTiming(player, blows);
-  const reach = swingRange(player.playerStats.swordTier) + (lungeReady(player) ? LUNGE_REACH : 0);
+  const long = sheet.attack.rule.properties.includes('reach') ? SWORD_STATS.reachExtra : 0;
+  const reach = swingRange(player.playerStats.swordTier) + long + (lungeReady(player) ? LUNGE_REACH : 0);
   const swing: Swing = {
     delay: timing.windUp,
     ticks: timing.live,

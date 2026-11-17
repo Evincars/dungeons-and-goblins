@@ -6,12 +6,16 @@ import { ARROW_STATS, ATTACK_PERIOD } from '../entities/WeaponStats';
 import { ATTACK_RECOVERY } from '../characters/StateTriggers';
 import { characterSheet, weaponInHand } from '../rules/CharacterSheet';
 import { weaponRule } from '../rules/Equipment';
+import { metresToPx } from '../rules/Scale';
+import type { ShotReach } from '../entities/ProjectileFactory';
 import { world } from '../world';
 import { attackTempo } from './SwordSystem';
 
 /**
- * Archery: a player fighting with a ranged weapon (bow, crossbow, pistol, darts) shoots at the crosshair on
- * attack instead of swinging. The shot rolls to hit when it strikes; ammunition is never used up.
+ * Archery: a player fighting with a ranged weapon (bow, crossbow, sling, darts) shoots at the crosshair on
+ * attack instead of swinging. The shot rolls to hit when it strikes; ammunition is never used up. Each weapon's
+ * entry in src/data/weapons.json decides how far it shoots (past its normal range with disadvantage, up to its long
+ * range) and whether it is `loading` (one shot per attack, Extra Attack or not).
  */
 
 export function holdsBow(player: Player): boolean {
@@ -22,10 +26,22 @@ function canShoot(player: Player): boolean {
   return !(player.arrowCooldown ?? 0) && player.health.current > 0 && !player.casting && !player.falling && !player.swordSwing;
 }
 
+/** How far the weapon in hand shoots, in pixels of the map (none for a weapon the table gives no range). */
+function reachOf(player: Player): ShotReach | undefined {
+  const distance = weaponRule(weaponInHand(player.equipped ?? {}) ?? undefined)?.rule.distance;
+  return distance ? { normal: metresToPx(distance[0]), long: metresToPx(distance[1]) } : undefined;
+}
+
+/** Shots in one volley: one per attack the hero makes (Extra Attack), but a loading weapon fires once whatever. */
+function volleySize(player: Player): number {
+  const loading = weaponRule(weaponInHand(player.equipped ?? {}) ?? undefined)?.rule.properties.includes('loading');
+  return loading ? 1 : characterSheet(player).attacks;
+}
+
 /** Looses one arrow at the crosshair, `followedBy` more to follow it in the same volley. */
 function loose(player: Player, followedBy: number): void {
   const aim = player.aimVector ?? { x: 0, y: 1 };
-  createArrow(player.position.x, player.position.y, aim.x, aim.y, characterSheet(player).attack, world.id(player));
+  createArrow(player.position.x, player.position.y, aim.x, aim.y, characterSheet(player).attack, world.id(player), reachOf(player));
   player.volley = followedBy;
   // Hold the release pose for a moment (the attack clip plays while attackTime is above the recovery); half as long under Action Surge.
   player.attackTime = ATTACK_RECOVERY + Math.ceil(ARROW_STATS.drawTicks / attackTempo(player));
@@ -50,7 +66,7 @@ function volleyGap(player: Player, count: number): number {
 /** A shot that comes free of the attack key (War Magic, after a spell): one volley, if the hero is not shooting already. */
 export function bonusShot(player: Player): boolean {
   if (!holdsBow(player) || !canShoot(player)) return false;
-  shoot(player, characterSheet(player).attacks - 1);
+  shoot(player, volleySize(player) - 1);
   return true;
 }
 
@@ -62,7 +78,7 @@ function followVolley(player: Player): void {
     player.volley = 0;
     return;
   }
-  const count = characterSheet(player).attacks;
+  const count = volleySize(player);
   const due = ATTACK_PERIOD - Math.max(0, count - left) * volleyGap(player, count);
   if ((player.arrowCooldown ?? 0) > due) return;
   loose(player, left - 1);
@@ -79,6 +95,6 @@ export function updateArrows(): void {
     const intents = player.playerInput.intents;
     if (!intents.attack || !holdsBow(player)) continue;
     intents.attack = false;
-    if (canShoot(player)) shoot(player, characterSheet(player).attacks - 1);
+    if (canShoot(player)) shoot(player, volleySize(player) - 1);
   }
 }

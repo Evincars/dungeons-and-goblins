@@ -115,8 +115,15 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `src/level/generators/MineDresser.ts`; the mines' props in `src/level/MineProps.ts`, their terrain pieces in `src/level/MineTiles.ts`,
   made by `scripts/mine-sheets.py` into `public/caves2/mines-terrain.png` (keep the two in step)); the slanted wall pieces of the catacombs' and the castle's tilesets in `src/level/SlantTiles.ts`,
   made by `scripts/iso-sheets.py` into each tileset's `mainlevbuild-isometric.png` copy (keep the two in step); enemy AI knobs (sight, squad sizes, flanking, trail
-  following) in `src/ai/constants.ts`; the D&D rules tables (SRD weapons and armour) in `src/rules/WeaponTable.ts`
-  and `src/rules/ArmorTable.ts`; hero classes (abilities, hit points, proficiencies, features) in
+  following) in `src/ai/constants.ts`; the D&D weapons in `src/data/weapons.json`
+  (every weapon of both D&D tables: damage, sort, properties, range in metres, versatile dice, price, weight, and its pictures in
+  `public/weapons`, one found weapon each, no two kinds sharing a picture) and the armour and robe in `src/data/armors.json` (AC, DEX
+  cap, the STR needed to put it on at all, stealth, price, weight; a suit's picture a column of `public/armors.png`, whose first four
+  rows are colours picked at random for each suit made), the shields in `src/data/shields.json` (the same fields, their pictures in
+  `public/weapons`; a new kind may reuse another's). These files are the single source: `src/rules/WeaponTable.ts` and
+  `ArmorTable.ts` read and check them, `ItemCatalog.ts` makes the items from them, and every rule in
+  play follows them (finesse, light for two-weapon fighting, two-handed, reach, loading, range and its disadvantage, versatile,
+  heavy armour's STR); no magic bonuses or ability stats on gear yet; hero classes (abilities, hit points, proficiencies, features) in
   `src/data/classes.json`; feats (the Baldur's Gate 3 list: requirement, the ability each raises, `worked`, effects) in
   `src/data/feats.json`, read by `src/rules/Feats.ts` and summed per hero as `FeatEffects` (`featEffects` in `rules/Build.ts`;
   Passive Feats have their own section in the Skills tab: a toggle one is bound to the quick bar as `feat:<id>` and its key
@@ -293,7 +300,9 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   purse), Need / Pass rolls for rare finds (`LootRoll.ts`) and the ~ console's commands (`Console.ts`; `/freeze` and `/killall` for testing, the switches in `Cheats.ts`). `src/scenes/` — title, settings,
   key bindings, character select, co-op lobby and the level itself. `src/ui/` — buttons, HUD (health bar, round
   buttons, `HudDialog`, `MinimapView`, `QuickBar`, `RestMenu`, `PartyBanner`, `LootRollPanel`), `PopupMenu`, `HeroPicker`,
-  `ConsoleView`, combat log, the inventory's character sheet (`AbilityGrid`, `SheetField`,
+  `ConsoleView`, combat log, the inventory (`InventoryOverlay`: the bag filtered, searched as typed — the letters of a name in order,
+  `core/fuzzy.ts`, matched ones lit in the tooltip — and sorted by price, weight or training, `game/BagView.ts`, without moving a
+  thing; a right-click menu to equip, take off, drop, compare or send), its character sheet (`AbilityGrid`, `SheetField`,
   `SheetInfoPanel`, `ProficiencyPanel`, tooltips in `SheetTopics`), panels, pause menu. On-screen controls call `claimPointer` (systems/InputSystem.ts) while
   under the pointer, so their clicks are not attacks.
 - `src/network/` — co-op: `protocol.ts` (messages and their validators), `CoopSession.ts` (PeerJS room),

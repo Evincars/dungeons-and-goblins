@@ -1,17 +1,17 @@
 import { q } from '../world';
 import type { LevelTheme } from '../level/Theme';
 import type { Entity, InventoryItem, Player } from '../world';
-import { ARMORS, HAND_WEAPONS, SHIELDS } from '../entities/ItemCatalog';
+import { ARMORS, HAND_WEAPONS, SHIELDS, freshCopy } from '../entities/ItemCatalog';
 import { WEAPON_BASES } from '../rules/WeaponTable';
 import { ARMOR_BASES } from '../rules/ArmorTable';
 import type { ItemBase } from '../rules/Equipment';
 import type { Build } from '../rules/Build';
 
-/** A fresh copy of the first catalogue entry of each of these D&D bases (in that order), skipping any the catalogue lacks. */
+/** A fresh copy (freshCopy) of the first catalogue entry of each of these D&D bases (in that order), skipping any the catalogue lacks. */
 function onePerBase(from: readonly InventoryItem[], bases: readonly ItemBase[]): InventoryItem[] {
   return bases.flatMap((base) => {
     const item = from.find((entry) => entry.base === base);
-    return item ? [structuredClone(item)] : [];
+    return item ? [freshCopy(item)] : [];
   });
 }
 
@@ -20,7 +20,7 @@ function onePerBase(from: readonly InventoryItem[], bases: readonly ItemBase[]):
  * a shield and one suit of every armour type, so each Armor Class and damage roll can be tested.
  */
 export function giveStartingKit(player: Entity): void {
-  player.inventory = [...onePerBase(HAND_WEAPONS, WEAPON_BASES), ...onePerBase(SHIELDS, ['shield']), ...onePerBase(ARMORS, ARMOR_BASES)];
+  player.inventory = [...onePerBase(HAND_WEAPONS, WEAPON_BASES), ...onePerBase(SHIELDS, ARMOR_BASES), ...onePerBase(ARMORS, ARMOR_BASES)];
 }
 
 /** One trip into the dungeon: how deep the party has gone. A new run starts from the title screen. */

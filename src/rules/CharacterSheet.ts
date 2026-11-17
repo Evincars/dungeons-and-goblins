@@ -3,7 +3,7 @@ import { abilities, proficiencyBonus } from './Abilities';
 import type { Abilities } from './Abilities';
 import { UNARMORED_AC } from './ArmorTable';
 import type { ArmorBase, ArmorRule } from './ArmorTable';
-import { WEAPON_TABLE } from './WeaponTable';
+import { weaponStats } from './WeaponTable';
 import type { WeaponBase, WeaponRule } from './WeaponTable';
 import { NATURAL_CRIT, plus } from './Dice';
 import type { D20Mode, Dice } from './Dice';
@@ -36,7 +36,7 @@ type Modifiers = Readonly<Record<StatName, number>>;
 export type ArmorClass = {
   total: number;
   /** The body armour worn and its table entry (null with none on). */
-  armor: { item: InventoryItem; base: ArmorBase; category: ArmorRule['category'] } | null;
+  armor: { item: InventoryItem; base: ArmorBase; category: BodyArmor } | null;
   /** The AC before DEX: 10 with no armour, else the armour's own. */
   base: number;
   /** The part of the DEX modifier that counts (heavy armour: none; medium: at most +2). */
@@ -54,11 +54,18 @@ export type ArmorClass = {
   proficient: boolean;
 };
 
-/** Heavy armour ignores DEX either way; medium lets at most +2 of it count (+3 with Medium Armour Master); light and none, all of it. */
+/** Armour worn on the body: light, medium or heavy (not a shield, not clothes). */
+type BodyArmor = Extract<ArmorRule['category'], 'light' | 'medium' | 'heavy'>;
+const isBodyArmor = (category: ArmorRule['category'] | undefined): category is BodyArmor =>
+  category === 'light' || category === 'medium' || category === 'heavy';
+
+/**
+ * As much of DEX as the armour lets count (its dexCap): light armour, clothes and none, all of it; medium at most +2 (+3
+ * with the Medium Armour Master feat; a penalty still counts); heavy (a cap of 0) none at all, bonus or penalty.
+ */
 function countedDex(rule: ArmorRule | null, dex: number, feats: FeatEffects): number {
-  if (!rule) return dex;
-  if (rule.category === 'heavy') return 0;
-  if (rule.dexCap === null) return dex;
+  if (!rule || rule.dexCap === null) return dex;
+  if (rule.dexCap === 0) return 0;
   const cap = rule.category === 'medium' ? Math.max(rule.dexCap, feats.mediumArmorDexCap) : rule.dexCap;
   return Math.min(dex, cap);
 }
@@ -85,8 +92,10 @@ function featureAC(styles: Styles | null, armored: boolean): { feature: number; 
  */
 export function armorClass(equipped: Equipped, modifiers: Modifiers, cls: HeroClass | null = null, styles: Styles | null = null, feats: FeatEffects = NO_FEATS): ArmorClass {
   const worn = armorRule(equipped.armor);
-  const rule = worn && worn.rule.category !== 'shield' ? worn.rule : null;
-  const armor = rule && worn && equipped.armor ? { item: equipped.armor, base: worn.base, category: rule.category } : null;
+  // Clothes (a robe) are no armour: AC 10 + DEX, as bare.
+  const category = worn?.rule.category;
+  const rule = worn && isBodyArmor(category) ? worn.rule : null;
+  const armor = worn && isBodyArmor(category) && equipped.armor ? { item: equipped.armor, base: worn.base, category } : null;
   const base = rule ? rule.ac : UNARMORED_AC;
   const dex = countedDex(rule, modifiers.dexterity, feats);
   const magic = magicBonus(armor?.item);
@@ -160,7 +169,7 @@ type Wielding = { item: InventoryItem | null; base: WeaponBase; twoHanded: boole
 
 /** Dice + ability modifier + magic to damage; d20 + proficiency + the same modifier + magic to hit. */
 function attackWith(w: Wielding, modifiers: Modifiers): WeaponAttack {
-  const rule: WeaponRule = WEAPON_TABLE[w.base];
+  const rule: WeaponRule = weaponStats(w.base);
   const ability = attackAbility(rule, modifiers);
   const abilityModifier = modifiers[ability];
   const magic = magicBonus(w.item ?? undefined);
@@ -216,7 +225,7 @@ export function weaponAttack(
   const item = weaponInHand(equipped);
   const found = weaponRule(item ?? undefined);
   const base: WeaponBase = found?.base ?? 'unarmed';
-  const rule: WeaponRule = WEAPON_TABLE[base];
+  const rule: WeaponRule = weaponStats(base);
   const trained = !cls || weaponProficient(cls, base);
   const twoHanded = !!rule.versatile && !!item && otherHandFree(equipped, item);
   const mode: D20Mode = armorTrained ? 'normal' : 'disadvantage';
@@ -258,8 +267,8 @@ export function attacksPerAction(cls: HeroClass | null, level: number, off: read
 export const ACTION_SURGE_ATTACKS_FACTOR = 2;
 
 /**
- * Whether the item is a melee weapon that one hand can hold beside another: a light one, or with the Dual Wielder feat any
- * one-handed weapon that is not heavy (a two-handed weapon needs both hands either way).
+ * Whether the item is a melee weapon light enough to fight with beside another (two-weapon fighting: both light), or with
+ * the Dual Wielder feat any one-handed weapon that is not heavy (a two-handed weapon needs both hands either way).
  */
 function handWeapon(item: InventoryItem | undefined, dualWield: boolean): boolean {
   const found = weaponRule(item);
@@ -354,9 +363,8 @@ export function heavyArmorReduction(sheet: Pick<CharacterSheet, 'armorClass' | '
   return sheet.armorClass.armor?.category === 'heavy' ? sheet.feats.heavyArmorReduction : 0;
 }
 
-/** A walker's pace in the tabletop game (feet a round), and what heavy armour too heavy for its wearer takes off. */
+/** A walker's pace in the tabletop game (feet a round). Armour too heavy for its wearer cannot be put on at all. */
 export const BASE_SPEED_FT = 30;
-const HEAVY_ARMOR_SLOW_FT = 10;
 /** Passive checks and spell save DCs are a fixed base plus the bonuses: 10 for a passive check, 8 for a DC. */
 const PASSIVE_BASE = 10;
 const SPELL_DC_BASE = 8;
@@ -418,12 +426,7 @@ function savingThrows(modifiers: Modifiers, cls: HeroClass, proficiency: number,
   } satisfies Record<StatName, SavingThrow>;
 }
 
-/** Heavy armour slows a wearer without the STR it asks for by 10 ft; the Mobile feat adds its feet. */
-function speedIn(ac: ArmorClass, scores: Readonly<Record<StatName, number>>, feats: FeatEffects): number {
-  const needs = ac.armor ? armorRule(ac.armor.item)?.rule.strength : undefined;
-  const base = needs !== undefined && scores.strength < needs ? BASE_SPEED_FT - HEAVY_ARMOR_SLOW_FT : BASE_SPEED_FT;
-  return base + feats.speedFeet;
-}
+
 
 /** Spells use the class's casting ability (anyone else: Intelligence, untrained but still proficient in the attack). */
 function spellcasting(cls: HeroClass, modifiers: Modifiers, proficiency: number, knight: boolean): Spellcasting {
@@ -486,7 +489,8 @@ export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' |
     battleMaster: player.build?.archetype === 'battle_master',
     maneuverDc: MANEUVER_DC_BASE + proficiency + Math.max(scores.modifiers.strength, scores.modifiers.dexterity),
     initiative: initiativeBonus(cls, level, player.build, scores.modifiers.dexterity, proficiency, off, feats),
-    speed: speedIn(ac, scores.scores, feats),
+    // Armour too heavy for its wearer cannot be put on, so only the Mobile feat changes the pace.
+    speed: BASE_SPEED_FT + feats.speedFeet,
     passivePerception: PASSIVE_BASE + scores.modifiers.wisdom + feats.passivePerception,
     saves: savingThrows(scores.modifiers, cls, proficiency, feats),
     spell: spellcasting(cls, scores.modifiers, proficiency, player.build?.archetype === 'eldritch_knight'),

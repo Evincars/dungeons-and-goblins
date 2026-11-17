@@ -693,8 +693,8 @@ test('a level generated ahead of time is the same level the seed builds on the s
 });
 
 test('dragging items: they stay on the square they are dropped on, gear is worn only where it fits, swaps and comes off', () => {
-  const sword = SHOP_ITEMS.find((i) => i.name === 'Short Sword');
-  const axe = SHOP_ITEMS.find((i) => i.name === 'Hand Axe');
+  const sword = SHOP_ITEMS.find((i) => i.base === 'shortsword');
+  const axe = SHOP_ITEMS.find((i) => i.base === 'handaxe');
   const helm = SHOP_ITEMS.find((i) => i.gear === 'head');
   const start = { inventory: [sword, helm, axe], equipped: {} };
   const corner = moveItem(start, { bag: 0 }, { bag: 41 });
@@ -714,7 +714,7 @@ test('dragging items: they stay on the square they are dropped on, gear is worn 
   assert.equal(off.inventory[5], axe, 'taken off onto the square it was dropped on');
   assert.equal(moveItem(off, { bag: 1 }, { slot: 'medal' }), null, 'only medals go in the medal slot');
   assert.equal(start.inventory.length, 3, 'the old arrangement is left alone');
-  assert.deepEqual(statTotals({ primary: axe, head: helm }), { strength: 3, dexterity: 1, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 });
+  assert.deepEqual(statTotals({ primary: axe, head: helm }), { strength: 0, dexterity: 1, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 });
 });
 
 test('an opened chest pays its coins and hands its weapon or armour straight to the opener; a dropped item is taken back with E', () => {
@@ -798,9 +798,9 @@ test('coins flung at a wall stop at its edge instead of landing on top of it', (
 });
 
 test('the item catalogues load every weapon, shield and armour, each with a name and stats to tune', () => {
-  assert.equal(WEAPONS.length, 160);
-  assert.equal(SHIELDS.length, 140);
-  assert.equal(ARMORS.length, 220);
+  assert.equal(WEAPONS.length, 59, 'a weapon for each picture the weapons table names');
+  assert.equal(SHIELDS.length, 4, 'the four shields of /weapons: two shields, two tower shields');
+  assert.equal(ARMORS.length, 13, 'the twelve D&D armours and a robe');
   for (const item of [...WEAPONS, ...SHIELDS, ...ARMORS]) {
     assert.ok(item.name && item.icon && item.gear && item.stats, item.id);
     assert.ok(validCommand({ kind: 'loadout', inventory: [item], equipped: {} }), `${item.id} passes the network checks`);
@@ -810,6 +810,63 @@ test('the item catalogues load every weapon, shield and armour, each with a name
   assert.equal(EFFECT_COLOURS.length, 9);
 });
 
+test('weapons and armour come from their JSON tables alone: D&D stats, the table\'s price and weight, no bonuses; suits in four colours', async () => {
+  const { weaponStats, isWeaponBase, WEAPON_BASES } = await load('rules/WeaponTable');
+  const { armorStats, ARMOR_BASES } = await load('rules/ArmorTable');
+  const { freshCopy, randomItem, armorIconRegions, ARMOR_COLOURS, catalogIconSources } = await load('entities/ItemCatalog');
+  const { formatDice } = await load('rules/Dice');
+  const { default: weaponsJson } = await import('../src/data/weapons.json', { with: { type: 'json' } });
+  const { default: armorsJson } = await import('../src/data/armors.json', { with: { type: 'json' } });
+  const { default: shieldsJson } = await import('../src/data/shields.json', { with: { type: 'json' } });
+  // Every weapon of both D&D tables is known to the rules, pictures or not.
+  for (const base of ['club', 'whip', 'war_pick', 'lance', 'flail', 'greatsword', 'pike', 'sling', 'blowgun', 'net', 'dart', 'sickle', 'spear']) assert.ok(isWeaponBase(base), base);
+  for (const base of ['pistol', 'musket', 'punch_dagger']) assert.ok(!isWeaponBase(base), `${base} is not a D&D weapon`);
+  assert.equal(WEAPON_BASES.length, 38, 'the 37 of the tables and a punch');
+  // The rules read each weapon exactly as the data file writes it.
+  for (const [base, raw] of Object.entries(weaponsJson.weapons)) {
+    const rule = weaponStats(base);
+    assert.equal(rule.name, raw.name);
+    assert.equal(raw.damage === null ? rule.damage.count + rule.damage.bonus : formatDice(rule.damage, true), raw.damage === null ? 0 : raw.damage, `${base} damage`);
+    assert.deepEqual([rule.category, rule.range, [...rule.properties], rule.distance && [...rule.distance], rule.cost, rule.weight], [raw.category, raw.range, raw.properties, raw.distance, raw.cost, raw.weight], base);
+    for (const item of WEAPONS.filter((w) => w.base === base)) assert.deepEqual([item.name, item.weight, item.value], [raw.name, raw.weight, Math.ceil(raw.cost)], `${item.id} is the table's`);
+  }
+  for (const [base, raw] of [...Object.entries(armorsJson.armors), ...Object.entries(shieldsJson.shields)]) {
+    const rule = armorStats(base);
+    assert.deepEqual([rule.name, rule.category, rule.ac, rule.dexCap, rule.strength, rule.stealthDisadvantage, rule.cost, rule.weight], [raw.name, raw.category, raw.ac, raw.dexCap, raw.strength, raw.stealthDisadvantage, raw.cost, raw.weight], base);
+  }
+  assert.deepEqual(weaponStats('longbow').distance, [30, 120], 'metres, as the Czech table gives them');
+  assert.equal(formatDice(weaponStats('blowgun').damage), '1', 'a flat 1');
+  assert.deepEqual([armorStats('plate').strength, armorStats('chain_mail').strength, armorStats('leather').strength], [15, 13, null]);
+  assert.equal(SHIELDS.every((s) => ['shield', 'tower_shield'].includes(s.base) && s.type === 'shield' && s.gear === 'offhand'), true);
+  assert.deepEqual([armorStats('shield').ac, armorStats('tower_shield').ac, armorStats('shield').category], [2, 2, 'shield'], 'shields from shields.json');
+  assert.ok(catalogIconSources().filter((s) => /^(weapon|shield)_/.test(s.key)).every((s) => s.src.startsWith('/weapons/WR_NightBoundSet_') && !s.src.includes(' ')), 'art from /weapons, no spaces');
+  // Each kind has pictures of its own, so the bag isn't three alike crossbows: the four crossbow pictures shared out.
+  const crossbows = ['hand_crossbow', 'light_crossbow', 'heavy_crossbow'].flatMap((b) => weaponStats(b).art);
+  assert.equal(new Set(crossbows).size, 4, 'four crossbow pictures, none shared');
+  assert.equal(new Set([...weaponStats('shortbow').art, ...weaponStats('longbow').art]).size, 5, 'and the five bows');
+  const pictures = WEAPONS.map((w) => w.id);
+  assert.equal(new Set(pictures).size, pictures.length);
+  for (const item of [...WEAPONS, ...SHIELDS, ...ARMORS]) assert.deepEqual(item.stats, {}, `${item.id} adds no ability scores`);
+  assert.ok([...HAND_WEAPONS, ...SHIELDS, ...ARMORS].every((w) => w.bonus === undefined), 'no magic yet');
+  assert.equal(WEAPONS.find((w) => w.base === 'quarterstaff').value, 1, 'a quarterstaff\'s 2 sp is paid as a gold piece');
+  // The suits' art: a column of armors.png, its first four rows the colours.
+  const plate = ARMORS.find((a) => a.base === 'plate');
+  const robe = ARMORS.find((a) => a.base === 'robe');
+  const regions = armorIconRegions();
+  assert.equal(Object.keys(regions).length, ARMORS.length * ARMOR_COLOURS);
+  assert.deepEqual(regions.armor_plate_1, { x: 8 * 32, y: 0, w: 32, h: 32 }, 'plate is the ninth column');
+  assert.deepEqual(regions.armor_splint_4, { x: 15 * 32, y: 3 * 32, w: 32, h: 32 });
+  assert.ok(Object.values(regions).every((r) => r.y < ARMOR_COLOURS * 32), 'only the first four rows');
+  const colours = new Set();
+  for (let i = 0; i < 80; i++) colours.add(freshCopy(plate).icon);
+  assert.deepEqual([...colours].sort(), ['armor_plate_1', 'armor_plate_2', 'armor_plate_3', 'armor_plate_4'], 'each suit made in a colour picked at random');
+  assert.equal(plate.icon, 'armor_plate_1', 'the catalogue entry itself is left as it is');
+  assert.ok(regions[randomItem([robe]).icon], 'every colour handed out has its art');
+  const dagger = WEAPONS.find((w) => w.base === 'dagger');
+  assert.equal(freshCopy(dagger).icon, dagger.icon, 'a weapon keeps its one picture');
+  assert.equal(ARMOR_BASES.includes('robe') && ARMOR_BASES.includes('shield') && ARMOR_BASES.includes('tower_shield'), true);
+});
+
 test('a new run starts with one weapon of every type, a shield and every type of armour in the bag', async () => {
   const { WEAPON_BASES } = await load('rules/WeaponTable');
   const { ARMOR_BASES } = await load('rules/ArmorTable');
@@ -817,9 +874,9 @@ test('a new run starts with one weapon of every type, a shield and every type of
   giveStartingKit(player);
   const bag = player.inventory;
   const bases = new Set(bag.map((i) => i.base));
-  const inCatalogue = new Set([...HAND_WEAPONS, ...SHIELDS, ...ARMORS].map((i) => i.base));
+  const inCatalogue = new Set([...HAND_WEAPONS, ...SHIELDS, ...ARMORS].flatMap((i) => (i.base ? [i.base] : [])));
   for (const base of [...WEAPON_BASES, ...ARMOR_BASES].filter((b) => inCatalogue.has(b))) assert.ok(bases.has(base), `${base} is in the bag`);
-  assert.ok(bases.size >= 39, 'every weapon and armour type the catalogue has');
+  assert.equal(bases.size, inCatalogue.size, 'every weapon and armour type the catalogue has');
   assert.equal(bag.length, bases.size, 'one of each');
   assert.ok(bag.length <= PlayerActions.MAX_INVENTORY, 'and it all fits');
   assert.notEqual(bag[0], HAND_WEAPONS.find((w) => w.base === bag[0].base), 'copies, not the catalogue entries');
@@ -857,7 +914,7 @@ test('enemies cannot walk onto the player: bodies collide, and touching still hu
 test('with a bow in hand an attack looses an arrow at the crosshair (no swing), and arrows never run out', () => {
   const player = playerAt(3, 3);
   player.aimVector = { x: 1, y: 0 };
-  player.equipped = { primary: { ...HAND_WEAPONS.find((w) => w.kind === 'bow') } };
+  player.equipped = { primary: { ...HAND_WEAPONS.find((w) => w.base === 'longbow') } };
   for (let shot = 0; shot < 3; shot++) {
     player.arrowCooldown = 0;
     player.playerInput.intents.attack = true;
@@ -1057,7 +1114,7 @@ test('the host carries out guest purchases near the shop, and only rearrangement
   assert.equal(guest.equipped.secondary.name, sword.name, 'a sword fits either hand');
   handleGuestCommand('p2', { kind: 'loadout', inventory: [], equipped: { primary: sword } });
   assert.equal(guest.equipped.primary.name, sword.name);
-  assert.equal(guest.playerStats.swordTier, 1 + sword.stats.strength, 'strength sharpens the sword');
+  assert.equal(guest.playerStats.swordTier, 1, 'a plain D&D sword adds no strength of its own');
   assert.equal(playerInSlot('p2'), guest);
   assert.ok(sameItems({ inventory: [sword], equipped: {} }, { inventory: [], equipped: { primary: sword } }));
 });
@@ -1178,8 +1235,8 @@ test('every catalogue weapon, armour and shield plays as a D&D base, and a guest
   const { isWeaponBase } = await load('rules/WeaponTable');
   const { isArmorBase } = await load('rules/ArmorTable');
   for (const item of HAND_WEAPONS) assert.ok(isWeaponBase(item.base), `${item.id} has a weapon base`);
-  for (const item of [...ARMORS, ...SHIELDS]) assert.ok(isArmorBase(item.base), `${item.id} has an armour base`);
-  assert.ok(HAND_WEAPONS.every((w) => (w.bonus ?? 0) <= 3) && HAND_WEAPONS.some((w) => w.bonus === 3), 'magic up to +3');
+  for (const item of [...ARMORS, ...SHIELDS]) assert.ok(isArmorBase(item.base) || item.id === 'armor_robe', `${item.id} has an armour base`);
+  assert.ok([...HAND_WEAPONS, ...ARMORS].every((w) => w.bonus === undefined), 'no magic yet');
   const sword = HAND_WEAPONS.find((w) => !w.bonus);
   assert.equal(validCommand({ kind: 'loadout', inventory: [{ ...sword, bonus: 4 }], equipped: {} }), false, 'no +4');
   assert.equal(validCommand({ kind: 'loadout', inventory: [{ ...sword, base: 'vorpal_sword' }], equipped: {} }), false);
@@ -1318,8 +1375,8 @@ test('the roll log is a queue: newest at the bottom, the top line fades first, a
 test('the swap key trades the 1st and 2nd weapon; a shield in the second hand stays put', async () => {
   const { swapWeapons } = PlayerActions;
   const player = playerAt(2, 2);
-  const sword = SHOP_ITEMS.find((i) => i.name === 'Short Sword');
-  const axe = SHOP_ITEMS.find((i) => i.name === 'Hand Axe');
+  const sword = SHOP_ITEMS.find((i) => i.base === 'shortsword');
+  const axe = SHOP_ITEMS.find((i) => i.base === 'handaxe');
   const shield = SHOP_ITEMS.find((i) => i.gear === 'offhand');
   player.equipped = { primary: sword, secondary: axe };
   assert.equal(swapWeapons(player), true);
@@ -1690,12 +1747,17 @@ test('the character sheet: proficiency, initiative, speed, passive Perception, s
   assert.deepEqual([sheet.spell.ability, sheet.spell.attack, sheet.spell.dc], ['charisma', 5, 13], 'CHA 16: +3 +2, DC 8 + 2 + 3');
   vesper.equipped = { primary: { type: 'weapon', name: 'g', value: 1, gear: 'weapon', base: 'greatsword' } };
   assert.equal(characterSheet(vesper).spell.attack, 5, 'an untrained weapon in hand does not spoil the spell');
-  const plate = { armor: { type: 'armor', name: 'p', value: 1, gear: 'armor', base: 'plate' } };
-  vesper.equipped = plate;
-  assert.equal(characterSheet(vesper).speed, 20, 'plate needs STR 15: Vesper (STR 9) is slowed');
+  // Plate needs STR 15: Vesper (STR 9) cannot put it on at all; the fighter (STR 16) can, and is not slowed.
+  const plate = { type: 'armor', name: 'Plate armour', value: 1, gear: 'armor', base: 'plate' };
+  vesper.equipped = {};
+  vesper.inventory = [plate];
+  assert.equal(PlayerActions.moveWorn(vesper, { bag: 0 }, { slot: 'armor' }), null, 'too weak to wear plate');
+  assert.match(vesper.rollLog.at(-1).text, /STR 15/, 'and says so');
   const fighter = playerAt(2, 2);
-  fighter.equipped = plate;
-  assert.equal(characterSheet(fighter).speed, 30, 'the fighter (STR 16) is not');
+  fighter.inventory = [plate];
+  assert.equal(PlayerActions.moveWorn(fighter, { bag: 0 }, { slot: 'armor' }).equipped.armor, plate);
+  fighter.equipped = { armor: plate };
+  assert.equal(characterSheet(fighter).speed, 30);
 });
 
 test('everyone is proficient with an unarmed strike, even a wizard', async () => {
@@ -2416,7 +2478,7 @@ test('a rare find in co-op is rolled for: Need rolls a d20, ties roll again, the
   const bo = seated(3, 2, 'p2', 'Bo');
   const cy = seated(4, 2, 'p3', 'Cy');
   for (const p of [ana, bo, cy]) p.inventory = [];
-  const sword = { ...WEAPONS.find((w) => (w.bonus ?? 0) >= 2), weight: 1 };
+  const sword = { ...WEAPONS[0], bonus: 2, weight: 1 };
   assert.equal(LootRoll.offerLoot({ ...sword, bonus: 0 }), false, 'a common find just drops');
   assert.equal(LootRoll.offerLoot(sword), true);
   const roll = world.entities.find((e) => e.lootRoll).lootRoll;
@@ -3042,7 +3104,7 @@ test('a guest draws an item on the floor whole, not the top-left corner of it cu
 
 test('a find with a long name keeps the world update valid, so the guest is not dropped from the game', () => {
   const ana = seated(2, 2, 'host', 'Ana');
-  const longest = WEAPONS.reduce((a, b) => (b.name.length > a.name.length ? b : a));
+  const longest = { ...WEAPONS[0], name: 'Rusted Axe of the Goblin King' };
   ana.inventory = [];
   assert.ok(PlayerActions.receiveItem(ana, longest));
   assert.ok(ana.rollLog.at(-1).text.length > 40, 'a line longer than the old limit');
@@ -4046,10 +4108,11 @@ test('two-weapon fighting: a weapon in each hand lands a second attack, with the
   const magic = { primary: weaponItem('shortsword'), secondary: weaponItem('dagger', 1) };
   assert.equal(offHandAttack(magic, mods, 1, CLASSES.fighter, true, null).damage.bonus, 1, 'the magic bonus stays');
   assert.equal(offHandAttack(both, { ...mods, strength: -1, dexterity: -1 }, 1, CLASSES.fighter, true, null).damage.bonus, -1, 'a penalty always counts');
+  assert.equal(offHandAttack({ primary: weaponItem('scimitar'), secondary: weaponItem('handaxe') }, mods, 1, CLASSES.fighter).base, 'handaxe', 'any light melee weapons');
+  assert.equal(offHandAttack({ primary: weaponItem('longsword'), secondary: weaponItem('dagger') }, mods, 1, CLASSES.fighter), null, 'both must be light: not a longsword');
+  assert.equal(offHandAttack({ primary: weaponItem('dagger'), secondary: weaponItem('rapier') }, mods, 1, CLASSES.fighter), null, 'nor a rapier');
   const { NO_FEATS } = await load('rules/Feats');
   const wielder = { ...NO_FEATS, dualWield: true };
-  assert.equal(offHandAttack({ primary: weaponItem('longsword'), secondary: weaponItem('dagger') }, mods, 1, CLASSES.fighter), null, 'only light weapons without Dual Wielder');
-  assert.equal(offHandAttack({ primary: weaponItem('dagger'), secondary: weaponItem('rapier') }, mods, 1, CLASSES.fighter), null, 'in either hand');
   assert.equal(offHandAttack({ primary: weaponItem('longsword'), secondary: weaponItem('dagger') }, mods, 1, CLASSES.fighter, true, null, wielder).base, 'dagger', 'Dual Wielder: any one-handed weapon');
   assert.equal(offHandAttack({ primary: weaponItem('dagger'), secondary: weaponItem('rapier') }, mods, 1, CLASSES.fighter, true, null, wielder).base, 'rapier', 'and in the second hand');
   assert.equal(offHandAttack(both, mods, 1, CLASSES.fighter, true, null).attackBonus, 2 + 3, 'the off hand\'s to-hit is whole: proficiency and STR');
@@ -5080,4 +5143,79 @@ test('the DMG tooltip names both weapons: the off hand with its whole blow, or w
   const both = damageTopic(characterSheet(hero)).detail.map((l) => (typeof l === 'string' ? l : l.text));
   assert.ok(both.includes('Off hand:') && !both.some((l) => l.startsWith('The off hand makes no blow')));
   assert.equal(both.filter((l) => l.startsWith('To hit:')).length, 2, 'each hand with its to-hit');
+});
+
+test('what the tables say is what plays: range, loading, reach, both hands, the STR to wear armour, clothes', async () => {
+  const { characterSheet, armorClass } = await load('rules/CharacterSheet');
+  const { metresToPx } = await load('rules/Scale');
+  const { wearRefusal } = PlayerActions;
+  const { ARROW_STATS } = await load('entities/WeaponStats');
+  const hero = heroWith('champion', 5);
+  hero.aimVector = { x: 1, y: 0 };
+  // A longbow's shot flies its long range (120 m), past its normal range (30 m) with disadvantage.
+  hero.equipped = { primary: weaponItem('longbow') };
+  hero.arrowCooldown = 0;
+  hero.playerInput.intents.attack = true;
+  updateArrows();
+  const shots = () => world.entities.filter((e) => e.projectile?.arrow && e.projectile.owner === world.id(hero));
+  const arrow = shots()[0];
+  assert.equal(arrow.projectile.life, Math.ceil(metresToPx(120) / ARROW_STATS.speed), 'it drops at its long range');
+  assert.equal(arrow.projectile.life - arrow.projectile.closeLife, Math.ceil(metresToPx(30) / ARROW_STATS.speed), 'past its normal range it rolls with disadvantage');
+  for (let t = 0; t < 120; t++) updateArrows();
+  assert.equal(shots().length, 2, 'Extra Attack: two arrows a volley');
+  for (const e of shots()) world.remove(e);
+  // A crossbow is loading: one bolt an attack, Extra Attack or not.
+  hero.equipped = { primary: weaponItem('heavy_crossbow') };
+  hero.arrowCooldown = 0;
+  hero.playerInput.intents.attack = true;
+  for (let t = 0; t < 120; t++) updateArrows();
+  assert.equal(shots().length, 1, 'one bolt');
+  for (const e of shots()) world.remove(e);
+  hero.equipped = {};
+  // Reach weapons strike further.
+  hero.equipped = { primary: weaponItem('glaive') };
+  hero.playerInput.intents.attack = true;
+  updateSword();
+  const long = hero.swordSwing.range;
+  hero.swordSwing = undefined;
+  hero.swordCooldown = 0;
+  hero.equipped = { primary: weaponItem('greatsword') };
+  hero.playerInput.intents.attack = true;
+  updateSword();
+  assert.ok(long > hero.swordSwing.range, 'a glaive reaches further than a greatsword');
+  hero.swordSwing = undefined;
+  world.remove(hero);
+  // A two-handed weapon leaves no hand for a shield; armour asks its STR of whoever puts it on.
+  const shield = SHIELDS[0];
+  assert.match(wearRefusal({}, { primary: weaponItem('greatsword'), secondary: shield }, 18), /both hands/);
+  assert.equal(wearRefusal({}, { primary: weaponItem('longsword'), secondary: shield }, 18), null);
+  const plate = { type: 'armor', name: 'Plate armour', value: 1, gear: 'armor', base: 'plate' };
+  assert.match(wearRefusal({}, { armor: plate }, 14), /STR 15/);
+  assert.equal(wearRefusal({}, { armor: plate }, 15), null);
+  assert.equal(wearRefusal({ armor: plate }, { armor: plate, primary: weaponItem('dagger') }, 9), null, 'worn already: it can be kept on');
+  // A robe is clothes: AC 10 + DEX, and anyone may wear it.
+  const mods = { strength: 0, dexterity: 3, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 };
+  const robe = ARMORS.find((a) => a.base === 'robe');
+  assert.equal(armorClass({ armor: robe }, mods).total, 13);
+  const wizard = playerAt(2, 2, 'wizard');
+  wizard.equipped = { armor: robe };
+  assert.ok(characterSheet(wizard).armorClass.proficient, 'no training needed for clothes');
+});
+
+test('the inventory\'s search finds the letters typed in order, any case, spaces skipped; the bag sorts and filters without moving a thing', async () => {
+  const { fuzzyMatch } = await load('core/fuzzy');
+  const { bagView } = await load('game/BagView');
+  assert.deepEqual(fuzzyMatch('vybow', 'Heavy crossbow'), [3, 4, 11, 12, 13], 'heaV-Y cross-B-O-W');
+  assert.deepEqual(fuzzyMatch('HV CB', 'Heavy crossbow'), [0, 3, 6, 11]);
+  assert.equal(fuzzyMatch('bowv', 'Heavy crossbow'), null, 'the letters in their order');
+  assert.deepEqual(fuzzyMatch('', 'Dagger'), []);
+  const item = (name, type, value, weight) => ({ name, type, value, weight, gear: type === 'weapon' ? 'weapon' : 'armor', stats: {} });
+  const bag = [item('Plate armour', 'armor', 1500, 32), null, item('Dagger', 'weapon', 2, 0.5), item('Heavy crossbow', 'weapon', 50, 5), null, item('Longsword', 'weapon', 15, 1.5)];
+  const query = (over) => ({ types: null, search: '', sort: 'none', trained: (i) => i.name !== 'Heavy crossbow', ...over });
+  assert.deepEqual(bagView(bag, 6, query({}), []), [0, 1, 2, 3, 4, 5], 'as it lies, free squares and all');
+  assert.deepEqual(bagView(bag, 6, query({ search: 'vybow' }), []), [3, 1, 4], 'searched: what matches, then the free squares');
+  assert.deepEqual(bagView(bag, 6, query({ types: ['weapon'], sort: 'price' }), []), [3, 5, 2, 1, 4], 'weapons, dearest first');
+  assert.deepEqual(bagView(bag, 6, query({ sort: 'weight' }), []), [0, 3, 5, 2, 1, 4], 'heaviest first');
+  assert.deepEqual(bagView(bag, 6, query({ sort: 'training' }), []), [0, 2, 5, 3, 1, 4], 'trained first, ties as they lie');
+  assert.equal(bag[0].name, 'Plate armour', 'the bag itself is left as it is');
 });

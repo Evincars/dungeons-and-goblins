@@ -1,27 +1,31 @@
-import { dice } from './Dice';
+import { ensure, StateError } from '../core/errors';
+import { hasKey, isRecord } from '../core/guards';
+import { dice, parseDice } from './Dice';
 import type { Dice } from './Dice';
-
-/**
- * The weapons table of the 5th edition System Reference Document (plus the Dungeon Master's Guide pistol and
- * musket, and a punch dagger for knuckles and katars, which the SRD lacks). An item's `base` in
- * src/data/weapons.json names one of these; its own magic bonus comes on top.
- */
-
 import { PHYSICAL_DAMAGE_TYPES } from './DamageTypes';
 import type { PhysicalDamageType } from './DamageTypes';
+import data from '../data/weapons.json';
+
+/**
+ * The weapons table of D&D 5e, read from src/data/weapons.json (its single source: change a weapon there and the game
+ * follows): damage, sort, properties, range, price and weight. An item's `base` names one of these; its own magic bonus
+ * comes on top. A punch (`unarmed`) is the rules' own and lives here.
+ */
 
 export const DAMAGE_TYPES = PHYSICAL_DAMAGE_TYPES;
 export type DamageType = PhysicalDamageType;
 
 /**
- * finesse: uses STR or DEX, whichever is better. light: fits a second hand. heavy: clumsy for small folk.
- * two_handed: needs both hands. reach: strikes from further off. thrown: can be hurled. loading: one shot per
- * turn. ammunition: shoots arrows, bolts or bullets.
+ * finesse: uses STR or DEX, whichever is better. light: fits a second hand (two-weapon fighting needs both light).
+ * heavy: clumsy for small folk. two_handed: needs both hands. reach: strikes further off. thrown: can be hurled.
+ * loading: one shot per attack. ammunition: shoots arrows, bolts, bullets or needles. special: rules of its own (a lance,
+ * a net).
  */
-export const WEAPON_PROPERTIES = ['finesse', 'light', 'heavy', 'two_handed', 'reach', 'thrown', 'loading', 'ammunition'] as const;
+export const WEAPON_PROPERTIES = ['finesse', 'light', 'heavy', 'two_handed', 'reach', 'thrown', 'loading', 'ammunition', 'special'] as const;
 export type WeaponProperty = (typeof WEAPON_PROPERTIES)[number];
 
 export type WeaponRule = {
+  name: string;
   damage: Dice;
   type: DamageType;
   /** Simple weapons anyone can use; martial ones need training. */
@@ -31,57 +35,81 @@ export type WeaponRule = {
   properties: readonly WeaponProperty[];
   /** Versatile weapons deal these dice instead when held in both hands. */
   versatile?: Dice;
+  /** A thrown or shooting weapon's range in metres: normal (no penalty), and long (with disadvantage). */
+  distance?: readonly [normal: number, long: number];
+  /** Price in gold (fractions for silver and copper), weight in kg. */
+  cost: number;
+  weight: number;
+  /** Its item pictures; each is a weapon that can be found (none yet for some). */
+  art: readonly string[];
 };
 
-export const WEAPON_BASES = [
-  'unarmed', 'club', 'dagger', 'punch_dagger', 'greatclub', 'handaxe', 'javelin', 'light_hammer', 'mace', 'quarterstaff',
-  'sickle', 'spear',
-  'light_crossbow', 'dart', 'shortbow', 'sling',
-  'battleaxe', 'glaive', 'greataxe', 'greatsword', 'halberd', 'longsword', 'maul', 'pike', 'scimitar',
-  'shortsword', 'whip', 'rapier', 'hand_crossbow', 'heavy_crossbow', 'longbow', 'pistol', 'musket',
-] as const;
-export type WeaponBase = (typeof WEAPON_BASES)[number];
+/** A weapon of the table, or a punch. */
+export type WeaponBase = Extract<keyof typeof data.weapons, string> | 'unarmed';
 
 export function isWeaponBase(value: unknown): value is WeaponBase {
-  return WEAPON_BASES.some((base) => base === value);
+  return value === 'unarmed' || (typeof value === 'string' && hasKey(data.weapons, value));
 }
 
-export const WEAPON_TABLE = {
-  /** A punch or kick: 1 damage plus STR, no dice. */
-  unarmed: { damage: dice(0, 4, 1), type: 'bludgeoning', category: 'simple', range: 'melee', properties: [] },
-  club: { damage: dice(1, 4), type: 'bludgeoning', category: 'simple', range: 'melee', properties: ['light'] },
-  dagger: { damage: dice(1, 4), type: 'piercing', category: 'simple', range: 'melee', properties: ['finesse', 'light', 'thrown'] },
-  punch_dagger: { damage: dice(1, 4), type: 'piercing', category: 'simple', range: 'melee', properties: ['finesse', 'light'] },
-  greatclub: { damage: dice(1, 8), type: 'bludgeoning', category: 'simple', range: 'melee', properties: ['two_handed'] },
-  handaxe: { damage: dice(1, 6), type: 'slashing', category: 'simple', range: 'melee', properties: ['light', 'thrown'] },
-  javelin: { damage: dice(1, 6), type: 'piercing', category: 'simple', range: 'melee', properties: ['thrown'] },
-  light_hammer: { damage: dice(1, 4), type: 'bludgeoning', category: 'simple', range: 'melee', properties: ['light', 'thrown'] },
-  mace: { damage: dice(1, 6), type: 'bludgeoning', category: 'simple', range: 'melee', properties: [] },
-  quarterstaff: { damage: dice(1, 6), type: 'bludgeoning', category: 'simple', range: 'melee', properties: [], versatile: dice(1, 8) },
-  sickle: { damage: dice(1, 4), type: 'slashing', category: 'simple', range: 'melee', properties: ['light'] },
-  spear: { damage: dice(1, 6), type: 'piercing', category: 'simple', range: 'melee', properties: ['thrown'], versatile: dice(1, 8) },
-  light_crossbow: { damage: dice(1, 8), type: 'piercing', category: 'simple', range: 'ranged', properties: ['ammunition', 'loading', 'two_handed'] },
-  dart: { damage: dice(1, 4), type: 'piercing', category: 'simple', range: 'ranged', properties: ['finesse', 'thrown'] },
-  shortbow: { damage: dice(1, 6), type: 'piercing', category: 'simple', range: 'ranged', properties: ['ammunition', 'two_handed'] },
-  sling: { damage: dice(1, 4), type: 'bludgeoning', category: 'simple', range: 'ranged', properties: ['ammunition'] },
-  battleaxe: { damage: dice(1, 8), type: 'slashing', category: 'martial', range: 'melee', properties: [], versatile: dice(1, 10) },
-  glaive: { damage: dice(1, 10), type: 'slashing', category: 'martial', range: 'melee', properties: ['heavy', 'reach', 'two_handed'] },
-  greataxe: { damage: dice(1, 12), type: 'slashing', category: 'martial', range: 'melee', properties: ['heavy', 'two_handed'] },
-  greatsword: { damage: dice(2, 6), type: 'slashing', category: 'martial', range: 'melee', properties: ['heavy', 'two_handed'] },
-  halberd: { damage: dice(1, 10), type: 'slashing', category: 'martial', range: 'melee', properties: ['heavy', 'reach', 'two_handed'] },
-  longsword: { damage: dice(1, 8), type: 'slashing', category: 'martial', range: 'melee', properties: [], versatile: dice(1, 10) },
-  maul: { damage: dice(2, 6), type: 'bludgeoning', category: 'martial', range: 'melee', properties: ['heavy', 'two_handed'] },
-  pike: { damage: dice(1, 10), type: 'piercing', category: 'martial', range: 'melee', properties: ['heavy', 'reach', 'two_handed'] },
-  scimitar: { damage: dice(1, 6), type: 'slashing', category: 'martial', range: 'melee', properties: ['finesse', 'light'] },
-  shortsword: { damage: dice(1, 6), type: 'piercing', category: 'martial', range: 'melee', properties: ['finesse', 'light'] },
-  whip: { damage: dice(1, 4), type: 'slashing', category: 'martial', range: 'melee', properties: ['finesse', 'reach'] },
-  rapier: { damage: dice(1, 8), type: 'piercing', category: 'martial', range: 'melee', properties: ['finesse'] },
-  hand_crossbow: { damage: dice(1, 6), type: 'piercing', category: 'martial', range: 'ranged', properties: ['ammunition', 'light', 'loading'] },
-  heavy_crossbow: { damage: dice(1, 10), type: 'piercing', category: 'martial', range: 'ranged', properties: ['ammunition', 'heavy', 'loading', 'two_handed'] },
-  longbow: { damage: dice(1, 8), type: 'piercing', category: 'martial', range: 'ranged', properties: ['ammunition', 'heavy', 'two_handed'] },
-  pistol: { damage: dice(1, 10), type: 'piercing', category: 'martial', range: 'ranged', properties: ['ammunition', 'loading'] },
-  musket: { damage: dice(1, 12), type: 'piercing', category: 'martial', range: 'ranged', properties: ['ammunition', 'loading', 'two_handed'] },
-} as const satisfies Record<WeaponBase, WeaponRule>;
+const isProperty = (value: unknown): value is WeaponProperty => WEAPON_PROPERTIES.some((p) => p === value);
+const isDamageType = (value: unknown): value is DamageType => DAMAGE_TYPES.some((t) => t === value);
+
+/** Damage as the data writes it: dice (`1d8`), a flat number (`1`), or null for none. */
+function readDamage(key: string, raw: unknown): Dice {
+  if (raw === null) return dice(0, 4);
+  if (typeof raw === 'string' && /^\d+$/.test(raw)) return dice(0, 4, Number(raw));
+  const parsed = typeof raw === 'string' ? parseDice(raw) : null;
+  ensure(parsed, `Bad damage for weapon ${key}`, { key, damage: String(raw) });
+  return parsed;
+}
+
+function readDistance(key: string, raw: unknown): readonly [number, number] | undefined {
+  if (raw === undefined) return undefined;
+  const ok = Array.isArray(raw) && raw.length === 2 && raw.every((m) => typeof m === 'number' && m > 0) && raw[0] <= raw[1];
+  ensure(ok, `Bad distance for weapon ${key}`, { key });
+  return [Number(raw[0]), Number(raw[1])];
+}
+
+function readStrings(raw: unknown): string[] {
+  return Array.isArray(raw) ? raw.filter((s): s is string => typeof s === 'string') : [];
+}
+
+/** One entry of the data file, checked: anything missing or misspelt stops the game loading, naming the weapon. */
+function readWeapon(key: string, raw: unknown): WeaponRule {
+  ensure(isRecord(raw), `Bad weapon ${key}`, { key });
+  const { name, category, range, cost, weight } = raw;
+  ensure(typeof name === 'string' && (category === 'simple' || category === 'martial') && (range === 'melee' || range === 'ranged'), `Bad weapon ${key}`, { key });
+  ensure(typeof cost === 'number' && cost >= 0 && typeof weight === 'number' && weight >= 0, `Bad cost or weight for weapon ${key}`, { key });
+  const damage = readDamage(key, raw.damage);
+  const type = raw.damageType ?? 'bludgeoning';
+  ensure(isDamageType(type), `Bad damage type for weapon ${key}`, { key });
+  const properties = readStrings(raw.properties);
+  ensure(properties.every(isProperty), `Unknown property for weapon ${key}`, { key, properties: properties.join(', ') });
+  const rule: WeaponRule = { name, damage, type, category, range, properties: properties.filter(isProperty), cost, weight, art: readStrings(raw.art) };
+  if (raw.versatile !== undefined) rule.versatile = readDamage(key, raw.versatile);
+  const distance = readDistance(key, raw.distance);
+  if (distance) rule.distance = distance;
+  return rule;
+}
+
+/** A punch or kick: 1 damage plus STR, no dice. */
+const UNARMED: WeaponRule = {
+  name: 'Unarmed strike', damage: dice(0, 4, 1), type: 'bludgeoning', category: 'simple', range: 'melee', properties: [], cost: 0, weight: 0, art: [],
+};
+
+/** Every weapon of the data file, in its order. */
+export const WEAPON_BASES: readonly WeaponBase[] = ['unarmed', ...Object.keys(data.weapons).filter(isWeaponBase)];
+
+const TABLE: ReadonlyMap<WeaponBase, WeaponRule> = new Map(WEAPON_BASES.map((base) => [
+  base, base === 'unarmed' ? UNARMED : readWeapon(base, data.weapons[base]),
+]));
+
+/** A weapon's entry in the table. */
+export function weaponStats(base: WeaponBase): WeaponRule {
+  const rule = TABLE.get(base);
+  if (!rule) throw new StateError(`No weapon ${base}`, { base });
+  return rule;
+}
 
 /** The magic bonus of the finest weapons and armour: +1 is uncommon, +2 rare, +3 very rare. */
 export const MAX_MAGIC_BONUS = 3;

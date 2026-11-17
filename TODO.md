@@ -1,0 +1,13 @@
+- [ ] Tooltips on first start for every clickable buble/button/div
+- [ ] Passive skills from Fighter need icons, after icons are implemented
+- [ ] Passive skills icons should be displayed on the top left corner if active
+- [ ] Passive skill timer on the icon in top left corner once passive was used
+- [ ] Ranged attacks make with someone in short range dont give disadvantage, fix
+- [ ] On screen indicators if i have a disadvantage, prefferebly info why as well
+- [ ] Feats Elemental Adept, Spell Sniper, Magic Initiate (all 6), Ritual Caster, Martial Adept, Weapon Master, Skilled need list to choose from, fix
+- [ ] Feats Dungeon Delver, Shield Master fix in the future once saving throws are added.
+- [ ] DMG tooltip needs to be shorter
+- [ ] Do not give any spells or class feature untill you acutally get to the level in the Level bubble
+- [ ] Show all 12 levels in the level bubble, but clicable will be only the ones matching or lower then your level
+- [ ] hotbar counts down seconds for cooldowns
+- [ ] hotbar binding does not stay there when you go next level

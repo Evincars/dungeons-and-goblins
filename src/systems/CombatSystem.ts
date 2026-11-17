@@ -1,6 +1,6 @@
 import { Rectangle } from 'pixi.js';
 import { world, q, isActivePlayer, isMob } from '../world';
-import type { Entity, Player } from '../world';
+import type { Entity, Player, Summon } from '../world';
 import type { Level } from '../level/Level';
 import { boxAround } from '../core/geometry';
 import { sound } from '../audio/SoundPlayer';
@@ -17,6 +17,8 @@ import { strike } from './Strike';
 import { protectFrom } from './ProtectionSystem';
 import { duelistTurnsAside, parried, riposted } from './Reactions';
 import { cheats } from '../game/Cheats';
+import { charmedAway, schoolShields, turnBlow } from './SchoolSystem';
+import { hurtUndead } from './SummonSystem';
 
 const PLAYER_HURT_TIME = 25;
 const PLAYER_FREEZE_TIME = 15;
@@ -120,8 +122,12 @@ function mobStrike(mob: Entity, player: Player): void {
     hurtPlayer(player, mob, MIN_HIT_DAMAGE);
     return;
   }
-  const attack = monsterAttack(mob.mobType, mob.mobWeapon);
-  const outcome = strike(player, protectFrom(player) ? { ...attack, mode: 'disadvantage' } : attack, mob);
+  // An enchanter's Instinctive Charm may turn the blow on another foe.
+  if (charmedAway(mob, player)) return;
+  const base = monsterAttack(mob.mobType, mob.mobWeapon);
+  const attack = protectFrom(player) ? { ...base, mode: 'disadvantage' as const } : base;
+  // A diviner's Portent die or an illusionist's double may turn a blow that hit.
+  const outcome = turnBlow(player, attack, strike(player, attack, mob));
   if (outcome.hit && !duelistTurnsAside(player, outcome)) landBlow(player, mob, outcome.damage);
   else missBlow(player, mob);
 }
@@ -150,14 +156,44 @@ export function updateContactDamage(level: Level): void {
   for (const player of q.players) {
     if (vulnerable(level, player)) swingAt(player);
   }
+  for (const undead of q.summons) swingAtUndead(undead);
 }
 
-/** Every enemy touching the player swings (one touching two heroes only once), each blow landing in its own time. */
+/** Every enemy touching the player swings (one touching two heroes only once), each blow landing in its own time; a charmed one does not. */
 function swingAt(player: Player): void {
   for (const mob of enemiesTouching(player)) {
-    if (swung.has(mob)) continue;
+    if (swung.has(mob) || charmed(mob)) continue;
     swung.add(mob);
     if (strikeLands(mob)) mobStrike(mob, player);
+  }
+}
+
+/** A foe held by a charm (Hypnotic Gaze, an illusion) strikes nobody. */
+const charmed = (mob: Entity): boolean => (mob.status?.charmed ?? 0) > 0;
+
+/** Every live enemy whose body overlaps the undead's (into the shared `touching` list). */
+function enemiesTouchingUndead(undead: Summon): readonly Entity[] {
+  touching.length = 0;
+  const reach = undead.radius.x + MAX_MOB_RADIUS + CONTACT_REACH;
+  const ub = boxAround(undead.position.x, undead.position.y, undead.radius.x + CONTACT_REACH, undead.radius.y + CONTACT_REACH, playerBox);
+  let kept = 0;
+  for (const mob of nearby(undead.position.x, undead.position.y, reach, Sense.mob, touching)) {
+    if (!isMob(mob) || mob.health.current <= 0) continue;
+    if (ub.intersects(boxAround(mob.position.x, mob.position.y, mob.radius.x, mob.radius.y, mobBox))) touching[kept++] = mob;
+  }
+  touching.length = kept;
+  return touching;
+}
+
+/** Enemies touching a necromancer's undead strike it (one already swinging at a hero this tick does not). */
+function swingAtUndead(undead: Summon): void {
+  if (undead.health.current <= 0 || undead.removed) return;
+  for (const mob of enemiesTouchingUndead(undead)) {
+    if (swung.has(mob) || charmed(mob) || !mob.mobType || !mob.mobWeapon) continue;
+    swung.add(mob);
+    if (!strikeLands(mob)) continue;
+    const outcome = strike(undead, monsterAttack(mob.mobType, mob.mobWeapon), mob);
+    if (outcome.hit) hurtUndead(undead, outcome.damage);
   }
 }
 
@@ -190,7 +226,9 @@ export function hurtPlayer(player: Entity, source: Entity, damage: number): void
   // The console's god mode takes no harm.
   if (!h || player.godMode || player.falling || player.respawnTicks !== undefined || h.current <= 0) return;
 
-  const finalDamage = Math.max(MIN_HIT_DAMAGE, Math.round(damage));
+  // An abjurer's Arcane Ward, and a Bladesinger's Song of Defence, take their share first (and may take all of it).
+  const finalDamage = schoolShields(player, Math.max(MIN_HIT_DAMAGE, Math.round(damage)));
+  if (finalDamage <= 0) return;
   player.lastHitBy = world.id(source);
   const absorbed = Math.min(player.tempHealth ?? 0, finalDamage);
   if (absorbed > 0) player.tempHealth = (player.tempHealth ?? 0) - absorbed;

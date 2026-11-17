@@ -1,4 +1,4 @@
-import { world, q, isActivePlayer, isTarget, QUICK_SLOTS } from '../world';
+import { world, q, isActivePlayer, isPlayer, isTarget, QUICK_SLOTS } from '../world';
 import type { Entity, Player, SpellEffect } from '../world';
 import type { Level } from '../level/Level';
 import { bonusSwing, hitMob } from './SwordSystem';
@@ -12,6 +12,7 @@ import type { CharacterSheet } from '../rules/CharacterSheet';
 import { heroClass, spellLevelFor } from '../rules/Classes';
 import { bindingFeatureId, featureCooldown, featureOn, featureOfClass, hasClassFeature } from '../rules/ClassFeatures';
 import { switchFeat, usedFeature } from './FeatureSystem';
+import { foreseeHit, foreseenSave, grimHarvest, savedDamage, spellCast, spellDamageBonus } from './SchoolSystem';
 import { bindingFeatId } from '../rules/Feats';
 import type { FeatId } from '../rules/Feats';
 import { SPELLS, TICKS_PER_SECOND, isSpellId } from '../rules/Spells';
@@ -99,7 +100,9 @@ function refuse(caster: Player, line: string): void {
 }
 
 /** What is said when a feature can't be used. */
-const FEATURE_REFUSALS = { unworked: 'roll.feature_unworked', no_dice: 'roll.no_dice_left', no_ally: 'roll.no_ally', hp_full: 'roll.hp_full' } as const;
+const FEATURE_REFUSALS = {
+  unworked: 'roll.feature_unworked', no_dice: 'roll.no_dice_left', no_ally: 'roll.no_ally', hp_full: 'roll.hp_full', no_foe: 'roll.no_foe', no_room: 'roll.no_room',
+} as const;
 
 /** The cast key on a class feature: it is used at once if the hero has it, it is worked and its square has recovered. */
 function startFeature(caster: Player, id: string, level: Level): void {
@@ -115,7 +118,7 @@ function startFeature(caster: Player, id: string, level: Level): void {
     refuse(caster, text('roll.spell_recovering', { seconds: (left / TICKS_PER_SECOND).toFixed(1) }));
     return;
   }
-  const result = usedFeature(caster, id, slot, level);
+  const result = usedFeature(caster, id, slot, level, aimPoint(caster));
   if (result !== 'ok') {
     refuse(caster, text(FEATURE_REFUSALS[result]));
     return;
@@ -181,20 +184,22 @@ function boltDamage(caster: Player, def: SpellDef, sheet: CharacterSheet): Dice 
   return agonizing ? plus(def.damage, sheet.modifiers[sheet.spell.ability]) : def.damage;
 }
 
-/** A bolt: rolled to hit (d20 + spell attack against AC) when it strikes. */
+/** A bolt: rolled to hit (d20 + spell attack against AC) when it strikes. Empowered Evocation adds to its damage. */
 function castBolt(caster: Player, def: SpellDef, dirX: number, dirY: number): void {
   const sheet = characterSheet(caster);
-  const attack = { attackBonus: sheet.spell.attack, damage: boltDamage(caster, def, sheet), mode: sheet.attack.mode };
-  createSpellBolt(caster.position.x, caster.position.y, dirX, dirY, attack, world.id(caster), caster.character?.def, { spell: def.id, impact: impactOf(def) });
+  const damage = plus(boltDamage(caster, def, sheet), spellDamageBonus(caster, def.id));
+  const attack = { attackBonus: sheet.spell.attack, damage, mode: sheet.attack.mode };
+  createSpellBolt(caster.position.x, caster.position.y, dirX, dirY, attack, world.id(caster), caster.character?.def,
+    { spell: def.id, impact: impactOf(def), castLevel: def.level });
 }
 
 /** Magic missile: its darts fly the aimed line one after another, and each always hits. */
 function castMissiles(caster: Player, def: SpellDef, dirX: number, dirY: number): void {
   const sheet = characterSheet(caster);
-  const attack = { attackBonus: sheet.spell.attack, damage: def.damage, mode: sheet.attack.mode };
+  const attack = { attackBonus: sheet.spell.attack, damage: plus(def.damage, spellDamageBonus(caster, def.id)), mode: sheet.attack.mode };
   for (let i = 0; i < def.count; i++) {
     createSpellBolt(caster.position.x, caster.position.y, dirX, dirY, attack, world.id(caster), caster.character?.def,
-      { spell: def.id, autoHit: true, impact: impactOf(def), wait: i * DART_GAP_TICKS });
+      { spell: def.id, autoHit: true, impact: impactOf(def), wait: i * DART_GAP_TICKS, castLevel: def.level });
   }
 }
 
@@ -209,15 +214,21 @@ function burstCentre(caster: Player, def: SpellDef, targetX: number, targetY: nu
   return { x: x + (dx / dist) * reach, y: y + (dy / dist) * reach };
 }
 
-/** One foe caught in a burst saves against the spell DC: a failure takes all the damage, a success half. */
+/**
+ * One foe caught in a burst saves against the spell DC (a diviner's Portent die may make it fail): a failure takes all the
+ * damage, a success half (a cantrip's nothing, but half with Potent Cantrip).
+ */
 function burstHits(caster: Player, def: SpellDef, foe: Entity, dc: number): void {
   const modifier = foe.mobType ? MONSTERS[foe.mobType].modifiers[def.save] : 0;
-  const save = rollCheck(modifier, dc, spellSaveMode(foe));
-  const rolled = Math.max(MIN_HIT_DAMAGE, rollDice(def.damage));
-  const damage = save.success ? Math.floor(rolled / 2) : rolled;
+  const save = foreseenSave(foe, caster, modifier, dc);
+  const rolled = Math.max(MIN_HIT_DAMAGE, rollDice(def.damage) + spellDamageBonus(caster, def.id));
+  const damage = save.success ? savedDamage(caster, def.level, rolled) : rolled;
   logSave(foe, save.total, save.success);
   recordSpell(caster, def.id, save.success ? 'saved' : 'auto', damage, save.total);
-  if (damage > 0) hitMob(foe, caster, damage, true);
+  if (damage <= 0) return;
+  const alive = (foe.health?.current ?? 0) > 0;
+  hitMob(foe, caster, damage, true);
+  grimHarvest(caster, foe, def.id, def.level, alive);
 }
 
 /** A burst: the effect where it goes off, and a save for every foe within its radius. */
@@ -282,6 +293,7 @@ function release(caster: Player, cast: NonNullable<Entity['casting']>): void {
   else castHeal(caster, def);
   sound.playSound(SPELL_SOUNDS[def.id], caster.position.x, caster.position.y);
   warMagic(caster, base);
+  spellCast(caster, def.id, def.level);
 }
 
 /** Starts a cast toward the crosshair, or plays the one under way and lets it go on its release frame. */
@@ -327,16 +339,27 @@ function withDisadvantage(attack: AttackProfile): AttackProfile {
 function strikeWith(bolt: Bolt, victim: Entity): boolean {
   const p = bolt.projectile;
   const shooter = p.owner === undefined ? undefined : world.entity(p.owner);
+  const alive = (victim.health?.current ?? 0) > 0;
   if (p.autoHit) {
     const damage = Math.max(MIN_HIT_DAMAGE, rollDice(p.attack.damage));
     if (shooter) logSpellDamage(shooter, damage);
     if (shooter && p.spell) recordSpell(shooter, p.spell, 'auto', damage);
     hitMob(victim, bolt, damage, true);
+    harvestWith(shooter, victim, p, alive);
     return true;
   }
-  const outcome = strike(victim, beyondNormalRange(p) ? withDisadvantage(p.attack) : p.attack, shooter, p.spell);
+  const attack = beyondNormalRange(p) ? withDisadvantage(p.attack) : p.attack;
+  // A diviner's spell attack that missed may be turned into a hit by a Portent die.
+  const rolled = strike(victim, attack, shooter, p.spell);
+  const outcome = p.spell ? foreseeHit(shooter, victim, attack, rolled) : rolled;
   if (outcome.hit) hitMob(victim, bolt, outcome.damage);
+  if (outcome.hit) harvestWith(shooter, victim, p, alive);
   return outcome.hit;
+}
+
+/** A spell's projectile struck: Grim Harvest, if it killed and its caster is a necromancer. */
+function harvestWith(shooter: Entity | undefined, victim: Entity, p: Bolt['projectile'], alive: boolean): void {
+  if (isPlayer(shooter) && p.spell) grimHarvest(shooter, victim, p.spell, p.castLevel ?? SPELLS[p.spell].level, alive);
 }
 
 function flyBolt(level: Level, bolt: Bolt): void {

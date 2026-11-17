@@ -116,7 +116,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `THEME_CONFIG`; the isometric castle's room dressing in `src/level/generators/IsoDresser.ts`, the mines' in
   `src/level/generators/MineDresser.ts`; the mines' props in `src/level/MineProps.ts`, their terrain pieces in `src/level/MineTiles.ts`,
   made by `scripts/mine-sheets.py` into `public/caves2/mines-terrain.png` (keep the two in step)); the slanted wall pieces of the catacombs' and the castle's tilesets in `src/level/SlantTiles.ts`,
-  made by `scripts/iso-sheets.py` into each tileset's `mainlevbuild-isometric.png` copy (keep the two in step); enemy AI knobs (sight, squad sizes, flanking, trail
+  made by `scripts/iso-sheets.py` into each tileset's `mainlevbuild-isometric.png` copy (keep the two in step); the Wizard's bind table, Bladesong's blades
+  and the undead's stats in `src/rules/Schools.ts`, the school features' timings in `src/systems/SchoolSystem.ts`; enemy AI knobs (sight, squad sizes, flanking, trail
   following) in `src/ai/constants.ts`; the D&D weapons in `src/data/weapons.json`
   (every weapon of both D&D tables: damage, sort, properties, range in metres, versatile dice, price, weight, and its pictures in
   `public/weapons`, one found weapon each, no two kinds sharing a picture) and the armour and robe in `src/data/armors.json` (AC, DEX
@@ -260,7 +261,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `systems/SpellSystem.ts` with effects from the library (`assets/Effects.ts`). `Spellbook.ts` reads the whole list: a class opens
   spell levels as the tabletop does, a cantrip's dice grow at hero levels 5/11/17, and a spell cast above its own level
   (the Skills tab of the inventory offers a box per level, `ui/SpellsPanel.ts`) rolls more and recovers more slowly. A click binds it
-  to a quick-bar square (`game/SpellBinding.ts`, `spellbook.bound`, the `bind_spell` command); every spell of
+  to a quick-bar square (`game/SpellBinding.ts`, `spellbook.bound`, the `bind_spell` command), and a right click on a square empties
+  it (`UNBOUND`, the `unbind_spell` command; nothing comes back in its place); every spell of
   `spell-list.json` has its numbers in `spells.json` and goes off (a heal with a `radius` mends every hero within it). Tooltips with
   more to tell show it while Alt is held (`ui/InfoTooltip.ts`). Class features (`rules/ClassFeatures.ts`) fill the Skills tab above the cantrips: a worked passive is on from its
   level and a click switches it off and on (`featuresOff`, the `toggle_feature` command; `featureOn` is what effects ask, and the
@@ -273,10 +275,19 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   A swing is a chain of blows (`swordSwing.blow`/`blows`: Extra Attack, Improved Extra Attack at 11; the first blow also strikes with the off-hand weapon, `systems/SwordSystem.ts`); a bow looses a
   volley (`volley`, `ArrowSystem.ts`). Every attack, the heroes' (`swordCooldown`, `arrowCooldown`) and the enemies' (`attackCooldown`),
   comes once an `ATTACK_PERIOD` (60 ticks, `entities/WeaponStats.ts`), with the blows of a chain or volley spread inside it. The Fighter's Martial Archetype (`rules/Archetypes.ts`; only the Champion is on offer
-  for now, `PLAYABLE_ARCHETYPES`, given at level 3 by `grantArchetype`; with more than one it is chosen in `ui/LevelChoices.ts`) gates features by `needs` in `features.json`: the Champion's critical range and Survivor, the Battle Master's
+  for now, `playableArchetypes`, given at level 3 by `grantArchetype`; with more than one it is chosen in `ui/LevelChoices.ts`) gates features by `needs` in `features.json`: the Champion's critical range and Survivor, the Battle Master's
   superiority dice and maneuvers (`rules/Maneuvers.ts`, `systems/ManeuverSystem.ts`: a maneuver is readied from the quick bar and
   spends a die on the blow or the enemy blow it waits for, `Reactions.ts` for Parry and Riposte; marks on foes are the `status` component),
   and the Eldritch Knight's wizard spells (`rules/KnightSpells.ts`, a spell list of its own in `Spellbook.ts`, War Magic after a cast).
+  The Wizard follows Baldur's Gate 3 to level 12: it sees the whole wizard list (greyed above its level) but keeps only as many
+  cantrips and spells of each level bound as its level allows (`rules/Schools.ts`, `roomToBind`; counted at the Skills tab's top
+  right); Arcane Recovery readies the spells of 5th level and below, 60 s less 6 s a charge (`cuts` in `features.json`; `logOnly`
+  entries are told only in the level panel). Its school, chosen at level 2 like an archetype (`WIZARD_SCHOOLS`), has a Skills tab
+  section of its own; the schools play out in `systems/SchoolSystem.ts` (`arcana`: Arcane Ward, Portent, charms through the
+  `status.charmed` hold, Illusory Self, Bladesong and Song of Defence, the Transmuter's Stone, Grim Harvest, Empowered Evocation,
+  Potent Cantrip; a turn is 6 s and a rest's charge a cooldown) and Animate Dead's undead in `systems/SummonSystem.ts`
+  (`entities/SummonFactory.ts`, `q.summons`: they follow their master and fight; foes touching one strike it). A feature with no
+  counterpart in the game yet is an info entry, `worked: false`.
   Experience follows the SRD
   (`game/Progress.ts`, monster `xp`; heroes stop at `LEVEL_CAP`, 12 for now, while the tables keep all 20 levels); hit points (SRD, unscaled: hit die + CON at level 1) and hit dice are in `rules/HitPoints.ts`.
   Spells go on the quick bar only in a safe room (`player.inSafeRoom`, `systems/SafeRoomSystem.ts`); class features anywhere.

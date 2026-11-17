@@ -16,6 +16,7 @@ import { text } from '../core/texts';
 import type { TextId } from '../core/texts';
 import { isStanding } from './Fallen';
 import { restoreDice } from '../systems/ManeuverSystem';
+import { restSchool } from '../systems/SchoolSystem';
 
 /**
  * Resting, as in the tabletop game. A short rest (no enemy hunting the party, two before a long one is
@@ -143,6 +144,7 @@ function restHero(player: Player, kind: RestKind, dice: number): void {
   player.spellbook?.recovery.fill(0);
   player.indomitableCooldown = 0;
   player.duelistCooldown = 0;
+  restSchool(player, kind === 'long');
   restoreDice(player);
   const spent = kind === 'long' ? 0 : spendHitDice(player, dice);
   if (kind === 'long') wake(player);

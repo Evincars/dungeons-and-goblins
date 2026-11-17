@@ -6,7 +6,7 @@ import { FEATS, FEAT_IDS, combineFeats, featAbility, isFeatId } from './Feats';
 import type { FeatEffects, FeatId, FeatRequirement } from './Feats';
 import { DEFAULT_FIGHTING_STYLE, isFightingStyle } from './FightingStyles';
 import type { FightingStyleId } from './FightingStyles';
-import { PLAYABLE_ARCHETYPES, isArchetype } from './Archetypes';
+import { isArchetype, playableArchetypes } from './Archetypes';
 import type { ArchetypeId } from './Archetypes';
 import { MANEUVER_LEVELS, isManeuver, maneuversKnown } from './Maneuvers';
 import { KNIGHT_PICK_LEVELS, freeSchoolPicks, knightCantripsKnown, knightSpellsKnown } from './KnightSpells';
@@ -146,7 +146,7 @@ export function improvementIndexAt(cls: HeroClass, level: number): number {
 export function levelHasChoice(cls: HeroClass, level: number, build: Build | undefined): boolean {
   if (!build) return false;
   if (level === 1 && !build.locked) return true;
-  if (archetypeLevel(cls, level) && !build.archetype && PLAYABLE_ARCHETYPES.length > 1) return true;
+  if (archetypeLevel(cls, level) && !build.archetype && playableArchetypes(cls.dndClass).length > 1) return true;
   if (picksPending(build, level)) return true;
   if (extraStyleLevel(cls, level)) return build.archetype === 'champion' && !build.extraStyle;
   const index = improvementIndexAt(cls, level);
@@ -241,9 +241,9 @@ export function takeExtraStyle(cls: HeroClass, build: Build, level: number, styl
   return true;
 }
 
-/** The Martial Archetype, taken at the level that offers it: final once chosen, and only one the game offers for now. */
+/** The Martial Archetype (or a wizard's school), taken at the level that offers it: final once chosen, and one the game offers the class. */
 export function takeArchetype(cls: HeroClass, build: Build, level: number, archetype: ArchetypeId): boolean {
-  if (!archetypeOffered(cls, level) || build.archetype || !PLAYABLE_ARCHETYPES.includes(archetype)) return false;
+  if (!archetypeOffered(cls, level) || build.archetype || !playableArchetypes(cls.dndClass).includes(archetype)) return false;
   build.archetype = archetype;
   return true;
 }
@@ -253,8 +253,9 @@ export function takeArchetype(cls: HeroClass, build: Build, level: number, arche
  * it at once. Returns the archetype given (null: none was due).
  */
 export function grantArchetype(cls: HeroClass, build: Build, level: number): ArchetypeId | null {
-  if (PLAYABLE_ARCHETYPES.length !== 1 || build.archetype || !archetypeOffered(cls, level)) return null;
-  build.archetype = PLAYABLE_ARCHETYPES[0];
+  const playable = playableArchetypes(cls.dndClass);
+  if (playable.length !== 1 || build.archetype || !archetypeOffered(cls, level)) return null;
+  build.archetype = playable[0];
   return build.archetype;
 }
 

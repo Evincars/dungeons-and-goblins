@@ -47,6 +47,8 @@ import { updateSafeRooms } from './SafeRoomSystem';
 import { updateProtection } from './ProtectionSystem';
 import { updateManeuvers } from './ManeuverSystem';
 import { updateFeatureTimers, updateSurvivor } from './FeatureSystem';
+import { updateSchools } from './SchoolSystem';
+import { updateSummons } from './SummonSystem';
 import { updateMusic } from './MusicSystem';
 import { updateAmbience } from './AmbienceSystem';
 
@@ -73,6 +75,7 @@ export const SIMULATION: readonly System[] = [
   ({ level }) => updateInventory(level),
   () => updateWeaponSwap(),
   ({ level, tick }) => updateAI(level, tick),
+  ({ level }) => updateSummons(level),
   () => updateInitiative(),
   () => updateArrows(),
   () => updateSword(),
@@ -108,6 +111,7 @@ export const SIMULATION: readonly System[] = [
   () => updateManeuvers(),
   () => updateSurvivor(),
   () => updateFeatureTimers(),
+  () => updateSchools(),
   (ctx) => { if (ctx.level.tilesDirty) ctx.rebuildTerrain(); },
 ];
 

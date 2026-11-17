@@ -1,4 +1,4 @@
-import { QUICK_ROW } from '../world';
+import { QUICK_ROW, QUICK_SLOTS } from '../world';
 import type { Player } from '../world';
 import { ensure } from '../core/errors';
 import { hasKey, isRecord } from '../core/guards';
@@ -6,13 +6,14 @@ import { isDamageType } from './DamageTypes';
 import type { DamageType } from './DamageTypes';
 import { parseDice } from './Dice';
 import type { Dice } from './Dice';
-import { heroClass } from './Classes';
+import { heroClass, spellLevelFor } from './Classes';
 import { bindingFeatureId, featureBinding, featureOfClass, nthActiveFeature } from './ClassFeatures';
 import type { FeatureDef } from './ClassFeatures';
 import type { DndClass } from './Classes';
 import { KNIGHT_LIST, KNIGHT_SCHOOLS, KNIGHT_SLOT_LEVELS, knightSlotLevel } from './KnightSpells';
 import type { Picks } from './Archetypes';
 import { SPELLS, TICKS_PER_SECOND, isSpellId } from './Spells';
+import { bindLimit, hasBindLimits } from './Schools';
 import type { SpellDef, SpellId } from './Spells';
 import spellbook from '../data/spellbook.json';
 import spellList from '../data/spell-list.json';
@@ -75,6 +76,10 @@ export type CatalogSpell = {
 
 /** A spell on the quick bar: which, and the level it is cast at. */
 export type QuickBinding = { spell: string; level: number };
+
+/** What a square the player emptied (a right click on the quick bar) holds: nothing, not even the class's own spell for it. */
+export const UNBOUND = 'unbound';
+export const EMPTY_SQUARE: QuickBinding = { spell: UNBOUND, level: 0 };
 
 const num = (v: unknown, fallback = 0): number => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
@@ -205,6 +210,14 @@ export function learnLevel(list: SpellList, spell: CatalogSpell): number | undef
   if (list !== KNIGHT_LIST) return spell.classes[list];
   if (!knightListed(spell.id)) return undefined;
   return spell.level === 0 ? KNIGHT_SLOT_LEVELS[0] : KNIGHT_SLOT_LEVELS[spell.level - 1];
+}
+
+/**
+ * The spells the Skills tab shows, by spell level (index 0: cantrips): a wizard sees the whole wizard list, the spells
+ * above their level greyed out (`learnLevel` says when each comes); everyone else the spells they have learnt.
+ */
+export function listedSpells(list: SpellList, heroLevel: number, known?: readonly string[]): CatalogSpell[][] {
+  return list === 'wizard' ? classSpells(list) : learntSpells(list, heroLevel, known);
 }
 
 /**
@@ -340,12 +353,44 @@ function defaultFeature(def: FeatureDef): QuickBinding {
  */
 export function quickBinding(player: Player, slot: number): QuickBinding | null {
   const bound = player.spellbook?.bound?.[slot];
-  if (bound) return bound;
+  if (bound) return bound.spell === UNBOUND ? null : bound;
   const cls = heroClass(player.heroClass);
   if (slot >= QUICK_ROW) {
-    const feature = nthActiveFeature(cls.dndClass, player.playerStats.level, player.build?.fightingStyle ?? null, slot - QUICK_ROW);
+    const feature = nthActiveFeature(cls.dndClass, player.playerStats.level, player.build ?? null, slot - QUICK_ROW);
     return feature ? defaultFeature(feature) : null;
   }
   const id = cls.spells[slot];
   return id ? defaultSpell(id) : null;
+}
+
+/**
+ * How many quick-bar squares (both rows) hold a spell bound at this level (0: a cantrip), leaving square `except` out. The
+ * class's own spells the hero has not learnt yet (shown dimmed on the bar until their level) are not counted.
+ */
+export function boundAtLevel(player: Player, castLevel: number, except = -1): number {
+  const cls = heroClass(player.heroClass);
+  let count = 0;
+  for (let slot = 0; slot < QUICK_SLOTS; slot++) {
+    const binding = slot === except ? null : quickBinding(player, slot);
+    if (!binding || !isCatalogSpell(binding.spell) || binding.level !== castLevel) continue;
+    if (!isSpellId(binding.spell) || spellLevelFor(cls, binding.spell) <= player.playerStats.level) count++;
+  }
+  return count;
+}
+
+/**
+ * Whether the hero may put this spell, cast at this level, on square `slot` (whatever is there gives up its place): a
+ * wizard keeps only as many cantrips and spells of each level on the bar as their level allows (src/rules/Schools.ts);
+ * class features, feats and every other class are not counted.
+ */
+export function roomToBind(player: Player, spell: string, castLevel: number, slot: number): boolean {
+  if (!hasBindLimits(heroClass(player.heroClass)) || !isCatalogSpell(spell)) return true;
+  return boundAtLevel(player, castLevel, slot) < bindLimit(player.playerStats.level, castLevel);
+}
+
+/** Whether the hero could bind this spell somewhere: room is left at its level, or a square holds one of that level it could replace. */
+export function roomSomewhere(player: Player, spell: string, castLevel: number): boolean {
+  if (!hasBindLimits(heroClass(player.heroClass)) || !isCatalogSpell(spell)) return true;
+  const used = boundAtLevel(player, castLevel);
+  return used < bindLimit(player.playerStats.level, castLevel) || used > 0;
 }

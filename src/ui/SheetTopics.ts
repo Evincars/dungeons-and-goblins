@@ -32,6 +32,7 @@ export function armorClassTopic(sheet: CharacterSheet): TipTopic {
   if (ac.shield) detail.push(text('sheet.ac.shield', { bonus: formatModifier(ac.shield) }));
   if (ac.featureName) detail.push(text('sheet.ac.feature', { feature: fightingStyleName(ac.featureName), bonus: formatModifier(ac.feature) }));
   if (ac.feat) detail.push(text('sheet.ac.feat', { bonus: formatModifier(ac.feat) }));
+  if (ac.school) detail.push(text('sheet.ac.school', { bonus: formatModifier(ac.school) }));
   detail.push(text('sheet.ac.total', { total: ac.total }));
   return { title: text('sheet.ac.name'), body: text('sheet.ac.description'), detail };
 }

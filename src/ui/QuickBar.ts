@@ -13,8 +13,9 @@ import { SPELLS, TICKS_PER_SECOND, isSpellId } from '../rules/Spells';
 import type { SpellDef } from '../rules/Spells';
 import { CATALOG, castDef, quickBinding, spellIconKey } from '../rules/Spellbook';
 import type { CatalogSpell, QuickBinding } from '../rules/Spellbook';
-import { abandonBinding, cancelBinding, finishBinding, pendingBinding, setOverQuickSquare } from '../game/SpellBinding';
-import { bindingFeatureId, featureOfClass } from '../rules/ClassFeatures';
+import { abandonBinding, bindRefusal, cancelBinding, finishBinding, pendingBinding, setOverQuickSquare } from '../game/SpellBinding';
+import { bindingFeatureId, featureCooldown, featureOfClass } from '../rules/ClassFeatures';
+import { requestUnbind } from '../game/PlayerActions';
 import type { FeatureDef } from '../rules/ClassFeatures';
 import { reportRejection } from '../core/errors';
 import { text } from '../core/texts';
@@ -108,9 +109,15 @@ function bindingName(binding: QuickBinding, castWith: Player['heroClass']): stri
   return featureOfBinding(binding, castWith)?.name ?? CATALOG[binding.spell]?.name ?? binding.spell;
 }
 
-/** What a square's spell does, for its tooltip. */
+/** What a square's spell does, for its tooltip, with a line telling that a right click empties the square. */
 function slotTopic(binding: QuickBinding | null, heroLevel: number, castWith: Player['heroClass'], featsOn: readonly string[] = []): TipTopic {
   if (!binding) return { title: text('hud.slot.empty'), body: text('hud.slot.empty_body') };
+  const topic = boundTopic(binding, heroLevel, castWith, featsOn);
+  return { ...topic, detail: [...(topic.detail ?? []), { text: text('hud.slot.unbind_hint'), color: THEME.muted }] };
+}
+
+/** What a bound square's spell, feature or feat does. */
+function boundTopic(binding: QuickBinding, heroLevel: number, castWith: Player['heroClass'], featsOn: readonly string[]): TipTopic {
   const feat = bindingFeatId(binding.spell);
   if (feat) return featTopic(feat, featsOn.includes(feat));
   const feature = featureOfBinding(binding, castWith);
@@ -209,6 +216,7 @@ export class QuickBar {
     square.on('pointerover', () => { this.hovered = i; claimPointer(square, true); setOverQuickSquare(true); });
     square.on('pointerout', () => { if (this.hovered === i) this.hovered = -1; claimPointer(square, false); setOverQuickSquare(false); });
     square.on('pointertap', () => this.pick(i));
+    square.on('rightclick', () => this.unbind(i));
     this.slots.push({ square, frame, icon, shade, initials, levelTag, keyTag, bound: null, active: false, locked: false, shadeH: -1 });
     this.row.addChild(square);
     this.drawFrame(this.slots[i]);
@@ -219,6 +227,12 @@ export class QuickBar {
     const slot = this.slotAt(i);
     if (pendingBinding() && this.player) finishBinding(this.player, slot);
     else chooseQuickSlot(slot);
+  }
+
+  /** A right click on a square empties it (not while a spell waits for a square). */
+  private unbind(i: number): void {
+    if (pendingBinding() || !this.player) return;
+    requestUnbind(this.player, this.slotAt(i));
   }
 
   /** A dark well; the picked one edged in gold. */
@@ -262,7 +276,7 @@ export class QuickBar {
   private updateShade(view: SlotView, binding: QuickBinding | null, left: number, player: Player): void {
     const spell = binding && isSpellId(binding.spell) ? castDef(SPELLS[binding.spell], binding.level, player.playerStats.level) : null;
     const feature = featureOfBinding(binding, player.heroClass);
-    const total = spell ? spell.recoveryTicks : feature ? feature.cooldown * TICKS_PER_SECOND : 0;
+    const total = spell ? spell.recoveryTicks : feature ? featureCooldown(feature, player.playerStats.level) * TICKS_PER_SECOND : 0;
     const shadeH = total > 0 && left > 0 ? Math.ceil(SLOT * Math.min(1, left / total)) : 0;
     if (view.shadeH === shadeH) return;
     view.shadeH = shadeH;
@@ -300,7 +314,8 @@ export class QuickBar {
     }
     const spell = CATALOG[waiting.spell] ?? { name: this.player ? bindingName(waiting, this.player.heroClass) : waiting.spell, level: 0 };
     const level = waiting.level > spell.level ? ` (${text('skills.cast_level', { level: waiting.level })})` : '';
-    this.prompt.text = text('skills.bind_prompt', { spell: spell.name, level });
+    const full = bindRefusal();
+    this.prompt.text = full ? text('skills.bind_replace', { what: full }) : text('skills.bind_prompt', { spell: spell.name, level });
     const phase = (Math.sin((this.breath++ / BREATH_PERIOD) * 2 * Math.PI) + 1) / 2;
     for (const view of this.slots) view.square.scale.set(1 + BREATH_SWELL * phase);
   }

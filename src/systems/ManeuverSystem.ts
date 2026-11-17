@@ -123,7 +123,7 @@ export function evasiveBonus(target: Entity): number {
 // ── Marks on foes ─────────────────────────────────────────────────────────────
 
 function statusOf(foe: Entity, by: number): NonNullable<Entity['status']> {
-  const status = foe.status ?? { prone: 0, frightened: 0, goaded: 0, distracted: 0, eldritch: 0, by };
+  const status = foe.status ?? { prone: 0, frightened: 0, goaded: 0, distracted: 0, eldritch: 0, charmed: 0, by };
   if (!foe.status) world.addComponent(foe, 'status', status);
   status.by = by;
   return status;
@@ -269,6 +269,20 @@ export function afterBlow(attacker: Entity | undefined, foe: Entity, outcome: At
 
 // ── Timers ────────────────────────────────────────────────────────────────────
 
+/** A charmed foe stands rooted while the charm lasts (it thinks and moves only once it is free). */
+function holdCharmed(foe: Entity, s: NonNullable<Entity['status']>): void {
+  s.charmed = Math.max(0, s.charmed - 1);
+  if (s.charmed <= 0) return;
+  foe.freezeTime = Math.max(foe.freezeTime ?? 0, 1);
+  if (foe.velocity) foe.velocity.x = foe.velocity.y = 0;
+}
+
+/** Charms a foe for this many ticks (systems/SchoolSystem.ts): it stands still and strikes nobody until hurt or freed. */
+export function charm(foe: Entity, by: number, ticks: number): void {
+  const status = statusOf(foe, by);
+  status.charmed = Math.max(status.charmed, ticks);
+}
+
 /** A readied maneuver lapses if its moment does not come; marks on foes wear off. */
 export function updateManeuvers(): void {
   for (const hero of readied) if (--hero.maneuver.ticks <= 0) world.removeComponent(hero, 'maneuver');
@@ -279,6 +293,7 @@ export function updateManeuvers(): void {
     s.goaded = Math.max(0, s.goaded - 1);
     s.distracted = Math.max(0, s.distracted - 1);
     s.eldritch = Math.max(0, s.eldritch - 1);
-    if (s.prone + s.frightened + s.goaded + s.distracted + s.eldritch === 0) world.removeComponent(foe, 'status');
+    holdCharmed(foe, s);
+    if (s.prone + s.frightened + s.goaded + s.distracted + s.eldritch + s.charmed === 0) world.removeComponent(foe, 'status');
   }
 }

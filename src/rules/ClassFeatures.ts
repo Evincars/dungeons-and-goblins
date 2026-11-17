@@ -34,6 +34,10 @@ export type FeatureDef = {
   cooldown: number;
   /** The hero levels at which an active has more uses (Action Surge: 2 uses at level 17); sorted, the first is its starting level. */
   uses: readonly { level: number; uses: number }[];
+  /** Seconds taken off an active's recovery from these hero levels on (Arcane Recovery's charges). */
+  cuts: readonly { level: number; seconds: number }[];
+  /** Only told in the level panel (an Arcane Recovery charge, a cantrip more to bind): the Skills tab leaves it out. */
+  logOnly: boolean;
   /** Only for a hero who chose this fighting style, archetype or maneuver. */
   needs: string | null;
   /** Off the list once this choice is made (the entry that asks for a style or an archetype goes when it is picked). */
@@ -47,12 +51,12 @@ export type FeatureDef = {
 
 const isKind = (v: unknown): v is FeatureKind => FEATURE_KINDS.some((k) => k === v);
 
-/** An active's uses by level, as `{ "2": 1, "17": 2 }` in the file. */
-function readUses(cls: string, raw: unknown): { level: number; uses: number }[] {
+/** Whole numbers by hero level, as `{ "2": 1, "17": 2 }` in the file (an active's uses, or the seconds cut off its recovery). */
+function readByLevel(cls: string, raw: unknown, what: string): { level: number; value: number }[] {
   if (raw === undefined) return [];
-  ensure(isRecord(raw), `Bad uses in class ${cls}`, { cls });
-  const entries = Object.entries(isRecord(raw) ? raw : {}).map(([level, uses]) => ({ level: Number(level), uses: Number(uses) }));
-  ensure(entries.every((e) => Number.isInteger(e.level) && Number.isInteger(e.uses) && e.uses >= 1), `Bad uses in class ${cls}`, { cls });
+  ensure(isRecord(raw), `Bad ${what} in class ${cls}`, { cls });
+  const entries = Object.entries(isRecord(raw) ? raw : {}).map(([level, value]) => ({ level: Number(level), value: Number(value) }));
+  ensure(entries.every((e) => Number.isInteger(e.level) && Number.isInteger(e.value) && e.value >= 1), `Bad ${what} in class ${cls}`, { cls });
   return entries.sort((a, b) => a.level - b.level);
 }
 
@@ -70,7 +74,9 @@ function readFeature(cls: string, raw: unknown): FeatureDef {
     unless: typeof r.unless === 'string' ? r.unless : null,
     replaces: typeof r.replaces === 'string' ? r.replaces : null,
     supersededBy: null,
-    uses: readUses(cls, r.uses),
+    uses: readByLevel(cls, r.uses, 'uses').map(({ level, value }) => ({ level, uses: value })),
+    cuts: readByLevel(cls, r.cuts, 'cuts').map(({ level, value }) => ({ level, seconds: value })),
+    logOnly: r.logOnly === true,
     description: String(r.description ?? ''),
   };
 }
@@ -120,16 +126,18 @@ export function featureUses(def: FeatureDef, level: number): number {
   return uses;
 }
 
-/** An active's recovery, in seconds, at this hero level: each use recovers in its share of the whole. */
+/** An active's recovery, in seconds, at this hero level: what its cuts so far leave of it, each use recovering in its share. */
 export function featureCooldown(def: FeatureDef, level: number): number {
-  return def.cooldown / featureUses(def, level);
+  let seconds = def.cooldown;
+  for (const cut of def.cuts) if (level >= cut.level) seconds -= cut.seconds;
+  return Math.max(0, seconds) / featureUses(def, level);
 }
 
-/** The `n`th active feature (0: the first) a hero of this class, level and fighting style has, in level order. */
-export function nthActiveFeature(cls: DndClass, level: number, style: string | null, n: number): FeatureDef | undefined {
+/** The `n`th active feature (0: the first) a hero of this class, level and choices (style, archetype or school) has, in level order. */
+export function nthActiveFeature(cls: DndClass, level: number, picks: Picks | null, n: number): FeatureDef | undefined {
   let left = n;
   for (const f of CLASS_FEATURE_LIST[cls]) {
-    if (f.kind !== 'active' || f.level > level || (f.needs !== null && f.needs !== style)) continue;
+    if (f.kind !== 'active' || !given(f, level, picks)) continue;
     if (left-- === 0) return f;
   }
   return undefined;

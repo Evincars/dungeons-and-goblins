@@ -3,10 +3,15 @@ import type { Player } from '../world';
 import { text } from '../core/texts';
 import { heroClass } from '../rules/Classes';
 import type { DndClass } from '../rules/Classes';
-import { castLevels, isCaster, learnLevel, learntSpells, spellIconKey, spellListOf } from '../rules/Spellbook';
+import { boundAtLevel, castLevels, isCaster, learnLevel, listedSpells, roomSomewhere, spellIconKey, spellListOf } from '../rules/Spellbook';
 import type { CatalogSpell, SpellList } from '../rules/Spellbook';
 import type { Build } from '../rules/Build';
-import { featureBinding, featuresAt } from '../rules/ClassFeatures';
+import { CLASS_FEATURE_LIST, featureBinding, featuresAt } from '../rules/ClassFeatures';
+import { isWizardSchool, schoolOf } from '../rules/Archetypes';
+import type { WizardSchool } from '../rules/Archetypes';
+import { BIND_TOP_LEVEL, bindLimit, hasBindLimits } from '../rules/Schools';
+import { bindKind } from '../game/SpellBinding';
+import { wrapLines } from './InfoTooltip';
 import type { FeatureDef } from '../rules/ClassFeatures';
 import { beginBinding } from '../game/SpellBinding';
 import { lazyTexture, requestArt } from '../assets/LazyArt';
@@ -15,15 +20,19 @@ import { preparesSpells, requestToggleFeature } from '../game/PlayerActions';
 import type { TipTopic } from './InfoTooltip';
 import { PixelLabel } from './PixelText';
 import { featTopic, featureTopic, spellTopic } from './SpellTopics';
-import { featName } from '../rules/Names';
+import { archetypeName, featName } from '../rules/Names';
 import { FEATS, featBinding } from '../rules/Feats';
 import type { FeatId } from '../rules/Feats';
 import { passiveFeats } from '../rules/Build';
 import { THEME } from './Theme';
 
 type Rect = { x: number; y: number; w: number; h: number };
-/** A box in the list (before scrolling): a spell, a class feature or a Passive Feat. */
-type Box = { spell: CatalogSpell | null; feature: FeatureDef | null; feat: FeatId | null; rect: Rectangle };
+/** A box in the list (before scrolling): a spell, a class feature or a Passive Feat; `locked` (greyed out) until the hero's level reaches it. */
+type Box = { spell: CatalogSpell | null; feature: FeatureDef | null; feat: FeatId | null; locked: boolean; rect: Rectangle };
+/** What a section lists: a spell, a feature or a feat, greyed out while locked. */
+type Item = { spell?: CatalogSpell; feature?: FeatureDef; feat?: FeatId; locked?: boolean };
+/** A wizard's bind counter at the top right: the spell level it counts (0: cantrips) and its line. */
+type Counter = { level: number; label: PixelLabel };
 /** One level a clicked spell can be cast at, as a box. */
 type Option = { level: number; rect: Rectangle };
 /** The boxes that open under a clicked spell that can be cast at several levels: one box per level. */
@@ -54,6 +63,18 @@ const BEAD_SPEED = 0.6;
 const BEAD_COLOURS = [0x4de1ff, 0xff5fd2, 0xffe14d, 0x7dff6a] as const;
 /** The hint at the top turns this colour outside a safe room, where spells can't be prepared. */
 const UNSAFE_HINT = 0xff9a6a;
+/** A box greyed out (a spell or feature above the hero's level): its picture this faint, under a veil this dark. */
+const LOCKED_ICON_ALPHA = 0.3;
+const LOCKED_VEIL_ALPHA = 0.45;
+/** A bind counter's colour: room left, full, or (after a level's limit fell short of what was bound) over. */
+const COUNTER_FREE = THEME.buttonText;
+const COUNTER_FULL = THEME.title;
+const COUNTER_OVER = UNSAFE_HINT;
+/** Space between the hint and the counters beside it; a line of the hint or a counter is this tall. */
+const COUNTER_GAP = 8;
+const LINE_H = 9;
+/** A refusal (no room to bind) stays in the hint this many updates. */
+const REFUSAL_UPDATES = 180;
 
 /**
  * The inventory's Skills tab: first "Class features:" (what the class has given the hero by their level: a passive is
@@ -63,11 +84,18 @@ const UNSAFE_HINT = 0xff9a6a;
  * it is an empty box that tells about itself under the pointer. Click one to put it on the quick bar: a spell that can
  * be cast at several levels first opens a box for each level, each telling its own numbers. Spells are prepared only in
  * a safe room (game/PlayerActions.ts `mayPrepare`): elsewhere the hint at the top says so and a click on one does nothing.
+ *
+ * A wizard sees every wizard spell, those above their level greyed out, and their school's features in a section of their
+ * own above the 1st-level spells (also greyed out until their level comes; its actives are bound without counting). At
+ * the top right, counters tell how many cantrips and spells of each level are bound and how many may be
+ * (src/rules/Schools.ts); with a level full, the hint says so instead of starting to bind.
  */
 export class SpellsPanel {
   readonly view = new Container();
   private readonly content = new Container();
   private readonly frames = new Graphics();
+  /** Dark veils over the greyed-out boxes, above their icons. */
+  private readonly veils = new Graphics();
   private readonly highlight = new Graphics();
   private readonly popup = new Container();
   private readonly scrollbar = new Graphics();
@@ -76,6 +104,11 @@ export class SpellsPanel {
   /** The line at the top: how to bind, or, outside a safe room, that spells wait for one. */
   private hint: PixelLabel | null = null;
   private hintSafe: boolean | null = null;
+  /** How wide the hint may run (beside the counters), and a refusal it shows for a while instead. */
+  private hintWidth = 0;
+  private refusal: string | null = null;
+  private refusalLeft = 0;
+  private counters: Counter[] = [];
   private bead = 0;
   private boxes: Box[] = [];
   private choice: Choice | null = null;
@@ -90,7 +123,7 @@ export class SpellsPanel {
   constructor(private readonly area: Rect) {
     const mask = new Graphics().rect(area.x, area.y, area.w, area.h).fill({ color: 0xffffff });
     this.content.mask = mask;
-    this.content.addChild(this.frames, this.beads, this.highlight);
+    this.content.addChild(this.frames, this.veils, this.beads, this.highlight);
     this.view.addChild(this.content, mask, this.scrollbar, this.popup);
   }
 
@@ -111,11 +144,13 @@ export class SpellsPanel {
 
   private clearContent(): void {
     this.boxes = [];
+    this.counters = [];
     this.hovered = null;
     this.frames.clear();
+    this.veils.clear();
     this.highlight.clear();
     this.beads.clear();
-    const keep: Container[] = [this.frames, this.beads, this.highlight];
+    const keep: Container[] = [this.frames, this.veils, this.beads, this.highlight];
     for (const child of this.content.removeChildren()) if (!keep.includes(child)) child.destroy();
     this.content.addChild(...keep);
   }
@@ -128,25 +163,27 @@ export class SpellsPanel {
   }
 
   /** One heading and its boxes in rows; returns where the next section starts. */
-  private addSection(label: string, items: readonly { spell?: CatalogSpell; feature?: FeatureDef; feat?: FeatId }[], top: number): number {
+  private addSection(label: string, items: readonly Item[], top: number): number {
     this.addHeading(label, top, THEME.title);
     const cols = Math.max(1, Math.floor((this.area.w - 2 * PAD + GAP) / (BOX + GAP)));
     const first = top + HEADING_H;
     items.forEach((item, i) => {
       const rect = new Rectangle(this.area.x + PAD + (i % cols) * (BOX + GAP), first + Math.floor(i / cols) * (BOX + GAP), BOX, BOX);
-      this.boxes.push({ spell: item.spell ?? null, feature: item.feature ?? null, feat: item.feat ?? null, rect });
-      if (item.spell) this.addIcon(item.spell, rect);
+      const locked = item.locked ?? false;
+      this.boxes.push({ spell: item.spell ?? null, feature: item.feature ?? null, feat: item.feat ?? null, locked, rect });
+      if (item.spell) this.addIcon(item.spell, rect, locked);
       if (item.feat) this.addInitials(item.feat, rect);
     });
     const rows = Math.ceil(items.length / cols);
     return first + rows * (BOX + GAP) + SECTION_GAP;
   }
 
-  /** A spell's icon (src/data/spell-list.json) inside its box, once it has loaded; a spell without one keeps an empty box. */
-  private addIcon(spell: CatalogSpell, rect: Rectangle): void {
+  /** A spell's icon (src/data/spell-list.json) inside its box, once it has loaded (faint while locked); a spell without one keeps an empty box. */
+  private addIcon(spell: CatalogSpell, rect: Rectangle, locked: boolean): void {
     const key = spellIconKey(spell.id);
     if (!key) return;
     const icon = new Sprite(Texture.EMPTY);
+    icon.alpha = locked ? LOCKED_ICON_ALPHA : 1;
     icon.position.set(rect.x + ICON_INSET, rect.y + ICON_INSET);
     this.content.addChildAt(icon, this.content.getChildIndex(this.frames) + 1);
     const show = (): void => {
@@ -160,30 +197,78 @@ export class SpellsPanel {
   private layout(cls: DndClass, level: number, build: Build | undefined): void {
     const list = spellListOf(cls, build);
     this.clearContent();
-    let y = this.area.y + PAD;
-    this.hint = this.addHeading(text('skills.hint'), y, THEME.muted);
-    this.hintSafe = null;
-    this.updateHint();
-    y += HEADING_H + SECTION_GAP;
-    y = this.addSection(text('skills.features'), featuresAt(cls, level, build ?? null).map((feature) => ({ feature })), y);
+    let y = this.addTop(this.area.y + PAD, level);
+    // The school's features have a section of their own, above the 1st-level spells.
+    const general = featuresAt(cls, level, build ?? null).filter((f) => !f.logOnly && !isWizardSchool(f.needs));
+    y = this.addSection(text('skills.features'), general.map((feature) => ({ feature })), y);
     const feats = this.player ? passiveFeats(heroClass(this.player.heroClass), level, build) : [];
     if (feats.length) y = this.addSection(text('skills.passive_feats'), feats.map((feat) => ({ feat })), y);
     if (!isCaster(list)) {
       this.addHeading(text('skills.none'), y, THEME.muted);
       y += HEADING_H;
     }
-    learntSpells(list, level, build?.spells).forEach((spells, spellLevel) => {
+    const school = schoolOf(build);
+    listedSpells(list, level, build?.spells).forEach((spells, spellLevel) => {
+      if (spellLevel === 1 && school) y = this.addSchool(cls, school, level, y);
       if (!spells.length) return;
       const label = spellLevel === 0 ? text('skills.cantrips') : text('skills.level', { level: spellLevel });
-      y = this.addSection(label, spells.map((spell) => ({ spell })), y);
+      y = this.addSection(label, spells.map((spell) => ({ spell, locked: (learnLevel(list, spell) ?? Infinity) > level })), y);
     });
     this.contentH = y - this.area.y;
     this.finishLayout();
   }
 
-  /** Draws the boxes and puts the list back at the top. */
+  /**
+   * The wizard's school: every feature it gives, the ones above the hero's level greyed out. Its actives are bound like spells
+   * but count against no limit.
+   */
+  private addSchool(cls: DndClass, school: WizardSchool, level: number, top: number): number {
+    const features = CLASS_FEATURE_LIST[cls].filter((f) => f.needs === school);
+    const label = text('skills.school', { school: archetypeName(school) });
+    return this.addSection(label, features.map((feature) => ({ feature, locked: feature.level > level })), top);
+  }
+
+  /**
+   * The top of the tab: a wizard's bind counters stacked at the right ("Cantrips 2/3", "Level 1 1/2"…, one for every level
+   * they may bind), and the hint beside them on the left. Returns where the sections start.
+   */
+  private addTop(top: number, level: number): number {
+    const right = this.area.x + this.area.w - PAD - SCROLLBAR_W;
+    const counted = this.player && hasBindLimits(heroClass(this.player.heroClass));
+    for (let spellLevel = 0; counted && spellLevel <= BIND_TOP_LEVEL; spellLevel++) {
+      if (bindLimit(level, spellLevel) <= 0) continue;
+      const label = new PixelLabel('', { color: COUNTER_FREE, align: 'right', shadow: true });
+      label.position.set(Math.round(right), Math.round(top + this.counters.length * LINE_H));
+      this.content.addChild(label);
+      this.counters.push({ level: spellLevel, label });
+    }
+    this.updateCounters();
+    const widest = this.counters.reduce((w, c) => Math.max(w, c.label.textWidth), 0);
+    this.hintWidth = this.area.w - 2 * PAD - (widest ? widest + COUNTER_GAP : 0);
+    this.hint = this.addHeading('', top, THEME.muted);
+    this.hintSafe = null;
+    this.updateHint();
+    const hintH = Math.max(HEADING_H, this.hint.textHeight);
+    return top + Math.max(hintH, this.counters.length * LINE_H) + SECTION_GAP;
+  }
+
+  /** Each counter says how many of its level are bound and how many may be, coloured by whether room is left. */
+  private updateCounters(): void {
+    const player = this.player;
+    if (!player) return;
+    const level = player.playerStats.level;
+    for (const { level: spellLevel, label } of this.counters) {
+      const used = boundAtLevel(player, spellLevel);
+      const limit = bindLimit(level, spellLevel);
+      label.text = spellLevel === 0 ? text('skills.binds.cantrips', { used, limit }) : text('skills.binds.level', { level: spellLevel, used, limit });
+      label.fill = used > limit ? COUNTER_OVER : used === limit ? COUNTER_FULL : COUNTER_FREE;
+    }
+  }
+
+  /** Draws the boxes (a veil over the locked ones) and puts the list back at the top. */
   private finishLayout(): void {
     for (const { rect } of this.boxes) this.drawBox(this.frames, rect);
+    for (const { rect, locked } of this.boxes) if (locked) this.veils.rect(rect.x, rect.y, rect.width, rect.height).fill({ color: 0x000000, alpha: LOCKED_VEIL_ALPHA });
     this.scrollY = 0;
     this.content.y = 0;
     this.drawScrollbar();
@@ -247,13 +332,31 @@ export class SpellsPanel {
     return !!this.player && preparesSpells(this.player);
   }
 
-  /** The top line says how to bind, or (in warning colour) that spells wait for a safe room. */
+  /** The top line says how to bind, or (in warning colour) that spells wait for a safe room, or that a level has no room left. */
   private updateHint(): void {
-    const safe = this.preparing;
+    if (this.refusalLeft > 0 && --this.refusalLeft === 0) this.refusal = null;
+    const safe = this.preparing && !this.refusal;
     if (!this.hint || safe === this.hintSafe) return;
     this.hintSafe = safe;
-    this.hint.text = text(safe ? 'skills.hint' : 'skills.safe_room_only');
+    const line = this.refusal ?? text(safe ? 'skills.hint' : 'skills.safe_room_only');
+    this.hint.text = wrapLines(line, this.hintWidth).join('\n');
     this.hint.fill = safe ? THEME.muted : UNSAFE_HINT;
+  }
+
+  /** The hint says for a while that no room is left to bind another spell of this kind (a cantrip, a level 2 spell). */
+  private refuse(what: string): void {
+    this.refusal = text('skills.bind_full', { what });
+    this.refusalLeft = REFUSAL_UPDATES;
+    this.hintSafe = null;
+  }
+
+  /** Starts binding the spell at this level, if a square can take it; else the hint says why not. */
+  private bind(spell: CatalogSpell, level: number): void {
+    if (this.player && !roomSomewhere(this.player, spell.id, level)) {
+      this.refuse(bindKind({ spell: spell.id, level }));
+      return;
+    }
+    beginBinding({ spell: spell.id, level });
   }
 
   /** What the pointer is over tells about itself: a level box its numbers at that level, a spell box its base ones, a feature its text. */
@@ -271,21 +374,23 @@ export class SpellsPanel {
   press(x: number, y: number): boolean {
     const option = this.optionAt(x, y);
     if (option && this.choice) {
-      const spell = this.choice.spell.id;
+      const spell = this.choice.spell;
       this.closeChoice();
-      beginBinding({ spell, level: option.level });
+      this.bind(spell, option.level);
       return true;
     }
     const wasOpen = this.choice !== null;
     this.closeChoice();
     const box = this.boxAt(x, y);
     if (!box || !this.list) return wasOpen;
+    // Greyed out: nothing to do yet (its tooltip tells the level it comes at).
+    if (box.locked) return true;
     if (box.feature) return this.pressFeature(box.feature);
     if (box.feat) return this.pressFeat(box.feat);
     // Outside a safe room a spell can't be prepared: the hint at the top already says so.
     if (!box.spell || !this.preparing) return true;
     const levels = castLevels(this.list, this.heroLevel, box.spell);
-    if (levels.length === 1) beginBinding({ spell: box.spell.id, level: levels[0] });
+    if (levels.length === 1) this.bind(box.spell, levels[0]);
     else this.openChoice(box, levels);
     return true;
   }
@@ -322,10 +427,11 @@ export class SpellsPanel {
   /** Every update: the hint follows whether the hero is in a safe room, and the train of beads runs round each switched-on passive. */
   animate(): void {
     this.updateHint();
+    this.updateCounters();
     const g = this.beads.clear();
     this.bead = (this.bead + BEAD_SPEED) % (4 * BOX);
-    for (const { feature, rect } of this.boxes) {
-      if (feature?.kind === 'passive' && feature.worked && !this.isOff(feature)) this.drawBeads(g, rect);
+    for (const { feature, rect, locked } of this.boxes) {
+      if (!locked && feature?.kind === 'passive' && feature.worked && !this.isOff(feature)) this.drawBeads(g, rect);
     }
     for (const { feat, rect } of this.boxes) if (feat && this.featOn(feat)) this.drawBeads(g, rect);
   }

@@ -6,7 +6,7 @@ import { isFightingStyle } from '../rules/FightingStyles';
 import { isArchetype } from '../rules/Archetypes';
 import type { ArchetypeId } from '../rules/Archetypes';
 import { isManeuver } from '../rules/Maneuvers';
-import { MAX_LEVEL } from '../game/Progress';
+import { LEVEL_CAP } from '../game/Progress';
 import type { FightingStyleId } from '../rules/FightingStyles';
 import type { SfxName } from '../audio/SoundPlayer';
 import { cleanName } from '../game/Settings';
@@ -15,7 +15,7 @@ import { isHeroClassId } from '../rules/Classes';
 import type { HeroClassId } from '../rules/Classes';
 import { isFiniteNumber, isRecord } from '../core/guards';
 import { isItemBase, isMagicBonus } from '../rules/Equipment';
-import { isCatalogSpell, knightListed, MAX_SPELL_LEVEL } from '../rules/Spellbook';
+import { isCatalogSpell, knightListed, MAX_SPELL_LEVEL, UNBOUND } from '../rules/Spellbook';
 import { bindingFeatureId, isFeatureId } from '../rules/ClassFeatures';
 import { bindingFeatId } from '../rules/Feats';
 
@@ -66,6 +66,8 @@ export type GuestCommand =
   | { kind: 'lock_build' }
   /** Put a spell, cast at a level, on a quick-bar square (the host checks the hero may). */
   | { kind: 'bind_spell'; slot: number; spell: string; level: number }
+  /** Empty a quick-bar square (a right click on it). */
+  | { kind: 'unbind_spell'; slot: number }
   /** Switch a passive class feature off or on. */
   | { kind: 'toggle_feature'; feature: string }
   /** In the exit room, once its button is pressed: on to the next level, or end the run. */
@@ -185,8 +187,9 @@ function isItemSquare(value: unknown): value is ItemSquare {
   return typeof value.slot === 'string' && isEquipSlot(value.slot);
 }
 
-/** A spell on the quick bar: one of the lists' spells, at a level from 0 to 9. */
+/** A spell on the quick bar: one of the lists' spells, at a level from 0 to 9 (or a square the player emptied). */
 export function validBinding(spell: unknown, level: unknown): boolean {
+  if (spell === UNBOUND) return level === 0;
   const named = typeof spell === 'string' && (bindingFeatureId(spell) !== null ? isFeatureId(bindingFeatureId(spell)) : bindingFeatId(spell) !== null || isCatalogSpell(spell));
   return named && Number.isInteger(level) && Number(level) >= 0 && Number(level) <= MAX_SPELL_LEVEL;
 }
@@ -194,11 +197,11 @@ export function validBinding(spell: unknown, level: unknown): boolean {
 /** The most maneuvers or spells a hero picks at once. */
 const MAX_PICK_BATCH = 8;
 
-/** A pick of what a level teaches: a real level, and only known maneuvers or spells, a handful at most. */
+/** A pick of what a level teaches: a level a hero can reach (up to the cap), and only known maneuvers or spells, a handful at most. */
 function validPick(value: Record<string, unknown>): boolean {
   const { level, maneuvers, spells } = value;
   const listOk = (list: unknown, valid: (id: unknown) => boolean): boolean => list === undefined || (Array.isArray(list) && list.length <= MAX_PICK_BATCH && list.every(valid));
-  return Number.isInteger(level) && Number(level) >= 1 && Number(level) <= MAX_LEVEL && listOk(maneuvers, isManeuver) && listOk(spells, knightListed);
+  return Number.isInteger(level) && Number(level) >= 1 && Number(level) <= LEVEL_CAP && listOk(maneuvers, isManeuver) && listOk(spells, knightListed);
 }
 
 export function validCommand(value: unknown): value is GuestCommand {
@@ -218,6 +221,7 @@ export function validCommand(value: unknown): value is GuestCommand {
   if (value.kind === 'lock_build') return true;
   if (value.kind === 'toggle_feature') return isFeatureId(value.feature);
   if (value.kind === 'depart') return isDepartChoice(value.choice);
+  if (value.kind === 'unbind_spell') return Number.isInteger(value.slot) && Number(value.slot) >= 0 && Number(value.slot) < QUICK_SLOTS;
   if (value.kind === 'bind_spell') return validBinding(value.spell, value.level) && Number.isInteger(value.slot) && Number(value.slot) >= 0 && Number(value.slot) < QUICK_SLOTS;
   if (value.kind !== 'loadout' || !Array.isArray(value.inventory) || value.inventory.length > MAX_ITEMS) return false;
   return value.inventory.every(isBagSquare) && validEquipped(value.equipped);

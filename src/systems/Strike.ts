@@ -16,9 +16,13 @@ import { sound } from '../audio/SoundPlayer';
  * roll shows over the attacker's head. The caller applies the damage when it hits.
  */
 
-/** A target's Armor Class: an enemy's from its monster block, a player's from their sheet (and Evasive Footwork), anything else (the training dummy) 10. */
+/**
+ * A target's Armor Class: an enemy's from its monster block, a player's from their sheet (and Evasive Footwork), a raised
+ * undead's its own, anything else (the training dummy) 10.
+ */
 export function armorClassOf(target: Entity): number {
   if (target.mobType) return MONSTERS[target.mobType].ac;
+  if (target.summon) return target.summon.ac;
   if (isPlayer(target)) return characterSheet(target).armorClass.total + evasiveBonus(target);
   return UNARMORED_AC;
 }

@@ -2926,8 +2926,9 @@ test('a spell cast at a higher level hits harder and recovers more slowly; any s
   const stretched = SPELLS.burning_hands.recoveryTicks + 2 * Spellbook.UPCAST_COOLDOWN_SECONDS * 60;
   assert.equal(wizard.spellbook.recovery[0], stretched, 'two levels above its own, so a longer recovery');
   assert.equal(wizard.casting.level, 3);
-  const mage = casterAt(2, 4, 'wizard', 1);
-  assert.equal(bindSpell(mage, 1, 'ice_knife', 1), true);
+  // A first-level wizard keeps two first-level spells on the bar: Ice Knife takes Magic Missile's square.
+  const mage = casterAt(2, 4, 'wizard', 2);
+  assert.equal(bindSpell(mage, 2, 'ice_knife', 1), true);
   cast(level, mage, 1);
   assert.equal(mage.casting?.spell, 'ice_knife', 'every spell on the list is cast');
 });
@@ -4496,7 +4497,7 @@ test('Battle Master: a foe that saves is not tripped, a prone foe is attacked wi
   useDieRoller(SURE_HIT);
   assert.equal(goblin.status, undefined, 'a natural 20 on the save resists it');
   assert.equal(hero.superiorityLeft, 3, 'the die is spent all the same');
-  world.addComponent(goblin, 'status', { prone: 100, frightened: 0, goaded: 0, distracted: 0, eldritch: 0, by: world.id(hero) });
+  world.addComponent(goblin, 'status', { prone: 100, frightened: 0, goaded: 0, distracted: 0, eldritch: 0, charmed: 0, by: world.id(hero) });
   const seen = [];
   useDieRoller((sides) => { seen.push(sides); return 10; });
   strike(goblin, attack, hero);
@@ -4626,7 +4627,7 @@ test('marked foes: a frightened or goaded enemy attacks with disadvantage, a goa
     return seen.filter((s) => s === 20).length;
   };
   assert.equal(d20s(goblin, hero), 1);
-  world.addComponent(goblin, 'status', { prone: 0, frightened: 100, goaded: 0, distracted: 0, eldritch: 0, by });
+  world.addComponent(goblin, 'status', { prone: 0, frightened: 100, goaded: 0, distracted: 0, eldritch: 0, charmed: 0, by });
   assert.equal(d20s(goblin, hero), 2, 'frightened of the hero: disadvantage against them');
   assert.equal(d20s(goblin, other), 1, 'and not against anyone else');
   goblin.status.frightened = 0;
@@ -4750,7 +4751,7 @@ test('the new Fighter components cross the network checked', () => {
   hero.volley = 1;
   world.addComponent(hero, 'maneuver', { id: 'parry', ticks: 50, bonus: 0 });
   const goblin = mobAt(arena(6, 6), 'goblin', 3, 3);
-  world.addComponent(goblin, 'status', { prone: 5, frightened: 0, goaded: 0, distracted: 0, eldritch: 0, by: 1 });
+  world.addComponent(goblin, 'status', { prone: 5, frightened: 0, goaded: 0, distracted: 0, eldritch: 0, charmed: 0, by: 1 });
   const snapshot = () => JSON.parse(JSON.stringify(captureWorld(false, 7)));
   assert.doesNotThrow(() => validateNetState(snapshot()));
   const bad = snapshot();
@@ -5272,4 +5273,225 @@ test('only heroes and foes clear the walls over them: a pot or a chest by a sout
   assert.ok(clearsWalls(goblin));
   assert.ok(!clearsWalls(urn), 'a breakable thing has hit points but clears nothing');
   assert.ok(!clearsWalls({ ...goblin, falling: { ticks: 1 } }), 'nor one falling into a pit');
+});
+
+// ── The Wizard: bind limits, Arcane Recovery, the schools ────────────────────
+
+const Schools = await load('rules/Schools');
+const SchoolSystem = await load('systems/SchoolSystem');
+const SummonSystem = await load('systems/SummonSystem');
+const WizardBuild = await load('rules/Build');
+const { CLASSES: WizardClasses } = await load('rules/Classes');
+const { unbindSpell } = await load('game/PlayerActions');
+const { updateManeuvers } = await load('systems/ManeuverSystem');
+const { hitMob } = await load('systems/Hits');
+const { resolveAttack } = await load('rules/Combat');
+
+/** A wizard of this level who studies `school`, standing in a safe room (spells are bound only there). */
+function wizardOf(school, level, tx = 2, ty = 2) {
+  const wizard = casterAt(tx, ty, 'wizard', 0);
+  wizard.playerStats.level = level;
+  wizard.build = { ...(wizard.build ?? WizardBuild.newBuild(WizardClasses.wizard)), archetype: school };
+  return wizard;
+}
+
+test('a wizard keeps only as many cantrips and spells of each level on the quick bar as the table of their level allows', () => {
+  assert.deepEqual([0, 1, 2].map((l) => Schools.bindLimit(1, l)), [3, 2, 0], 'level 1: 3 cantrips, 2 first-level spells');
+  assert.deepEqual([0, 1, 2, 3].map((l) => Schools.bindLimit(5, l)), [4, 4, 3, 2]);
+  assert.deepEqual([0, 5, 6].map((l) => Schools.bindLimit(12, l)), [5, 2, 1]);
+  arena(12, 6);
+  const wizard = casterAt(2, 2, 'wizard', 0);
+  assert.equal(Spellbook.boundAtLevel(wizard, 0), 2, 'the class\'s own cantrips count');
+  assert.equal(Spellbook.boundAtLevel(wizard, 1), 2, 'and its own spells');
+  assert.equal(bindSpell(wizard, 5, 'ice_knife', 1), false, 'no room for a third first-level spell');
+  assert.equal(bindSpell(wizard, 2, 'ice_knife', 1), true, 'but it may take the place of one');
+  assert.equal(bindSpell(wizard, 6, 'chill_touch', 0), true, 'a third cantrip');
+  assert.equal(bindSpell(wizard, 7, 'acid_splash', 0), false, 'not a fourth');
+  assert.equal(bindSpell(wizard, 11, 'feature:arcane_recovery', 0), true, 'class features are not counted');
+  assert.equal(unbindSpell(wizard, 6), true);
+  assert.equal(Spellbook.quickBinding(wizard, 6), null, 'an emptied square holds nothing');
+  assert.equal(unbindSpell(wizard, 0), true);
+  assert.equal(Spellbook.quickBinding(wizard, 0), null, 'not even the class\'s own spell');
+  assert.equal(Spellbook.boundAtLevel(wizard, 0), 1);
+  assert.equal(bindSpell(wizard, 7, 'acid_splash', 0), true, 'room again');
+  const cleric = casterAt(2, 4, 'cleric', 0);
+  for (let slot = 3; slot < 9; slot++) assert.equal(bindSpell(cleric, slot, 'cure_wounds', 1), true, 'other classes are not counted');
+  assert.ok(validCommand({ kind: 'unbind_spell', slot: 4 }));
+  assert.ok(!validCommand({ kind: 'unbind_spell', slot: 20 }));
+  world.addComponent(wizard, 'playerSlot', 'host');
+  assert.doesNotThrow(() => validateNetState(JSON.parse(JSON.stringify(captureWorld(false, 7)))), 'an emptied square travels to guests');
+});
+
+test('a wizard sees every wizard spell, and an extra cantrip and Arcane Recovery\'s charges are told in the level panel', () => {
+  const listed = Spellbook.listedSpells('wizard', 1);
+  assert.ok(listed[6].some((s) => s.id === 'chain_lightning'), 'a 6th-level spell is listed at level 1');
+  assert.equal(Spellbook.learnLevel('wizard', Spellbook.CATALOG.chain_lightning), 11, 'greyed out until level 11');
+  assert.ok(!Spellbook.listedSpells('cleric', 1)[6].length, 'a cleric sees only what they have learnt');
+  const logged = (level) => Features.featuresAt('wizard', level, null).filter((f) => f.level === level && f.logOnly).map((f) => f.name);
+  assert.deepEqual(logged(3), ['Arcane Recovery cooldown shortened by 6 seconds']);
+  assert.deepEqual(logged(4), ['Additional Cantrip able to be bound']);
+  assert.deepEqual(logged(10), ['Additional Cantrip able to be bound']);
+  assert.deepEqual(logged(2), []);
+});
+
+test('Arcane Recovery readies the spells of 5th level and below, and recovers 6 seconds sooner for every charge', () => {
+  const recovery = Features.featureOfClass('wizard', 'arcane_recovery');
+  assert.deepEqual([1, 2, 3, 5, 9, 11, 12].map((l) => Features.featureCooldown(recovery, l)), [60, 60, 54, 48, 36, 30, 30]);
+  assert.deepEqual([1, 3, 11].map(Schools.arcaneRecoveryCharges), [1, 2, 6]);
+  const level = arena(12, 6);
+  const wizard = wizardOf('evocation', 11);
+  assert.equal(bindSpell(wizard, 4, 'fireball', 3), true);
+  assert.equal(bindSpell(wizard, 5, 'chain_lightning', 6), true);
+  wizard.spellbook.recovery[4] = 300;
+  wizard.spellbook.recovery[5] = 300;
+  wizard.spellbook.recovery[12] = 300;
+  assert.equal(usedFeature(wizard, 'arcane_recovery', 10, level), 'ok');
+  assert.equal(wizard.spellbook.recovery[4], 0, 'a 3rd-level spell is ready');
+  assert.equal(wizard.spellbook.recovery[5], 300, 'a 6th-level one is not');
+});
+
+test('a wizard chooses a school at level 2: one of the nine, and only a wizard', () => {
+  const cls = WizardClasses.wizard;
+  const build = WizardBuild.newBuild(cls);
+  build.locked = true;
+  assert.equal(WizardBuild.levelHasChoice(cls, 2, build), true, 'the school is chosen at level 2');
+  assert.equal(WizardBuild.takeArchetype(cls, build, 2, 'champion'), false, 'a Fighter\'s archetype is not on offer');
+  assert.equal(WizardBuild.takeArchetype(cls, build, 2, 'necromancy'), true);
+  assert.equal(WizardBuild.levelHasChoice(cls, 2, build), false);
+  assert.equal(WizardBuild.takeArchetype(WizardClasses.fighter, WizardBuild.newBuild(WizardClasses.fighter), 3, 'evocation'), false);
+  const at = (school, lvl) => Features.featuresAt('wizard', lvl, { archetype: school }).map((f) => f.id);
+  assert.ok(at('evocation', 2).includes('sculpt_spells') && !at('evocation', 2).includes('arcane_ward'));
+  assert.ok(!at('evocation', 2).includes('arcane_tradition'), 'the entry that asks for a school goes once one is chosen');
+  arena(12, 6);
+  const illusionist = wizardOf('illusion', 2);
+  assert.deepEqual(Spellbook.quickBinding(illusionist, 11), { spell: 'feature:improved_minor_illusion', level: 0 }, 'the school\'s actives fill the second row');
+});
+
+test('Evocation adds Intelligence to its spells\' damage, and Potent Cantrip keeps half of a saved cantrip', () => {
+  arena(12, 6);
+  const evoker = wizardOf('evocation', 10);
+  const int = sheetOf(evoker).modifiers.intelligence;
+  assert.ok(int > 0);
+  assert.equal(SchoolSystem.spellDamageBonus(evoker, 'fire_bolt'), int, 'Empowered Evocation');
+  assert.equal(SchoolSystem.spellDamageBonus(evoker, 'chill_touch'), 0, 'a Necromancy cantrip gets nothing');
+  assert.equal(SchoolSystem.spellDamageBonus(wizardOf('evocation', 9, 2, 4), 'fire_bolt'), 0, 'not before level 10');
+  assert.equal(SchoolSystem.savedDamage(evoker, 0, 10), 5, 'Potent Cantrip: half');
+  assert.equal(SchoolSystem.savedDamage(wizardOf('abjuration', 10, 4, 4), 0, 10), 0, 'a saved cantrip does nothing without it');
+  assert.equal(SchoolSystem.savedDamage(wizardOf('abjuration', 10, 6, 4), 1, 10), 5, 'a spell of 1st level or higher still does half');
+});
+
+test('an Arcane Ward blocks as much as its strength, weakening by 1, and with Projected Ward shields an ally near', () => {
+  const level = arena(12, 6);
+  const abjurer = wizardOf('abjuration', 6);
+  const goblin = mobAt(level, 'goblin', 8, 2);
+  SchoolSystem.updateSchools();
+  assert.equal(abjurer.arcana.ward, 6, 'it starts at the wizard\'s level');
+  const before = abjurer.health.current;
+  hurtPlayer(abjurer, goblin, 10);
+  assert.equal(abjurer.health.current, before - 4, 'the ward blocked 6');
+  assert.equal(abjurer.arcana.ward, 5);
+  const ally = playerAt(3, 2, 'fighter');
+  const allyBefore = ally.health.current;
+  hurtPlayer(ally, goblin, 3);
+  assert.equal(ally.health.current, allyBefore, 'Projected Ward: the ally took nothing');
+  assert.equal(abjurer.arcana.ward, 4);
+  SchoolSystem.restSchool(abjurer, true);
+  assert.equal(abjurer.arcana.ward, 6, 'a long rest sets it to the wizard\'s level');
+});
+
+test('a diviner\'s Portent die turns a foe\'s blow into a miss, and is foreseen again in time', () => {
+  const level = arena(12, 6);
+  const diviner = wizardOf('divination', 2);
+  const fighter = playerAt(3, 2, 'fighter');
+  mobAt(level, 'goblin', 4, 2);
+  SchoolSystem.updateSchools();
+  diviner.arcana.portent = [3, 18];
+  const attack = { attackBonus: 4, damage: { count: 1, sides: 6, bonus: 2 }, mode: 'normal' };
+  const hit = resolveAttack(attack, 10);
+  assert.ok(hit.hit);
+  const turned = SchoolSystem.turnBlow(fighter, attack, hit);
+  assert.equal(turned.hit, false, 'a 3 + 4 misses');
+  assert.deepEqual(diviner.arcana.portent, [18], 'the low die is spent');
+  for (let t = 0; t < 3600 && diviner.arcana.portent.length < 2; t++) SchoolSystem.updateSchools();
+  assert.equal(diviner.arcana.portent.length, 2, 'foreseen again within a minute');
+});
+
+test('Hypnotic Gaze roots a foe that fails its save until it is hurt; Illusory Self turns one blow every 30 seconds', () => {
+  const level = arena(12, 6);
+  const enchanter = wizardOf('enchantment', 2);
+  const goblin = mobAt(level, 'goblin', 3, 2);
+  beginPerception();
+  useDieRoller(() => 1);
+  assert.equal(usedFeature(enchanter, 'hypnotic_gaze', 11, level), 'ok');
+  useDieRoller(SURE_HIT);
+  assert.ok(goblin.status.charmed > 0, 'charmed');
+  updateManeuvers();
+  assert.ok(goblin.freezeTime > 0, 'it stands still');
+  hitMob(goblin, enchanter, 1, true);
+  assert.equal(goblin.status.charmed, 0, 'a blow breaks it');
+  assert.equal(usedFeature(wizardOf('enchantment', 2, 9, 4), 'hypnotic_gaze', 11, level), 'no_foe', 'nobody near');
+
+  const illusionist = wizardOf('illusion', 10, 8, 2);
+  SchoolSystem.updateSchools();
+  const attack = { attackBonus: 4, damage: { count: 1, sides: 6, bonus: 2 }, mode: 'normal' };
+  assert.equal(SchoolSystem.turnBlow(illusionist, attack, resolveAttack(attack, 10)).hit, false, 'the double takes it');
+  assert.equal(SchoolSystem.turnBlow(illusionist, attack, resolveAttack(attack, 10)).hit, true, 'then it recovers');
+});
+
+test('a Bladesinger is trained in light blades, and Bladesong adds the proficiency bonus to AC unless impeded', () => {
+  const level = arena(12, 6);
+  const singer = wizardOf('bladesinging', 6);
+  singer.equipped = { primary: { ...WEAPONS.find((w) => w.base === 'rapier') } };
+  const before = sheetOf(singer);
+  assert.ok(before.attack.proficient, 'trained in the rapier');
+  assert.equal(before.attacks, 2, 'Extra Attack at level 6');
+  assert.equal(usedFeature(singer, 'bladesong', 11, level), 'ok');
+  const song = sheetOf(singer);
+  assert.equal(song.armorClass.total, before.armorClass.total + song.proficiency);
+  assert.equal(song.speed, before.speed + 10);
+  assert.equal(song.saves.constitution.bonus, before.saves.constitution.bonus + song.proficiency);
+  singer.equipped = { primary: { ...WEAPONS.find((w) => w.base === 'quarterstaff') } };
+  assert.equal(sheetOf(singer).armorClass.school, 0, 'a quarterstaff impedes it');
+});
+
+test('Animate Dead raises undead that fight for the necromancer; raising again lets the old ones crumble', () => {
+  const level = arena(12, 6);
+  const necromancer = wizardOf('necromancy', 6);
+  const goblin = mobAt(level, 'goblin', 4, 2);
+  assert.equal(usedFeature(necromancer, 'animate_dead_zombie', 11, level), 'ok');
+  const raised = [...world.with('summon')];
+  assert.equal(raised.length, 2, 'Undead Thralls raises two');
+  assert.equal(raised[0].health.max, 22 + 6, 'with the wizard level in hit points');
+  assert.equal(raised[0].summon.damage.bonus, 1 + 3, 'and the proficiency bonus on their damage');
+  assert.equal(usedFeature(necromancer, 'animate_dead_skeleton', 12, level), 'ok');
+  assert.ok(raised.every((u) => u.removed), 'the zombies crumble');
+  const goblinBefore = goblin.health.current;
+  for (let t = 0; t < 240 && goblin.health.current === goblinBefore; t++) {
+    beginPerception();
+    SummonSystem.updateSummons(level);
+    updateMovement(level);
+  }
+  assert.ok(goblin.health.current < goblinBefore, 'a skeleton struck the goblin');
+  SchoolSystem.updateSchools();
+  necromancer.health.current = 1;
+  goblin.health.current = 0;
+  SchoolSystem.grimHarvest(necromancer, goblin, 'fireball', 3, true);
+  assert.equal(necromancer.health.current, 1 + 6, 'Grim Harvest: twice the spell\'s level');
+  world.addComponent(necromancer, 'playerSlot', 'host');
+  assert.doesNotThrow(() => validateNetState(JSON.parse(JSON.stringify(captureWorld(false, 7)))), 'undead and the school state travel to guests');
+});
+
+test('a Transmuter\'s Stone makes its carrier faster or trained in Constitution saves; Benign Transposition teleports', () => {
+  const level = arena(14, 6);
+  const transmuter = wizardOf('transmutation', 6);
+  const base = sheetOf(transmuter);
+  assert.equal(usedFeature(transmuter, 'transmuters_stone_speed', 11, level), 'ok');
+  assert.equal(sheetOf(transmuter).speed, base.speed + 10);
+  assert.equal(usedFeature(transmuter, 'transmuters_stone_constitution', 12, level), 'ok');
+  assert.equal(sheetOf(transmuter).speed, base.speed, 'the new stone takes the old one\'s place');
+  assert.ok(sheetOf(transmuter).saves.constitution.proficient);
+  const conjurer = wizardOf('conjuration', 6, 2, 3);
+  const from = conjurer.position.x;
+  assert.equal(usedFeature(conjurer, 'benign_transposition', 11, level, { x: from + 200, y: conjurer.position.y }), 'ok');
+  assert.ok(conjurer.position.x > from + 150 && conjurer.position.x <= from + 288, 'it stepped through the air toward the aim');
 });

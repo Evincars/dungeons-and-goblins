@@ -1,5 +1,6 @@
 import {
-  world, isDepartChoice, isEquipSlot, isItemType, isLogEvent, isLogResult, isMobType, isPlayerSlot, isRestNotice, isRollTone, isVoteKind, MOB_STATES, PLAYER_SLOTS,
+  world, isDepartChoice, isEquipSlot, isItemType, isLogEvent, isLogResult, isMobType, isPlayerSlot, isRestNotice, isRollTone, isSummonKind, isTransmuterStone,
+  isVoteKind, MOB_STATES, PLAYER_SLOTS,
   QUICK_SLOTS, TACTIC_ROLES,
 } from '../world';
 import type { Entity, PlayerSlot } from '../world';
@@ -20,6 +21,7 @@ import { isWeaponBase } from '../rules/WeaponTable';
 import { MAX_ROLL_LINES } from '../systems/RollLogSystem';
 import { MAX_LOG_ENTRIES, MAX_LOG_ITEM } from '../systems/CombatLogSystem';
 import { isSpellId } from '../rules/Spells';
+import { isDieSides } from '../rules/Dice';
 
 /**
  * The live world as the co-op host sends it: every entity that is not rebuilt locally from the level
@@ -103,7 +105,10 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
     lootBonus: 'number' },
   swordSwing: { delay: 'number', ticks: 'number', dirX: 'number', dirY: 'number', range: 'number', hitIds: 'object', blow: 'number', blows: 'number', offHand: 'boolean', tempo: 'number' },
   maneuver: { id: 'string', ticks: 'number', bonus: 'number' },
-  status: { prone: 'number', frightened: 'number', goaded: 'number', distracted: 'number', eldritch: 'number', by: 'number' },
+  status: { prone: 'number', frightened: 'number', goaded: 'number', distracted: 'number', eldritch: 'number', charmed: 'number', by: 'number' },
+  arcana: { ward: 'number', portent: 'object', portentTicks: 'number', harvestTicks: 'number', charmTicks: 'number', illusoryTicks: 'number',
+    songTicks: 'number', defenceTicks: 'number', stone: 'string' },
+  summon: { kind: 'string', owner: 'number', attackBonus: 'number', damage: 'object', ac: 'number', cooldown: 'number' },
   loot: { value: 'number', kind: 'number', velX: 'number', velY: 'number', suckRadius: 'number', glide: 'number', age: 'number', life: 'number' },
   item: { type: 'string', name: 'string', value: 'number' },
   chest: { opened: 'boolean', disappearTicks: 'number', drops: 'string' },
@@ -209,6 +214,22 @@ function validDeparture(exit: NonNullable<EntityState['exitButton']>): boolean {
     && (exit.outcome === null || isDepartChoice(exit.outcome));
 }
 
+/** The most Portent dice a diviner foresees (Expert Divination's three). */
+const MAX_PORTENT = 3;
+const D20 = 20;
+
+/** A wizard's school state: at most three Portent dice, each a face of a d20, and a known stone (or none). */
+function validArcana(arcana: NonNullable<EntityState['arcana']>): boolean {
+  const dice = arcana.portent;
+  const diceOk = Array.isArray(dice) && dice.length <= MAX_PORTENT && dice.every((d) => Number.isInteger(d) && d >= 1 && d <= D20);
+  return diceOk && (arcana.stone === '' || isTransmuterStone(arcana.stone));
+}
+
+/** An undead's damage dice: whole numbers of a real die. */
+function isDice(dice: unknown): boolean {
+  return isRecord(dice) && Number.isInteger(dice.count) && isDieSides(dice.sides) && Number.isInteger(dice.bonus);
+}
+
 /** Rules beyond field types: known names and kinds, clean player names, well-formed lists. */
 function checkDetails(data: EntityState): void {
   ensure(data.playerSlot === undefined || isPlayerSlot(data.playerSlot), 'Invalid player slot');
@@ -234,6 +255,8 @@ function checkDetails(data: EntityState): void {
   ensure(!data.swordSwing || isIntList(data.swordSwing.hitIds), 'Invalid sword swing');
   ensure(!data.build || validBuild(data.build), 'Invalid build');
   ensure(!data.maneuver || isFeatureId(data.maneuver.id), 'Invalid maneuver');
+  ensure(!data.arcana || validArcana(data.arcana), 'Invalid school state');
+  ensure(!data.summon || (isSummonKind(data.summon.kind) && isDice(data.summon.damage)), 'Invalid undead');
   ensure(!data.spellbook || (isRecoveryList(data.spellbook.recovery) && (data.spellbook.bound === undefined || isBoundList(data.spellbook.bound))), 'Invalid spellbook');
   ensure(!data.casting?.spell || isSpellId(data.casting.spell), 'Invalid spell');
   ensure(!data.projectile?.spell || isSpellId(data.projectile.spell), 'Invalid spell');

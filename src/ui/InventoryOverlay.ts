@@ -978,7 +978,7 @@ export class InventoryOverlay {
 
   /**
    * "Equip" for an item in the bag: put on where it goes (a shield on the off-hand, armour on the body); a weapon, which
-   * either hand can hold, opens a choice of the primary hand or the off-hand. Null for what cannot be worn.
+   * either hand can hold, opens a choice of the main hand or the off-hand. Null for what cannot be worn.
    */
   private equipRow(player: Player, place: ItemPlace, item: InventoryItem): MenuRow | null {
     const slots = EQUIP_SLOTS.filter((slot) => fitsSlot(item, slot));

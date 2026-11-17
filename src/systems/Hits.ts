@@ -20,12 +20,14 @@ export function hitMob(mob: Entity, attacker: Entity, damage: number, evenIfFlin
   if ((mob.freezeTime ?? 0) > 0 && !evenIfFlinching) return;
 
   const flinched = (mob.hurtTime ?? 0) > 0;
-  // The kill (and its coins) goes to whoever struck last: a projectile's shooter, not the projectile.
-  mob.lastHitBy = attacker.projectile?.owner ?? world.id(attacker);
+  // The kill (and its coins) goes to whoever struck last: a projectile's shooter, not the projectile; an undead's master.
+  mob.lastHitBy = attacker.projectile?.owner ?? attacker.summon?.owner ?? world.id(attacker);
   mob.hurtTime = MOB_HURT_TICKS;
   mob.attackTime = 0;
   mob.freezeTime = MOB_FREEZE_TICKS;
   h.current = Math.max(0, h.current - damage);
+  // A blow breaks a charm (Hypnotic Gaze, an illusion's hold).
+  if (mob.status) mob.status.charmed = 0;
 
   const ap = attacker.position;
   const mp = mob.position;

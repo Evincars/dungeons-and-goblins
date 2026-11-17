@@ -32,10 +32,10 @@ export function createSpellBolt(
 }
 
 /**
- * What a spell's projectile carries: the spell, whether it always hits, the effect it strikes with, and how many ticks
- * it waits before it flies (a volley leaves one dart after another).
+ * What a spell's projectile carries: the spell, whether it always hits, the effect it strikes with, how many ticks
+ * it waits before it flies (a volley leaves one dart after another), and the level it was cast at (Grim Harvest).
  */
-export type SpellCarry = { spell?: SpellId; autoHit?: boolean; impact?: SpellEffect; wait?: number };
+export type SpellCarry = { spell?: SpellId; autoHit?: boolean; impact?: SpellEffect; wait?: number; castLevel?: number };
 
 /** A caster's own bolt: its flight frames looping, turned along (dx, dy). */
 function boltArt(def: CharacterDef, bolt: BoltDef, dx: number, dy: number): Partial<Entity> {

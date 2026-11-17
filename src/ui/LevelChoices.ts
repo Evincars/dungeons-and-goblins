@@ -1,7 +1,7 @@
 import type { Player } from '../world';
 import { text } from '../core/texts';
 import { requestArchetype, requestExtraStyle, requestPicks } from '../game/Customize';
-import { ARCHETYPES } from '../rules/Archetypes';
+import { playableArchetypes } from '../rules/Archetypes';
 import type { ArchetypeId } from '../rules/Archetypes';
 import { knightNeeded, maneuversNeeded } from '../rules/Build';
 import type { HeroClass } from '../rules/Classes';
@@ -32,6 +32,8 @@ const BUTTON_H = 16;
 const GAP = 4;
 const ROW_H = BUTTON_H + GAP;
 const ARCHETYPE_W = 96;
+/** Archetype (or school) buttons in a row. */
+const ARCHETYPES_PER_ROW = 3;
 const SMALL = 15;
 const SPELL_ROWS = 7;
 const PER_PAGE = SPELL_ROWS * 2;
@@ -47,7 +49,7 @@ const marked = (name: string, chosen: boolean): string => (chosen ? `> ${name} <
 
 /**
  * The pages of the level panel where the player chooses something that is final once confirmed: the Fighter's Martial
- * Archetype (level 3), a Champion's second fighting style (level 10), a Battle Master's maneuvers and an Eldritch
+ * Archetype (level 3) or the Wizard's school (level 2), a Champion's second fighting style (level 10), a Battle Master's maneuvers and an Eldritch
  * Knight's cantrips and spells. The pick is held here as a draft until Confirm sends it (to the host, for a guest).
  */
 export class LevelChoices {
@@ -83,21 +85,25 @@ export class LevelChoices {
 
   // ── Martial Archetype ───────────────────────────────────────────────────────
 
-  drawArchetype(player: Player): void {
-    this.kit.label(text('level.archetype.title'), 0, 0, THEME.title);
-    let y = this.kit.paragraph(text('level.archetype.hint'), 14);
-    ARCHETYPES.forEach((id, i) => {
+  drawArchetype(player: Player, cls: HeroClass): void {
+    const school = cls.dndClass === 'wizard';
+    this.kit.label(text(school ? 'level.school.title' : 'level.archetype.title'), 0, 0, THEME.title);
+    let y = this.kit.paragraph(text(school ? 'level.school.hint' : 'level.archetype.hint'), 14);
+    const offered = playableArchetypes(cls.dndClass);
+    offered.forEach((id, i) => {
       const name = archetypeName(id);
-      const button = this.kit.button(marked(name, this.archetype === id), i * (ARCHETYPE_W + GAP + 2), y, ARCHETYPE_W, BUTTON_H, () => { this.archetype = id; });
+      const x = (i % ARCHETYPES_PER_ROW) * (ARCHETYPE_W + GAP + 2);
+      const row = y + Math.floor(i / ARCHETYPES_PER_ROW) * ROW_H;
+      const button = this.kit.button(marked(name, this.archetype === id), x, row, ARCHETYPE_W, BUTTON_H, () => { this.archetype = id; });
       this.kit.explain(button, { title: name, body: archetypeDescription(id), wide: true });
     });
-    y += ROW_H + 4;
+    y += Math.ceil(offered.length / ARCHETYPES_PER_ROW) * ROW_H + 4;
     const chosen = this.archetype;
     if (chosen) {
       this.kit.label(archetypeName(chosen), 0, y, THEME.title);
       this.kit.paragraph(archetypeDescription(chosen), y + 10, THEME.text);
     } else {
-      this.kit.paragraph(text('level.archetype.none'), y);
+      this.kit.paragraph(text(school ? 'level.school.none' : 'level.archetype.none'), y);
     }
     this.confirmButton(() => {
       if (!chosen) return;
@@ -225,7 +231,7 @@ export class LevelChoices {
     if (!build) return y;
     const { archetype, extraStyle, maneuvers, spells } = build;
     if (archetype && this.isArchetypeTab(cls, tab)) {
-      this.kit.label(text('level.archetype.chosen', { name: archetypeName(archetype) }), 0, y, THEME.title);
+      this.kit.label(text(cls.dndClass === 'wizard' ? 'level.school.chosen' : 'level.archetype.chosen', { name: archetypeName(archetype) }), 0, y, THEME.title);
       y = this.kit.paragraph(archetypeDescription(archetype), y + 10, THEME.text);
     }
     if (extraStyle && tab === extraStyleTab(cls)) {

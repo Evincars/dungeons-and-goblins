@@ -4,7 +4,9 @@ import type { Player } from '../world';
 import { text } from '../core/texts';
 import { TICKS_PER_SECOND } from '../rules/Spells';
 import { heroClass } from '../rules/Classes';
-import { featureOfClass, featuresAt } from '../rules/ClassFeatures';
+import { featureOn, featureOfClass, featuresAt } from '../rules/ClassFeatures';
+import { bladesongImpeded } from '../rules/Schools';
+import { undeadOf } from '../systems/SummonSystem';
 import { superiorityDice, superioritySides } from '../rules/Maneuvers';
 import { passiveFeats } from '../rules/Build';
 import { FEATS } from '../rules/Feats';
@@ -23,12 +25,18 @@ const READY_COLOR = THEME.title;
 const RECOVERING: Readonly<Record<string, (player: Player) => number>> = {
   protection: (player) => player.protectCooldown ?? 0,
   indomitable: (player) => player.indomitableCooldown ?? 0,
+  grim_harvest: (player) => player.arcana?.harvestTicks ?? 0,
+  instinctive_charm: (player) => player.arcana?.charmTicks ?? 0,
+  illusory_self: (player) => player.arcana?.illusoryTicks ?? 0,
+  song_of_defence: (player) => player.arcana?.defenceTicks ?? 0,
 };
 /** The boosts an active feature gives while they last (Action Surge, Remarkable Athlete), and the ticks each has left. */
 const BOOSTS = [
   { id: 'action_surge', left: (player: Player): number => player.actionSurge ?? 0 },
   { id: 'remarkable_athlete', left: (player: Player): number => player.athleteBoost ?? 0 },
 ] as const;
+/** Passives whose own line (systems/SchoolSystem.ts state) says more than their name. */
+const TOLD_APART: ReadonlySet<string> = new Set(['arcane_ward', 'portent']);
 /** A boost that is running is shown in this colour. */
 const BOOST_COLOR = 0x40e0d0;
 /** Great Weapon Master's earned attack, waiting for the next swing, is shown in blue. */
@@ -36,6 +44,28 @@ const BONUS_ATTACK_COLOR = 0x5aa8ff;
 
 /** Seconds to a tenth, as the HUD counts them. */
 const secondsOf = (ticks: number): string => (Math.ceil((ticks / TICKS_PER_SECOND) * 10) / 10).toFixed(1);
+
+type Line = { content: string; color: number };
+
+/**
+ * A wizard's school at work: the Arcane Ward's strength, the Portent dice foreseen, the Bladesong's seconds left (impeded or
+ * not), the Transmuter's Stone carried and the undead raised (systems/SchoolSystem.ts, systems/SummonSystem.ts).
+ */
+function schoolLines(player: Player): Line[] {
+  const lines: Line[] = [];
+  const arcana = player.arcana;
+  if (!arcana) return lines;
+  if (featureOn(player, 'arcane_ward')) lines.push({ content: text('hud.passive.ward', { amount: arcana.ward }), color: READY_COLOR });
+  if (featureOn(player, 'portent')) lines.push({ content: text('hud.passive.portent', { dice: arcana.portent.join(' ') || '-' }), color: READY_COLOR });
+  if (arcana.songTicks > 0) {
+    const impeded = bladesongImpeded(player.equipped ?? {});
+    lines.push({ content: text(impeded ? 'hud.passive.bladesong_impeded' : 'hud.passive.bladesong', { seconds: secondsOf(arcana.songTicks) }), color: impeded ? THEME.muted : BOOST_COLOR });
+  }
+  if (arcana.stone) lines.push({ content: text(arcana.stone === 'speed' ? 'hud.passive.stone_speed' : 'hud.passive.stone_constitution'), color: READY_COLOR });
+  const undead = undeadOf(player);
+  if (undead > 0) lines.push({ content: text('hud.passive.undead', { count: undead }), color: READY_COLOR });
+  return lines;
+}
 
 /**
  * The passive class features that are switched on, top left corner, a line each with its name; Protection and
@@ -67,14 +97,17 @@ export class PassiveHud {
     const dice = this.diceLine(player);
     const ready = player.maneuver?.id ?? '';
     const timers = [player.protectCooldown, player.indomitableCooldown, player.actionSurge, player.athleteBoost, player.duelistCooldown].map((t) => secondsOf(t ?? 0));
+    const school = schoolLines(player);
+    const schoolTimers = Object.values(RECOVERING).map((left) => secondsOf(left(player)));
     const key = JSON.stringify([
       player.heroClass, player.playerStats.level, b?.fightingStyle, b?.extraStyle, b?.archetype, b?.maneuvers, b?.improvements, off, timers, dice, ready,
-      player.featsOn, player.bonusAttack,
+      player.featsOn, player.bonusAttack, school, schoolTimers,
     ]);
     if (key === this.shown) return;
     this.shown = key;
     const cls = heroClass(player.heroClass).dndClass;
-    const active = featuresAt(cls, player.playerStats.level, b ?? null).filter((f) => f.kind === 'passive' && f.worked && !off.includes(f.id));
+    // Passives with a line of their own (the ward, Portent) are told there instead.
+    const active = featuresAt(cls, player.playerStats.level, b ?? null).filter((f) => f.kind === 'passive' && f.worked && !off.includes(f.id) && !TOLD_APART.has(f.id));
     const lines: { content: string; color: number }[] = active.map((f) => {
       const left = RECOVERING[f.id]?.(player) ?? 0;
       return left > 0 ? { content: text('hud.passive.recovering', { name: f.name, seconds: secondsOf(left) }), color: THEME.muted } : { content: f.name, color: READY_COLOR };
@@ -83,7 +116,7 @@ export class PassiveHud {
       const left = boost.left(player);
       if (left > 0) lines.push({ content: text('hud.passive.recovering', { name: featureOfClass(cls, boost.id)?.name ?? boost.id, seconds: secondsOf(left) }), color: BOOST_COLOR });
     }
-    lines.push(...this.featLines(player));
+    lines.push(...school, ...this.featLines(player));
     if (dice) lines.push({ content: dice, color: READY_COLOR });
     if (ready) lines.push({ content: text('hud.maneuver_ready', { name: featureOfClass(cls, ready)?.name ?? ready }), color: THEME.buttonText });
     this.lines.forEach((line, i) => {

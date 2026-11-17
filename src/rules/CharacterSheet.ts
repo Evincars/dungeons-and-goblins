@@ -9,6 +9,8 @@ import { NATURAL_CRIT, plus } from './Dice';
 import type { D20Mode, Dice } from './Dice';
 import { armorRule, isShield, magicBonus, weaponRule } from './Equipment';
 import { heroClass, weaponProficient } from './Classes';
+import { NO_SCHOOL_BONUSES, bladesongImpeded, schoolBonuses, trainedClass } from './Schools';
+import type { SchoolBonuses } from './Schools';
 import { classHasFeature } from './ClassFeatures';
 import type { HeroClass } from './Classes';
 import { PRIMARY_ABILITIES } from './DndClasses';
@@ -50,6 +52,8 @@ export type ArmorClass = {
   featureName: FightingStyleId | null;
   /** What feats add (Dual Wielder: +1 with a melee weapon in each hand). */
   feat: number;
+  /** What the hero's school adds (Bladesong: the proficiency bonus). */
+  school: number;
   /** Trained in the armour and shield worn; untrained, every attack roll has disadvantage. */
   proficient: boolean;
 };
@@ -104,7 +108,7 @@ export function armorClass(equipped: Equipped, modifiers: Modifiers, cls: HeroCl
   const { feature, featureName } = featureAC(styles, !!armor);
   const feat = meleeInBothHands(equipped) ? feats.dualWieldArmorClass : 0;
   const proficient = !cls || ((!armor || armorTrained(cls, feats, armor.category)) && (!shieldItem || armorTrained(cls, feats, 'shield')));
-  return { total: base + dex + magic + shield + feature + feat, armor, base, dex, magic, shield, feature, featureName, feat, proficient };
+  return { total: base + dex + magic + shield + feature + feat, armor, base, dex, magic, shield, feature, featureName, feat, school: 0, proficient };
 }
 
 export type WeaponAttack = {
@@ -147,7 +151,7 @@ export type WeaponAttack = {
   critFrom: number;
 };
 
-/** The weapon a character fights with: the primary hand's, else a weapon in the second hand. */
+/** The weapon a character fights with: the main hand's, else a weapon in the second hand. */
 export function weaponInHand(equipped: Equipped): InventoryItem | null {
   if (weaponRule(equipped.primary)) return equipped.primary ?? null;
   return weaponRule(equipped.secondary) ? equipped.secondary ?? null : null;
@@ -414,11 +418,16 @@ export type CharacterSheet = Abilities & {
   spell: Spellcasting;
 };
 
-/** Each ability's saving throw; the class's saves (and those of the Resilient feat) add the proficiency bonus. */
-function savingThrows(modifiers: Modifiers, cls: HeroClass, proficiency: number, feats: FeatEffects): Record<StatName, SavingThrow> {
+/**
+ * Each ability's saving throw; the class's saves (and those of the Resilient feat, or a Transmuter's Stone for Constitution)
+ * add the proficiency bonus, and Bladesong adds it once more to Constitution.
+ */
+function savingThrows(modifiers: Modifiers, cls: HeroClass, proficiency: number, feats: FeatEffects, school: SchoolBonuses): Record<StatName, SavingThrow> {
   const save = (stat: StatName): SavingThrow => {
-    const proficient = cls.savingThrows.includes(stat) || feats.saves.includes(stat);
-    return { bonus: modifiers[stat] + (proficient ? proficiency : 0), proficient };
+    const stone = stat === 'constitution' && school.constitutionTrained;
+    const proficient = cls.savingThrows.includes(stat) || feats.saves.includes(stat) || stone;
+    const song = stat === 'constitution' ? school.constitutionSave : 0;
+    return { bonus: modifiers[stat] + (proficient ? proficiency : 0) + song, proficient };
   };
   return {
     strength: save('strength'), dexterity: save('dexterity'), constitution: save('constitution'),
@@ -457,18 +466,32 @@ function initiativeBonus(cls: HeroClass, level: number, build: Build | undefined
 
 const NONE_OFF: readonly string[] = [];
 
+/** What a hero's school gives them right now: a Bladesong sung unimpeded, and the Transmuter's Stone they carry. */
+function schoolNow(player: Pick<Player, 'arcana'>, equipped: Equipped, proficiency: number): SchoolBonuses {
+  const arcana = player.arcana;
+  if (!arcana) return NO_SCHOOL_BONUSES;
+  return schoolBonuses(arcana.songTicks > 0 && !bladesongImpeded(equipped), arcana.stone, proficiency);
+}
+
+/** Armor Class with the school's share added. */
+function withSchoolAC(ac: ArmorClass, school: SchoolBonuses): ArmorClass {
+  return school.armorClass ? { ...ac, school: school.armorClass, total: ac.total + school.armorClass } : ac;
+}
+
 /** Everything the inventory's character sheet shows, from the player's class and what they wear. */
-export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' | 'health' | 'heroClass' | 'build' | 'featuresOff' | 'actionSurge' | 'featsOn'>): CharacterSheet {
+export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' | 'health' | 'heroClass' | 'build' | 'featuresOff' | 'actionSurge' | 'featsOn' | 'arcana'>): CharacterSheet {
   const equipped = player.equipped ?? {};
-  const cls = heroClass(player.heroClass);
+  // A Bladesinger is trained beyond the wizard's own (Training in War and Song).
+  const cls = trainedClass(heroClass(player.heroClass), player.build);
   const level = player.playerStats.level;
   const base = baseScores(cls, level, player.build);
   const scores = abilities(equipped, base);
   const styles = player.build ?? null;
   const off = player.featuresOff ?? NONE_OFF;
   const feats = featEffects(cls, level, player.build, player.featsOn ?? NONE_OFF);
-  const ac = armorClass(equipped, scores.modifiers, cls, styles, feats);
   const proficiency = proficiencyBonus(level);
+  const school = schoolNow(player, equipped, proficiency);
+  const ac = withSchoolAC(armorClass(equipped, scores.modifiers, cls, styles, feats), school);
   const surge = (player.actionSurge ?? 0) > 0 ? ACTION_SURGE_ATTACKS_FACTOR : 1;
   const offHand = offHandAttack(equipped, scores.modifiers, level, cls, ac.proficient, styles, feats);
   return {
@@ -489,10 +512,10 @@ export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' |
     battleMaster: player.build?.archetype === 'battle_master',
     maneuverDc: MANEUVER_DC_BASE + proficiency + Math.max(scores.modifiers.strength, scores.modifiers.dexterity),
     initiative: initiativeBonus(cls, level, player.build, scores.modifiers.dexterity, proficiency, off, feats),
-    // Armour too heavy for its wearer cannot be put on, so only the Mobile feat changes the pace.
-    speed: BASE_SPEED_FT + feats.speedFeet,
+    // Armour too heavy for its wearer cannot be put on, so only the Mobile feat, Bladesong and a Transmuter's Stone change the pace.
+    speed: BASE_SPEED_FT + feats.speedFeet + school.speedFeet,
     passivePerception: PASSIVE_BASE + scores.modifiers.wisdom + feats.passivePerception,
-    saves: savingThrows(scores.modifiers, cls, proficiency, feats),
+    saves: savingThrows(scores.modifiers, cls, proficiency, feats, school),
     spell: spellcasting(cls, scores.modifiers, proficiency, player.build?.archetype === 'eldritch_knight'),
   };
 }

@@ -10,6 +10,8 @@ import { TileType } from '../level/TileType';
 import { AIM_HEIGHT } from '../entities/ProjectileFactory';
 import { hasFeat } from '../rules/Build';
 import { heroClass } from '../rules/Classes';
+import { bladesongImpeded, schoolBonuses } from '../rules/Schools';
+import { singing } from './SchoolSystem';
 import { FEATS } from '../rules/Feats';
 import { BASE_SPEED_FT } from '../rules/CharacterSheet';
 import { athleteSpeedFactor } from './FeatureSystem';
@@ -166,6 +168,15 @@ function featSpeedFactor(walker: Walker): number {
   return (BASE_SPEED_FT + FEATS.mobile.speedFeet) / BASE_SPEED_FT;
 }
 
+/** A singing Bladesinger (unimpeded) and a Transmuter's Stone of speed each add 10 feet to the pace. */
+function schoolSpeedFactor(walker: Walker): number {
+  const arcana = walker.arcana;
+  if (!arcana) return 1;
+  const song = singing(walker) && !bladesongImpeded(walker.equipped ?? {});
+  const feet = schoolBonuses(song, arcana.stone, 0).speedFeet;
+  return (BASE_SPEED_FT + feet) / BASE_SPEED_FT;
+}
+
 /** Sprinting drains stamina while moving; letting go of the key (or running dry) recovers it. Returns the speed factor. */
 function sprintFactor(walker: Walker, moving: boolean): number {
   const stats = walker.playerStats;
@@ -211,7 +222,7 @@ function drivePlayer(walker: Walker): void {
     return;
   }
   const moving = pi.up || pi.down || pi.left || pi.right;
-  const spd = (walker.speed ?? 1.0) * sprintFactor(walker, moving) * featSpeedFactor(walker) * athleteSpeedFactor(walker);
+  const spd = (walker.speed ?? 1.0) * sprintFactor(walker, moving) * featSpeedFactor(walker) * athleteSpeedFactor(walker) * schoolSpeedFactor(walker);
   const vel = walker.velocity;
   if (pi.up)    vel.y -= spd;
   if (pi.down)  vel.y += spd;

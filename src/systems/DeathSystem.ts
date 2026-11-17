@@ -114,6 +114,9 @@ function die(entity: Entity, pos: { x: number; y: number }): void {
   } else if (entity.chest) {
     sound.playSound('chest_open', pos.x, pos.y);
     createDeathFx(pos.x, pos.y);
+  } else if (entity.summon) {
+    // A necromancer's undead falls back to dust.
+    createDeathFx(pos.x, pos.y);
   } else if (entity.ai) {
     logDeath(entity);
     if (entity.mobType) sound.playSound(MOB_CRIES[entity.mobType].die, pos.x, pos.y);

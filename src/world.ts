@@ -8,6 +8,7 @@ import type { HeroClassId } from './rules/Classes';
 import type { Build } from './rules/Build';
 import type { WeaponBase } from './rules/WeaponTable';
 import type { AttackProfile } from './rules/Combat';
+import type { Dice } from './rules/Dice';
 import type { SpellId } from './rules/Spells';
 import type { QuickBinding } from './rules/Spellbook';
 import type { EffectColour, EffectShape } from './assets/Effects';
@@ -190,6 +191,22 @@ export function isDepartChoice(value: unknown): value is DepartChoice {
   return DEPART_CHOICES.some((choice) => choice === value);
 }
 
+/** The undead Animate Dead raises. */
+export const SUMMON_KINDS = ['zombie', 'skeleton'] as const;
+export type SummonKind = (typeof SUMMON_KINDS)[number];
+
+export function isSummonKind(value: unknown): value is SummonKind {
+  return SUMMON_KINDS.some((kind) => kind === value);
+}
+
+/** What a Transmuter's Stone gives its carrier: 10 feet of speed, or training in Constitution saving throws. */
+export const TRANSMUTER_STONES = ['speed', 'constitution'] as const;
+export type TransmuterStone = (typeof TRANSMUTER_STONES)[number];
+
+export function isTransmuterStone(value: unknown): value is TransmuterStone {
+  return TRANSMUTER_STONES.some((stone) => stone === value);
+}
+
 /** Who controls a player character: the host, or one of up to three guests in a co-op room. */
 export const PLAYER_SLOTS = ['host', 'p2', 'p3', 'p4'] as const;
 export type PlayerSlot = (typeof PLAYER_SLOTS)[number];
@@ -355,9 +372,24 @@ export type Entity = {
   /**
    * What a hero's maneuvers or spells have done to a foe, as ticks left of each: tripped, frightened, goaded (disadvantage
    * against anyone but `by`, the entity id of whoever did it), distracted (the next attacker of someone else has advantage)
-   * and eldritch (its next saving throw against a spell is at disadvantage).
+   * eldritch (its next saving throw against a spell is at disadvantage) and charmed (an enchanter's Hypnotic Gaze or an
+   * illusion holds it: it stands still and strikes nobody until the ticks run out or it is hurt).
    */
-  status?: { prone: number; frightened: number; goaded: number; distracted: number; eldritch: number; by: number };
+  status?: { prone: number; frightened: number; goaded: number; distracted: number; eldritch: number; charmed: number; by: number };
+  /**
+   * What a wizard's school keeps going between uses (systems/SchoolSystem.ts): the Arcane Ward's strength; the Portent dice
+   * foreseen and the ticks until a used one is foreseen again; the ticks until Grim Harvest, Instinctive Charm, Illusory Self and
+   * Song of Defence work again; the ticks of Bladesong left; and the Transmuter's Stone carried ('' for none).
+   */
+  arcana?: {
+    ward: number; portent: number[]; portentTicks: number; harvestTicks: number; charmTicks: number; illusoryTicks: number;
+    songTicks: number; defenceTicks: number; stone: TransmuterStone | '';
+  };
+  /**
+   * An undead a necromancer raised (systems/SummonSystem.ts): its kind, its master's entity id, and its blow (to hit,
+   * damage), Armor Class and the ticks until it may strike again.
+   */
+  summon?: { kind: SummonKind; owner: number; attackBonus: number; damage: Dice; ac: number; cooldown: number };
   /** The dice rolls shown over the head, oldest first; each fades after a while (systems/RollLogSystem.ts). */
   rollLog?: RollLine[];
   /** The level's combat log (one entity holds it): the latest blows, newest last (systems/CombatLogSystem.ts). */
@@ -468,6 +500,8 @@ export type Entity = {
     spell?: SpellId; autoHit?: boolean; impact?: SpellEffect;
     /** Ticks it waits in the caster's hand before it flies: a magic missile's darts go one after another. */
     wait?: number;
+    /** The level the spell was cast at (a necromancer's Grim Harvest heals by it). */
+    castLevel?: number;
     /** A shot's `life` once it has flown past its weapon's normal range: below it, the shot rolls with disadvantage. */
     closeLife?: number;
   };
@@ -687,10 +721,12 @@ export const q = {
   ephemerals:  world.with('position', 'ephemeral'),
   glowing:     world.with('position', 'glow'),
   removed:     world.with('removed'),
+  summons:     world.with('position', 'velocity', 'radius', 'health', 'summon'),
 };
 
 export type Player = (typeof q.players)['entities'][number];
 export type Mob = (typeof q.walkingMobs)['entities'][number];
+export type Summon = (typeof q.summons)['entities'][number];
 
 /** The player this screen controls, for input, the camera, HUD and panels; undefined between levels. */
 export function localPlayer(): Player | undefined {

@@ -10,7 +10,7 @@ import {
   meetsRequirement, newBuild, picksPending, visibleLevel,
 } from '../rules/Build';
 import type { Build, Improvement } from '../rules/Build';
-import { PLAYABLE_ARCHETYPES } from '../rules/Archetypes';
+import { playableArchetypes } from '../rules/Archetypes';
 import { heroClass } from '../rules/Classes';
 import type { HeroClass } from '../rules/Classes';
 import { featuresAt } from '../rules/ClassFeatures';
@@ -227,7 +227,7 @@ export class LevelPanel {
     const build = player.build ?? newBuild(cls);
     if (tab === 1 && !build.locked) this.drawCreation(player, cls, current);
     else if (this.improvementOpen(cls, tab, build)) this.drawImprovementPage(player, cls, tab, current);
-    else if (archetypeLevel(cls, tab) && !build.archetype && PLAYABLE_ARCHETYPES.length > 1) this.choices.drawArchetype(player);
+    else if (archetypeLevel(cls, tab) && !build.archetype && playableArchetypes(cls.dndClass).length > 1) this.choices.drawArchetype(player, cls);
     else if (extraStyleLevel(cls, tab) && build.archetype === 'champion' && !build.extraStyle) this.choices.drawExtraStyle(player);
     else if (picksPending(build, tab)) this.drawPicks(player, tab);
     else if (improvementIndexAt(cls, tab) >= 0) this.drawImprovementPage(player, cls, tab, current);

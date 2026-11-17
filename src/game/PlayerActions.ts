@@ -17,7 +17,8 @@ import { queueAnswer } from './Party';
 import { setSeatPaused } from './Pause';
 import { chooseLoot } from './LootRoll';
 import { applyCustomization, isCustomizeCommand } from './Customize';
-import { canBind, spellListOf } from '../rules/Spellbook';
+import { EMPTY_SQUARE, canBind, roomToBind, spellListOf } from '../rules/Spellbook';
+import type { QuickBinding } from '../rules/Spellbook';
 import { bindingFeatureId, canToggle, hasClassFeature } from '../rules/ClassFeatures';
 import { FEATS, bindingFeatId } from '../rules/Feats';
 import type { FeatId } from '../rules/Feats';
@@ -358,12 +359,35 @@ export function bindSpell(player: Player, slot: number, spell: string, level: nu
   if (!allowed) return false;
   const feature = bindingFeatureId(spell);
   if (feature !== null && !hasClassFeature(player, feature)) return false;
+  // A wizard keeps only so many cantrips and spells of each level on the bar.
+  if (!roomToBind(player, spell, level, slot)) return false;
+  putOnSquare(player, slot, { spell, level });
+  return true;
+}
+
+/** What a square holds from now on, its recovery started afresh. */
+function putOnSquare(player: Player, slot: number, binding: QuickBinding): void {
   const book = player.spellbook ?? (player.spellbook = { recovery: Array.from({ length: QUICK_SLOTS }, () => 0) });
   const bound = Array.from({ length: QUICK_SLOTS }, (_, i) => book.bound?.[i] ?? null);
-  bound[slot] = { spell, level };
+  bound[slot] = binding;
   book.bound = bound;
   book.recovery[slot] = 0;
+}
+
+/**
+ * Empties a quick-bar square (a right click on it): it holds nothing from now on, not even the class's own spell, until
+ * something is bound there again. Allowed anywhere, unlike binding a spell. Returns whether the square was a real one.
+ */
+export function unbindSpell(player: Player, slot: number): boolean {
+  if (!Number.isInteger(slot) || slot < 0 || slot >= QUICK_SLOTS) return false;
+  putOnSquare(player, slot, EMPTY_SQUARE);
   return true;
+}
+
+/** A right click on a quick-bar square: emptied here at once, or asked of the host for a guest. */
+export function requestUnbind(player: Player, slot: number): void {
+  if (coop.role === 'guest') coop.sendCommand({ kind: 'unbind_spell', slot });
+  else unbindSpell(player, slot);
 }
 
 /** Switches a passive class feature off or on if the hero has it and the game plays it out. */
@@ -415,6 +439,10 @@ export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): voi
   }
   if (command.kind === 'bind_spell') {
     bindSpell(player, command.slot, command.spell, command.level);
+    return;
+  }
+  if (command.kind === 'unbind_spell') {
+    unbindSpell(player, command.slot);
     return;
   }
   if (command.kind === 'give') {

@@ -20,6 +20,11 @@ import { passiveFeats } from '../rules/Build';
 import { featName } from '../rules/Names';
 import { logLine } from './RollLogSystem';
 import { text } from '../core/texts';
+import { hasKey } from '../core/guards';
+import { isCatalogSpell, quickBinding } from '../rules/Spellbook';
+import { ARCANE_RECOVERY_TOP_LEVEL } from '../rules/Schools';
+import { useSchoolFeature } from './SchoolSystem';
+import { raiseUndead } from './SummonSystem';
 
 /**
  * The active class features (rules/ClassFeatures.ts), used from the quick bar with the cast key. Each does its work
@@ -51,7 +56,7 @@ const SURVIVOR_TICKS = 360;
 const SURVIVOR_BASE = 5;
 
 /** What using a feature came to: done, or why it was not. */
-export type FeatureResult = 'ok' | 'unworked' | 'no_dice' | 'no_ally' | 'hp_full';
+export type FeatureResult = 'ok' | 'unworked' | 'no_dice' | 'no_ally' | 'hp_full' | 'no_foe' | 'no_room';
 
 /** What a hero's feature is called (its id if the class does not list it). */
 function nameOfFeature(hero: Player, id: string): string {
@@ -84,6 +89,15 @@ function readyTheBar(hero: Player, spare: number): void {
   for (let i = 0; i < recovery.length; i++) if (i !== spare) recovery[i] = 0;
 }
 
+/** Arcane Recovery: every spell on the bar bound at 5th level or below is ready at once (class features keep recovering). */
+function arcaneRecovery(hero: Player): void {
+  const recovery = hero.spellbook?.recovery;
+  for (let i = 0; recovery && i < recovery.length; i++) {
+    const binding = quickBinding(hero, i);
+    if (binding && isCatalogSpell(binding.spell) && binding.level <= ARCANE_RECOVERY_TOP_LEVEL) recovery[i] = 0;
+  }
+}
+
 /** Cunning Action: a Dash as a bonus action, so the sprint stamina is full again. */
 function cunningAction(hero: Player): void {
   hero.playerStats.sprint = 0;
@@ -102,7 +116,7 @@ function preserveLife(hero: Player): void {
 }
 
 /** A place a body can stand: not inside a wall at its feet, and not over a pit. */
-function standable(level: Level, hero: Player, x: number, y: number): boolean {
+export function standable(level: Level, hero: Player, x: number, y: number): boolean {
   const rx = hero.radius?.x ?? 0;
   if (level.blocksPoint(x, y) || level.blocksPoint(x - rx, y) || level.blocksPoint(x + rx, y)) return false;
   return !overHole(level, { position: { x, y }, radius: hero.radius });
@@ -127,12 +141,31 @@ function arcaneCharge(hero: Player, level: Level): void {
   playEffect(ARCANE_CHARGE_EFFECT.shape, ARCANE_CHARGE_EFFECT.colour, hero.position.x, hero.position.y, AIM_HEIGHT, ARCANE_CHARGE_EFFECT.scale);
 }
 
+/** Animate Dead raises a zombie or a skeleton (and Undead Thralls one more) at the necromancer's side. */
+const UNDEAD_FEATURES = { animate_dead_zombie: 'zombie', animate_dead_skeleton: 'skeleton' } as const;
+
+/** A wizard's school feature (systems/SchoolSystem.ts, systems/SummonSystem.ts); null for any other id. */
+function usedSchoolFeature(hero: Player, id: string, level: Level, aim: { x: number; y: number }): FeatureResult | null {
+  const canStand = (x: number, y: number): boolean => standable(level, hero, x, y);
+  if (hasKey(UNDEAD_FEATURES, id)) {
+    raiseUndead(hero, UNDEAD_FEATURES[id], canStand);
+    return 'ok';
+  }
+  return useSchoolFeature(hero, id, level, aim, canStand);
+}
+
 /**
  * The hero uses a feature: its effect happens now. Returns why nothing happened for one the game does not play out
- * yet or a maneuver that can't be readied (nothing is spent then). `slot` is the quick-bar square it was used from.
+ * yet or a maneuver that can't be readied (nothing is spent then). `slot` is the quick-bar square it was used from, `aim`
+ * the point aimed at (where Benign Transposition goes, or an illusion is made).
  */
-export function usedFeature(hero: Player, id: string, slot: number, level: Level): FeatureResult {
+export function usedFeature(hero: Player, id: string, slot: number, level: Level, aim: { x: number; y: number } = hero.position): FeatureResult {
   const used = (): void => recordEvent(hero, 'feature', { item: nameOfFeature(hero, id) });
+  const school = usedSchoolFeature(hero, id, level, aim);
+  if (school !== null) {
+    if (school === 'ok') used();
+    return school;
+  }
   if (id === 'second_wind') {
     // Nothing to mend at full health: it is not used, and its square does not start recovering.
     if (hero.health.current >= hero.health.max) return 'hp_full';
@@ -145,7 +178,10 @@ export function usedFeature(hero: Player, id: string, slot: number, level: Level
   } else if (id === 'remarkable_athlete') {
     used();
     hero.athleteBoost = FEATURE_BOOST_TICKS;
-  } else if (id === 'arcane_recovery' || id === 'eldritch_master') {
+  } else if (id === 'arcane_recovery') {
+    used();
+    arcaneRecovery(hero);
+  } else if (id === 'eldritch_master') {
     used();
     readyTheBar(hero, slot);
   } else if (id === 'cunning_action') {

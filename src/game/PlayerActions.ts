@@ -19,6 +19,9 @@ import { chooseLoot } from './LootRoll';
 import { applyCustomization, isCustomizeCommand } from './Customize';
 import { canBind, spellListOf } from '../rules/Spellbook';
 import { bindingFeatureId, canToggle, hasClassFeature } from '../rules/ClassFeatures';
+import { FEATS, bindingFeatId } from '../rules/Feats';
+import type { FeatId } from '../rules/Feats';
+import { passiveFeats } from '../rules/Build';
 import { heroClass } from '../rules/Classes';
 import { chooseDeparture } from '../systems/ExitSystem';
 
@@ -298,16 +301,24 @@ export function preparesSpells(player: Player): boolean {
   return !!player.inSafeRoom;
 }
 
-/** Whether this may go on the quick bar now: a spell only in a safe room, a class feature anywhere. */
+/** Whether this may go on the quick bar now: a spell only in a safe room, a class feature or a Passive Feat anywhere. */
 export function mayPrepare(player: Player, spell: string): boolean {
-  return bindingFeatureId(spell) !== null || preparesSpells(player);
+  return bindingFeatureId(spell) !== null || bindingFeatId(spell) !== null || preparesSpells(player);
+}
+
+/** A toggle Passive Feat the hero has (Great Weapon Master, Sharpshooter) may be bound; it is used at level 0. */
+function featBindable(player: Player, feat: FeatId, level: number): boolean {
+  const cls = heroClass(player.heroClass);
+  return level === 0 && FEATS[feat].passive === 'toggle' && passiveFeats(cls, player.playerStats.level, player.build).includes(feat);
 }
 
 /** Puts a spell, cast at a level, on a quick-bar square if the hero has learnt it, may cast it there and is in a safe room. */
 export function bindSpell(player: Player, slot: number, spell: string, level: number): boolean {
   const list = spellListOf(heroClass(player.heroClass).dndClass, player.build);
   if (!Number.isInteger(slot) || slot < 0 || slot >= QUICK_SLOTS || !mayPrepare(player, spell)) return false;
-  if (!canBind(list, player.playerStats.level, spell, level, player.build?.spells)) return false;
+  const feat = bindingFeatId(spell);
+  const allowed = feat ? featBindable(player, feat, level) : canBind(list, player.playerStats.level, spell, level, player.build?.spells);
+  if (!allowed) return false;
   const feature = bindingFeatureId(spell);
   if (feature !== null && !hasClassFeature(player, feature)) return false;
   const book = player.spellbook ?? (player.spellbook = { recovery: Array.from({ length: QUICK_SLOTS }, () => 0) });

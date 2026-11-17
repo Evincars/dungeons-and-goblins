@@ -2,7 +2,7 @@ import { STAT_NAMES, isStatName } from '../world';
 import type { StatName } from '../world';
 import { isFiniteNumber, isRecord } from '../core/guards';
 import type { ArmorTraining, HeroClass } from './Classes';
-import { FEATS, combineFeats, featAbility, isFeatId } from './Feats';
+import { FEATS, FEAT_IDS, combineFeats, featAbility, isFeatId } from './Feats';
 import type { FeatEffects, FeatId, FeatRequirement } from './Feats';
 import { DEFAULT_FIGHTING_STYLE, isFightingStyle } from './FightingStyles';
 import type { FightingStyleId } from './FightingStyles';
@@ -92,9 +92,14 @@ function featsTaken(cls: HeroClass, level: number, build: Build | undefined): { 
   return taken;
 }
 
-/** What the hero's feats add up to (src/rules/Feats.ts). */
-export function featEffects(cls: HeroClass, level: number, build: Build | undefined): FeatEffects {
-  return combineFeats(featsTaken(cls, level, build));
+/** What the hero's feats add up to (src/rules/Feats.ts); `on`: the toggle feats switched on. */
+export function featEffects(cls: HeroClass, level: number, build: Build | undefined, on: readonly string[] = []): FeatEffects {
+  return combineFeats(featsTaken(cls, level, build), on);
+}
+
+/** The Passive Feats the hero has (Great Weapon Master, Defensive Duellist…), in the order of the feat list: the Skills tab lists them. */
+export function passiveFeats(cls: HeroClass, level: number, build: Build | undefined): FeatId[] {
+  return FEAT_IDS.filter((feat) => FEATS[feat].worked && FEATS[feat].passive !== null && hasFeat(cls, level, build, feat));
 }
 
 /** Initiative bonus from feats. */

@@ -1,7 +1,9 @@
 import type { TipTopic } from './InfoTooltip';
 import { text } from '../core/texts';
 import { formatDamage } from '../rules/Dice';
-import { damageTypeName } from '../rules/Names';
+import { damageTypeName, featDescription, featName } from '../rules/Names';
+import { FEATS } from '../rules/Feats';
+import type { FeatId } from '../rules/Feats';
 import { spellIconKey, spellStats } from '../rules/Spellbook';
 import { SPELLS, isSpellId } from '../rules/Spells';
 import { featureCooldown, featureUses } from '../rules/ClassFeatures';
@@ -120,4 +122,12 @@ export function featureTopic(feature: FeatureDef, switchedOff: boolean, heroLeve
   if (uses > 1) detail.push(text('feature.tip.uses', { uses }));
   if (feature.kind !== 'info' && !feature.worked) detail.push(text('feature.tip.unworked'));
   return { title: feature.name, body: feature.description, detail, wide: true };
+}
+
+/** A Passive Feat in the Skills tab or on the quick bar: what it does, and how it is used (and whether it is on). */
+export function featTopic(feat: FeatId, on: boolean): TipTopic {
+  const detail = [text('feat.tip.passive')];
+  if (FEATS[feat].passive === 'toggle') detail.push(text(on ? 'feat.tip.toggle_on' : 'feat.tip.toggle_off'));
+  else detail.push(text('feat.tip.auto'));
+  return { title: featName(feat), body: featDescription(feat), detail, wide: true };
 }

@@ -335,8 +335,14 @@ export type Entity = {
   actionSurge?: number;
   /** Ticks left of a Champion's Remarkable Athlete: the hero moves at twice their speed (systems/FeatureSystem.ts). */
   athleteBoost?: number;
-  /** Ticks until a Fighter's Indomitable rerolls a failed saving throw again (rules/Indomitable.ts; a rest makes it ready). */
+  /** Ticks until a Fighter's Indomitable rerolls a failed saving throw again (systems/FeatureSystem.ts; a rest makes it ready). */
   indomitableCooldown?: number;
+  /** The toggle Passive Feats switched on from the quick bar (Great Weapon Master's and Sharpshooter's -5/+10, rules/Feats.ts). */
+  featsOn?: string[];
+  /** Great Weapon Master: a critical hit or a kill earned an attack more for the next swing (systems/SwordSystem.ts). */
+  bonusAttack?: boolean;
+  /** Ticks until Defensive Duellist turns another blow aside (systems/CombatSystem.ts; a rest makes it ready). */
+  duelistCooldown?: number;
   /** The Battle Master's superiority dice left (none set: all of them; a rest restores them, systems/ManeuverSystem.ts). */
   superiorityLeft?: number;
   /**
@@ -386,6 +392,8 @@ export type Entity = {
     spent?: CharacterState;
     /** The blow of a swing chain whose clip is playing (a new blow restarts the swing clip). */
     blow?: number;
+    /** The part of a frame step carried over when the clip plays faster than its own pace (a quick swing chain). */
+    carry?: number;
     flipX: boolean;
   };
 
@@ -507,6 +515,8 @@ export type Entity = {
     blows: number;
     /** The first blow is made with the off-hand weapon as well (a melee weapon in each hand). */
     offHand: boolean;
+    /** How many times faster than its natural pace each blow plays (Action Surge, or a long chain squeezed into the second); the attack clip follows it. */
+    tempo: number;
   };
   swordCooldown?: number;
   /** Ticks until the next arrow can be loosed. */

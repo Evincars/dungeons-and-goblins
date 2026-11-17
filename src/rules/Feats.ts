@@ -26,6 +26,34 @@ export function isFeatId(value: unknown): value is FeatId {
   return FEAT_IDS.some((id) => id === value);
 }
 
+/** What a Passive Feat is: one the player switches on and off from the quick bar, or one that works by itself. */
+export const FEAT_PASSIVES = ['toggle', 'auto'] as const;
+export type FeatPassive = (typeof FEAT_PASSIVES)[number];
+const isFeatPassive = (v: unknown): v is FeatPassive => FEAT_PASSIVES.some((p) => p === v);
+
+/** The weapons a power attack (Great Weapon Master, Sharpshooter) works with. */
+export const POWER_ATTACKS = ['heavy_melee', 'ranged'] as const;
+export type PowerAttack = (typeof POWER_ATTACKS)[number];
+const isPowerAttack = (v: unknown): v is PowerAttack => POWER_ATTACKS.some((p) => p === v);
+
+/** A power attack trades this much to hit for POWER_ATTACK_DAMAGE more damage. */
+export const POWER_ATTACK_HIT = -5;
+export const POWER_ATTACK_DAMAGE = 10;
+/** Ticks Defensive Duellist needs before it turns another blow aside (30 s; a rest makes it ready). */
+export const DUELIST_COOLDOWN_TICKS = 1800;
+
+/** The word that makes a quick-bar binding a feat to switch on and off (`feat:great_weapon_master`). */
+export const FEAT_PREFIX = 'feat:';
+
+/** The feat a quick-bar binding names, if it names one. */
+export function bindingFeatId(spell: string): FeatId | null {
+  if (!spell.startsWith(FEAT_PREFIX)) return null;
+  const id = spell.slice(FEAT_PREFIX.length);
+  return isFeatId(id) ? id : null;
+}
+
+export const featBinding = (id: FeatId): string => `${FEAT_PREFIX}${id}`;
+
 type ArmorCategory = ArmorRule['category'];
 const ARMOR_CATEGORIES = ['light', 'medium', 'heavy', 'shield'] as const satisfies readonly ArmorCategory[];
 const isArmorCategory = (v: unknown): v is ArmorCategory => ARMOR_CATEGORIES.some((c) => c === v);
@@ -68,6 +96,14 @@ export type FeatDef = {
   unarmedStrengthTwice: boolean;
   /** A short rest heals every hit point. */
   shortRestFullHeal: boolean;
+  /** A Passive Feat: switched on and off from the quick bar, or working by itself (null: neither). */
+  passive: FeatPassive | null;
+  /** While switched on: -5 to hit, +10 damage with this kind of weapon (when proficient). */
+  powerAttack: PowerAttack | null;
+  /** A critical hit or a kill with a melee weapon adds an attack to the next swing (Great Weapon Master). */
+  bonusAttack: boolean;
+  /** Defensive Duellist's reaction. */
+  duelist: boolean;
 };
 
 function readNumber(id: FeatId, raw: Record<string, unknown>, key: string): number {
@@ -121,7 +157,17 @@ function readFeat(id: FeatId, raw: unknown): FeatDef {
     dualWieldArmorClass: readNumber(id, r, 'dualWieldArmorClass'),
     unarmedStrengthTwice: readFlag(id, r, 'unarmedStrengthTwice'),
     shortRestFullHeal: readFlag(id, r, 'shortRestFullHeal'),
+    passive: readChoice(id, r.passive, 'passive', isFeatPassive),
+    powerAttack: readChoice(id, r.powerAttack, 'powerAttack', isPowerAttack),
+    bonusAttack: readFlag(id, r, 'bonusAttack'),
+    duelist: readFlag(id, r, 'duelist'),
   };
+}
+
+function readChoice<T>(id: FeatId, raw: unknown, key: string, guard: (v: unknown) => v is T): T | null {
+  if (raw === undefined) return null;
+  ensure(guard(raw), `Bad ${key} in feat ${id}`, { id, key });
+  return guard(raw) ? raw : null;
 }
 
 function readAll(): Record<FeatId, FeatDef> {
@@ -166,16 +212,25 @@ export type FeatEffects = {
   dualWieldArmorClass: number;
   unarmedStrengthTwice: boolean;
   shortRestFullHeal: boolean;
+  /** The power attacks switched on, and the feat each comes from (for the tooltip). */
+  powerAttacks: readonly { kind: PowerAttack; feat: FeatId }[];
+  bonusAttack: boolean;
+  duelist: boolean;
 };
 
 export const NO_FEATS: FeatEffects = {
   initiative: 0, armor: [], mediumArmorDexCap: 0, heavyArmorReduction: 0, speedFeet: 0, passivePerception: 0, saves: [],
   savageDamage: false, dualWield: false, dualWieldArmorClass: 0, unarmedStrengthTwice: false, shortRestFullHeal: false,
+  powerAttacks: [], bonusAttack: false, duelist: false,
 };
 
-/** The effects of these feats together (each with the ability it raised, for Resilient's saving throw). */
-export function combineFeats(taken: readonly { feat: FeatId; ability: StatName | null }[]): FeatEffects {
+/**
+ * The effects of these feats together (each with the ability it raised, for Resilient's saving throw). `on`: the toggle
+ * feats the hero has switched on (a power attack counts only then).
+ */
+export function combineFeats(taken: readonly { feat: FeatId; ability: StatName | null }[], on: readonly string[] = []): FeatEffects {
   if (!taken.length) return NO_FEATS;
+  const powerAttacks: { kind: PowerAttack; feat: FeatId }[] = [];
   const armor = new Set<ArmorCategory>();
   const saves = new Set<StatName>();
   const sum = { ...NO_FEATS };
@@ -193,6 +248,9 @@ export function combineFeats(taken: readonly { feat: FeatId; ability: StatName |
     sum.dualWield ||= def.dualWield;
     sum.unarmedStrengthTwice ||= def.unarmedStrengthTwice;
     sum.shortRestFullHeal ||= def.shortRestFullHeal;
+    sum.bonusAttack ||= def.bonusAttack;
+    sum.duelist ||= def.duelist;
+    if (def.powerAttack && on.includes(feat)) powerAttacks.push({ kind: def.powerAttack, feat });
   }
-  return { ...sum, armor: [...armor], saves: STAT_NAMES.filter((stat) => saves.has(stat)) };
+  return { ...sum, armor: [...armor], saves: STAT_NAMES.filter((stat) => saves.has(stat)), powerAttacks };
 }

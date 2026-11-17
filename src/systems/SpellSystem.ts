@@ -11,7 +11,9 @@ import { characterSheet } from '../rules/CharacterSheet';
 import type { CharacterSheet } from '../rules/CharacterSheet';
 import { heroClass, spellLevelFor } from '../rules/Classes';
 import { bindingFeatureId, featureCooldown, featureOn, featureOfClass, hasClassFeature } from '../rules/ClassFeatures';
-import { usedFeature } from './FeatureSystem';
+import { switchFeat, usedFeature } from './FeatureSystem';
+import { bindingFeatId } from '../rules/Feats';
+import type { FeatId } from '../rules/Feats';
 import { SPELLS, TICKS_PER_SECOND, isSpellId } from '../rules/Spells';
 import { castDef, quickBinding } from '../rules/Spellbook';
 import type { QuickBinding } from '../rules/Spellbook';
@@ -121,11 +123,25 @@ function startFeature(caster: Player, id: string, level: Level): void {
   caster.castCooldown = SPELL_STATS.cooldown;
 }
 
+/** The cast key on a toggle Passive Feat: it switches on or off (a short pause before the next press counts). */
+function switchFeatFromBar(caster: Player, feat: FeatId): void {
+  if (!switchFeat(caster, feat)) {
+    refuse(caster, text('roll.no_spell'));
+    return;
+  }
+  caster.castCooldown = SPELL_STATS.cooldown;
+}
+
 /** The cast key: the spell picked starts (its recovery runs from now), or the caster says why it can't. */
 function startCast(caster: Player, level: Level): void {
   if (!caster.playerInput.intents.cast || !canCast(caster)) return;
   const binding = chosenBinding(caster);
   if (!binding && !heroClass(caster.heroClass).spells.length) return;
+  const featId = binding ? bindingFeatId(binding.spell) : null;
+  if (featId) {
+    switchFeatFromBar(caster, featId);
+    return;
+  }
   const featureId = binding ? bindingFeatureId(binding.spell) : null;
   if (featureId) {
     startFeature(caster, featureId, level);

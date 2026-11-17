@@ -12,6 +12,7 @@ import { setVisualFrame } from '../render/AnimatedVisual';
 import { ensure } from '../core/errors';
 import { hasKey, isFiniteNumber, isRecord } from '../core/guards';
 import { isFeatureId, MAX_FEATURES } from '../rules/ClassFeatures';
+import { FEAT_IDS, isFeatId } from '../rules/Feats';
 import { isBagSquare, isDiceCount, isInventoryItem, MAX_ITEM_NAME, validBinding } from './protocol';
 import { isHeroClassId } from '../rules/Classes';
 import { validBuild } from '../rules/Build';
@@ -100,7 +101,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   playerStats: { level: 'number', exp: 'number', gold: 'number', swordTier: 'number', hitDice: 'number',
     sprinting: 'boolean', sprint: 'number', maxSprint: 'number', sprintLocked: 'boolean', kills: 'number', goldEarned: 'number',
     lootBonus: 'number' },
-  swordSwing: { delay: 'number', ticks: 'number', dirX: 'number', dirY: 'number', range: 'number', hitIds: 'object', blow: 'number', blows: 'number', offHand: 'boolean' },
+  swordSwing: { delay: 'number', ticks: 'number', dirX: 'number', dirY: 'number', range: 'number', hitIds: 'object', blow: 'number', blows: 'number', offHand: 'boolean', tempo: 'number' },
   maneuver: { id: 'string', ticks: 'number', bonus: 'number' },
   status: { prone: 'number', frightened: 'number', goaded: 'number', distracted: 'number', eldritch: 'number', by: 'number' },
   loot: { value: 'number', kind: 'number', velX: 'number', velY: 'number', suckRadius: 'number', glide: 'number', age: 'number', life: 'number' },
@@ -123,6 +124,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   lootRoll: { id: 'number', item: 'object', ticks: 'number', choices: 'object' },
   inventory: {},
   featuresOff: {},
+  featsOn: {},
   equipped: {},
   rollLog: {},
   combatLog: { seq: 'number', entries: 'object' },
@@ -139,6 +141,7 @@ const VALUES: Readonly<Record<string, FieldType>> = {
   dustTimer: 'number', respawnTicks: 'number', minimapColor: 'number', safeZone: 'boolean', inSafeRoom: 'boolean', playerSlot: 'string',
   playerName: 'string', heroClass: 'string', mobWeapon: 'string', protectCooldown: 'number', survivorCooldown: 'number',
   superiorityLeft: 'number', tempHealth: 'number', volley: 'number', actionSurge: 'number', athleteBoost: 'number', indomitableCooldown: 'number',
+  bonusAttack: 'boolean', duelistCooldown: 'number',
 };
 
 function hasType(v: unknown, type: FieldType): boolean {
@@ -222,6 +225,7 @@ function checkDetails(data: EntityState): void {
   ensure(!data.ai || (MOB_STATES.includes(data.ai.state) && TACTIC_ROLES.includes(data.ai.role)), 'Invalid enemy state');
   ensure(!data.item || isItemType(data.item.type), 'Invalid item');
   ensure(!data.featuresOff || (Array.isArray(data.featuresOff) && data.featuresOff.length <= MAX_FEATURES && data.featuresOff.every(isFeatureId)), 'Invalid switched-off features');
+  ensure(!data.featsOn || (Array.isArray(data.featsOn) && data.featsOn.length <= FEAT_IDS.length && data.featsOn.every(isFeatId)), 'Invalid switched-on feats');
   ensure(!data.inventory || (Array.isArray(data.inventory) && data.inventory.every(isBagSquare)), 'Invalid inventory');
   ensure(!data.item || isInventoryItem(data.item), 'Invalid item');
   ensure(!data.equipped || Object.entries(data.equipped).every(([slot, item]) => isEquipSlot(slot) && isInventoryItem(item)), 'Invalid equipment');

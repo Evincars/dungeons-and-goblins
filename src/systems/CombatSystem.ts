@@ -15,7 +15,7 @@ import { MIN_HIT_DAMAGE } from '../rules/Combat';
 import { ATTACK_PERIOD } from '../entities/WeaponStats';
 import { strike } from './Strike';
 import { protectFrom } from './ProtectionSystem';
-import { parried, riposted } from './Reactions';
+import { duelistTurnsAside, parried, riposted } from './Reactions';
 import { cheats } from '../game/Cheats';
 
 const PLAYER_HURT_TIME = 25;
@@ -122,7 +122,7 @@ function mobStrike(mob: Entity, player: Player): void {
   }
   const attack = monsterAttack(mob.mobType, mob.mobWeapon);
   const outcome = strike(player, protectFrom(player) ? { ...attack, mode: 'disadvantage' } : attack, mob);
-  if (outcome.hit) landBlow(player, mob, outcome.damage);
+  if (outcome.hit && !duelistTurnsAside(player, outcome)) landBlow(player, mob, outcome.damage);
   else missBlow(player, mob);
 }
 

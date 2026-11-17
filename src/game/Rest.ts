@@ -142,6 +142,7 @@ function restHero(player: Player, kind: RestKind, dice: number): void {
   const before = player.health.current;
   player.spellbook?.recovery.fill(0);
   player.indomitableCooldown = 0;
+  player.duelistCooldown = 0;
   restoreDice(player);
   const spent = kind === 'long' ? 0 : spendHitDice(player, dice);
   if (kind === 'long') wake(player);

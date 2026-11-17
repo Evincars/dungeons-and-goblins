@@ -2196,7 +2196,7 @@ test('fighting styles: Archery, Defense, Dueling and Great Weapon Fighting chang
   const short = { primary: weapon('shortsword'), secondary: shield };
   assert.equal(attack(short, 'dueling').damage.bonus, attack(short, null).damage.bonus + 2, 'Dueling: one-handed with a shield');
   assert.equal(attack(short, 'dueling').styleDamage, 2, 'told apart for the tooltip');
-  assert.equal(attack(sword, 'dueling').damage.bonus, attack(sword, null).damage.bonus, 'not with a versatile weapon, even in one hand');
+  assert.equal(attack(sword, 'dueling').damage.bonus, attack(sword, null).damage.bonus + 2, 'a versatile weapon beside a shield is held in one hand');
   assert.equal(attack({ primary: weapon('longbow') }, 'archery').styleHit, 2, 'Archery told apart for the tooltip');
   assert.equal(attack({ primary: weapon('longsword') }, 'dueling').damage.bonus, attack({ primary: weapon('longsword') }, null).damage.bonus, 'a versatile sword held in both hands is not one-handed');
   assert.equal(attack({ primary: weapon('shortsword') }, 'dueling').damage.bonus, attack({ primary: weapon('shortsword') }, null).damage.bonus + 2, 'a one-handed sword with the other hand empty');
@@ -4134,10 +4134,11 @@ test('Extra Attack: a bow looses a volley, one arrow after another', () => {
   const arrows = () => world.entities.filter((e) => e.projectile?.arrow).length;
   assert.equal(arrows(), 1);
   assert.equal(hero.volley, 1, 'one more is to follow');
-  for (let t = 0; t < 29; t++) updateArrows();
-  assert.equal(arrows(), 1, 'the second arrow waits for its half of the second');
+  // The archer's pace: the release pose and its recovery (12 + 10 ticks), not half the second.
+  for (let t = 0; t < 21; t++) updateArrows();
+  assert.equal(arrows(), 1, 'the second arrow waits for the first shot to play out');
   updateArrows();
-  assert.equal(arrows(), 2, 'and follows 30 ticks after the first');
+  assert.equal(arrows(), 2, 'and follows 22 ticks after the first');
   assert.equal(hero.volley, 0);
   assert.ok(hero.arrowCooldown > 0, 'the next volley is still a second off');
   hero.arrowCooldown = 0;
@@ -4792,6 +4793,7 @@ test('Action Surge doubles every swing\'s attacks for 6 seconds, and the whole c
   const { characterSheet } = await load('rules/CharacterSheet');
   const { updateFeatureTimers } = await load('systems/FeatureSystem');
   const { ATTACK_PERIOD } = await load('entities/WeaponStats');
+  const { blowTiming } = await load('systems/SwordSystem');
   for (const [lvl, normal] of [[2, 1], [5, 2], [11, 3], [12, 3]]) {
     const hero = heroWith('champion', lvl);
     assert.equal(characterSheet(hero).attacks, normal, `level ${lvl}`);
@@ -4799,13 +4801,25 @@ test('Action Surge doubles every swing\'s attacks for 6 seconds, and the whole c
     assert.equal(characterSheet(hero).attacks, normal * 2, `level ${lvl} under Action Surge`);
     hero.playerInput.intents.attack = true;
     let blows = 0;
+    let over = -1;
+    let waiting = 0;
     for (let t = 0; t < ATTACK_PERIOD; t++) {
       updateSword();
       hero.playerInput.intents.attack = false;
       blows = Math.max(blows, (hero.swordSwing?.blow ?? -1) + 1);
+      if (over < 0 && !hero.swordSwing) {
+        over = t;
+        waiting = hero.swordCooldown;
+      }
     }
     assert.equal(blows, normal * 2, `level ${lvl}: every blow of the chain comes`);
-    assert.equal(hero.swordSwing, undefined, `level ${lvl}: and it is over within the second`);
+    assert.ok(over >= 0 && over < ATTACK_PERIOD, `level ${lvl}: and it is over within the second`);
+    // Each blow takes half its natural time, one after another: not spread over the whole second.
+    const surged = blowTiming(hero, normal * 2);
+    const plain = blowTiming({ ...hero, actionSurge: 0 }, 1);
+    assert.ok(surged.windUp + surged.live <= Math.ceil((plain.windUp + plain.live) / 2), `level ${lvl}: half the time a blow`);
+    assert.ok(over <= normal * 2 * (surged.windUp + surged.live) + 1, `level ${lvl}: the chain ends as its last blow does`);
+    assert.equal(waiting, ATTACK_PERIOD - over, 'the next click still waits for the rest of the second');
     for (let t = 0; t < 360; t++) updateFeatureTimers();
     assert.equal(characterSheet(hero).attacks, normal, 'back to normal after 6 seconds');
   }
@@ -4947,4 +4961,123 @@ test('feats in play: Savage Attacker, Dual Wielder, Heavy Armour Master, Mobile,
   hero.playerStats.hitDice = 0;
   takeRest('short');
   assert.equal(hero.health.current, hero.health.max, 'Durable: a short rest heals all');
+});
+
+test('Extra Attack: each blow lands on its own swing\'s impact frame, the blows back to back, and the next click a second later', async () => {
+  const { blowTiming } = await load('systems/SwordSystem');
+  const { clipImpactTicks } = await load('characters/Characters');
+  const { ATTACK_PERIOD } = await load('entities/WeaponStats');
+  const hero = heroWith('champion', 5);
+  const impact = clipImpactTicks(hero.character.def, 'attack');
+  const timing = blowTiming(hero, 2);
+  assert.equal(timing.windUp, impact, 'the second blow lands where its swing clip strikes, not half a second later');
+  assert.equal(timing.tempo, 1, 'at the hero\'s own pace');
+  hero.playerInput.intents.attack = true;
+  const landed = [];
+  let blow = -1;
+  for (let t = 0; t < ATTACK_PERIOD; t++) {
+    updateSword();
+    hero.playerInput.intents.attack = false;
+    const swing = hero.swordSwing;
+    if (swing && swing.blow !== blow && swing.delay === 0) {
+      blow = swing.blow;
+      landed.push(t);
+    }
+  }
+  assert.equal(landed.length, 2);
+  assert.equal(landed[1] - landed[0], timing.windUp + timing.live, 'the second follows the first by one blow');
+  hero.playerInput.intents.attack = true;
+  updateSword();
+  assert.ok(hero.swordSwing, 'the next click a second later swings again');
+});
+
+test('a long chain that would not fit the second at its pace plays faster, the clip with it', async () => {
+  const { blowTiming } = await load('systems/SwordSystem');
+  const { ATTACK_PERIOD } = await load('entities/WeaponStats');
+  const hero = heroWith('champion', 12);
+  hero.actionSurge = 360;
+  const timing = blowTiming(hero, 6);
+  assert.ok(6 * (timing.windUp + timing.live) < ATTACK_PERIOD, 'six blows fit');
+  assert.ok(timing.tempo >= 2, 'at least twice as fast');
+});
+
+test('Great Weapon Master: a crit or a kill earns an attack for the next swing; its -5/+10 is switched from the quick bar', async () => {
+  const { CLASSES } = await load('rules/Classes');
+  const Build = await load('rules/Build');
+  const { characterSheet } = await load('rules/CharacterSheet');
+  const level = arena(10, 6);
+  const hero = heroWith('champion', 4, { fightingStyle: 'defense', locked: true });
+  assert.ok(Build.takeImprovement(CLASSES.fighter, hero.build, 4, { feat: 'great_weapon_master' }));
+  assert.deepEqual(Build.passiveFeats(CLASSES.fighter, 4, hero.build), ['great_weapon_master']);
+  hero.equipped = { primary: weaponItem('greatsword') };
+  const plain = characterSheet(hero).attack;
+  hero.inSafeRoom = false;
+  assert.equal(bindSpell(hero, 0, 'feat:great_weapon_master', 0), true, 'bound anywhere');
+  assert.equal(bindSpell(hero, 1, 'feat:sharpshooter', 0), false, 'not a feat they have');
+  hero.playerInput.spellSlot = 0;
+  hero.castCooldown = 0;
+  cast(level, hero, 1);
+  assert.deepEqual(hero.featsOn, ['great_weapon_master'], 'its key switches it on');
+  const power = characterSheet(hero).attack;
+  assert.equal(power.attackBonus, plain.attackBonus - 5);
+  assert.equal(power.damage.bonus, plain.damage.bonus + 10);
+  hero.equipped = { primary: weaponItem('longsword') };
+  assert.equal(characterSheet(hero).attack.featDamage, 0, 'only with a heavy weapon');
+  hero.equipped = { primary: weaponItem('greatsword') };
+  // A kill earns the attack.
+  const dummy = createTrainingDummy(centre(4.7), centre(2));
+  hero.position.x = centre(4);
+  hero.position.y = centre(2);
+  useDieRoller((sides) => (sides === 20 ? 20 : 1));
+  hero.playerInput.intents.attack = true;
+  for (let t = 0; t < 60; t++) {
+    beginPerception();
+    updateSword();
+    hero.playerInput.intents.attack = false;
+  }
+  useDieRoller(null);
+  world.remove(dummy);
+  assert.equal(hero.bonusAttack, true, 'a critical hit earns it');
+  hero.playerInput.intents.attack = true;
+  updateSword();
+  assert.equal(hero.swordSwing.blows, characterSheet(hero).attacks + 1, 'the next swing makes one blow more');
+  assert.equal(hero.bonusAttack, false, 'and spends it');
+});
+
+test('Defensive Duellist turns aside a blow its proficiency bonus would, with a finesse weapon, then needs 30 seconds', async () => {
+  const { CLASSES } = await load('rules/Classes');
+  const Build = await load('rules/Build');
+  const { duelistTurnsAside } = await load('systems/Reactions');
+  const { armorClassOf } = await load('systems/Strike');
+  const hero = heroWith('champion', 4, { fightingStyle: 'defense', locked: true });
+  hero.equipped = { primary: weaponItem('rapier') };
+  const ac = armorClassOf(hero);
+  const blow = (total, natural = 10) => ({ hit: true, total, natural, critical: natural === 20 });
+  assert.equal(duelistTurnsAside(hero, blow(ac)), false, 'not without the feat');
+  assert.ok(Build.takeImprovement(CLASSES.fighter, hero.build, 4, { feat: 'defensive_duelist' }));
+  assert.equal(duelistTurnsAside(hero, blow(ac + 2, 20)), false, 'a natural 20 still hits');
+  assert.equal(duelistTurnsAside(hero, blow(ac + 2)), false, 'proficiency +2 would not turn a total of AC + 2');
+  assert.equal(duelistTurnsAside(hero, blow(ac + 1)), true);
+  assert.equal(hero.duelistCooldown, 30 * 60);
+  assert.equal(duelistTurnsAside(hero, blow(ac)), false, 'recovering');
+  hero.duelistCooldown = 0;
+  hero.equipped = { primary: weaponItem('longsword') };
+  assert.equal(duelistTurnsAside(hero, blow(ac)), false, 'only with a finesse weapon');
+});
+
+test('the DMG tooltip names both weapons: the off hand with its whole blow, or why it makes none', async () => {
+  const { characterSheet } = await load('rules/CharacterSheet');
+  const { damageTopic } = await load('ui/SheetTopics');
+  const hero = heroWith('champion', 1, { fightingStyle: 'defense', locked: true });
+  hero.equipped = { primary: weaponItem('longsword'), secondary: weaponItem('dagger') };
+  const sheet = characterSheet(hero);
+  assert.equal(sheet.offHand, null, 'a longsword is not light');
+  assert.equal(sheet.offHandBlocked.base, 'dagger');
+  const lines = damageTopic(sheet).detail.map((l) => (typeof l === 'string' ? l : l.text));
+  assert.ok(lines.includes('Main hand:') && lines.includes('Off hand:'));
+  assert.ok(lines.some((l) => l.startsWith('The off hand makes no blow')));
+  hero.equipped = { primary: weaponItem('shortsword'), secondary: weaponItem('dagger') };
+  const both = damageTopic(characterSheet(hero)).detail.map((l) => (typeof l === 'string' ? l : l.text));
+  assert.ok(both.includes('Off hand:') && !both.some((l) => l.startsWith('The off hand makes no blow')));
+  assert.equal(both.filter((l) => l.startsWith('To hit:')).length, 2, 'each hand with its to-hit');
 });

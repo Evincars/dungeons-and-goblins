@@ -14,12 +14,16 @@ import { reportRejection } from '../core/errors';
 import { preparesSpells, requestToggleFeature } from '../game/PlayerActions';
 import type { TipTopic } from './InfoTooltip';
 import { PixelLabel } from './PixelText';
-import { featureTopic, spellTopic } from './SpellTopics';
+import { featTopic, featureTopic, spellTopic } from './SpellTopics';
+import { featName } from '../rules/Names';
+import { FEATS, featBinding } from '../rules/Feats';
+import type { FeatId } from '../rules/Feats';
+import { passiveFeats } from '../rules/Build';
 import { THEME } from './Theme';
 
 type Rect = { x: number; y: number; w: number; h: number };
-/** A box in the list (before scrolling): a spell or a class feature. */
-type Box = { spell: CatalogSpell | null; feature: FeatureDef | null; rect: Rectangle };
+/** A box in the list (before scrolling): a spell, a class feature or a Passive Feat. */
+type Box = { spell: CatalogSpell | null; feature: FeatureDef | null; feat: FeatId | null; rect: Rectangle };
 /** One level a clicked spell can be cast at, as a box. */
 type Option = { level: number; rect: Rectangle };
 /** The boxes that open under a clicked spell that can be cast at several levels: one box per level. */
@@ -96,7 +100,7 @@ export class SpellsPanel {
     const cls = heroClass(player.heroClass).dndClass;
     const level = player.playerStats.level;
     const b = player.build;
-    const key = JSON.stringify([cls, level, b?.fightingStyle, b?.extraStyle, b?.archetype, b?.maneuvers, b?.spells]);
+    const key = JSON.stringify([cls, level, b?.fightingStyle, b?.extraStyle, b?.archetype, b?.maneuvers, b?.spells, b?.improvements]);
     if (key === this.key) return;
     this.key = key;
     this.list = spellListOf(cls, b);
@@ -124,14 +128,15 @@ export class SpellsPanel {
   }
 
   /** One heading and its boxes in rows; returns where the next section starts. */
-  private addSection(label: string, items: readonly { spell?: CatalogSpell; feature?: FeatureDef }[], top: number): number {
+  private addSection(label: string, items: readonly { spell?: CatalogSpell; feature?: FeatureDef; feat?: FeatId }[], top: number): number {
     this.addHeading(label, top, THEME.title);
     const cols = Math.max(1, Math.floor((this.area.w - 2 * PAD + GAP) / (BOX + GAP)));
     const first = top + HEADING_H;
     items.forEach((item, i) => {
       const rect = new Rectangle(this.area.x + PAD + (i % cols) * (BOX + GAP), first + Math.floor(i / cols) * (BOX + GAP), BOX, BOX);
-      this.boxes.push({ spell: item.spell ?? null, feature: item.feature ?? null, rect });
+      this.boxes.push({ spell: item.spell ?? null, feature: item.feature ?? null, feat: item.feat ?? null, rect });
       if (item.spell) this.addIcon(item.spell, rect);
+      if (item.feat) this.addInitials(item.feat, rect);
     });
     const rows = Math.ceil(items.length / cols);
     return first + rows * (BOX + GAP) + SECTION_GAP;
@@ -161,6 +166,8 @@ export class SpellsPanel {
     this.updateHint();
     y += HEADING_H + SECTION_GAP;
     y = this.addSection(text('skills.features'), featuresAt(cls, level, build ?? null).map((feature) => ({ feature })), y);
+    const feats = this.player ? passiveFeats(heroClass(this.player.heroClass), level, build) : [];
+    if (feats.length) y = this.addSection(text('skills.passive_feats'), feats.map((feat) => ({ feat })), y);
     if (!isCaster(list)) {
       this.addHeading(text('skills.none'), y, THEME.muted);
       y += HEADING_H;
@@ -256,6 +263,7 @@ export class SpellsPanel {
     const box = this.boxAt(x, y);
     if (!box || !this.list) return null;
     if (box.feature) return featureTopic(box.feature, this.isOff(box.feature), this.heroLevel);
+    if (box.feat) return featTopic(box.feat, this.featOn(box.feat));
     return box.spell ? spellTopic(box.spell, box.spell.level, this.heroLevel, learnLevel(this.list, box.spell)) : null;
   }
 
@@ -273,12 +281,31 @@ export class SpellsPanel {
     const box = this.boxAt(x, y);
     if (!box || !this.list) return wasOpen;
     if (box.feature) return this.pressFeature(box.feature);
+    if (box.feat) return this.pressFeat(box.feat);
     // Outside a safe room a spell can't be prepared: the hint at the top already says so.
     if (!box.spell || !this.preparing) return true;
     const levels = castLevels(this.list, this.heroLevel, box.spell);
     if (levels.length === 1) beginBinding({ spell: box.spell.id, level: levels[0] });
     else this.openChoice(box, levels);
     return true;
+  }
+
+  /** A toggle Passive Feat waits for a quick-bar square (its key switches it); one that works by itself has nothing to bind. */
+  private pressFeat(feat: FeatId): boolean {
+    if (FEATS[feat].passive === 'toggle') beginBinding({ spell: featBinding(feat), level: 0 });
+    return true;
+  }
+
+  /** A toggle feat switched on, or one that works by itself (always on). */
+  private featOn(feat: FeatId): boolean {
+    return FEATS[feat].passive === 'auto' || !!this.player?.featsOn?.includes(feat);
+  }
+
+  /** A Passive Feat's box shows its initials (feats have no icons). */
+  private addInitials(feat: FeatId, rect: Rectangle): void {
+    const label = new PixelLabel(featInitials(feat), { color: THEME.buttonText, align: 'center', shadow: true });
+    label.position.set(Math.round(rect.x + BOX / 2), Math.round(rect.y + (BOX - 8) / 2));
+    this.content.addChild(label);
   }
 
   private isOff(feature: FeatureDef): boolean {
@@ -300,6 +327,7 @@ export class SpellsPanel {
     for (const { feature, rect } of this.boxes) {
       if (feature?.kind === 'passive' && feature.worked && !this.isOff(feature)) this.drawBeads(g, rect);
     }
+    for (const { feat, rect } of this.boxes) if (feat && this.featOn(feat)) this.drawBeads(g, rect);
   }
 
   private drawBeads(g: Graphics, rect: Rectangle): void {
@@ -377,4 +405,9 @@ export class SpellsPanel {
     this.clearPopup();
     return wasOpen;
   }
+}
+
+/** "GWM": the first letters of a feat's words, for its box. */
+function featInitials(feat: FeatId): string {
+  return featName(feat).split(/[\s:]+/).filter(Boolean).map((word) => word[0]).join('').slice(0, 3).toUpperCase();
 }

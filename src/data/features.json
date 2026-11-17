@@ -9,7 +9,7 @@
       { "id": "defense", "name": "Defense", "level": 1, "kind": "info", "worked": true, "needs": "defense",
         "description": "Your fighting style: +1 Armor Class while you are wearing armour." },
       { "id": "dueling", "name": "Dueling", "level": 1, "kind": "info", "worked": true, "needs": "dueling",
-        "description": "Your fighting style: +2 damage with a melee weapon that is neither two-handed nor versatile, held in one hand while you hold no other weapon (a shield is fine)." },
+        "description": "Your fighting style: +2 damage with a melee weapon held in one hand when you hold no other weapon (a shield is fine). A versatile weapon with the other hand empty is held in both hands, so Dueling needs a shield beside it." },
       { "id": "great_weapon_fighting", "name": "Great Weapon Fighting", "level": 1, "kind": "info", "worked": true, "needs": "great_weapon_fighting",
         "description": "Your fighting style: when you roll a 1 or a 2 on a damage die with a melee weapon held in two hands (a two-handed or versatile weapon), you roll that die again and must use the new roll." },
       { "id": "two_weapon_fighting", "name": "Two-Weapon Fighting", "level": 1, "kind": "info", "worked": true, "needs": "two_weapon_fighting",

@@ -14,6 +14,12 @@ import { overHole } from './HoleSystem';
 import { logHeal } from './RollLogSystem';
 import { recordEvent } from './CombatLogSystem';
 import { heroClass } from '../rules/Classes';
+import { FEATS } from '../rules/Feats';
+import type { FeatId } from '../rules/Feats';
+import { passiveFeats } from '../rules/Build';
+import { featName } from '../rules/Names';
+import { logLine } from './RollLogSystem';
+import { text } from '../core/texts';
 
 /**
  * The active class features (rules/ClassFeatures.ts), used from the quick bar with the cast key. Each does its work
@@ -157,12 +163,13 @@ export function usedFeature(hero: Player, id: string, slot: number, level: Level
   return 'ok';
 }
 
-/** Each hero's feature boosts (Action Surge, Remarkable Athlete) and Indomitable's recovery run down a tick. */
+/** Each hero's feature boosts (Action Surge, Remarkable Athlete), Indomitable's and Defensive Duellist's recovery run down a tick. */
 export function updateFeatureTimers(): void {
   for (const hero of q.players) {
     if ((hero.actionSurge ?? 0) > 0) hero.actionSurge = (hero.actionSurge ?? 0) - 1;
     if ((hero.athleteBoost ?? 0) > 0) hero.athleteBoost = (hero.athleteBoost ?? 0) - 1;
     if ((hero.indomitableCooldown ?? 0) > 0) hero.indomitableCooldown = (hero.indomitableCooldown ?? 0) - 1;
+    if ((hero.duelistCooldown ?? 0) > 0) hero.duelistCooldown = (hero.duelistCooldown ?? 0) - 1;
   }
 }
 
@@ -202,4 +209,18 @@ export function updateSurvivor(): void {
     mend(hero, amount, h.max, nameOfFeature(hero, 'survivor'));
     hero.survivorCooldown = SURVIVOR_TICKS;
   }
+}
+
+/**
+ * The quick-bar key of a toggle Passive Feat (Great Weapon Master, Sharpshooter): its -5/+10 is switched on or off, and the
+ * hero says which. Returns false for a feat the hero does not have or that is not switched.
+ */
+export function switchFeat(hero: Player, feat: FeatId): boolean {
+  const cls = heroClass(hero.heroClass);
+  if (FEATS[feat].passive !== 'toggle' || !passiveFeats(cls, hero.playerStats.level, hero.build).includes(feat)) return false;
+  const on = hero.featsOn ?? [];
+  const now = !on.includes(feat);
+  hero.featsOn = now ? [...on, feat] : on.filter((f) => f !== feat);
+  logLine(hero, text(now ? 'roll.feat_on' : 'roll.feat_off', { name: featName(feat) }), now ? 'hit' : 'miss');
+  return true;
 }

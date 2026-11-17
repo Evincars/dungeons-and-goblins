@@ -38,8 +38,14 @@ export function shoot(player: Player, followedBy = 0): void {
   loose(player, followedBy);
 }
 
-/** The arrows of a volley of `count` are spread evenly over the attack period. */
-const volleyGap = (count: number): number => Math.floor(ATTACK_PERIOD / Math.max(1, count));
+/**
+ * Ticks between the arrows of a volley of `count`: the archer's own pace (the release pose and its recovery), twice as
+ * fast under Action Surge, and quicker still only if the volley would not fit the attack period.
+ */
+function volleyGap(player: Player, count: number): number {
+  const pace = Math.ceil((ARROW_STATS.drawTicks + ATTACK_RECOVERY) / attackTempo(player));
+  return Math.max(1, Math.min(pace, Math.floor((ATTACK_PERIOD - 1) / Math.max(1, count))));
+}
 
 /** A shot that comes free of the attack key (War Magic, after a spell): one volley, if the hero is not shooting already. */
 export function bonusShot(player: Player): boolean {
@@ -57,7 +63,7 @@ function followVolley(player: Player): void {
     return;
   }
   const count = characterSheet(player).attacks;
-  const due = ATTACK_PERIOD - Math.max(0, count - left) * volleyGap(count);
+  const due = ATTACK_PERIOD - Math.max(0, count - left) * volleyGap(player, count);
   if ((player.arrowCooldown ?? 0) > due) return;
   loose(player, left - 1);
 }

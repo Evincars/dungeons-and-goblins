@@ -4,10 +4,13 @@ import { statDescription, statName, statShort } from '../entities/Items';
 import { keyAbilities } from '../rules/CharacterSheet';
 import type { CharacterSheet, WeaponAttack } from '../rules/CharacterSheet';
 import { NATURAL_CRIT, formatDamage, formatDice, formatModifier } from '../rules/Dice';
-import { armorName, damageTypeName, dndClassName, featureName, fightingStyleName, trainingName, weaponName } from '../rules/Names';
+import { armorName, damageTypeName, dndClassName, featName, featureName, fightingStyleName, trainingName, weaponName } from '../rules/Names';
 import { BASE_SPEED_FT } from '../rules/CharacterSheet';
 import type { TipDetail, TipTopic } from './InfoTooltip';
 import { THEME } from './Theme';
+
+/** The note under an off-hand weapon that makes no blow. */
+const BLOCKED_COLOR = 0xe85a4f;
 
 /** The character sheet's tooltips: what each value means, and how the player's own one adds up. */
 
@@ -47,15 +50,18 @@ export function hitPointsTopic(sheet: CharacterSheet): TipTopic {
  */
 export function damageTopic(sheet: CharacterSheet): TipTopic {
   const attack = sheet.attack;
+  const second = sheet.offHand ?? sheet.offHandBlocked;
   const detail: TipDetail[] = [];
-  if (sheet.offHand) detail.push({ text: text('sheet.dmg.main_hand'), color: THEME.title });
+  if (second) detail.push({ text: text('sheet.dmg.main_hand'), color: THEME.title });
   detail.push(...attackLines(attack));
   if (attack.critFrom < NATURAL_CRIT) detail.push(text('sheet.dmg.crit', { from: attack.critFrom }));
   if (sheet.attacks > 1) detail.push(text('sheet.dmg.attacks', { count: sheet.attacks }));
-  if (sheet.offHand) {
+  if (second) {
     detail.push({ text: text('sheet.dmg.off_hand'), color: THEME.title });
-    detail.push(...attackLines(sheet.offHand));
+    detail.push(...attackLines(second));
   }
+  // A weapon in the second hand that makes no blow: two-weapon fighting asks for light weapons without Dual Wielder.
+  if (!sheet.offHand && sheet.offHandBlocked) detail.push({ text: text('sheet.dmg.off_hand_blocked'), color: BLOCKED_COLOR });
   if (sheet.battleMaster) detail.push(text('sheet.dmg.maneuver_dc', { dc: sheet.maneuverDc }));
   return { title: text('sheet.dmg.name'), body: text('sheet.dmg.description'), detail };
 }
@@ -71,6 +77,7 @@ function attackLines(attack: WeaponAttack): string[] {
   lines.push(abilityLine(attack));
   if (attack.magic) lines.push(text('sheet.dmg.magic', { bonus: formatModifier(attack.magic) }));
   if (attack.styleDamage && attack.styleName) lines.push(text('sheet.dmg.style', { style: fightingStyleName(attack.styleName), bonus: formatModifier(attack.styleDamage) }));
+  if (attack.featDamage && attack.featName) lines.push(text('sheet.dmg.style', { style: featName(attack.featName), bonus: formatModifier(attack.featDamage) }));
   if (attack.extra) lines.push(text('sheet.dmg.sneak', { dice: formatDice(attack.extra) }));
   if (attack.rerollBelow) lines.push(text('sheet.dmg.reroll', { below: attack.rerollBelow }));
   if (attack.savage) lines.push(text('sheet.dmg.savage'));
@@ -93,6 +100,7 @@ function hitParts(attack: WeaponAttack): string {
   parts.push(attack.proficient ? text('sheet.dmg.hit_proficiency', { bonus: formatModifier(attack.proficiency) }) : text('sheet.dmg.hit_untrained'));
   if (attack.styleHit && attack.styleName) parts.push(`${fightingStyleName(attack.styleName)} ${formatModifier(attack.styleHit)}`);
   if (attack.magic) parts.push(text('sheet.dmg.hit_magic', { bonus: formatModifier(attack.magic) }));
+  if (attack.featHit && attack.featName) parts.push(`${featName(attack.featName)} ${formatModifier(attack.featHit)}`);
   return parts.join(', ');
 }
 

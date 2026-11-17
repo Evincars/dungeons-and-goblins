@@ -6,6 +6,9 @@ import { TICKS_PER_SECOND } from '../rules/Spells';
 import { heroClass } from '../rules/Classes';
 import { featureOfClass, featuresAt } from '../rules/ClassFeatures';
 import { superiorityDice, superioritySides } from '../rules/Maneuvers';
+import { passiveFeats } from '../rules/Build';
+import { FEATS } from '../rules/Feats';
+import { featName } from '../rules/Names';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
 
@@ -28,6 +31,8 @@ const BOOSTS = [
 ] as const;
 /** A boost that is running is shown in this colour. */
 const BOOST_COLOR = 0x40e0d0;
+/** Great Weapon Master's earned attack, waiting for the next swing, is shown in blue. */
+const BONUS_ATTACK_COLOR = 0x5aa8ff;
 
 /** Seconds to a tenth, as the HUD counts them. */
 const secondsOf = (ticks: number): string => (Math.ceil((ticks / TICKS_PER_SECOND) * 10) / 10).toFixed(1);
@@ -61,8 +66,11 @@ export class PassiveHud {
     const b = player.build;
     const dice = this.diceLine(player);
     const ready = player.maneuver?.id ?? '';
-    const timers = [player.protectCooldown, player.indomitableCooldown, player.actionSurge, player.athleteBoost].map((t) => secondsOf(t ?? 0));
-    const key = JSON.stringify([player.heroClass, player.playerStats.level, b?.fightingStyle, b?.extraStyle, b?.archetype, b?.maneuvers, off, timers, dice, ready]);
+    const timers = [player.protectCooldown, player.indomitableCooldown, player.actionSurge, player.athleteBoost, player.duelistCooldown].map((t) => secondsOf(t ?? 0));
+    const key = JSON.stringify([
+      player.heroClass, player.playerStats.level, b?.fightingStyle, b?.extraStyle, b?.archetype, b?.maneuvers, b?.improvements, off, timers, dice, ready,
+      player.featsOn, player.bonusAttack,
+    ]);
     if (key === this.shown) return;
     this.shown = key;
     const cls = heroClass(player.heroClass).dndClass;
@@ -75,6 +83,7 @@ export class PassiveHud {
       const left = boost.left(player);
       if (left > 0) lines.push({ content: text('hud.passive.recovering', { name: featureOfClass(cls, boost.id)?.name ?? boost.id, seconds: secondsOf(left) }), color: BOOST_COLOR });
     }
+    lines.push(...this.featLines(player));
     if (dice) lines.push({ content: dice, color: READY_COLOR });
     if (ready) lines.push({ content: text('hud.maneuver_ready', { name: featureOfClass(cls, ready)?.name ?? ready }), color: THEME.buttonText });
     this.lines.forEach((line, i) => {
@@ -84,6 +93,24 @@ export class PassiveHud {
       line.text = entry.content;
       line.fill = entry.color;
     });
+  }
+
+  /**
+   * The Passive Feats at work: a toggle one while switched on, one that works by itself (with its recovery), and Great Weapon
+   * Master's earned attack, in blue, until the next swing spends it.
+   */
+  private featLines(player: Player): { content: string; color: number }[] {
+    const lines: { content: string; color: number }[] = [];
+    for (const feat of passiveFeats(heroClass(player.heroClass), player.playerStats.level, player.build)) {
+      const auto = FEATS[feat].passive === 'auto';
+      if (!auto && !player.featsOn?.includes(feat)) continue;
+      const left = feat === 'defensive_duelist' ? player.duelistCooldown ?? 0 : 0;
+      lines.push(left > 0
+        ? { content: text('hud.passive.recovering', { name: featName(feat), seconds: secondsOf(left) }), color: THEME.muted }
+        : { content: featName(feat), color: READY_COLOR });
+    }
+    if (player.bonusAttack) lines.push({ content: text('hud.bonus_attack'), color: BONUS_ATTACK_COLOR });
+    return lines;
   }
 
   /** A Battle Master's dice left, as the line reads (empty for anyone else). */

@@ -6,7 +6,11 @@ import { superioritySides } from '../rules/Maneuvers';
 import { diceLeft, spendDie } from './ManeuverSystem';
 import { logLine } from './RollLogSystem';
 import { recordEvent } from './CombatLogSystem';
-import { strike } from './Strike';
+import { armorClassOf, strike } from './Strike';
+import type { AttackOutcome } from '../rules/Combat';
+import { NATURAL_CRIT } from '../rules/Dice';
+import { DUELIST_COOLDOWN_TICKS } from '../rules/Feats';
+import { featName } from '../rules/Names';
 import { hitMob } from './Hits';
 
 /**
@@ -42,4 +46,21 @@ export function riposted(hero: Player, foe: Entity): void {
   const attack = characterSheet(hero).attack;
   const outcome = strike(foe, attack.extra ? attack : { ...attack, extra: { count: 1, sides, bonus: 0 } }, hero);
   if (outcome.hit) hitMob(foe, hero, outcome.damage);
+}
+
+/**
+ * Defensive Duellist, a Passive Feat that works by itself: an enemy's melee blow that hits (not a natural 20) while the hero
+ * holds a finesse weapon they are proficient with, and that their proficiency bonus added to their Armor Class would turn
+ * aside, misses. It then needs 30 seconds (or a rest) before it does so again. Returns whether the blow was turned.
+ */
+export function duelistTurnsAside(hero: Player, outcome: AttackOutcome): boolean {
+  if (!outcome.hit || outcome.natural === NATURAL_CRIT || (hero.duelistCooldown ?? 0) > 0) return false;
+  const sheet = characterSheet(hero);
+  const attack = sheet.attack;
+  if (!sheet.feats.duelist || !attack.item || !attack.proficient || !attack.rule.properties.includes('finesse')) return false;
+  if (outcome.total >= armorClassOf(hero) + sheet.proficiency) return false;
+  hero.duelistCooldown = DUELIST_COOLDOWN_TICKS;
+  logLine(hero, text('roll.duelist', { bonus: sheet.proficiency }), 'hit');
+  recordEvent(hero, 'feature', { item: featName('defensive_duelist') });
+  return true;
 }

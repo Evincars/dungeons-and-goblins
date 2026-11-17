@@ -14,6 +14,8 @@ import { lungeReady } from './ManeuverSystem';
 import { characterDef, clipImpactTicks } from '../characters/Characters';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
+import { logLine } from './RollLogSystem';
+import { text } from '../core/texts';
 
 type Swing = NonNullable<Entity['swordSwing']>;
 
@@ -22,25 +24,44 @@ const struck: Entity[] = [];
 export { hitMob };
 
 /**
- * A swing is a chain of blows: one, or several with Extra Attack. The blows come one after another and the whole chain is
- * over within the attack period (a second), which is also the swing's cooldown. With a melee weapon in each hand the first
- * blow is made with both at once: one swing on the screen, an attack (a d20 and a damage roll) from each weapon.
+ * A swing is a chain of blows: one, or several with Extra Attack. Each blow plays at the hero's own swing speed (the attack
+ * clip's wind-up to its impact frame, then the live hitbox), the next starting as the last ends, so what is seen and what is
+ * rolled go together. Under Action Surge every blow takes half as long, so twice the blows fit the same time. The next
+ * swing may start a second after this one (the attack period, also the swing's cooldown); a chain too long for it at its
+ * pace plays faster until it fits. With a melee weapon in each hand the first blow is made with both at once: one swing on
+ * the screen, an attack (a d20 and a damage roll) from each weapon.
  */
 
 /** The chain's last blow ends this many ticks before the period does, so the next swing never cuts it short. */
 const CHAIN_MARGIN = 1;
 
-/**
- * How much faster than usual the hero's blows play: twice under Action Surge, whose chain holds twice the blows in the same
- * second (wind-up, live hitbox and the attack clip all take half as long, CharacterAnimationSystem.ts).
- */
+/** Action Surge plays every blow this many times faster. */
+const SURGE_TEMPO = 2;
+
+/** How much faster than its natural pace the hero attacks: twice under Action Surge (arrows too, ArrowSystem.ts). */
 export function attackTempo(player: Pick<Player, 'actionSurge'>): number {
-  return (player.actionSurge ?? 0) > 0 ? 2 : 1;
+  return (player.actionSurge ?? 0) > 0 ? SURGE_TEMPO : 1;
 }
 
-/** Ticks one blow's hitbox stays live, at the hero's tempo. */
-function swingTicksFor(player: Player): number {
-  return Math.ceil(SWORD_STATS.swingTicks / attackTempo(player));
+/** Ticks the attack clip winds up to its impact frame (none for characters without one). */
+function impactTicks(player: Player): number {
+  const def = player.character?.def;
+  return def ? clipImpactTicks(def, 'attack') : 0;
+}
+
+/** One blow's timing: the wind-up before it lands and the ticks its hitbox stays live, and how much faster than natural that is. */
+export type BlowTiming = { windUp: number; live: number; tempo: number };
+
+/**
+ * The timing of each blow of a chain of `blows`: the natural blow (wind-up and live hitbox), sped up by Action Surge, and
+ * squeezed further only when the whole chain would not fit the period.
+ */
+export function blowTiming(player: Player, blows: number): BlowTiming {
+  const impact = impactTicks(player);
+  const natural = impact + SWORD_STATS.swingTicks;
+  const ticks = Math.max(2, Math.min(Math.ceil(natural / attackTempo(player)), Math.floor((ATTACK_PERIOD - CHAIN_MARGIN) / Math.max(1, blows))));
+  const windUp = Math.floor((impact * ticks) / natural);
+  return { windUp, live: ticks - windUp, tempo: natural / ticks };
 }
 
 /** A heavy or two-handed weapon swings with a heavier grunt. */
@@ -59,36 +80,27 @@ function canSwing(player: Player): boolean {
     && !player.casting && !player.falling;
 }
 
-/** Ticks the first blow winds up before it lands: the attack clip's impact frame (none for characters without one). */
-function firstWindUp(player: Player): number {
-  const def = player.character?.def;
-  return def ? Math.floor(clipImpactTicks(def, 'attack') / attackTempo(player)) : 0;
-}
-
-/**
- * Ticks each following blow of a chain of `blows` winds up: what is left of the period after the first blow, shared out
- * between the blows that follow, so the chain of any length lands within the second.
- */
-function followWindUp(player: Player, blows: number): number {
-  if (blows < 2) return 0;
-  const live = swingTicksFor(player);
-  const room = ATTACK_PERIOD - firstWindUp(player) - live - CHAIN_MARGIN;
-  return Math.max(0, Math.floor(room / (blows - 1)) - live);
+/** Great Weapon Master's earned attack: spent on the next swing of the attack key, one blow more. */
+function earnedAttack(player: Player, fromKey: boolean): number {
+  if (!fromKey || !player.bonusAttack) return 0;
+  player.bonusAttack = false;
+  return 1;
 }
 
 /**
  * A swing starts: its first blow lands on the attack clip's impact frame (at once for characters without one), the
- * others follow it within the second, and the next swing starts a second after this one, not before.
+ * others follow it one after another, and the next swing starts a second after this one, not before.
  */
-function startSwing(player: Player): void {
+function startSwing(player: Player, fromKey = true): void {
   player.playerInput.intents.attack = false;
   const aim = player.aimVector ?? { x: 0, y: 1 };
   const sheet = characterSheet(player);
-  const blows = sheet.attacks;
+  const blows = sheet.attacks + earnedAttack(player, fromKey);
+  const timing = blowTiming(player, blows);
   const reach = swingRange(player.playerStats.swordTier) + (lungeReady(player) ? LUNGE_REACH : 0);
   const swing: Swing = {
-    delay: firstWindUp(player),
-    ticks: swingTicksFor(player),
+    delay: timing.windUp,
+    ticks: timing.live,
     dirX: aim.x,
     dirY: aim.y,
     range: reach,
@@ -96,6 +108,7 @@ function startSwing(player: Player): void {
     blow: 0,
     blows,
     offHand: !!sheet.offHand,
+    tempo: timing.tempo,
   };
   world.addComponent(player, 'swordSwing', swing);
   player.swordCooldown = SWORD_STATS.cooldown;
@@ -108,7 +121,7 @@ function startSwing(player: Player): void {
  */
 export function bonusSwing(player: Player): boolean {
   if (player.swordSwing || player.health.current <= 0 || player.falling) return false;
-  startSwing(player);
+  startSwing(player, false);
   return true;
 }
 
@@ -147,7 +160,16 @@ function swingAt(player: Player, target: Entity, swing: Swing): void {
 function strikeWith(player: Player, target: Entity, attack: AttackProfile, alongside: boolean): void {
   const outcome = strike(target, attack, player);
   if (target.position) sound.playSound(outcome.hit ? 'sword_hit' : 'sword_miss', target.position.x, target.position.y);
-  if (outcome.hit) hitMob(target, player, outcome.damage, alongside);
+  if (!outcome.hit) return;
+  hitMob(target, player, outcome.damage, alongside);
+  if (outcome.critical || (target.health?.current ?? 1) <= 0) earnBonusAttack(player);
+}
+
+/** Great Weapon Master: a critical hit or a kill with a melee weapon earns an attack more for the next swing (shown top left). */
+function earnBonusAttack(player: Player): void {
+  if (player.bonusAttack || !characterSheet(player).feats.bonusAttack) return;
+  player.bonusAttack = true;
+  logLine(player, text('roll.bonus_attack'), 'crit');
 }
 
 /** Every enemy (and the training dummy) inside the live blow's arc is swung at, each once per blow. */
@@ -178,9 +200,11 @@ function endBlow(player: Player, swing: Swing): void {
     return;
   }
   const aim = player.aimVector ?? { x: swing.dirX, y: swing.dirY };
+  const timing = blowTiming(player, swing.blows);
   swing.blow++;
-  swing.delay = followWindUp(player, swing.blows);
-  swing.ticks = swingTicksFor(player);
+  swing.delay = timing.windUp;
+  swing.ticks = timing.live;
+  swing.tempo = timing.tempo;
   swing.dirX = aim.x;
   swing.dirY = aim.y;
   swing.hitIds.length = 0;

@@ -14,8 +14,8 @@ import type { HeroClass } from './Classes';
 import { PRIMARY_ABILITIES } from './DndClasses';
 import { armorTrained, baseScores, featEffects } from './Build';
 import type { Build } from './Build';
-import { NO_FEATS } from './Feats';
-import type { FeatEffects } from './Feats';
+import { NO_FEATS, POWER_ATTACK_DAMAGE, POWER_ATTACK_HIT } from './Feats';
+import type { FeatEffects, FeatId, PowerAttack } from './Feats';
 import {
   ARCHERY_ATTACK_BONUS, DEFENSE_ARMOR_CLASS, DUELING_DAMAGE_BONUS, GREAT_WEAPON_REROLL_BELOW, hasStyle,
 } from './FightingStyles';
@@ -117,6 +117,10 @@ export type WeaponAttack = {
   styleName: FightingStyleId | null;
   /** Damage dice are rolled twice and the higher total kept (the Savage Attacker feat). */
   savage?: boolean;
+  /** A power attack switched on (Great Weapon Master, Sharpshooter): what it takes off to hit and adds to damage, and its feat. */
+  featHit: number;
+  featDamage: number;
+  featName: FeatId | null;
   /** The proficiency bonus added to hit (0 when untrained in the weapon), and whether the wielder is trained. */
   proficiency: number;
   proficient: boolean;
@@ -163,7 +167,7 @@ function attackWith(w: Wielding, modifiers: Modifiers): WeaponAttack {
   const dice = w.twoHanded && rule.versatile ? rule.versatile : rule.damage;
   return {
     item: w.item, base: w.base, rule, ability, abilityModifier, abilityDamage: abilityModifier, abilityHit: abilityModifier, magic,
-    styleHit: 0, styleDamage: 0, styleName: null,
+    styleHit: 0, styleDamage: 0, styleName: null, featHit: 0, featDamage: 0, featName: null,
     proficiency: w.proficiency, proficient: w.proficiency > 0, twoHanded: w.twoHanded,
     damage: plus(dice, abilityModifier + magic),
     attackBonus: w.proficiency + abilityModifier + magic,
@@ -172,9 +176,27 @@ function attackWith(w: Wielding, modifiers: Modifiers): WeaponAttack {
   };
 }
 
-/** The feats that shape every weapon blow: Savage Attacker's dice, and Tavern Brawler's STR counted twice bare-handed. */
+/** The weapons a power attack works with: a heavy melee weapon (Great Weapon Master) or a ranged one (Sharpshooter). */
+function powerWeapon(kind: PowerAttack, attack: WeaponAttack): boolean {
+  if (kind === 'ranged') return attack.rule.range === 'ranged';
+  return attack.rule.range === 'melee' && attack.rule.properties.includes('heavy');
+}
+
+/** A power attack switched on, with a weapon it suits and the hero is proficient with: -5 to hit, +10 damage. */
+function withPowerAttack(attack: WeaponAttack, feats: FeatEffects): void {
+  const power = feats.powerAttacks.find((p) => powerWeapon(p.kind, attack));
+  if (!power || !attack.proficient) return;
+  attack.featHit = POWER_ATTACK_HIT;
+  attack.featDamage = POWER_ATTACK_DAMAGE;
+  attack.featName = power.feat;
+  attack.attackBonus += POWER_ATTACK_HIT;
+  attack.damage = plus(attack.damage, POWER_ATTACK_DAMAGE);
+}
+
+/** The feats that shape every weapon blow: a power attack, Savage Attacker's dice, and Tavern Brawler's STR counted twice bare-handed. */
 function withFeats(attack: WeaponAttack, feats: FeatEffects): WeaponAttack {
   if (feats.savageDamage) attack.savage = true;
+  withPowerAttack(attack, feats);
   if (!feats.unarmedStrengthTwice || attack.base !== 'unarmed') return attack;
   attack.abilityHit += attack.abilityModifier;
   attack.abilityDamage += attack.abilityModifier;
@@ -274,16 +296,19 @@ function otherHandWeaponless(equipped: Equipped, item: InventoryItem | null): bo
   return !weaponRule(other);
 }
 
-/** A melee weapon that is neither two-handed nor versatile, in one hand, and no weapon in the other (a shield is fine): Dueling's grip. */
+/**
+ * Dueling's grip: a melee weapon in one hand and no weapon in the other. A two-handed weapon never is; a versatile one is
+ * held in both hands while the other hand is empty, and in one hand beside a shield.
+ */
 function duelingGrip(attack: WeaponAttack, equipped: Equipped): boolean {
   const melee = attack.rule.range === 'melee' && attack.base !== 'unarmed';
-  const oneHanded = !attack.rule.properties.includes('two_handed') && !attack.rule.versatile;
+  const oneHanded = !attack.rule.properties.includes('two_handed') && !attack.twoHanded;
   return melee && oneHanded && otherHandWeaponless(equipped, attack.item);
 }
 
 /**
  * What the fighting style does to this blow: Archery adds +2 to hit with a ranged weapon, Dueling +2 to the damage of a
- * melee weapon that is neither two-handed nor versatile, held in one hand with no weapon in the other, Great Weapon
+ * melee weapon held in one hand with no weapon in the other (a versatile one only beside a shield), Great Weapon
  * Fighting rerolls low damage dice of a melee weapon in two hands.
  */
 function withFightingStyle(attack: WeaponAttack, equipped: Equipped, styles: Styles | null): WeaponAttack {
@@ -353,6 +378,11 @@ export type CharacterSheet = Abilities & {
   attack: WeaponAttack;
   /** The off-hand attack of fighting with a weapon in each hand (null: not holding a melee weapon in both). */
   offHand: WeaponAttack | null;
+  /**
+   * A melee weapon in the second hand that makes no blow because the pair is not light (and the hero lacks Dual Wielder):
+   * what it would deal, for the tooltip to tell why it does not.
+   */
+  offHandBlocked: WeaponAttack | null;
   /** Weapon attacks in one swing: one, more with Extra Attack, doubled under Action Surge (the off-hand blow comes on top). */
   attacks: number;
   /** What the hero's feats add up to. */
@@ -425,7 +455,7 @@ function initiativeBonus(cls: HeroClass, level: number, build: Build | undefined
 const NONE_OFF: readonly string[] = [];
 
 /** Everything the inventory's character sheet shows, from the player's class and what they wear. */
-export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' | 'health' | 'heroClass' | 'build' | 'featuresOff' | 'actionSurge'>): CharacterSheet {
+export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' | 'health' | 'heroClass' | 'build' | 'featuresOff' | 'actionSurge' | 'featsOn'>): CharacterSheet {
   const equipped = player.equipped ?? {};
   const cls = heroClass(player.heroClass);
   const level = player.playerStats.level;
@@ -433,10 +463,11 @@ export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' |
   const scores = abilities(equipped, base);
   const styles = player.build ?? null;
   const off = player.featuresOff ?? NONE_OFF;
-  const feats = featEffects(cls, level, player.build);
+  const feats = featEffects(cls, level, player.build, player.featsOn ?? NONE_OFF);
   const ac = armorClass(equipped, scores.modifiers, cls, styles, feats);
   const proficiency = proficiencyBonus(level);
   const surge = (player.actionSurge ?? 0) > 0 ? ACTION_SURGE_ATTACKS_FACTOR : 1;
+  const offHand = offHandAttack(equipped, scores.modifiers, level, cls, ac.proficient, styles, feats);
   return {
     ...scores,
     heroClass: cls,
@@ -445,7 +476,8 @@ export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' |
     baseScores: base,
     armorClass: ac,
     attack: weaponAttack(equipped, scores.modifiers, level, cls, ac.proficient, styles, off, feats),
-    offHand: offHandAttack(equipped, scores.modifiers, level, cls, ac.proficient, styles, feats),
+    offHand,
+    offHandBlocked: offHand ? null : offHandAttack(equipped, scores.modifiers, level, cls, ac.proficient, styles, { ...feats, dualWield: true }),
     attacks: attacksPerAction(cls, level, off, styles) * surge,
     feats,
     hitPoints: { current: player.health.current, max: player.health.max },

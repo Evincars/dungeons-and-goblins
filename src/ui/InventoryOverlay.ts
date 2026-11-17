@@ -1,4 +1,4 @@
-import { Container, Graphics, Rectangle, Sprite } from 'pixi.js';
+import { Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
 import type { FederatedPointerEvent, FederatedWheelEvent } from 'pixi.js';
 import { EQUIP_SLOTS, localPlayer, q } from '../world';
 import type { BagSquare, EquipSlot, InventoryItem, ItemType, Player } from '../world';
@@ -30,30 +30,56 @@ import type { CharacterSheet } from '../rules/CharacterSheet';
 import { formatDamage } from '../rules/Dice';
 import { heroName } from '../rules/Names';
 import { sound } from '../audio/SoundPlayer';
+import { context2d, createCanvas, imageOf } from '../render/canvas';
+import { TextBox } from './TextBox';
+import { fuzzyMatch } from '../core/fuzzy';
+import { BAG_SORTS, bagView } from '../game/BagView';
+import type { BagSort } from '../game/BagView';
+import { armorRule, weaponRule } from '../rules/Equipment';
+import { armorProficient, weaponProficient } from '../rules/Classes';
 
 /** inventory.png, measured in its own pixels: the leather bag panel, the cloth gear panel, and its two tabs. */
 const ART = { w: 2752, h: 1536 };
 const BAG_AREA = { x: 78, y: 284, w: 1108, h: 1174 };
 const GEAR_AREA = { x: 1404, y: 320, w: 1264, h: 1138 };
-const TABS = [{ x: 1331, y: 5, w: 378, h: 210 }, { x: 1765, y: 5, w: 378, h: 210 }];
+const TABS = [{ x: 1331, y: 5, w: 378, h: 218 }, { x: 1765, y: 5, w: 378, h: 218 }];
 const TAB_TITLES = [text('inventory.tab_gear'), text('inventory.tab_stats')];
 /** The tabs, in order: the character (equipment and sheet) and the skills (spells). */
 const CHARACTER_TAB = 0;
 const SKILLS_TAB = 1;
-/** The part of a tab inside its iron frame (art pixels in from its edges), which lights up. */
-const TAB_INSET = { side: 44, top: 70, bottom: 6 };
-/** A tab under the pointer brightens; the open one brightens more and is underlined; the others are dimmed. */
-const TAB_HOVER_ALPHA = 0.06;
-const TAB_ACTIVE_ALPHA = 0.12;
-const TAB_IDLE_DIM = 0.35;
-const TAB_UNDERLINE = 2;
+/** The art's panels start this far down; above them its strip holds only the two tabs, which are drawn on their own. */
+const PANEL_TOP = 223;
+/** The bag panel's iron frame, outside edges (art pixels), and the frame's iron. */
+const BAG_FRAME = { left: 19, right: 1250 };
+const IRON = 0x1f222b;
+const IRON_EDGE = 0x4a5563;
+const IRON_OUTLINE = 0x04050a;
+/** The inside of a tab's iron frame (art pixels in from its edges): cleared, so the tab is the frame alone. */
+const TAB_INSET = { side: 44, top: 70 };
+/**
+ * The open tab stands up out of the row (this many design pixels), the shadow it casts under it, and a glint that runs
+ * along its top bar now and then; the others sink back and are dimmed (a tab under the pointer less so).
+ */
+const TAB_LIFT = 3;
+const TAB_SHADOW_ALPHA = 0.45;
+const TAB_IDLE_ALPHA = 0.5;
+const TAB_HOVER_IDLE_ALPHA = 0.8;
+const GLINT_PERIOD_MS = 2600;
+const GLINT_RUN_MS = 700;
+const GLINT_W = 10;
+const GLINT_ALPHA = 0.55;
 /** The mouse button that opens an item's menu. */
 const RIGHT_BUTTON = 2;
 /** Two items compared stand side by side, this far apart. */
 const COMPARE_GAP = 4;
 /** Where the title (the hero's name) sits, above the bag panel. */
 const TITLE = { x: 80, y: 6 };
-/** The weight carried shows under the gold; it turns orange past this share of what can be carried. */
+/**
+ * The gold and the weight carried stand on a plate of the bag frame's iron, fused to the frame's top right corner
+ * (this tall, its text this far in); the weight turns orange past this share of what can be carried.
+ */
+const PURSE_H = 24;
+const PURSE_PAD = 6;
 const WEIGHT_ROW = 11;
 const HEAVY_SHARE = 0.9;
 
@@ -83,13 +109,20 @@ const COLUMN_GAP = 10;
  * The stats column, top down: the six abilities in a row of cells, a rule, the Armor Class, hit point and
  * damage fields (this tall), a rule, the rest of the character sheet, a rule, and the hero's proficiencies.
  */
-const FIELD_H = 24;
+const FIELD_H = 32;
 /** Space round each rule, and between the fields. */
 const RULE_GAP = 4;
 const FIELD_GAP = 4;
 /** An item square: a lighter, more solid well than the art, so the items stand out on it. */
 const SQUARE_FILL = 0x3b342c;
 const SQUARE_FILL_ALPHA = 0.88;
+/**
+ * A bag cell: a lighter, cooler well than the leather (the darkest weapons are near black), faintly edged, so the
+ * items read against it without the cells shouting.
+ */
+const BAG_CELL_FILL = 0x564c42;
+const BAG_CELL_FILL_ALPHA = 0.9;
+const BAG_CELL_EDGE_ALPHA = 0.3;
 const SQUARE_EDGE = 0xb4a488;
 const SQUARE_EDGE_ALPHA = 0.55;
 const DIM_ALPHA = 0.6;
@@ -100,6 +133,16 @@ const BAG_SCROLLBAR_MIN_H = 10;
 /** The filter buttons stand in a row this tall over the bag, this far apart. */
 const FILTER_H = 12;
 const FILTER_GAP = 8;
+/** Under them, the search box (this tall, this far above the bag); the sort button at the row's right end, this big. */
+const SEARCH_H = 13;
+const SEARCH_GAP = 3;
+const SORT_SIZE = 10;
+/** The count of items a search finds shows at the box's right, this far in. */
+const FOUND_PAD = 3;
+/** The bitmap font's glyphs are this tall. */
+const GLYPH_H = 8;
+/** The longest search the box takes. */
+const MAX_QUERY = 24;
 /** An item marked with Ctrl+click is tinted gold this much and framed in gold. */
 const MARK_ALPHA = 0.28;
 const GHOST_ALPHA = 0.85;
@@ -118,11 +161,6 @@ const BAG_FILTERS: readonly BagFilter[] = [
   { label: text('inventory.filter.shields'), types: ['shield'] },
   { label: text('inventory.filter.other'), types: ['ring', 'medal'] },
 ];
-
-/** Adds the bag's free squares to `view`, in order. */
-function pushFreeSquares(inventory: readonly BagSquare[], view: number[]): void {
-  for (let i = 0; i < MAX_INVENTORY; i++) if (!inventory[i]) view.push(i);
-}
 
 /** A place to keep: a bag square's own place changes as the bag scrolls. */
 function copyPlace(place: ItemPlace): ItemPlace {
@@ -143,7 +181,24 @@ const FIELDS: readonly FieldDef[] = [
   { caption: text('sheet.hp.short'), accent: THEME.hitPoints, value: (s) => text('sheet.hp.value', { current: s.hitPoints.current, max: s.hitPoints.max }), topic: hitPointsTopic },
   { caption: text('sheet.dmg.short'), accent: THEME.damage, value: (s) => formatDamage(s.attack.damage, s.attack.extra, true), topic: damageTopic },
 ];
-type Tab = { glow: Graphics; label: PixelLabel; page: Container; hovered: boolean; w: number; h: number };
+type Tab = { frame: Sprite; shadow: Graphics; glint: Graphics; label: PixelLabel; page: Container; hovered: boolean; rect: Rect; labelY: number };
+
+
+/**
+ * A tab of the art as a texture of its own: its iron frame, the grey inside it cleared (cut out of the art once, onto a
+ * canvas of its own).
+ */
+function tabFrameTexture(tab: Rect): Texture {
+  const whole = getTexture('inventory_art');
+  const image = imageOf(whole);
+  const canvas = createCanvas(tab.w, tab.h);
+  if (!image) return Texture.EMPTY;
+  const ctx = context2d(canvas);
+  ctx.drawImage(image, whole.frame.x + tab.x, whole.frame.y + tab.y, tab.w, tab.h, 0, 0, tab.w, tab.h);
+  // The frame is open at its foot, where it stands on the panel: its inside is cleared all the way down.
+  ctx.clearRect(TAB_INSET.side, TAB_INSET.top, tab.w - 2 * TAB_INSET.side, tab.h - TAB_INSET.top);
+  return Texture.from(canvas);
+}
 
 /** A rect of the art, in the overlay's design space. */
 function designRect(r: Rect): Rect {
@@ -201,6 +256,14 @@ export class InventoryOverlay {
   /** An item's right-click menu (send it to another player). */
   private readonly itemMenu = new PopupMenu();
   private readonly gold = new PixelLabel('', { color: 0xffcc00, align: 'right', shadow: true });
+  /** The plate the gold and weight stand on, sized to them. */
+  private readonly purse = new Graphics();
+  /** The search over the bag (made once the canvas it types into is known), and what it holds. */
+  private search: TextBox | null = null;
+  private query = '';
+  private readonly found = new PixelLabel('', { color: THEME.muted, align: 'right', shadow: true });
+  private sort: BagSort = 'none';
+  private readonly sortButton = new Graphics();
   private readonly tooltip = new ItemTooltip();
   /** The other item in a comparison, beside the first. */
   private readonly compareTip = new ItemTooltip();
@@ -240,7 +303,9 @@ export class InventoryOverlay {
     // An overlay: while it is up, the pointer is the inventory's wherever it is (no swings, no picking things up).
     claimPointer(this, visible);
     if (visible) sound.playLocal('dialog');
+    if (this.search) this.search.visible = visible;
     if (!visible) {
+      this.search?.element.blur();
       this.endDrag();
       this.endCompare();
       this.infoTip.hide();
@@ -255,6 +320,10 @@ export class InventoryOverlay {
    */
   handleEscape(): boolean {
     if (this.itemMenu.hide()) return true;
+    if (this.search && document.activeElement === this.search.element) {
+      this.search.element.blur();
+      return true;
+    }
     if (this.comparing) {
       this.endCompare();
       return true;
@@ -265,6 +334,7 @@ export class InventoryOverlay {
   update(): void {
     const player = localPlayer();
     if (!this.container.visible || !player) return;
+    this.animateTabs();
     if (this.activeTab === SKILLS_TAB) this.spells?.animate();
     // Alt held or let go: the tooltip up shows its whole story, or its short one again.
     this.infoTip.refresh();
@@ -284,6 +354,7 @@ export class InventoryOverlay {
 
   destroy(): void {
     this.stopListening();
+    this.search?.destroy();
     claimPointer(this, false);
     this.infoTip.hide();
     this.container.destroy({ children: true });
@@ -292,21 +363,22 @@ export class InventoryOverlay {
   // ── Layout ──────────────────────────────────────────────────────────────────
 
   private build(): void {
-    const art = new Sprite(getTexture('inventory_art'));
+    // The art from its panels down: the strip above holds the two tabs, drawn on their own (addTab).
+    const whole = getTexture('inventory_art');
+    const art = new Sprite(new Texture({ source: whole.source, frame: new Rectangle(whole.frame.x, whole.frame.y + PANEL_TOP, whole.frame.width, whole.frame.height - PANEL_TOP) }));
     art.scale.set(K);
+    art.y = PANEL_TOP * K;
     this.root.addChild(art);
     const title = this.title;
     title.position.set(TITLE.x * K, TITLE.y);
-    this.gold.position.set((BAG_AREA.x + BAG_AREA.w) * K, TITLE.y);
-    this.weight.position.set((BAG_AREA.x + BAG_AREA.w) * K, TITLE.y + WEIGHT_ROW);
-    this.root.addChild(title, this.gold, this.weight);
+    this.root.addChild(title, this.purse, this.gold, this.weight);
     this.buildBag(designRect(BAG_AREA));
     const gearPage = new Container();
     const skillsPage = new Container();
     this.root.addChild(gearPage, skillsPage);
     this.buildGear(designRect(GEAR_AREA), gearPage);
     this.buildSkillsPage(designRect(GEAR_AREA), skillsPage);
-    [gearPage, skillsPage].forEach((page, i) => this.addTab(designRect(TABS[i]), TAB_TITLES[i], page));
+    [gearPage, skillsPage].forEach((page, i) => this.addTab(designRect(TABS[i]), TAB_TITLES[i], page, TABS[i]));
     this.showTab(CHARACTER_TAB);
     this.ghost.anchor.set(0.5);
     this.ghost.alpha = GHOST_ALPHA;
@@ -314,27 +386,31 @@ export class InventoryOverlay {
     this.root.addChild(this.ghost, this.tooltip.view, this.compareTip.view, this.infoTip.view, this.itemMenu.view);
   }
 
-  /** A clickable tab over the art's tab: it lights up under the pointer and when open, and shows its page. */
-  private addTab(tab: Rect, text: string, page: Container): void {
-    const inner = {
-      x: tab.x + TAB_INSET.side * K, y: tab.y + TAB_INSET.top * K,
-      w: tab.w - 2 * TAB_INSET.side * K, h: tab.h - (TAB_INSET.top + TAB_INSET.bottom) * K,
-    };
-    const glow = new Graphics();
-    glow.position.set(inner.x, inner.y);
-    const label = new PixelLabel(text, { color: THEME.buttonText, align: 'center', shadow: true });
-    label.position.set(Math.round(inner.x + inner.w / 2), Math.round(inner.y + inner.h / 2 - 4));
+  /**
+   * A tab: the art's iron tab frame on its own (its grey inside cleared), its title in it, the whole frame a button that
+   * shows its page.
+   */
+  private addTab(tab: Rect, title: string, page: Container, art: Rect): void {
+    const frame = new Sprite(tabFrameTexture(art));
+    frame.scale.set(K);
+    frame.position.set(tab.x, tab.y);
+    const shadow = new Graphics().ellipse(tab.w / 2, 0, tab.w / 2, TAB_LIFT + 1).fill({ color: 0x000000, alpha: TAB_SHADOW_ALPHA });
+    shadow.position.set(tab.x, tab.y + tab.h);
+    const glint = new Graphics();
+    const labelY = Math.round(tab.y + (TAB_INSET.top * K + tab.h) / 2 - 4);
+    const label = new PixelLabel(title, { color: THEME.buttonText, align: 'center', shadow: true });
+    label.position.set(Math.round(tab.x + tab.w / 2), labelY);
     const hit = new Container();
     hit.eventMode = 'static';
     hit.cursor = 'pointer';
-    hit.hitArea = new Rectangle(inner.x, inner.y, inner.w, inner.h);
-    const entry: Tab = { glow, label, page, hovered: false, w: inner.w, h: inner.h };
+    hit.hitArea = new Rectangle(tab.x, tab.y - TAB_LIFT, tab.w, tab.h + TAB_LIFT);
+    const entry: Tab = { frame, shadow, glint, label, page, hovered: false, rect: tab, labelY };
     const index = this.tabs.length;
     hit.on('pointerover', () => this.hoverTab(entry, true));
     hit.on('pointerout', () => this.hoverTab(entry, false));
     hit.on('pointertap', () => this.showTab(index));
     this.tabs.push(entry);
-    this.root.addChild(glow, label, hit);
+    this.root.addChild(shadow, frame, glint, label, hit);
     this.drawTab(entry);
   }
 
@@ -354,18 +430,36 @@ export class InventoryOverlay {
     });
   }
 
-  /** The open tab glows and is underlined in gold; one under the pointer brightens; the rest are dimmed. */
+  /**
+   * The open tab stands up out of the row, its shadow under it, at full strength; the others sit back, dimmed (less so
+   * under the pointer). No colour marks it: only its stance.
+   */
   private drawTab(tab: Tab): void {
-    const { w, h } = tab;
     const active = this.tabs[this.activeTab] === tab;
-    const g = tab.glow.clear();
-    if (active) {
-      g.rect(0, 0, w, h).fill({ color: 0xffffff, alpha: TAB_ACTIVE_ALPHA });
-      g.rect(0, h - TAB_UNDERLINE, w, TAB_UNDERLINE).fill({ color: THEME.title });
-    } else {
-      g.rect(0, 0, w, h).fill({ color: tab.hovered ? 0xffffff : 0x000000, alpha: tab.hovered ? TAB_HOVER_ALPHA : TAB_IDLE_DIM });
+    const lift = active ? -TAB_LIFT : 0;
+    const alpha = active ? 1 : tab.hovered ? TAB_HOVER_IDLE_ALPHA : TAB_IDLE_ALPHA;
+    tab.frame.y = tab.rect.y + lift;
+    tab.label.y = tab.labelY + lift;
+    tab.frame.alpha = alpha;
+    tab.label.alpha = alpha;
+    tab.label.fill = active || tab.hovered ? THEME.buttonHover : THEME.buttonText;
+    tab.shadow.visible = active;
+    tab.glint.visible = active;
+  }
+
+  /** Now and then a glint runs along the open tab's top bar, left to right. */
+  private animateTabs(): void {
+    const tab = this.tabs[this.activeTab];
+    if (!tab) return;
+    const t = performance.now() % GLINT_PERIOD_MS;
+    const g = tab.glint.clear();
+    if (t > GLINT_RUN_MS) return;
+    const bar = { x: tab.rect.x + TAB_INSET.side * K * 0.5, w: tab.rect.w - TAB_INSET.side * K, y: tab.rect.y - TAB_LIFT + TAB_INSET.side * K * 0.35 };
+    const x = bar.x + (bar.w - GLINT_W) * (t / GLINT_RUN_MS);
+    for (let i = 0; i < GLINT_W; i++) {
+      const fade = 1 - Math.abs(i - GLINT_W / 2) / (GLINT_W / 2);
+      g.rect(Math.round(x + i), Math.round(bar.y), 1, 2).fill({ color: 0xffffff, alpha: GLINT_ALPHA * fade });
     }
-    tab.label.fill = active ? THEME.title : tab.hovered ? THEME.buttonHover : THEME.muted;
   }
 
   /**
@@ -374,7 +468,9 @@ export class InventoryOverlay {
    */
   private buildBag(bag: Rect): void {
     this.buildFilters(bag);
-    const area = { x: bag.x, y: bag.y + FILTER_H, w: bag.w - BAG_SCROLLBAR_W - BAG_GAP, h: bag.h - FILTER_H };
+    this.buildSortButton(bag);
+    const head = FILTER_H + SEARCH_H + SEARCH_GAP;
+    const area = { x: bag.x, y: bag.y + head, w: bag.w - BAG_SCROLLBAR_W - BAG_GAP, h: bag.h - head };
     const cols = INVENTORY_COLS;
     const rows = BAG_VISIBLE_ROWS;
     const cellW = (area.w - 2 * BAG_PAD - BAG_GAP * (cols - 1)) / cols;
@@ -385,7 +481,7 @@ export class InventoryOverlay {
       const y = Math.round(area.y + BAG_PAD + Math.floor(i / cols) * (cellH + BAG_GAP));
       const right = Math.round(area.x + BAG_PAD + (i % cols) * (cellW + BAG_GAP) + cellW);
       const bottom = Math.round(area.y + BAG_PAD + Math.floor(i / cols) * (cellH + BAG_GAP) + cellH);
-      this.bagSquares.push(this.addSquare({ bag: i }, x, y, right - x, null, undefined, false, bottom - y));
+      this.bagSquares.push(this.addSquare({ bag: i }, x, y, right - x, null, undefined, 'bag', bottom - y));
     }
     this.scrollTrack = new Rectangle(bag.x + bag.w - BAG_SCROLLBAR_W, area.y + BAG_PAD, BAG_SCROLLBAR_W, area.h - 2 * BAG_PAD);
     this.root.addChild(this.bagScrollbar);
@@ -415,26 +511,98 @@ export class InventoryOverlay {
     this.shown = null;
   }
 
+  /** The sort button at the filter row's right end: three bars, longest on top; a click opens the ways to order the bag. */
+  private buildSortButton(bag: Rect): void {
+    const x = Math.round(bag.x + bag.w - BAG_SCROLLBAR_W - SORT_SIZE);
+    const y = Math.round(bag.y);
+    const button = this.sortButton;
+    button.position.set(x, y);
+    button.eventMode = 'static';
+    button.cursor = 'pointer';
+    button.hitArea = new Rectangle(-2, -1, SORT_SIZE + 4, FILTER_H);
+    button.on('pointertap', () => this.openSortMenu(x, y + FILTER_H));
+    this.root.addChild(button);
+    this.drawSortButton();
+  }
+
+  /** Gold while the bag is sorted, muted while it lies as it is. */
+  private drawSortButton(): void {
+    const color = this.sort === 'none' ? THEME.muted : THEME.title;
+    const g = this.sortButton.clear();
+    [SORT_SIZE, SORT_SIZE - 3, SORT_SIZE - 6].forEach((w, i) => g.rect(0, 1 + i * 3, w, 2).fill({ color }));
+  }
+
+  /** The ways to order the bag, the one in use marked. */
+  private openSortMenu(x: number, y: number): void {
+    const rows: MenuRow[] = BAG_SORTS.map((sort) => ({
+      label: `${sort === this.sort ? '> ' : ''}${text(`inventory.sort.${sort}`)}`,
+      action: () => this.setSort(sort),
+    }));
+    this.tooltip.hide();
+    this.itemMenu.show(rows, x, y, { w: DESIGN_W, h: DESIGN_H });
+  }
+
+  private setSort(sort: BagSort): void {
+    this.sort = sort;
+    this.bagRow = 0;
+    this.drawSortButton();
+    this.shown = null;
+  }
+
+  /**
+   * The search box under the filters, typed into through the page's canvas (scene/InGameScene.ts hands it over): the
+   * bag shows only the items whose names hold the letters typed, in order (core/fuzzy.ts), as they are typed.
+   */
+  attachSearch(canvas: HTMLCanvasElement): void {
+    if (this.search) return;
+    const bag = designRect(BAG_AREA);
+    const scale = this.root.scale.x;
+    const box = {
+      x: Math.round(this.root.x + bag.x * scale), y: Math.round(this.root.y + (bag.y + FILTER_H) * scale),
+      w: Math.round((bag.w - BAG_SCROLLBAR_W) * scale), h: Math.round(SEARCH_H * scale),
+    };
+    this.search = new TextBox(canvas, box, { ariaLabel: text('inventory.search'), placeholder: text('inventory.search'), maxLength: MAX_QUERY });
+    this.search.element.addEventListener('input', () => this.setQuery(this.search?.value ?? ''));
+    this.search.visible = this.container.visible;
+    // The count of what was found sits inside the box's right end, over it.
+    this.found.position.set(box.x + box.w - FOUND_PAD, box.y + Math.round((box.h - GLYPH_H) / 2));
+    this.container.addChild(this.search.view, this.found);
+  }
+
+  private setQuery(query: string): void {
+    this.query = query.trim();
+    this.bagRow = 0;
+    this.shown = null;
+  }
+
+  /** The letters of an item's name the search matched (none while nothing is typed). */
+  private matchedLetters(item: InventoryItem): readonly number[] {
+    return this.query ? fuzzyMatch(this.query, item.name) ?? [] : [];
+  }
+
   /**
    * Which bag square each square on screen shows: the filter's view of the bag (everything; or the items it lets
    * through, then the free squares to drop onto), from the row scrolled to.
    */
   private layoutBag(player: Player): void {
-    const view = this.bagView;
-    view.length = 0;
-    const types = BAG_FILTERS[this.filter].types;
     const inventory = player.inventory ?? [];
-    for (let i = 0; i < MAX_INVENTORY; i++) {
-      const item = inventory[i];
-      if (!types || (item && types.includes(item.type))) view.push(i);
-    }
-    // Under a filter, the free squares follow the items, to drop things onto.
-    if (types) pushFreeSquares(inventory, view);
+    const view = bagView(inventory, MAX_INVENTORY, { types: BAG_FILTERS[this.filter].types, search: this.query, sort: this.sort, trained: (item) => this.trained(item) }, this.bagView);
+    this.found.text = this.query ? text('inventory.search_found', { count: view.filter((i) => inventory[i]).length }) : '';
     this.bagRow = Math.max(0, Math.min(this.bagRow, this.lastBagRow()));
     this.bagSquares.forEach((square, i) => {
       if ('bag' in square.place) square.place.bag = view[this.bagRow * INVENTORY_COLS + i] ?? -1;
     });
     this.drawBagScrollbar();
+  }
+
+  /** Whether the hero is trained in an item (a weapon, armour or a shield; anything else needs no training). */
+  private trained(item: InventoryItem): boolean {
+    const cls = this.sheet?.heroClass;
+    if (!cls) return true;
+    const weapon = weaponRule(item);
+    if (weapon) return weaponProficient(cls, weapon.base);
+    const armor = armorRule(item);
+    return !armor || armorProficient(cls, armor.rule.category);
   }
 
   /** The furthest row the bag can be scrolled to. */
@@ -531,12 +699,13 @@ export class InventoryOverlay {
   }
 
   /**
-   * One cell (bag square or equipment slot), `size` wide and `height` tall (square unless given): a dark well
-   * (with a light edge if `edged`), and the icon of what is in it.
+   * One cell (bag square or equipment slot), `size` wide and `height` tall (square unless given): a well with a light
+   * edge (a bag cell's darker, its edge fainter), and the icon of what is in it.
    */
-  private addSquare(place: ItemPlace, x: number, y: number, size: number, page: Container | null = null, zone?: Rectangle, edged = true, height = size): Square {
-    const frame = new Graphics().rect(x, y, size, height).fill({ color: SQUARE_FILL, alpha: SQUARE_FILL_ALPHA });
-    if (edged) frame.stroke({ color: SQUARE_EDGE, alpha: SQUARE_EDGE_ALPHA, width: 1, alignment: 1 });
+  private addSquare(place: ItemPlace, x: number, y: number, size: number, page: Container | null = null, zone?: Rectangle, look: 'slot' | 'bag' = 'slot', height = size): Square {
+    const bag = look === 'bag';
+    const frame = new Graphics().rect(x, y, size, height).fill({ color: bag ? BAG_CELL_FILL : SQUARE_FILL, alpha: bag ? BAG_CELL_FILL_ALPHA : SQUARE_FILL_ALPHA })
+      .stroke({ color: SQUARE_EDGE, alpha: bag ? BAG_CELL_EDGE_ALPHA : SQUARE_EDGE_ALPHA, width: 1, alignment: 1 });
     const icon = new Sprite();
     icon.anchor.set(0.5);
     icon.position.set(x + size / 2, y + height / 2);
@@ -592,6 +761,26 @@ export class InventoryOverlay {
     const kg = carriedWeight(player);
     this.weight.text = text('inventory.weight', { carried: kg.toFixed(1), max: MAX_CARRY_KG });
     this.weight.fill = kg > MAX_CARRY_KG * HEAVY_SHARE ? 0xffa060 : THEME.buttonText;
+    this.drawPurse();
+  }
+
+  /**
+   * The plate the gold and weight stand on: the bag frame's iron, standing on the frame's top right corner and open at
+   * its foot, so it reads as part of the bag, sized to the longer line.
+   */
+  private drawPurse(): void {
+    const right = Math.round(BAG_FRAME.right * K);
+    const bottom = Math.round(PANEL_TOP * K) + 1;
+    const w = Math.ceil(Math.max(this.gold.textWidth, this.weight.textWidth)) + 2 * PURSE_PAD;
+    const x = right - w;
+    const y = bottom - PURSE_H;
+    this.purse.clear()
+      .rect(x - 1, y - 1, w + 2, PURSE_H + 1).fill({ color: IRON_OUTLINE })
+      .rect(x, y, w, PURSE_H).fill({ color: IRON })
+      .rect(x, y, w, 1).fill({ color: IRON_EDGE })
+      .rect(x, y, 1, PURSE_H - 1).fill({ color: IRON_EDGE });
+    this.gold.position.set(right - PURSE_PAD, y + 3);
+    this.weight.position.set(right - PURSE_PAD, y + 3 + WEIGHT_ROW);
   }
 
   // ── Dragging ────────────────────────────────────────────────────────────────
@@ -626,8 +815,8 @@ export class InventoryOverlay {
   }
 
   /**
-   * Right-click on an item: a menu of what can be done with it — drop it at the hero's feet, compare it with
-   * another of its kind, or send it to another player (into the first free square of their bag).
+   * Right-click on an item: a menu of what can be done with it — put it on (or take it off), drop it at the hero's
+   * feet, compare it with another of its kind, or send it to another player (into the first free square of their bag).
    */
   private openItemMenu(player: Player, e: FederatedPointerEvent): void {
     const square = this.squareAt(e);
@@ -640,10 +829,14 @@ export class InventoryOverlay {
     this.clearMarks();
     if (!square || !item) return;
     const place = copyPlace(square.place);
-    const rows: MenuRow[] = [
+    const rows: MenuRow[] = [];
+    const wear = 'bag' in place ? slotFor(player.equipped ?? {}, item, true) : null;
+    if (wear) rows.push({ label: text('inventory.menu.equip'), action: () => this.quickMove(player, place) });
+    if ('slot' in place && freeSquare(player.inventory ?? []) >= 0) rows.push({ label: text('inventory.menu.take_off'), action: () => this.quickMove(player, place) });
+    rows.push(
       { label: text('inventory.menu.drop'), action: () => requestDrop(player, place) },
       { label: text('inventory.menu.compare'), action: null, submenu: this.compareRows(player, item, p.x, p.y) },
-    ];
+    );
     for (const other of q.players) {
       if (other === player) continue;
       const name = other.playerName ?? '';
@@ -806,7 +999,7 @@ export class InventoryOverlay {
     if (this.comparing) return;
     if (this.activeTab === SKILLS_TAB) this.spells?.hover(p.x, p.y);
     const item = player && square && !this.dragging && !this.itemMenu.open ? this.itemIn(player, square.place) : undefined;
-    if (item) this.tooltip.show(item, p.x, p.y, { w: DESIGN_W, h: DESIGN_H }, this.sheet?.heroClass, this.sheet?.scores.strength);
+    if (item) this.tooltip.show(item, p.x, p.y, { w: DESIGN_W, h: DESIGN_H }, this.sheet?.heroClass, this.sheet?.scores.strength, this.matchedLetters(item));
     else this.tooltip.hide();
     this.updateInfoTip(p.x, p.y);
   }

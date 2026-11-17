@@ -1,11 +1,10 @@
 {
   "$comment": [
-    "The armour of D&D 5e, the shield, and a robe. Each key is an armour the rules know; everything the game does with it comes from here.",
-    "name: what it is called. category: light, medium or heavy (who is trained in it, src/data/classes.json), shield (adds its ac on top), or clothes (no armour at all).",
+    "The armour of D&D 5e and a robe (shields are in shields.json). Each key is an armour the rules know; everything the game does with it comes from here.",
+    "name: what it is called. category: light, medium or heavy (who is trained in it, src/data/classes.json), or clothes (no armour at all).",
     "cost: price in gold. weight: kg. ac: the Armor Class it gives. dexCap: the most of the DEX modifier added to it (null: all of it; 0: none).",
     "stealthDisadvantage: too noisy to sneak in. strength: the STR score a hero needs to put it on at all (null: anyone).",
-    "column: its picture, a column (1-16) of /public/armors.png, whose first four rows are the same suit in four colours, one picked at random for each suit made.",
-    "art (a shield): its pictures in /public; each is a shield that can be found."
+    "column: its picture, a column (1-16) of /public/armors.png, whose first four rows are the same suit in four colours, one picked at random for each suit made."
   ],
   "armors": {
     "padded": {
@@ -139,22 +138,6 @@
       "strength": 15,
       "weight": 32,
       "column": 9
-    },
-    "shield": {
-      "name": "Shield",
-      "category": "shield",
-      "cost": 10,
-      "ac": 2,
-      "dexCap": null,
-      "stealthDisadvantage": false,
-      "strength": null,
-      "weight": 3,
-      "art": [
-        "/weapons/WR_NightBoundSet_Shield_001.png",
-        "/weapons/WR_NightBoundSet_Shield_002.png",
-        "/weapons/WR_NightBoundSet_TowerShield_001.png",
-        "/weapons/WR_NightBoundSet_TowerShield_002.png"
-      ]
     },
     "robe": {
       "name": "Simple robe",

@@ -488,9 +488,6 @@
       ],
       "weight": 1,
       "art": [
-        "/weapons/WR_NightBoundSet_Bow_001.png",
-        "/weapons/WR_NightBoundSet_Bow_002.png",
-        "/weapons/WR_NightBoundSet_Bow_003.png",
         "/weapons/WR_NightBoundSet_Bow_004.png",
         "/weapons/WR_NightBoundSet_Bow_005.png"
       ]
@@ -513,10 +510,8 @@
       ],
       "weight": 2.5,
       "art": [
-        "/weapons/WR_NightBoundSet_Crossbow_001.png",
         "/weapons/WR_NightBoundSet_Crossbow_002.png",
-        "/weapons/WR_NightBoundSet_Crossbow_003.png",
-        "/weapons/WR_NightBoundSet_Crossbow_004.png"
+        "/weapons/WR_NightBoundSet_Crossbow_003.png"
       ]
     },
     "sling": {
@@ -574,9 +569,7 @@
       "art": [
         "/weapons/WR_NightBoundSet_Bow_001.png",
         "/weapons/WR_NightBoundSet_Bow_002.png",
-        "/weapons/WR_NightBoundSet_Bow_003.png",
-        "/weapons/WR_NightBoundSet_Bow_004.png",
-        "/weapons/WR_NightBoundSet_Bow_005.png"
+        "/weapons/WR_NightBoundSet_Bow_003.png"
       ]
     },
     "blowgun": {
@@ -615,10 +608,7 @@
       ],
       "weight": 1.5,
       "art": [
-        "/weapons/WR_NightBoundSet_Crossbow_001.png",
-        "/weapons/WR_NightBoundSet_Crossbow_002.png",
-        "/weapons/WR_NightBoundSet_Crossbow_003.png",
-        "/weapons/WR_NightBoundSet_Crossbow_004.png"
+        "/weapons/WR_NightBoundSet_Crossbow_001.png"
       ]
     },
     "net": {
@@ -658,9 +648,6 @@
       ],
       "weight": 5,
       "art": [
-        "/weapons/WR_NightBoundSet_Crossbow_001.png",
-        "/weapons/WR_NightBoundSet_Crossbow_002.png",
-        "/weapons/WR_NightBoundSet_Crossbow_003.png",
         "/weapons/WR_NightBoundSet_Crossbow_004.png"
       ]
     }

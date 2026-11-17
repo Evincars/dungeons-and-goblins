@@ -1,0 +1,36 @@
+{
+  "$comment": [
+    "Shields: armour of the shield category, held in the second hand; ac is what it adds to Armor Class. The same fields as armors.json (cost in gold, weight in kg, strength: the STR needed to take it up, null for anyone).",
+    "art: its pictures in /public; each is a shield that can be found. A new kind of shield may use the same pictures as another."
+  ],
+  "shields": {
+    "shield": {
+      "name": "Shield",
+      "category": "shield",
+      "cost": 10,
+      "ac": 2,
+      "dexCap": null,
+      "stealthDisadvantage": false,
+      "strength": null,
+      "weight": 3,
+      "art": [
+        "/weapons/WR_NightBoundSet_Shield_001.png",
+        "/weapons/WR_NightBoundSet_Shield_002.png"
+      ]
+    },
+    "tower_shield": {
+      "name": "Tower shield",
+      "category": "shield",
+      "cost": 10,
+      "ac": 2,
+      "dexCap": null,
+      "stealthDisadvantage": false,
+      "strength": null,
+      "weight": 3,
+      "art": [
+        "/weapons/WR_NightBoundSet_TowerShield_001.png",
+        "/weapons/WR_NightBoundSet_TowerShield_002.png"
+      ]
+    }
+  }
+}

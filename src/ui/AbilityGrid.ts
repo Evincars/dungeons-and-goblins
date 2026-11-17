@@ -8,14 +8,18 @@ import { formatModifier } from '../rules/Dice';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
 
-/** Each cell: this tall, this far from the next; its name band, the small score under it, the modifier large below. */
-export const ABILITY_CELL_H = 38;
+/**
+ * Each cell: this tall, this far from the next; its name band (the name this far down it), the small score under it, the
+ * modifier large below, with room above and below each so a key ability's gold frame never crowds them.
+ */
+export const ABILITY_CELL_H = 46;
 const CELL_GAP = 3;
-const NAME_H = 10;
+const NAME_H = 13;
+const NAME_Y = 3;
 const SCORE_SCALE = 0.75;
-const SCORE_Y = 12;
+const SCORE_Y = 16;
 const MODIFIER_SCALE = 2;
-const MODIFIER_Y = 19;
+const MODIFIER_Y = 25;
 const WELL_ALPHA = 0.85;
 /** The class's key abilities (rules/CharacterSheet.ts keyAbilities) are framed in gold this thick, their name band lit. */
 const KEY_EDGE = 2;
@@ -38,8 +42,9 @@ export class AbilityGrid {
   }
 
   private addCell(stat: StatName, x: number, y: number, w: number): void {
+    // Plain colours, no grey edges: the well, and the name band over it.
     const frame = new Graphics()
-      .rect(x, y, w, ABILITY_CELL_H).fill({ color: THEME.well, alpha: WELL_ALPHA }).stroke({ color: THEME.panelBorder, width: 1, alignment: 1 })
+      .rect(x, y, w, ABILITY_CELL_H).fill({ color: THEME.well, alpha: WELL_ALPHA })
       .rect(x, y, w, NAME_H).fill({ color: THEME.row });
     const key = new Graphics()
       .rect(x, y, w, NAME_H).fill({ color: KEY_BAND })
@@ -47,7 +52,7 @@ export class AbilityGrid {
     key.visible = false;
     const centre = Math.round(x + w / 2);
     const name = new PixelLabel(statShort(stat), { color: THEME.title, align: 'center', shadow: true });
-    name.position.set(centre, y + 1);
+    name.position.set(centre, y + NAME_Y);
     const score = new PixelLabel('', { color: THEME.muted, scale: SCORE_SCALE, align: 'center', shadow: true });
     score.position.set(centre, y + SCORE_Y);
     const modifier = new PixelLabel('', { color: THEME.text, scale: MODIFIER_SCALE, align: 'center', shadow: true });

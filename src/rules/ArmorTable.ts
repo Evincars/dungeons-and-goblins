@@ -1,11 +1,12 @@
 import { ensure, StateError } from '../core/errors';
 import { hasKey, isRecord } from '../core/guards';
 import data from '../data/armors.json';
+import shieldData from '../data/shields.json';
 
 /**
- * The armour table of D&D 5e, read from src/data/armors.json (its single source: change an armour there and the game
- * follows): Armor Class, how much DEX counts, the STR needed to wear it, price and weight. An item's `base` names one of
- * these (the shield too); its own magic bonus comes on top.
+ * The armour table of D&D 5e, read from src/data/armors.json and the shields from src/data/shields.json (their single
+ * source: change an entry there and the game follows): Armor Class, how much DEX counts, the STR needed to wear it, price
+ * and weight. An item's `base` names one of these; its own magic bonus comes on top.
  */
 
 /** Light, medium and heavy armour (who is trained in it), a shield (added on top), or clothes (no armour at all). */
@@ -31,10 +32,15 @@ export type ArmorRule = {
   art: readonly string[];
 };
 
-export type ArmorBase = Extract<keyof typeof data.armors, string>;
+export type ArmorBase = Extract<keyof typeof data.armors | keyof typeof shieldData.shields, string>;
 
 export function isArmorBase(value: unknown): value is ArmorBase {
-  return typeof value === 'string' && hasKey(data.armors, value);
+  return typeof value === 'string' && (hasKey(data.armors, value) || hasKey(shieldData.shields, value));
+}
+
+/** An entry of either file, as written. */
+function rawArmor(base: ArmorBase): unknown {
+  return hasKey(data.armors, base) ? data.armors[base] : hasKey(shieldData.shields, base) ? shieldData.shields[base] : undefined;
 }
 
 const isCategory = (value: unknown): value is ArmorCategory => ARMOR_CATEGORIES.some((c) => c === value);
@@ -52,10 +58,10 @@ function readArmor(key: string, raw: unknown): ArmorRule {
   return { name, category, ac, dexCap, strength, stealthDisadvantage, cost, weight, column, art };
 }
 
-/** Every armour of the data file, in its order. */
-export const ARMOR_BASES: readonly ArmorBase[] = Object.keys(data.armors).filter(isArmorBase);
+/** Every armour of the data files, in their order (the body armour, then the shields). */
+export const ARMOR_BASES: readonly ArmorBase[] = [...Object.keys(data.armors), ...Object.keys(shieldData.shields)].filter(isArmorBase);
 
-const TABLE: ReadonlyMap<ArmorBase, ArmorRule> = new Map(ARMOR_BASES.map((base) => [base, readArmor(base, data.armors[base])]));
+const TABLE: ReadonlyMap<ArmorBase, ArmorRule> = new Map(ARMOR_BASES.map((base) => [base, readArmor(base, rawArmor(base))]));
 
 /** An armour's entry in the table. */
 export function armorStats(base: ArmorBase): ArmorRule {

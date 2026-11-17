@@ -798,8 +798,8 @@ test('coins flung at a wall stop at its edge instead of landing on top of it', (
 });
 
 test('the item catalogues load every weapon, shield and armour, each with a name and stats to tune', () => {
-  assert.equal(WEAPONS.length, 72, 'a weapon for each picture the weapons table names');
-  assert.equal(SHIELDS.length, 4, 'the four shields of /weapons, the tower shields among them');
+  assert.equal(WEAPONS.length, 59, 'a weapon for each picture the weapons table names');
+  assert.equal(SHIELDS.length, 4, 'the four shields of /weapons: two shields, two tower shields');
   assert.equal(ARMORS.length, 13, 'the twelve D&D armours and a robe');
   for (const item of [...WEAPONS, ...SHIELDS, ...ARMORS]) {
     assert.ok(item.name && item.icon && item.gear && item.stats, item.id);
@@ -817,6 +817,7 @@ test('weapons and armour come from their JSON tables alone: D&D stats, the table
   const { formatDice } = await load('rules/Dice');
   const { default: weaponsJson } = await import('../src/data/weapons.json', { with: { type: 'json' } });
   const { default: armorsJson } = await import('../src/data/armors.json', { with: { type: 'json' } });
+  const { default: shieldsJson } = await import('../src/data/shields.json', { with: { type: 'json' } });
   // Every weapon of both D&D tables is known to the rules, pictures or not.
   for (const base of ['club', 'whip', 'war_pick', 'lance', 'flail', 'greatsword', 'pike', 'sling', 'blowgun', 'net', 'dart', 'sickle', 'spear']) assert.ok(isWeaponBase(base), base);
   for (const base of ['pistol', 'musket', 'punch_dagger']) assert.ok(!isWeaponBase(base), `${base} is not a D&D weapon`);
@@ -829,16 +830,22 @@ test('weapons and armour come from their JSON tables alone: D&D stats, the table
     assert.deepEqual([rule.category, rule.range, [...rule.properties], rule.distance && [...rule.distance], rule.cost, rule.weight], [raw.category, raw.range, raw.properties, raw.distance, raw.cost, raw.weight], base);
     for (const item of WEAPONS.filter((w) => w.base === base)) assert.deepEqual([item.name, item.weight, item.value], [raw.name, raw.weight, Math.ceil(raw.cost)], `${item.id} is the table's`);
   }
-  for (const [base, raw] of Object.entries(armorsJson.armors)) {
+  for (const [base, raw] of [...Object.entries(armorsJson.armors), ...Object.entries(shieldsJson.shields)]) {
     const rule = armorStats(base);
     assert.deepEqual([rule.name, rule.category, rule.ac, rule.dexCap, rule.strength, rule.stealthDisadvantage, rule.cost, rule.weight], [raw.name, raw.category, raw.ac, raw.dexCap, raw.strength, raw.stealthDisadvantage, raw.cost, raw.weight], base);
   }
   assert.deepEqual(weaponStats('longbow').distance, [30, 120], 'metres, as the Czech table gives them');
   assert.equal(formatDice(weaponStats('blowgun').damage), '1', 'a flat 1');
   assert.deepEqual([armorStats('plate').strength, armorStats('chain_mail').strength, armorStats('leather').strength], [15, 13, null]);
-  assert.equal(SHIELDS.every((s) => s.base === 'shield' && s.type === 'shield' && s.gear === 'offhand'), true);
+  assert.equal(SHIELDS.every((s) => ['shield', 'tower_shield'].includes(s.base) && s.type === 'shield' && s.gear === 'offhand'), true);
+  assert.deepEqual([armorStats('shield').ac, armorStats('tower_shield').ac, armorStats('shield').category], [2, 2, 'shield'], 'shields from shields.json');
   assert.ok(catalogIconSources().filter((s) => /^(weapon|shield)_/.test(s.key)).every((s) => s.src.startsWith('/weapons/WR_NightBoundSet_') && !s.src.includes(' ')), 'art from /weapons, no spaces');
-  assert.ok(['/weapons/WR_NightBoundSet_Crossbow_001.png'].every((src) => ['hand_crossbow', 'light_crossbow', 'heavy_crossbow'].every((b) => weaponStats(b).art.includes(src))), 'every crossbow uses the crossbow pictures');
+  // Each kind has pictures of its own, so the bag isn't three alike crossbows: the four crossbow pictures shared out.
+  const crossbows = ['hand_crossbow', 'light_crossbow', 'heavy_crossbow'].flatMap((b) => weaponStats(b).art);
+  assert.equal(new Set(crossbows).size, 4, 'four crossbow pictures, none shared');
+  assert.equal(new Set([...weaponStats('shortbow').art, ...weaponStats('longbow').art]).size, 5, 'and the five bows');
+  const pictures = WEAPONS.map((w) => w.id);
+  assert.equal(new Set(pictures).size, pictures.length);
   for (const item of [...WEAPONS, ...SHIELDS, ...ARMORS]) assert.deepEqual(item.stats, {}, `${item.id} adds no ability scores`);
   assert.ok([...HAND_WEAPONS, ...SHIELDS, ...ARMORS].every((w) => w.bonus === undefined), 'no magic yet');
   assert.equal(WEAPONS.find((w) => w.base === 'quarterstaff').value, 1, 'a quarterstaff\'s 2 sp is paid as a gold piece');
@@ -857,7 +864,7 @@ test('weapons and armour come from their JSON tables alone: D&D stats, the table
   assert.ok(regions[randomItem([robe]).icon], 'every colour handed out has its art');
   const dagger = WEAPONS.find((w) => w.base === 'dagger');
   assert.equal(freshCopy(dagger).icon, dagger.icon, 'a weapon keeps its one picture');
-  assert.equal(ARMOR_BASES.includes('robe') && ARMOR_BASES.includes('shield'), true);
+  assert.equal(ARMOR_BASES.includes('robe') && ARMOR_BASES.includes('shield') && ARMOR_BASES.includes('tower_shield'), true);
 });
 
 test('a new run starts with one weapon of every type, a shield and every type of armour in the bag', async () => {
@@ -4847,4 +4854,22 @@ test('what the tables say is what plays: range, loading, reach, both hands, the 
   const wizard = playerAt(2, 2, 'wizard');
   wizard.equipped = { armor: robe };
   assert.ok(characterSheet(wizard).armorClass.proficient, 'no training needed for clothes');
+});
+
+test('the inventory\'s search finds the letters typed in order, any case, spaces skipped; the bag sorts and filters without moving a thing', async () => {
+  const { fuzzyMatch } = await load('core/fuzzy');
+  const { bagView } = await load('game/BagView');
+  assert.deepEqual(fuzzyMatch('vybow', 'Heavy crossbow'), [3, 4, 11, 12, 13], 'heaV-Y cross-B-O-W');
+  assert.deepEqual(fuzzyMatch('HV CB', 'Heavy crossbow'), [0, 3, 6, 11]);
+  assert.equal(fuzzyMatch('bowv', 'Heavy crossbow'), null, 'the letters in their order');
+  assert.deepEqual(fuzzyMatch('', 'Dagger'), []);
+  const item = (name, type, value, weight) => ({ name, type, value, weight, gear: type === 'weapon' ? 'weapon' : 'armor', stats: {} });
+  const bag = [item('Plate armour', 'armor', 1500, 32), null, item('Dagger', 'weapon', 2, 0.5), item('Heavy crossbow', 'weapon', 50, 5), null, item('Longsword', 'weapon', 15, 1.5)];
+  const query = (over) => ({ types: null, search: '', sort: 'none', trained: (i) => i.name !== 'Heavy crossbow', ...over });
+  assert.deepEqual(bagView(bag, 6, query({}), []), [0, 1, 2, 3, 4, 5], 'as it lies, free squares and all');
+  assert.deepEqual(bagView(bag, 6, query({ search: 'vybow' }), []), [3, 1, 4], 'searched: what matches, then the free squares');
+  assert.deepEqual(bagView(bag, 6, query({ types: ['weapon'], sort: 'price' }), []), [3, 5, 2, 1, 4], 'weapons, dearest first');
+  assert.deepEqual(bagView(bag, 6, query({ sort: 'weight' }), []), [0, 3, 5, 2, 1, 4], 'heaviest first');
+  assert.deepEqual(bagView(bag, 6, query({ sort: 'training' }), []), [0, 2, 5, 3, 1, 4], 'trained first, ties as they lie');
+  assert.equal(bag[0].name, 'Plate armour', 'the bag itself is left as it is');
 });

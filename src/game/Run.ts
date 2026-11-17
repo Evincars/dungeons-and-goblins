@@ -20,7 +20,7 @@ function onePerBase(from: readonly InventoryItem[], bases: readonly ItemBase[]):
  * a shield and one suit of every armour type, so each Armor Class and damage roll can be tested.
  */
 export function giveStartingKit(player: Entity): void {
-  player.inventory = [...onePerBase(HAND_WEAPONS, WEAPON_BASES), ...onePerBase(SHIELDS, ['shield']), ...onePerBase(ARMORS, ARMOR_BASES)];
+  player.inventory = [...onePerBase(HAND_WEAPONS, WEAPON_BASES), ...onePerBase(SHIELDS, ARMOR_BASES), ...onePerBase(ARMORS, ARMOR_BASES)];
 }
 
 /** One trip into the dungeon: how deep the party has gone. A new run starts from the title screen. */

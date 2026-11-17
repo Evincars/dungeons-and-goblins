@@ -27,6 +27,8 @@ const OFFSET = 10;
 const BG_ALPHA = 0.94;
 /** Gear the hero is not trained in is flagged in this colour. */
 const UNTRAINED_COLOR = 0xff7060;
+/** The letters of the name a search matched (core/fuzzy.ts) stand out in this colour. */
+const MATCH_COLOR = 0x8fe3ff;
 
 type Line = { text: string; color: number };
 
@@ -98,6 +100,21 @@ function detailLines(item: InventoryItem, cls: HeroClass | undefined, strength: 
   return lines;
 }
 
+/** A label's width stops at its last letter's ink: the next run starts this one gap further on, as letters do. */
+const LETTER_GAP = 1;
+
+/** A name cut into runs of letters that were matched and that were not. */
+function runs(name: string, matched: ReadonlySet<number>): Array<{ text: string; matched: boolean }> {
+  const out: Array<{ text: string; matched: boolean }> = [];
+  for (let i = 0; i < name.length; i++) {
+    const hit = matched.has(i);
+    const last = out.at(-1);
+    if (last && last.matched === hit) last.text += name[i];
+    else out.push({ text: name[i], matched: hit });
+  }
+  return out;
+}
+
 /**
  * A tooltip for any item: its name as the header, its picture, and its stats underneath. Show it over an
  * item under the pointer; it keeps itself inside the area it is given. Given the hero's class and STR score, it
@@ -109,9 +126,13 @@ export class ItemTooltip {
   readonly view = new Container();
   private readonly frame = new Graphics();
   private readonly picture = new Sprite();
-  private readonly header = new PixelLabel('', { color: THEME.title, shadow: true });
+  /** The name, in runs of plain and matched letters. */
+  private readonly header = new Container();
+  private headerW = 0;
   private readonly lines = new Container();
   private shown: InventoryItem | null = null;
+  /** The letters of the name a search matched, as last laid out. */
+  private matched = '';
 
   constructor() {
     this.view.visible = false;
@@ -121,8 +142,10 @@ export class ItemTooltip {
   }
 
   /** Shows `item` near (x, y), kept inside a `bounds`-sized area starting at 0, 0. */
-  show(item: InventoryItem, x: number, y: number, bounds: { w: number; h: number }, cls?: HeroClass, strength?: number): void {
-    if (this.shown !== item) this.layout(item, cls, strength);
+  show(item: InventoryItem, x: number, y: number, bounds: { w: number; h: number }, cls?: HeroClass, strength?: number, matched: readonly number[] = []): void {
+    const key = matched.join();
+    if (this.shown !== item || this.matched !== key) this.layout(item, cls, strength, matched);
+    this.matched = key;
     this.shown = item;
     const w = this.frame.width;
     const h = this.frame.height;
@@ -137,8 +160,8 @@ export class ItemTooltip {
   }
 
   /** Lays the tooltip out for an item: header across the top, picture on the left, details beside it. */
-  private layout(item: InventoryItem, cls: HeroClass | undefined, strength: number | undefined): void {
-    this.header.text = item.name;
+  private layout(item: InventoryItem, cls: HeroClass | undefined, strength: number | undefined, matched: readonly number[]): void {
+    this.setHeader(item.name, matched);
     this.header.position.set(PAD, PAD);
     const texture = lazyTexture(itemIcon(item));
     this.picture.texture = texture;
@@ -151,11 +174,24 @@ export class ItemTooltip {
       label.position.set(PAD + PICTURE + GAP, PAD + HEADER_H + i * LINE_H);
       this.lines.addChild(label);
     });
-    const textW = Math.max(MIN_W, this.header.textWidth, PICTURE + GAP + Math.max(0, ...this.lines.children.map((c) => c.width)));
+    const textW = Math.max(MIN_W, this.headerW, PICTURE + GAP + Math.max(0, ...this.lines.children.map((c) => c.width)));
     const bodyH = Math.max(PICTURE, details.length * LINE_H);
     this.frame.clear()
       .rect(0, 0, textW + 2 * PAD, PAD * 2 + HEADER_H + bodyH).fill({ color: THEME.panel, alpha: BG_ALPHA })
       .stroke({ color: THEME.panelBorder, width: 1, alignment: 1 });
+  }
+
+  /** The name across the top: runs of letters, those a search matched in their own colour. */
+  private setHeader(name: string, matched: readonly number[]): void {
+    for (const child of this.header.removeChildren()) child.destroy();
+    let x = 0;
+    for (const run of runs(name, new Set(matched))) {
+      const label = new PixelLabel(run.text, { color: run.matched ? MATCH_COLOR : THEME.title, shadow: true });
+      label.x = x;
+      this.header.addChild(label);
+      x += label.textWidth + LETTER_GAP;
+    }
+    this.headerW = Math.max(0, x - LETTER_GAP);
   }
 
   /** Forgets the laid-out item, so the next show lays it out again (its picture may have loaded since). */

@@ -213,6 +213,7 @@ export class InGameScene implements Scene {
     this.buildLoadingOverlay();
     manager.canvas.style.cursor = 'none';
     initInput(manager.canvas);
+    this.inv.attachSearch(manager.canvas);
 
     this.onKeyDown = (e) => this.handleKey(e);
     window.addEventListener('keydown', this.onKeyDown);

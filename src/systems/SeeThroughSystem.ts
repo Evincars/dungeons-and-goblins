@@ -44,9 +44,13 @@ let tallColumns = 0;
 let filedFor: SeeThroughWalls | null = null;
 let filedCount = -1;
 
-/** Whether a figure is on its feet and drawn (not respawning, not falling into a pit). */
-function standing(entity: Figure): boolean {
-  return entity.sprite.visible && entity.respawnTicks === undefined && !entity.falling;
+/**
+ * Whether a figure is a hero or a foe on their feet and drawn (not respawning, not falling into a pit). Things with
+ * hit points of their own — pots, urns, crates by a wall — never clear what stands over them.
+ */
+export function clearsWalls(entity: Figure): boolean {
+  const living = entity.playerStats !== undefined || entity.mobType !== undefined;
+  return living && entity.sprite.visible && entity.respawnTicks === undefined && !entity.falling;
 }
 
 /** How tall a figure stands over its feet: to the top of its head, for a character. */
@@ -128,7 +132,7 @@ export function updateSeeThrough(walls: SeeThroughWalls, viewer: { x: number; y:
   refile(walls, levelWidth);
   revealer.begin();
   for (const entity of figures) {
-    if (!viewer || !standing(entity)) continue;
+    if (!viewer || !clearsWalls(entity)) continue;
     const dx = entity.position.x - viewer.x;
     const dy = entity.position.y - viewer.y;
     if (dx * dx + dy * dy <= SEE_THROUGH_RANGE * SEE_THROUGH_RANGE) lookAt(entity, walls);

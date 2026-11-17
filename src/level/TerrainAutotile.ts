@@ -99,14 +99,18 @@ export const OVERHEAD_Z = 1e6;
 
 // Framed 2×2 pit (cols 38–43, rows 16–21): 64px hole with a 5px rim outside it
 const PIT = { x: 619, y: 267, w: 74, h: 74, rim: 5 };
-// Its lobes (laid over its rim where they join, LOBE_OVERLAP in from its edge), and the quatrefoil pit on 2×2 tiles.
+/**
+ * Its lobes, and the quatrefoil pit on 2×2 tiles. A lobe's open side lies on the square's inside edge, so it covers the
+ * square's rim where they join and its own rim's ends meet the square's; the arched alcove on the north stands over the
+ * square's north wall (this tall under its rim), its dark foot meeting the square's dark.
+ */
+const PIT_NORTH_WALL = 27;
 const LOBE_PIECES = {
   north: { x: 640, y: 208, w: 32, h: 48 },
   east: { x: 704, y: 288, w: 16, h: 32 },
   south: { x: 640, y: 352, w: 32, h: 16 },
   west: { x: 592, y: 288, w: 16, h: 32 },
 } as const;
-const LOBE_OVERLAP = 4;
 const QUATREFOIL = { x: 624, y: 384, w: 64, h: 64 };
 // A framed 2×2 drain grate set into the floor, its frame spilling this far past the tiles.
 const GRATE = { x: 487, y: 202, w: 82, h: 79, rimX: 9, rimY: 8 };
@@ -428,10 +432,10 @@ class TerrainBuilder {
     const lobe = (piece: { x: number; y: number; w: number; h: number }, dx: number, dy: number): void => {
       this.overlayPieces.push({ dx, dy, sx: piece.x, sy: piece.y, w: piece.w, h: piece.h });
     };
-    if (lobes & LOBE_N) lobe(north, x + (side - north.w) / 2, y + LOBE_OVERLAP - north.h);
-    if (lobes & LOBE_E) lobe(east, x + side - LOBE_OVERLAP, y + (side - east.h) / 2);
-    if (lobes & LOBE_S) lobe(south, x + (side - south.w) / 2, y + side - LOBE_OVERLAP);
-    if (lobes & LOBE_W) lobe(west, x + LOBE_OVERLAP - west.w, y + (side - west.h) / 2);
+    if (lobes & LOBE_N) lobe(north, x + (side - north.w) / 2, y + PIT_NORTH_WALL - north.h);
+    if (lobes & LOBE_E) lobe(east, x + side, y + (side - east.h) / 2);
+    if (lobes & LOBE_S) lobe(south, x + (side - south.w) / 2, y + side);
+    if (lobes & LOBE_W) lobe(west, x - west.w, y + (side - west.h) / 2);
   }
 
   /** A framed drain grate over 2×2 floor tiles, its frame spilling onto the floor round it. */

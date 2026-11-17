@@ -63,22 +63,19 @@ const IRON_OUTLINE = 0x04050a;
 const TAB_INSET = { left: 44, right: 43, top: 45 };
 const TAB_INSIDE = 0x030409;
 /**
- * The open tab stands up out of the row (this many design pixels), lit from below as by a lantern at its foot: a red
- * glow (this wide a share of the tab, this tall, its strength breathing between these on two out-of-step waves), and a
- * glint runs along its top bar now and then; the others sink back and are dimmed (a tab under the pointer less so).
+ * The tabs stand behind the panels, their feet tucked under the panels' top edge: the others sink this many design
+ * pixels further in, the open one stands out its whole height (no gap ever opens under a tab). The open one is lit from
+ * below as by a lantern at its foot: a dim red glow filling its dark opening, fading up it and out to its sides, its
+ * strength breathing between these on two out-of-step waves; the others are dimmed (a tab under the pointer less so).
  */
-const TAB_LIFT = 3;
+const TAB_SINK = 8;
 const TAB_GLOW_COLOR = '255, 64, 32';
-const TAB_GLOW_W = 1.1;
-const TAB_GLOW_H = 30;
-const TAB_GLOW_ALPHA = { low: 0.55, high: 0.85 };
+const TAB_GLOW_ALPHA = { low: 0.3, high: 0.45 };
 const TAB_GLOW_WAVES_MS = [1700, 610];
+/** The glow is strongest along the opening's foot and fades out this share of the way to each side. */
+const TAB_GLOW_SIDE_FADE = 0.3;
 const TAB_IDLE_ALPHA = 0.5;
 const TAB_HOVER_IDLE_ALPHA = 0.8;
-const GLINT_PERIOD_MS = 2600;
-const GLINT_RUN_MS = 700;
-const GLINT_W = 10;
-const GLINT_ALPHA = 0.55;
 /** The mouse button that opens an item's menu. */
 const RIGHT_BUTTON = 2;
 /** Two items compared stand side by side, this far apart. */
@@ -168,8 +165,8 @@ const GHOST_ALPHA = 0.85;
  */
 const AURA_COLOR = '255, 40, 24';
 const AURA_SHARE = 1;
-const AURA_ALPHA = 0.9;
-const AURA_HOLD = 0.7;
+const AURA_ALPHA = 0.45;
+const AURA_HOLD = 0.6;
 
 type Rect = { x: number; y: number; w: number; h: number };
 /** `page`: the tab page the square is on (bag squares are always shown). */
@@ -211,7 +208,8 @@ const FIELDS: readonly FieldDef[] = [
   { caption: text('sheet.hp.short'), accent: THEME.hitPoints, value: (s) => text('sheet.hp.value', { current: s.hitPoints.current, max: s.hitPoints.max }), topic: hitPointsTopic },
   { caption: text('sheet.dmg.short'), accent: THEME.damage, value: (s) => formatDamage(s.attack.damage, s.attack.extra, true), topic: damageTopic },
 ];
-type Tab = { frame: Sprite; glow: Sprite; glint: Graphics; label: PixelLabel; page: Container; hovered: boolean; rect: Rect; labelY: number };
+/** A tab: what stands out of the panels and slides (its frame, glow and title), its page, and where it stands open. */
+type Tab = { stand: Container; frame: Sprite; glow: Sprite; label: PixelLabel; page: Container; hovered: boolean; rect: Rect };
 
 
 /**
@@ -231,18 +229,30 @@ function tabFrameTexture(tab: Rect): Texture {
   return Texture.from(canvas);
 }
 
-/** The lantern's light under the open tab: red, brightest at the middle of its foot and fading up and out (made once). */
+/**
+ * The lantern's light in the open tab's opening (made once, stretched over it): red, strongest along its foot, fading up
+ * it and out towards its sides, so neither its edges nor its corners show.
+ */
 let tabGlow: Texture | null = null;
 function tabGlowTexture(): Texture {
   if (tabGlow) return tabGlow;
   const size = 64;
   const canvas = createCanvas(size, size);
   const ctx = context2d(canvas);
-  const light = ctx.createRadialGradient(size / 2, size, 0, size / 2, size, size);
-  light.addColorStop(0, `rgba(${TAB_GLOW_COLOR}, 1)`);
-  light.addColorStop(0.45, `rgba(${TAB_GLOW_COLOR}, 0.35)`);
-  light.addColorStop(1, `rgba(${TAB_GLOW_COLOR}, 0)`);
-  ctx.fillStyle = light;
+  const up = ctx.createLinearGradient(0, size, 0, 0);
+  up.addColorStop(0, `rgba(${TAB_GLOW_COLOR}, 1)`);
+  up.addColorStop(0.5, `rgba(${TAB_GLOW_COLOR}, 0.3)`);
+  up.addColorStop(1, `rgba(${TAB_GLOW_COLOR}, 0)`);
+  ctx.fillStyle = up;
+  ctx.fillRect(0, 0, size, size);
+  // Faded out to the sides: only what the side mask keeps stays.
+  const sides = ctx.createLinearGradient(0, 0, size, 0);
+  sides.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  sides.addColorStop(TAB_GLOW_SIDE_FADE, 'rgba(0, 0, 0, 1)');
+  sides.addColorStop(1 - TAB_GLOW_SIDE_FADE, 'rgba(0, 0, 0, 1)');
+  sides.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.fillStyle = sides;
   ctx.fillRect(0, 0, size, size);
   tabGlow = Texture.from(canvas);
   return tabGlow;
@@ -462,35 +472,36 @@ export class InventoryOverlay {
   }
 
   /**
-   * A tab: the art's iron tab frame on its own (its grey inside cleared), its title in it, the whole frame a button that
-   * shows its page.
+   * A tab: the art's iron tab frame on its own (its grey inside filled dark), its title in it, standing behind the panels
+   * with its foot tucked under them; the whole of it a button that shows its page.
    */
   private addTab(tab: Rect, title: string, page: Container, art: Rect): void {
+    const stand = new Container();
+    stand.position.set(tab.x, tab.y);
     const frame = new Sprite(tabFrameTexture(art));
     frame.scale.set(K);
-    frame.position.set(tab.x, tab.y);
-    // The glow stands on the tab's foot, inside its opening: the lantern below lights it and the title from underneath.
+    // The glow fills the tab's dark opening: the lantern below lights it and the title from underneath.
     const glow = new Sprite(tabGlowTexture());
-    glow.anchor.set(0.5, 1);
-    glow.width = tab.w * TAB_GLOW_W;
-    glow.height = TAB_GLOW_H;
-    glow.position.set(tab.x + tab.w / 2, tab.y + tab.h);
+    glow.position.set(TAB_INSET.left * K, TAB_INSET.top * K);
+    glow.width = tab.w - (TAB_INSET.left + TAB_INSET.right) * K;
+    glow.height = tab.h - TAB_INSET.top * K;
     glow.blendMode = 'add';
-    const glint = new Graphics();
-    const labelY = Math.round(tab.y + (TAB_INSET.top * K + tab.h) / 2 - GLYPH_H / 2);
     const label = new PixelLabel(title, { color: THEME.buttonText, align: 'center', shadow: true });
-    label.position.set(Math.round(tab.x + tab.w / 2), labelY);
+    label.position.set(Math.round(tab.w / 2), Math.round((TAB_INSET.top * K + tab.h) / 2 - GLYPH_H / 2));
+    stand.addChild(frame, glow, label);
     const hit = new Container();
     hit.eventMode = 'static';
     hit.cursor = 'pointer';
-    hit.hitArea = new Rectangle(tab.x, tab.y - TAB_LIFT, tab.w, tab.h + TAB_LIFT);
-    const entry: Tab = { frame, glow, glint, label, page, hovered: false, rect: tab, labelY };
+    hit.hitArea = new Rectangle(tab.x, tab.y, tab.w, tab.h);
+    const entry: Tab = { stand, frame, glow, label, page, hovered: false, rect: tab };
     const index = this.tabs.length;
     hit.on('pointerover', () => this.hoverTab(entry, true));
     hit.on('pointerout', () => this.hoverTab(entry, false));
     hit.on('pointertap', () => this.showTab(index));
     this.tabs.push(entry);
-    this.root.addChild(frame, glow, glint, label, hit);
+    // Behind the panels' art (the first thing in the root), the button over everything.
+    this.root.addChildAt(stand, 0);
+    this.root.addChild(hit);
     this.drawTab(entry);
   }
 
@@ -511,38 +522,26 @@ export class InventoryOverlay {
   }
 
   /**
-   * The open tab stands up out of the row at full strength, lit from below; the others sit back, dimmed (less so under
-   * the pointer).
+   * The open tab stands out of the panels at full strength, lit from below; the others sink further in behind them,
+   * dimmed (less so under the pointer).
    */
   private drawTab(tab: Tab): void {
     const active = this.tabs[this.activeTab] === tab;
-    const lift = active ? -TAB_LIFT : 0;
     const alpha = active ? 1 : tab.hovered ? TAB_HOVER_IDLE_ALPHA : TAB_IDLE_ALPHA;
-    tab.frame.y = tab.rect.y + lift;
-    tab.label.y = tab.labelY + lift;
+    tab.stand.y = tab.rect.y + (active ? 0 : TAB_SINK);
     tab.frame.alpha = alpha;
     tab.label.alpha = alpha;
     tab.label.fill = active || tab.hovered ? THEME.buttonHover : THEME.buttonText;
     tab.glow.visible = active;
-    tab.glint.visible = active;
   }
 
-  /** The lantern under the open tab flickers; now and then a glint runs along its top bar, left to right. */
+  /** The lantern under the open tab flickers. */
   private animateTabs(): void {
     const tab = this.tabs[this.activeTab];
     if (!tab) return;
     const now = performance.now();
     const wave = TAB_GLOW_WAVES_MS.reduce((sum, period) => sum + Math.sin((now / period) * Math.PI * 2), 0) / TAB_GLOW_WAVES_MS.length;
     tab.glow.alpha = TAB_GLOW_ALPHA.low + (TAB_GLOW_ALPHA.high - TAB_GLOW_ALPHA.low) * (wave + 1) / 2;
-    const t = now % GLINT_PERIOD_MS;
-    const g = tab.glint.clear();
-    if (t > GLINT_RUN_MS) return;
-    const bar = { x: tab.rect.x + TAB_INSET.left * K * 0.5, w: tab.rect.w - (TAB_INSET.left + TAB_INSET.right) * K / 2, y: tab.rect.y - TAB_LIFT + TAB_INSET.top * K * 0.35 };
-    const x = bar.x + (bar.w - GLINT_W) * (t / GLINT_RUN_MS);
-    for (let i = 0; i < GLINT_W; i++) {
-      const fade = 1 - Math.abs(i - GLINT_W / 2) / (GLINT_W / 2);
-      g.rect(Math.round(x + i), Math.round(bar.y), 1, 2).fill({ color: 0xffffff, alpha: GLINT_ALPHA * fade });
-    }
   }
 
   /**

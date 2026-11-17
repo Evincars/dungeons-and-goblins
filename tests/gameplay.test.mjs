@@ -638,7 +638,9 @@ test('a shaped pit swallows what stands over its drawn ground: its lobes, not th
   const mid = 6 * TILE_WIDTH;
   assert.ok(level.overPit(left - 6, mid), 'the west lobe reaches into the floor tile beside the square');
   assert.ok(!level.overPit(left - 20, mid), 'past it is floor');
-  assert.ok(level.overPit(mid, 5 * TILE_WIDTH - 30), 'the arched alcove north of it');
+  assert.ok(level.overPit(mid, 5 * TILE_WIDTH - 14), 'the arched alcove north of it');
+  assert.ok(!level.overPit(mid, 5 * TILE_WIDTH - 24), 'past the alcove\'s arch is floor');
+  assert.ok(!level.overPit(left + 6, 5 * TILE_WIDTH - 10), 'beside the alcove is floor');
   assert.ok(!level.overPit(left - 6, 5 * TILE_WIDTH + 2), 'the corner beside a lobe is floor');
   assert.ok(insidePit(pit, mid, mid));
   const foil = { x: 10, y: 2, shape: 'quatrefoil', lobes: 0 };
@@ -5258,4 +5260,16 @@ test('two items of a kind compared: more AC or damage is better, less weight is;
   assert.ok(itemTrained(wizard, armor('plate'), ['heavy']), 'a feat\'s armour training counts');
   assert.ok(itemTrained(heroClass('fighter'), armor('plate')));
   assert.ok(itemTrained(wizard, { type: 'medal', name: 'Medal', value: 1 }), 'a medal needs no training');
+});
+
+test('only heroes and foes clear the walls over them: a pot or a chest by a south wall leaves it be', async () => {
+  const { clearsWalls } = await load('systems/SeeThroughSystem');
+  const sprite = { visible: true };
+  const hero = { position: { x: 0, y: 0 }, sprite, health: { current: 5, max: 5 }, playerStats: {} };
+  const goblin = { position: { x: 0, y: 0 }, sprite, health: { current: 5, max: 5 }, mobType: 'goblin' };
+  const urn = { position: { x: 0, y: 0 }, sprite, health: { current: 1, max: 1 } };
+  assert.ok(clearsWalls(hero));
+  assert.ok(clearsWalls(goblin));
+  assert.ok(!clearsWalls(urn), 'a breakable thing has hit points but clears nothing');
+  assert.ok(!clearsWalls({ ...goblin, falling: { ticks: 1 } }), 'nor one falling into a pit');
 });

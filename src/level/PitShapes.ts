@@ -60,13 +60,12 @@ export type Outline = { boxes: readonly Box[]; discs: readonly Disc[]; bounds: B
 /** The pit's 2×2 tiles, in pixels. */
 const SIDE = 2 * TILE_WIDTH;
 /**
- * A lobe is a half-disc this wide (its flat side against the square) whose open middle has this radius, set this far
- * into the square so it covers the square's rim where they join (as the art is drawn, TerrainAutotile.ts).
+ * A lobe is a half-disc whose open middle has this radius, its flat side on the square's edge (as the art is drawn,
+ * TerrainAutotile.ts: it covers the square's rim there).
  */
 const LOBE_R = 14;
-const LOBE_OVERLAP = 4;
 /** The arched alcove is as wide as a lobe and reaches this far north of the square. */
-const ARCH_REACH = 44;
+const ARCH_REACH = 21;
 /** The quatrefoil's four round lobes, each centred this far in from its edge, with the same open radius. */
 const FOIL_INSET = 18;
 /** A faller is pulled at least this far inside the edge of the square they dropped into (half of a narrower box). */
@@ -75,13 +74,13 @@ const DROP_MARGIN = 14;
 const CORE: Box = { x0: 0, y0: 0, x1: SIDE, y1: SIDE };
 const MID = SIDE / 2;
 const LOBE_DISCS: ReadonlyArray<[number, Disc]> = [
-  [LOBE_E, { cx: SIDE - LOBE_OVERLAP, cy: MID, r: LOBE_R }],
-  [LOBE_S, { cx: MID, cy: SIDE - LOBE_OVERLAP, r: LOBE_R }],
-  [LOBE_W, { cx: LOBE_OVERLAP, cy: MID, r: LOBE_R }],
+  [LOBE_E, { cx: SIDE, cy: MID, r: LOBE_R }],
+  [LOBE_S, { cx: MID, cy: SIDE, r: LOBE_R }],
+  [LOBE_W, { cx: 0, cy: MID, r: LOBE_R }],
 ];
 /** The arched alcove: a column as wide as a lobe, rounded at its north end. */
-const ARCH_TOP = LOBE_OVERLAP - ARCH_REACH + LOBE_R;
-const ARCH_BOX: Box = { x0: MID - LOBE_R, y0: ARCH_TOP, x1: MID + LOBE_R, y1: LOBE_OVERLAP };
+const ARCH_TOP = LOBE_R - ARCH_REACH;
+const ARCH_BOX: Box = { x0: MID - LOBE_R, y0: ARCH_TOP, x1: MID + LOBE_R, y1: 0 };
 const ARCH_DISC: Disc = { cx: MID, cy: ARCH_TOP, r: LOBE_R };
 const QUATREFOIL: Outline = withBounds(
   [{ x0: FOIL_INSET, y0: FOIL_INSET, x1: SIDE - FOIL_INSET, y1: SIDE - FOIL_INSET }],

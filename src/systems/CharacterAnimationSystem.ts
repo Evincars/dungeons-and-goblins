@@ -27,7 +27,10 @@ export function updateCharacterAnimation(): void {
     const def = characterDef(c.def);
     const found = stateClip(def, c.state);
     if (!found) continue;
-    advance(c, found.clip, clipFrames(found.clip, found.sheet));
+    const frames = clipFrames(found.clip, found.sheet);
+    advance(c, found.clip, frames);
+    // Action Surge fits twice the blows into a second: the attack clip plays at double speed.
+    if (c.state === 'attack' && (entity.actionSurge ?? 0) > 0) advance(c, found.clip, frames);
     const sprite = entity.sprite;
     sprite.texture = clipFrameTexture(found.clip, found.sheet, c.frame, facingRow(def, c.flipX));
     sprite.anchor.set(clipAnchorX(def, found.clip), clipAnchorY(def, found.clip));

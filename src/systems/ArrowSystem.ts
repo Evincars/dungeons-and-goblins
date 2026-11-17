@@ -7,6 +7,7 @@ import { ATTACK_RECOVERY } from '../characters/StateTriggers';
 import { characterSheet, weaponInHand } from '../rules/CharacterSheet';
 import { weaponRule } from '../rules/Equipment';
 import { world } from '../world';
+import { attackTempo } from './SwordSystem';
 
 /**
  * Archery: a player fighting with a ranged weapon (bow, crossbow, pistol, darts) shoots at the crosshair on
@@ -26,8 +27,8 @@ function loose(player: Player, followedBy: number): void {
   const aim = player.aimVector ?? { x: 0, y: 1 };
   createArrow(player.position.x, player.position.y, aim.x, aim.y, characterSheet(player).attack, world.id(player));
   player.volley = followedBy;
-  // Hold the release pose for a moment (the attack clip plays while attackTime is above the recovery).
-  player.attackTime = ATTACK_RECOVERY + ARROW_STATS.drawTicks;
+  // Hold the release pose for a moment (the attack clip plays while attackTime is above the recovery); half as long under Action Surge.
+  player.attackTime = ATTACK_RECOVERY + Math.ceil(ARROW_STATS.drawTicks / attackTempo(player));
   sound.playSound('bow_shot', player.position.x, player.position.y);
 }
 

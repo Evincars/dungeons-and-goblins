@@ -96,7 +96,7 @@ function refuse(caster: Player, line: string): void {
 }
 
 /** What is said when a feature can't be used. */
-const FEATURE_REFUSALS = { unworked: 'roll.feature_unworked', no_dice: 'roll.no_dice_left', no_ally: 'roll.no_ally' } as const;
+const FEATURE_REFUSALS = { unworked: 'roll.feature_unworked', no_dice: 'roll.no_dice_left', no_ally: 'roll.no_ally', hp_full: 'roll.hp_full' } as const;
 
 /** The cast key on a class feature: it is used at once if the hero has it, it is worked and its square has recovered. */
 function startFeature(caster: Player, id: string, level: Level): void {

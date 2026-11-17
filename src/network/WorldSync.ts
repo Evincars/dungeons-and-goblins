@@ -138,7 +138,7 @@ const VALUES: Readonly<Record<string, FieldType>> = {
   mobType: 'string', castCooldown: 'number', swordCooldown: 'number', arrowCooldown: 'number', spawnedBy: 'number', stepTimer: 'number',
   dustTimer: 'number', respawnTicks: 'number', minimapColor: 'number', safeZone: 'boolean', inSafeRoom: 'boolean', playerSlot: 'string',
   playerName: 'string', heroClass: 'string', mobWeapon: 'string', protectCooldown: 'number', survivorCooldown: 'number',
-  superiorityLeft: 'number', tempHealth: 'number', volley: 'number',
+  superiorityLeft: 'number', tempHealth: 'number', volley: 'number', actionSurge: 'number', athleteBoost: 'number', indomitableCooldown: 'number',
 };
 
 function hasType(v: unknown, type: FieldType): boolean {

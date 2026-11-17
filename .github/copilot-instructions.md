@@ -119,7 +119,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   made by `scripts/iso-sheets.py` into each tileset's `mainlevbuild-isometric.png` copy (keep the two in step); enemy AI knobs (sight, squad sizes, flanking, trail
   following) in `src/ai/constants.ts`; the D&D rules tables (SRD weapons and armour) in `src/rules/WeaponTable.ts`
   and `src/rules/ArmorTable.ts`; hero classes (abilities, hit points, proficiencies, features) in
-  `src/data/classes.json`; enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`;
+  `src/data/classes.json`; feats (the Baldur's Gate 3 list: requirement, the ability each raises, `worked`, effects) in
+  `src/data/feats.json`, read by `src/rules/Feats.ts` and summed per hero as `FeatEffects` (`featEffects` in `rules/Build.ts`); enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`;
   castable spells (dice, recovery, save, area, effect) in `src/data/spells.json`; the spells the game uses at all
   (only ones that act at once and can be drawn with our effects) and their icons in `src/data/spell-list.json`
   (`img`, filled in by `scripts/spell-icons.sh`, which pixelates each icon in `public/spells-icons` into `<name>_pixelart.png`
@@ -256,15 +257,18 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   level and a click switches it off and on (`featuresOff`, the `toggle_feature` command; `featureOn` is what effects ask, and the
   HUD's top left lists the ones on, `ui/PassiveHud.ts`); an active (Second Wind, Action Surge…) is bound to a quick-bar square as
   `feature:<id>` and used with the cast key (`systems/FeatureSystem.ts`; an active with several uses recovers in its share, `featureCooldown`).
-  A swing is a chain of blows (`swordSwing.blow`/`blows`: Extra Attack; the first blow also strikes with the off-hand weapon, `systems/SwordSystem.ts`); a bow looses a
+  Action Surge doubles the attacks of every swing and volley for 6 s (`actionSurge`), each blow and the attack clip at double
+  speed (`attackTempo`); Remarkable Athlete doubles the speed for 6 s (`athleteBoost`); Indomitable rerolls a failed save
+  (`heroSavingThrow`) then recovers 30 s (`indomitableCooldown`); a rest makes all of them ready.
+  A swing is a chain of blows (`swordSwing.blow`/`blows`: Extra Attack, Improved Extra Attack at 11; the first blow also strikes with the off-hand weapon, `systems/SwordSystem.ts`); a bow looses a
   volley (`volley`, `ArrowSystem.ts`). Every attack, the heroes' (`swordCooldown`, `arrowCooldown`) and the enemies' (`attackCooldown`),
-  comes once an `ATTACK_PERIOD` (60 ticks, `entities/WeaponStats.ts`), with the blows of a chain or volley spread inside it. The Fighter's Martial Archetype (`rules/Archetypes.ts`, taken at level 3 in the level panel,
-  `ui/LevelChoices.ts`) gates features by `needs` in `features.json`: the Champion's critical range and Survivor, the Battle Master's
+  comes once an `ATTACK_PERIOD` (60 ticks, `entities/WeaponStats.ts`), with the blows of a chain or volley spread inside it. The Fighter's Martial Archetype (`rules/Archetypes.ts`; only the Champion is on offer
+  for now, `PLAYABLE_ARCHETYPES`, given at level 3 by `grantArchetype`; with more than one it is chosen in `ui/LevelChoices.ts`) gates features by `needs` in `features.json`: the Champion's critical range and Survivor, the Battle Master's
   superiority dice and maneuvers (`rules/Maneuvers.ts`, `systems/ManeuverSystem.ts`: a maneuver is readied from the quick bar and
   spends a die on the blow or the enemy blow it waits for, `Reactions.ts` for Parry and Riposte; marks on foes are the `status` component),
   and the Eldritch Knight's wizard spells (`rules/KnightSpells.ts`, a spell list of its own in `Spellbook.ts`, War Magic after a cast).
   Experience follows the SRD
-  (`game/Progress.ts`, monster `xp`); hit points (SRD, unscaled: hit die + CON at level 1) and hit dice are in `rules/HitPoints.ts`.
+  (`game/Progress.ts`, monster `xp`; heroes stop at `LEVEL_CAP`, 12 for now, while the tables keep all 20 levels); hit points (SRD, unscaled: hit die + CON at level 1) and hit dice are in `rules/HitPoints.ts`.
   Spells go on the quick bar only in a safe room (`player.inSafeRoom`, `systems/SafeRoomSystem.ts`); class features anywhere.
 - `src/audio/` — Howler: `SoundBank.ts` (the effect recipes, music tracks and ambient beds), `SoundPlayer.ts` (effects,
   faded and panned by distance; `playSound` is relayed to co-op guests, `playLocal` is not), `Deck.ts` (one looping

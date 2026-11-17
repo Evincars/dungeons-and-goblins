@@ -30,6 +30,19 @@ export { hitMob };
 /** The chain's last blow ends this many ticks before the period does, so the next swing never cuts it short. */
 const CHAIN_MARGIN = 1;
 
+/**
+ * How much faster than usual the hero's blows play: twice under Action Surge, whose chain holds twice the blows in the same
+ * second (wind-up, live hitbox and the attack clip all take half as long, CharacterAnimationSystem.ts).
+ */
+export function attackTempo(player: Pick<Player, 'actionSurge'>): number {
+  return (player.actionSurge ?? 0) > 0 ? 2 : 1;
+}
+
+/** Ticks one blow's hitbox stays live, at the hero's tempo. */
+function swingTicksFor(player: Player): number {
+  return Math.ceil(SWORD_STATS.swingTicks / attackTempo(player));
+}
+
 /** A heavy or two-handed weapon swings with a heavier grunt. */
 function swingSound(player: Player): SfxName {
   const properties = weaponRule(weaponInHand(player.equipped ?? {}) ?? undefined)?.rule.properties ?? [];
@@ -49,7 +62,7 @@ function canSwing(player: Player): boolean {
 /** Ticks the first blow winds up before it lands: the attack clip's impact frame (none for characters without one). */
 function firstWindUp(player: Player): number {
   const def = player.character?.def;
-  return def ? clipImpactTicks(def, 'attack') : 0;
+  return def ? Math.floor(clipImpactTicks(def, 'attack') / attackTempo(player)) : 0;
 }
 
 /**
@@ -58,8 +71,9 @@ function firstWindUp(player: Player): number {
  */
 function followWindUp(player: Player, blows: number): number {
   if (blows < 2) return 0;
-  const room = ATTACK_PERIOD - firstWindUp(player) - SWORD_STATS.swingTicks - CHAIN_MARGIN;
-  return Math.max(0, Math.floor(room / (blows - 1)) - SWORD_STATS.swingTicks);
+  const live = swingTicksFor(player);
+  const room = ATTACK_PERIOD - firstWindUp(player) - live - CHAIN_MARGIN;
+  return Math.max(0, Math.floor(room / (blows - 1)) - live);
 }
 
 /**
@@ -74,7 +88,7 @@ function startSwing(player: Player): void {
   const reach = swingRange(player.playerStats.swordTier) + (lungeReady(player) ? LUNGE_REACH : 0);
   const swing: Swing = {
     delay: firstWindUp(player),
-    ticks: SWORD_STATS.swingTicks,
+    ticks: swingTicksFor(player),
     dirX: aim.x,
     dirY: aim.y,
     range: reach,
@@ -166,7 +180,7 @@ function endBlow(player: Player, swing: Swing): void {
   const aim = player.aimVector ?? { x: swing.dirX, y: swing.dirY };
   swing.blow++;
   swing.delay = followWindUp(player, swing.blows);
-  swing.ticks = SWORD_STATS.swingTicks;
+  swing.ticks = swingTicksFor(player);
   swing.dirX = aim.x;
   swing.dirY = aim.y;
   swing.hitIds.length = 0;

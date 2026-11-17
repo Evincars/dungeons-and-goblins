@@ -16,13 +16,27 @@ const LINE_H = 10;
 const MAX_LINES = 14;
 /** A passive that is ready is shown in this colour; one that is recovering is dimmed. */
 const READY_COLOR = THEME.title;
-/** Protection is the passive that needs time to recover between uses. */
-const PROTECTION = 'protection';
+/** The passives that need time to recover between uses, and the ticks each has left. */
+const RECOVERING: Readonly<Record<string, (player: Player) => number>> = {
+  protection: (player) => player.protectCooldown ?? 0,
+  indomitable: (player) => player.indomitableCooldown ?? 0,
+};
+/** The boosts an active feature gives while they last (Action Surge, Remarkable Athlete), and the ticks each has left. */
+const BOOSTS = [
+  { id: 'action_surge', left: (player: Player): number => player.actionSurge ?? 0 },
+  { id: 'remarkable_athlete', left: (player: Player): number => player.athleteBoost ?? 0 },
+] as const;
+/** A boost that is running is shown in this colour. */
+const BOOST_COLOR = 0x40e0d0;
+
+/** Seconds to a tenth, as the HUD counts them. */
+const secondsOf = (ticks: number): string => (Math.ceil((ticks / TICKS_PER_SECOND) * 10) / 10).toFixed(1);
 
 /**
- * The passive class features that are switched on, top left corner, a line each with its name; Protection also
- * shows the seconds left while it recovers. A passive the hero switched off in the Skills tab is not listed. A Battle
- * Master's superiority dice left and the maneuver they have readied come after them.
+ * The passive class features that are switched on, top left corner, a line each with its name; Protection and
+ * Indomitable also show the seconds left while they recover. A passive the hero switched off in the Skills tab is not
+ * listed. A boost an active feature gives (Action Surge, Remarkable Athlete) is listed with its seconds left while it
+ * lasts. A Battle Master's superiority dice left and the maneuver they have readied come after them.
  */
 export class PassiveHud {
   readonly view = new Container();
@@ -43,20 +57,24 @@ export class PassiveHud {
   update(): void {
     const player = localPlayer();
     if (!player) return;
-    const left = player.protectCooldown ?? 0;
-    const seconds = Math.ceil((left / TICKS_PER_SECOND) * 10) / 10;
     const off = player.featuresOff ?? [];
     const b = player.build;
     const dice = this.diceLine(player);
     const ready = player.maneuver?.id ?? '';
-    const key = JSON.stringify([player.heroClass, player.playerStats.level, b?.fightingStyle, b?.extraStyle, b?.archetype, b?.maneuvers, off, seconds, dice, ready]);
+    const timers = [player.protectCooldown, player.indomitableCooldown, player.actionSurge, player.athleteBoost].map((t) => secondsOf(t ?? 0));
+    const key = JSON.stringify([player.heroClass, player.playerStats.level, b?.fightingStyle, b?.extraStyle, b?.archetype, b?.maneuvers, off, timers, dice, ready]);
     if (key === this.shown) return;
     this.shown = key;
     const cls = heroClass(player.heroClass).dndClass;
     const active = featuresAt(cls, player.playerStats.level, b ?? null).filter((f) => f.kind === 'passive' && f.worked && !off.includes(f.id));
-    const lines: { content: string; color: number }[] = active.map((f) => (f.id === PROTECTION && left > 0
-      ? { content: text('style.passive.recovering', { seconds: seconds.toFixed(1) }), color: THEME.muted }
-      : { content: f.name, color: READY_COLOR }));
+    const lines: { content: string; color: number }[] = active.map((f) => {
+      const left = RECOVERING[f.id]?.(player) ?? 0;
+      return left > 0 ? { content: text('hud.passive.recovering', { name: f.name, seconds: secondsOf(left) }), color: THEME.muted } : { content: f.name, color: READY_COLOR };
+    });
+    for (const boost of BOOSTS) {
+      const left = boost.left(player);
+      if (left > 0) lines.push({ content: text('hud.passive.recovering', { name: featureOfClass(cls, boost.id)?.name ?? boost.id, seconds: secondsOf(left) }), color: BOOST_COLOR });
+    }
     if (dice) lines.push({ content: dice, color: READY_COLOR });
     if (ready) lines.push({ content: text('hud.maneuver_ready', { name: featureOfClass(cls, ready)?.name ?? ready }), color: THEME.buttonText });
     this.lines.forEach((line, i) => {

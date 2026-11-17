@@ -1,12 +1,12 @@
 import { STAT_NAMES, isStatName } from '../world';
 import type { StatName } from '../world';
 import { isFiniteNumber, isRecord } from '../core/guards';
-import type { HeroClass } from './Classes';
-import { FEATS, isFeatId } from './Feats';
-import type { FeatId } from './Feats';
+import type { ArmorTraining, HeroClass } from './Classes';
+import { FEATS, combineFeats, featAbility, isFeatId } from './Feats';
+import type { FeatEffects, FeatId, FeatRequirement } from './Feats';
 import { DEFAULT_FIGHTING_STYLE, isFightingStyle } from './FightingStyles';
 import type { FightingStyleId } from './FightingStyles';
-import { isArchetype } from './Archetypes';
+import { PLAYABLE_ARCHETYPES, isArchetype } from './Archetypes';
 import type { ArchetypeId } from './Archetypes';
 import { MANEUVER_LEVELS, isManeuver, maneuversKnown } from './Maneuvers';
 import { KNIGHT_PICK_LEVELS, freeSchoolPicks, knightCantripsKnown, knightSpellsKnown } from './KnightSpells';
@@ -20,8 +20,11 @@ import { ABILITY_CAP, gainsAt } from './Progression';
  * safe room (`locked`), a Champion's second fighting style, and the Ability Score Improvements or feats taken at the levels that offer them.
  */
 
-/** One Ability Score Improvement (two points, +2 in one ability or +1 in two) or a feat in its place. */
-export type Improvement = { stats: Partial<Record<StatName, number>> } | { feat: FeatId };
+/**
+ * One Ability Score Improvement (two points, +2 in one ability or +1 in two) or a feat in its place (with the ability it
+ * raises by 1, for a feat that lets the player pick one).
+ */
+export type Improvement = { stats: Partial<Record<StatName, number>> } | { feat: FeatId; ability?: StatName };
 
 export type Build = {
   /** The bought scores, 8 to 15 (a human's +1 comes on top, see `baseScores`). */
@@ -51,10 +54,16 @@ export function newBuild(cls: HeroClass): Build {
   return { scores, locked: false, improvements: [] };
 }
 
+/** What the Improvements put into one ability: their points, and the 1 of each feat that raised it. */
 function improvementPoints(build: Build | undefined, stat: StatName): number {
   let points = 0;
-  for (const improvement of build?.improvements ?? []) if ('stats' in improvement) points += improvement.stats[stat] ?? 0;
+  for (const improvement of build?.improvements ?? []) points += improvementShare(improvement, stat);
   return points;
+}
+
+function improvementShare(improvement: Improvement, stat: StatName): number {
+  if ('stats' in improvement) return improvement.stats[stat] ?? 0;
+  return featAbility(improvement.feat, improvement.ability) === stat ? 1 : 0;
 }
 
 /** The six ability scores before gear: bought, plus the human's point, fixed class bonuses and the Improvements taken. */
@@ -74,9 +83,47 @@ export function hasFeat(cls: HeroClass, level: number, build: Build | undefined,
   return !!build?.improvements.some((improvement) => 'feat' in improvement && improvement.feat === feat);
 }
 
+/** Every feat the hero has, from their class and from their Improvements, with the ability each raised. */
+function featsTaken(cls: HeroClass, level: number, build: Build | undefined): { feat: FeatId; ability: StatName | null }[] {
+  const taken = gainsAt(cls.progression, level).feats.map((feat) => ({ feat, ability: featAbility(feat, undefined) }));
+  for (const improvement of build?.improvements ?? []) {
+    if ('feat' in improvement) taken.push({ feat: improvement.feat, ability: featAbility(improvement.feat, improvement.ability) });
+  }
+  return taken;
+}
+
+/** What the hero's feats add up to (src/rules/Feats.ts). */
+export function featEffects(cls: HeroClass, level: number, build: Build | undefined): FeatEffects {
+  return combineFeats(featsTaken(cls, level, build));
+}
+
 /** Initiative bonus from feats. */
 export function featInitiative(cls: HeroClass, level: number, build: Build | undefined): number {
-  return hasFeat(cls, level, build, 'alert') ? FEATS.alert.initiative : 0;
+  return featEffects(cls, level, build).initiative;
+}
+
+/** Trained in this kind of armour: by the class, or by a feat. */
+export function armorTrained(cls: HeroClass, effects: FeatEffects, category: ArmorTraining): boolean {
+  return cls.armor.includes(category) || effects.armor.includes(category);
+}
+
+/** The hero casts spells: a caster class, or an Eldritch Knight. */
+export function isSpellcaster(cls: HeroClass, build: Build | undefined): boolean {
+  return cls.spellcasting !== null || build?.archetype === 'eldritch_knight';
+}
+
+/** Whether the hero meets what a feat asks for (a feat that asks for nothing is always met). */
+export function meetsRequirement(cls: HeroClass, level: number, build: Build | undefined, requires: FeatRequirement | null): boolean {
+  if (!requires) return true;
+  if ('armor' in requires) return armorTrained(cls, featEffects(cls, level, build), requires.armor);
+  if ('spellcaster' in requires) return isSpellcaster(cls, build);
+  const scores = baseScores(cls, level, build);
+  return requires.abilityAtLeast.abilities.some((stat) => scores[stat] >= requires.abilityAtLeast.score);
+}
+
+/** A feat the hero may take now: the game plays it out, they meet its requirement and have not taken it yet. */
+export function featOpen(cls: HeroClass, level: number, build: Build | undefined, feat: FeatId): boolean {
+  return FEATS[feat].worked && meetsRequirement(cls, level, build, FEATS[feat].requires) && !hasFeat(cls, level, build, feat);
 }
 
 /** Improvements on offer at this level that are still to be taken. */
@@ -94,7 +141,7 @@ export function improvementIndexAt(cls: HeroClass, level: number): number {
 export function levelHasChoice(cls: HeroClass, level: number, build: Build | undefined): boolean {
   if (!build) return false;
   if (level === 1 && !build.locked) return true;
-  if (archetypeLevel(cls, level) && !build.archetype) return true;
+  if (archetypeLevel(cls, level) && !build.archetype && PLAYABLE_ARCHETYPES.length > 1) return true;
   if (picksPending(build, level)) return true;
   if (extraStyleLevel(cls, level)) return build.archetype === 'champion' && !build.extraStyle;
   const index = improvementIndexAt(cls, level);
@@ -189,11 +236,21 @@ export function takeExtraStyle(cls: HeroClass, build: Build, level: number, styl
   return true;
 }
 
-/** The Martial Archetype, taken at the level that offers it: final once chosen. */
+/** The Martial Archetype, taken at the level that offers it: final once chosen, and only one the game offers for now. */
 export function takeArchetype(cls: HeroClass, build: Build, level: number, archetype: ArchetypeId): boolean {
-  if (!archetypeOffered(cls, level) || build.archetype) return false;
+  if (!archetypeOffered(cls, level) || build.archetype || !PLAYABLE_ARCHETYPES.includes(archetype)) return false;
   build.archetype = archetype;
   return true;
+}
+
+/**
+ * With a single archetype on offer there is nothing to choose: a hero who has reached the level that offers it is given
+ * it at once. Returns the archetype given (null: none was due).
+ */
+export function grantArchetype(cls: HeroClass, build: Build, level: number): ArchetypeId | null {
+  if (PLAYABLE_ARCHETYPES.length !== 1 || build.archetype || !archetypeOffered(cls, level)) return null;
+  build.archetype = PLAYABLE_ARCHETYPES[0];
+  return build.archetype;
 }
 
 /** What a hero learns at a level that teaches something new: maneuvers, or an Eldritch Knight's cantrips and spells. */
@@ -247,9 +304,17 @@ export function lockBuild(cls: HeroClass, build: Build, level: number): void {
   if (fightingStyleOffered(cls, level) && !build.fightingStyle) build.fightingStyle = DEFAULT_FIGHTING_STYLE;
 }
 
-/** The improvement is two points that keep every score within the cap, or a feat not taken yet. */
+/** A feat the hero may take, with an ability it offers (when it raises one) that is still below the cap. */
+function featFits(cls: HeroClass, level: number, build: Build, feat: FeatId, ability: StatName | undefined): boolean {
+  if (!isFeatId(feat) || !featOpen(cls, level, build, feat)) return false;
+  if (!FEATS[feat].abilities.length) return ability === undefined;
+  const raised = featAbility(feat, ability);
+  return raised !== null && baseScores(cls, level, build)[raised] < ABILITY_CAP;
+}
+
+/** The improvement is two points that keep every score within the cap, or a feat the hero may take. */
 function improvementFits(cls: HeroClass, level: number, build: Build, improvement: Improvement): boolean {
-  if ('feat' in improvement) return isFeatId(improvement.feat) && !hasFeat(cls, level, build, improvement.feat);
+  if ('feat' in improvement) return featFits(cls, level, build, improvement.feat, improvement.ability);
   const scores = baseScores(cls, level, build);
   const entries = Object.entries(improvement.stats);
   const points = entries.reduce((sum, [, amount]) => sum + amount, 0);
@@ -268,7 +333,7 @@ export function takeImprovement(cls: HeroClass, build: Build, level: number, imp
 
 export function validImprovement(value: unknown): value is Improvement {
   if (!isRecord(value)) return false;
-  if ('feat' in value) return isFeatId(value.feat);
+  if ('feat' in value) return isFeatId(value.feat) && (value.ability === undefined || isStatName(value.ability));
   const stats = value.stats;
   if (!isRecord(stats)) return false;
   const entries = Object.entries(stats);

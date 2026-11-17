@@ -2,11 +2,12 @@ import type { StatName } from '../world';
 import { text } from '../core/texts';
 import { statDescription, statName, statShort } from '../entities/Items';
 import { keyAbilities } from '../rules/CharacterSheet';
-import type { CharacterSheet } from '../rules/CharacterSheet';
+import type { CharacterSheet, WeaponAttack } from '../rules/CharacterSheet';
 import { NATURAL_CRIT, formatDamage, formatDice, formatModifier } from '../rules/Dice';
 import { armorName, damageTypeName, dndClassName, featureName, fightingStyleName, trainingName, weaponName } from '../rules/Names';
 import { BASE_SPEED_FT } from '../rules/CharacterSheet';
-import type { TipTopic } from './InfoTooltip';
+import type { TipDetail, TipTopic } from './InfoTooltip';
+import { THEME } from './Theme';
 
 /** The character sheet's tooltips: what each value means, and how the player's own one adds up. */
 
@@ -27,6 +28,7 @@ export function armorClassTopic(sheet: CharacterSheet): TipTopic {
   if (ac.magic) detail.push(text('sheet.ac.magic', { bonus: formatModifier(ac.magic) }));
   if (ac.shield) detail.push(text('sheet.ac.shield', { bonus: formatModifier(ac.shield) }));
   if (ac.featureName) detail.push(text('sheet.ac.feature', { feature: fightingStyleName(ac.featureName), bonus: formatModifier(ac.feature) }));
+  if (ac.feat) detail.push(text('sheet.ac.feat', { bonus: formatModifier(ac.feat) }));
   detail.push(text('sheet.ac.total', { total: ac.total }));
   return { title: text('sheet.ac.name'), body: text('sheet.ac.description'), detail };
 }
@@ -39,33 +41,59 @@ export function hitPointsTopic(sheet: CharacterSheet): TipTopic {
   return { title: text('sheet.hp.name'), body: text('sheet.hp.description'), detail };
 }
 
+/**
+ * Weapon damage: how the blow of the weapon in hand adds up, and what it adds to its d20. With a weapon in each hand the
+ * main hand's blow comes first under a heading, then the off hand's, each told whole.
+ */
 export function damageTopic(sheet: CharacterSheet): TipTopic {
   const attack = sheet.attack;
-  const base = weaponName(attack.base);
-  const detail = [
-    text('sheet.dmg.weapon', { name: attack.item?.name ?? base }),
-    text('sheet.dmg.dice', { base, dice: formatDice(attack.rule.damage), type: damageTypeName(attack.rule.type) }),
-  ];
-  if (attack.twoHanded && attack.rule.versatile) detail.push(text('sheet.dmg.two_handed', { dice: formatDice(attack.rule.versatile) }));
-  detail.push(text('sheet.dmg.ability', { ability: statShort(attack.ability), modifier: formatModifier(attack.abilityModifier) }));
-  if (attack.magic) detail.push(text('sheet.dmg.magic', { bonus: formatModifier(attack.magic) }));
-  if (attack.extra) detail.push(text('sheet.dmg.sneak', { dice: formatDice(attack.extra) }));
-  detail.push(text('sheet.dmg.total', { dice: formatDamage(attack.damage, attack.extra) }));
-  detail.push(text('sheet.dmg.to_hit', { bonus: formatModifier(attack.attackBonus), proficiency: formatModifier(attack.proficiency) }));
-  if (attack.mode === 'disadvantage') detail.push(text('sheet.dmg.disadvantage'));
+  const detail: TipDetail[] = [];
+  if (sheet.offHand) detail.push({ text: text('sheet.dmg.main_hand'), color: THEME.title });
+  detail.push(...attackLines(attack));
   if (attack.critFrom < NATURAL_CRIT) detail.push(text('sheet.dmg.crit', { from: attack.critFrom }));
   if (sheet.attacks > 1) detail.push(text('sheet.dmg.attacks', { count: sheet.attacks }));
-  detail.push(...offHandLines(sheet));
+  if (sheet.offHand) {
+    detail.push({ text: text('sheet.dmg.off_hand'), color: THEME.title });
+    detail.push(...attackLines(sheet.offHand));
+  }
   if (sheet.battleMaster) detail.push(text('sheet.dmg.maneuver_dc', { dc: sheet.maneuverDc }));
   return { title: text('sheet.dmg.name'), body: text('sheet.dmg.description'), detail };
 }
 
-/** The second hand's blow of two-weapon fighting: its weapon, damage and to-hit. */
-function offHandLines(sheet: CharacterSheet): string[] {
-  const off = sheet.offHand;
-  if (!off) return [];
-  const name = off.item?.name ?? weaponName(off.base);
-  return [text('sheet.dmg.off_hand', { name, dice: formatDamage(off.damage, off.extra) }), text('sheet.dmg.off_hand_hit', { bonus: formatModifier(off.attackBonus) })];
+/** One weapon's blow: its dice, every bonus to damage, the total, and the to-hit with what it is made of. */
+function attackLines(attack: WeaponAttack): string[] {
+  const base = weaponName(attack.base);
+  const lines = [
+    text('sheet.dmg.weapon', { name: attack.item?.name ?? base }),
+    text('sheet.dmg.dice', { base, dice: formatDice(attack.rule.damage), type: damageTypeName(attack.rule.type) }),
+  ];
+  if (attack.twoHanded && attack.rule.versatile) lines.push(text('sheet.dmg.two_handed', { dice: formatDice(attack.rule.versatile) }));
+  lines.push(abilityLine(attack));
+  if (attack.magic) lines.push(text('sheet.dmg.magic', { bonus: formatModifier(attack.magic) }));
+  if (attack.styleDamage && attack.styleName) lines.push(text('sheet.dmg.style', { style: fightingStyleName(attack.styleName), bonus: formatModifier(attack.styleDamage) }));
+  if (attack.extra) lines.push(text('sheet.dmg.sneak', { dice: formatDice(attack.extra) }));
+  if (attack.rerollBelow) lines.push(text('sheet.dmg.reroll', { below: attack.rerollBelow }));
+  if (attack.savage) lines.push(text('sheet.dmg.savage'));
+  lines.push(text('sheet.dmg.total', { dice: formatDamage(attack.damage, attack.extra) }));
+  lines.push(text('sheet.dmg.to_hit', { bonus: formatModifier(attack.attackBonus), parts: hitParts(attack) }));
+  if (attack.mode === 'disadvantage') lines.push(text('sheet.dmg.disadvantage'));
+  return lines;
+}
+
+/** What the ability adds to damage: all of it, or (an off-hand blow without Two-Weapon Fighting) none of it. */
+function abilityLine(attack: WeaponAttack): string {
+  const vars = { ability: statShort(attack.ability), modifier: formatModifier(attack.abilityDamage) };
+  if (attack.abilityDamage === 0 && attack.abilityModifier > 0) return text('sheet.dmg.ability_off_hand', { ability: vars.ability, modifier: formatModifier(attack.abilityModifier) });
+  return text('sheet.dmg.ability', vars);
+}
+
+/** "STR +3, proficiency +2, Archery +2, magic +1": what the to-hit is made of (proficiency only for a weapon the hero is trained in). */
+function hitParts(attack: WeaponAttack): string {
+  const parts = [`${statShort(attack.ability)} ${formatModifier(attack.abilityHit)}`];
+  parts.push(attack.proficient ? text('sheet.dmg.hit_proficiency', { bonus: formatModifier(attack.proficiency) }) : text('sheet.dmg.hit_untrained'));
+  if (attack.styleHit && attack.styleName) parts.push(`${fightingStyleName(attack.styleName)} ${formatModifier(attack.styleHit)}`);
+  if (attack.magic) parts.push(text('sheet.dmg.hit_magic', { bonus: formatModifier(attack.magic) }));
+  return parts.join(', ');
 }
 
 /** Armour training: what it means, and whether what is worn now is covered. */

@@ -1460,7 +1460,7 @@ test('the combat log writes rests, healing, kills, deaths, levels and the choice
   assert.deepEqual(news(), [], 'a refused choice is not written');
   const caster = playerAt(5, 3, 'fighter');
   caster.playerStats.level = 3;
-  assert.equal(applyCustomization(caster, { kind: 'archetype', archetype: 'battle_master' }), true);
+  assert.equal(applyCustomization(caster, { kind: 'archetype', archetype: 'champion' }), true);
   assert.equal(news()[0][0], 'archetype');
 
   const goblin = mobAt(level, 'goblin', 8, 3);
@@ -2020,9 +2020,11 @@ test('in co-op a rest waits for every companion to agree; one refusal calls it o
 test('experience by the SRD: kills give their challenge rating\'s XP, and 300 reaches level 2 with another hit die', () => {
   assert.equal(levelForXp(299), 1);
   assert.equal(levelForXp(300), 2);
-  assert.equal(levelForXp(355000), 20);
+  assert.equal(levelForXp(100000), 12);
+  assert.equal(levelForXp(355000), 12, 'level 12 is the cap for now');
   assert.equal(nextLevelXp(1), 300);
-  assert.equal(nextLevelXp(20), null);
+  assert.equal(nextLevelXp(11), 100000);
+  assert.equal(nextLevelXp(12), null, 'nothing past the cap');
   const level = arena(14, 6);
   const hero = playerAt(2, 2);
   const maxBefore = hero.health.max;
@@ -2191,7 +2193,11 @@ test('fighting styles: Archery, Defense, Dueling and Great Weapon Fighting chang
   assert.equal(attack({ primary: weapon('longbow') }, 'archery').attackBonus, attack({ primary: weapon('longbow') }, null).attackBonus + 2, 'Archery: +2 to hit at range');
   assert.equal(attack({ primary: weapon('longsword') }, 'archery').attackBonus, attack({ primary: weapon('longsword') }, null).attackBonus, 'not in melee');
   const sword = { primary: weapon('longsword'), secondary: shield };
-  assert.equal(attack(sword, 'dueling').damage.bonus, attack(sword, null).damage.bonus + 2, 'Dueling: one-handed with a shield');
+  const short = { primary: weapon('shortsword'), secondary: shield };
+  assert.equal(attack(short, 'dueling').damage.bonus, attack(short, null).damage.bonus + 2, 'Dueling: one-handed with a shield');
+  assert.equal(attack(short, 'dueling').styleDamage, 2, 'told apart for the tooltip');
+  assert.equal(attack(sword, 'dueling').damage.bonus, attack(sword, null).damage.bonus, 'not with a versatile weapon, even in one hand');
+  assert.equal(attack({ primary: weapon('longbow') }, 'archery').styleHit, 2, 'Archery told apart for the tooltip');
   assert.equal(attack({ primary: weapon('longsword') }, 'dueling').damage.bonus, attack({ primary: weapon('longsword') }, null).damage.bonus, 'a versatile sword held in both hands is not one-handed');
   assert.equal(attack({ primary: weapon('shortsword') }, 'dueling').damage.bonus, attack({ primary: weapon('shortsword') }, null).damage.bonus + 2, 'a one-handed sword with the other hand empty');
   assert.equal(attack({ primary: weapon('shortsword'), secondary: weapon('dagger') }, 'dueling').damage.bonus, attack({ primary: weapon('shortsword') }, null).damage.bonus, 'no other weapon');
@@ -2336,7 +2342,7 @@ test('the level log: each level knows whether it has a choice, and Save makes th
   assert.equal(applyCustomization(hero, { kind: 'fighting_style', style: 'archery' }), false);
   assert.equal(Build.levelHasChoice(fighter, 1, build), false);
   assert.equal(Build.hasChoices(fighter, 2, build), false);
-  assert.equal(Build.levelHasChoice(fighter, 3, build), true, 'level 3 offers the Martial Archetype');
+  assert.equal(Build.levelHasChoice(fighter, 3, build), false, 'level 3 makes the hero a Champion: nothing to choose');
   hero.playerStats.level = 3;
   assert.equal(applyCustomization(hero, { kind: 'archetype', archetype: 'champion' }), true);
   assert.equal(applyCustomization(hero, { kind: 'archetype', archetype: 'battle_master' }), false, 'it is final');
@@ -2929,7 +2935,8 @@ test('every class lists its features by level, in a file that names real kinds',
   const at = (cls, level) => Features.featuresAt(cls, level, null).map((f) => f.id);
   assert.ok(at('fighter', 1).includes('second_wind') && !at('fighter', 1).includes('action_surge'));
   assert.ok(at('fighter', 2).includes('action_surge'));
-  assert.ok(at('fighter', 20).includes('extra_attack') && !at('fighter', 20).includes('protection'), 'Protection only for the style');
+  assert.ok(at('fighter', 20).includes('extra_attack_3') && !at('fighter', 20).includes('protection'), 'Protection only for the style');
+  assert.ok(at('fighter', 11).includes('improved_extra_attack') && !at('fighter', 11).includes('extra_attack'), 'Improved Extra Attack takes the place of Extra Attack');
   assert.ok(Features.featuresAt('fighter', 1, { fightingStyle: 'protection' }).some((f) => f.id === 'protection'));
   assert.ok(Features.featuresAt('fighter', 1, { extraStyle: 'protection' }).some((f) => f.id === 'protection'), 'a second style opens it too');
   assert.ok(at('rogue', 20).includes('stroke_of_luck') && at('cleric', 17).includes('supreme_healing'));
@@ -2984,7 +2991,8 @@ test('actives go on the quick bar and are used with the cast key', () => {
   fighter.playerInput.spellSlot = 1;
   fighter.castCooldown = 0;
   cast(level, fighter, 1);
-  assert.equal(fighter.spellbook.recovery[3], 0, 'Action Surge readies the rest of the bar');
+  assert.equal(fighter.actionSurge, 6 * 60, 'Action Surge doubles the attacks for 6 seconds');
+  assert.ok(fighter.spellbook.recovery[3] > 0, 'the rest of the bar keeps recovering');
   assert.equal(fighter.spellbook.recovery[1], 60 * 60, 'and it recovers for a minute itself');
   const wizard = casterAt(2, 4, 'wizard', 0);
   bindSpell(wizard, 0, 'feature:arcane_recovery', 0);
@@ -4038,8 +4046,13 @@ test('two-weapon fighting: a weapon in each hand lands a second attack, with the
   const magic = { primary: weaponItem('shortsword'), secondary: weaponItem('dagger', 1) };
   assert.equal(offHandAttack(magic, mods, 1, CLASSES.fighter, true, null).damage.bonus, 1, 'the magic bonus stays');
   assert.equal(offHandAttack(both, { ...mods, strength: -1, dexterity: -1 }, 1, CLASSES.fighter, true, null).damage.bonus, -1, 'a penalty always counts');
-  assert.equal(offHandAttack({ primary: weaponItem('longsword'), secondary: weaponItem('dagger') }, mods, 1, CLASSES.fighter).base, 'dagger', 'any melee weapon in the first hand');
-  assert.equal(offHandAttack({ primary: weaponItem('dagger'), secondary: weaponItem('rapier') }, mods, 1, CLASSES.fighter).base, 'rapier', 'and in the second');
+  const { NO_FEATS } = await load('rules/Feats');
+  const wielder = { ...NO_FEATS, dualWield: true };
+  assert.equal(offHandAttack({ primary: weaponItem('longsword'), secondary: weaponItem('dagger') }, mods, 1, CLASSES.fighter), null, 'only light weapons without Dual Wielder');
+  assert.equal(offHandAttack({ primary: weaponItem('dagger'), secondary: weaponItem('rapier') }, mods, 1, CLASSES.fighter), null, 'in either hand');
+  assert.equal(offHandAttack({ primary: weaponItem('longsword'), secondary: weaponItem('dagger') }, mods, 1, CLASSES.fighter, true, null, wielder).base, 'dagger', 'Dual Wielder: any one-handed weapon');
+  assert.equal(offHandAttack({ primary: weaponItem('dagger'), secondary: weaponItem('rapier') }, mods, 1, CLASSES.fighter, true, null, wielder).base, 'rapier', 'and in the second hand');
+  assert.equal(offHandAttack(both, mods, 1, CLASSES.fighter, true, null).attackBonus, 2 + 3, 'the off hand\'s to-hit is whole: proficiency and STR');
   assert.equal(offHandAttack({ primary: weaponItem('greatsword'), secondary: weaponItem('dagger') }, mods, 1, CLASSES.fighter), null, 'a two-handed weapon needs both hands');
   assert.equal(offHandAttack({ primary: weaponItem('dagger'), secondary: weaponItem('greatsword') }, mods, 1, CLASSES.fighter), null, 'either way round');
   assert.equal(offHandAttack({ primary: weaponItem('dagger'), secondary: { type: 'shield', name: 's', value: 1, gear: 'offhand', base: 'shield' } }, mods, 1, CLASSES.fighter), null, 'a shield is no weapon');
@@ -4171,7 +4184,7 @@ test('with a melee weapon in each hand one click makes an attack with each, roll
   const { updateCombatTimers } = await load('systems/CombatSystem');
   const { characterSheet } = await load('rules/CharacterSheet');
   const hero = heroWith('champion', 1);
-  hero.equipped = { primary: weaponItem('longsword'), secondary: weaponItem('dagger') };
+  hero.equipped = { primary: weaponItem('shortsword'), secondary: weaponItem('dagger') };
   const dummy = createTrainingDummy(centre(4.7), centre(2));
   hero.position.x = centre(4);
   hero.position.y = centre(2);
@@ -4195,7 +4208,7 @@ test('with a melee weapon in each hand one click makes an attack with each, roll
   assert.equal(entries.map((e) => e.result).join(), 'hit,hit', 'the second hits although the first just struck');
   assert.equal(dummy.health.current, dummy.health.max - entries[0].damage - entries[1].damage, 'and both damage rolls count');
   assert.ok(rolled.filter((sides) => sides === 20).length >= 2, 'each rolls its own d20');
-  assert.ok(rolled.includes(8) && rolled.includes(4), 'the longsword rolls its d8 and the dagger its d4');
+  assert.ok(rolled.includes(6) && rolled.includes(4), 'the shortsword rolls its d6 and the dagger its d4');
   assert.deepEqual(entries.map((e) => e.damage), [3 + sheet.attack.damage.bonus, 3 + sheet.offHand.damage.bonus], 'each deals its own damage');
   world.remove(dummy);
   world.remove(hero);
@@ -4255,16 +4268,19 @@ test('critical hits: a d20 of the critical range always hits and doubles the dic
   assert.equal(characterSheet(wizard).attack.critFrom, 20);
 });
 
-test('Champion: Remarkable Athlete adds to initiative, Survivor mends a hero at half health, the archetype is final', async () => {
+test('Champion: Remarkable Athlete doubles the speed for 6 seconds, Survivor mends a hero at half health, the archetype is final', async () => {
   const { characterSheet } = await load('rules/CharacterSheet');
   const { CLASSES } = await load('rules/Classes');
   const Build = await load('rules/Build');
-  const { updateSurvivor } = await load('systems/FeatureSystem');
+  const { updateSurvivor, updateFeatureTimers, athleteSpeedFactor } = await load('systems/FeatureSystem');
   const champ = heroWith('champion', 7);
   const master = heroWith('battle_master', 7);
-  assert.equal(characterSheet(champ).initiative - characterSheet(master).initiative, 2, 'half the proficiency bonus (+3), rounded up');
-  const earlier = heroWith('champion', 6);
-  assert.equal(characterSheet(earlier).initiative, characterSheet(heroWith('battle_master', 6)).initiative, 'not before level 7');
+  assert.equal(characterSheet(champ).initiative, characterSheet(master).initiative, 'no longer an initiative bonus');
+  assert.equal(Features.featureOfClass('fighter', 'remarkable_athlete').kind, 'active');
+  assert.equal(usedFeature(champ, 'remarkable_athlete', 0, arena(6, 6)), 'ok');
+  assert.equal(athleteSpeedFactor(champ), 2, 'twice the speed');
+  for (let t = 0; t < 360; t++) updateFeatureTimers();
+  assert.equal(athleteSpeedFactor(champ), 1, 'for 6 seconds');
   const hero = heroWith('champion', 18);
   hero.health.max = 200;
   hero.health.current = 150;
@@ -4301,7 +4317,7 @@ test('the Fighter has every feature of the level table, each gated by its archet
   const { MANEUVERS } = await load('rules/Maneuvers');
   const ids = (picks, level) => Features.featuresAt('fighter', level, picks).map((f) => f.id);
   const champion = ids({ archetype: 'champion' }, 20);
-  for (const id of ['champion', 'remarkable_athlete', 'additional_fighting_style', 'superior_critical', 'survivor', 'extra_attack', 'indomitable']) {
+  for (const id of ['champion', 'remarkable_athlete', 'additional_fighting_style', 'superior_critical', 'survivor', 'extra_attack_3', 'indomitable']) {
     assert.ok(champion.includes(id), id);
   }
   assert.ok(!champion.includes('improved_critical'), 'Superior Critical takes its place');
@@ -4326,7 +4342,8 @@ test('the Fighter has every feature of the level table, each gated by its archet
   const surge = Features.featureOfClass('fighter', 'action_surge');
   assert.deepEqual([2, 16, 17, 20].map((level) => Features.featureCooldown(surge, level)), [60, 60, 30, 30], 'Action Surge twice from level 17: half the wait');
   const indomitable = Features.featureOfClass('fighter', 'indomitable');
-  assert.deepEqual([9, 13, 17].map((level) => Features.featureUses(indomitable, level)), [1, 2, 3]);
+  assert.deepEqual([9, 13, 17].map((level) => Features.featureUses(indomitable, level)), [1, 1, 1], 'one reroll, then 30 seconds to recover');
+  assert.equal(indomitable.kind, 'passive');
 });
 
 test('Action Surge recovers in 30 seconds from level 17', () => {
@@ -4690,7 +4707,9 @@ test('a guest picks an archetype and maneuvers; the host checks each', () => {
   world.addComponent(hero, 'playerSlot', 'p2');
   hero.playerStats.level = 3;
   handleGuestCommand('p2', { kind: 'archetype', archetype: 'battle_master' });
-  assert.equal(hero.build.archetype, 'battle_master');
+  assert.equal(hero.build.archetype, undefined, 'only the Champion is on offer for now');
+  // A Battle Master from before the archetypes were narrowed down still learns their maneuvers.
+  hero.build.archetype = 'battle_master';
   handleGuestCommand('p2', { kind: 'pick', level: 3, maneuvers: ['parry', 'riposte', 'rally'] });
   assert.deepEqual(hero.build.maneuvers, ['parry', 'riposte', 'rally']);
   handleGuestCommand('p2', { kind: 'pick', level: 7, maneuvers: ['trip_attack', 'pushing_attack'] });
@@ -4727,11 +4746,205 @@ test('the level log shows a level only once the choices before it are made', asy
   build.fightingStyle = 'dueling';
   build.locked = true;
   assert.equal(Build.visibleLevel(fighter, 2, build), 2, 'no choice at level 2');
-  assert.equal(Build.visibleLevel(fighter, 5, build), 3, 'level 2 comes with level 3, which asks for the archetype');
+  assert.equal(Build.visibleLevel(fighter, 5, build), 4, 'level 3 makes the hero a Champion by itself: level 4 offers an Improvement');
   build.archetype = 'champion';
   assert.equal(Build.visibleLevel(fighter, 5, build), 4, 'level 4 offers an Improvement');
   Build.takeImprovement(fighter, build, 4, { feat: 'tough' });
   assert.equal(Build.visibleLevel(fighter, 5, build), 5);
   assert.equal(Build.visibleLevel(fighter, 7, build), 6, 'level 6 is waiting');
   assert.equal(Build.visibleLevel(CLASSES.wizard, 4, createPlayer(0, 0, 'wizard').build), 1, 'the wizard has not saved their scores');
+});
+
+// ── Level cap, Fighter features reworked, feats ────────────────────────────
+
+test('experience stops at level 12 for now, though the tables go on to 20', async () => {
+  const { grantExperience } = await load('systems/DeathSystem');
+  const { LEVEL_CAP, MAX_LEVEL } = await load('game/Progress');
+  assert.equal(LEVEL_CAP, 12);
+  assert.equal(MAX_LEVEL, 20, 'the rules tables keep every level');
+  const hero = playerAt(2, 2, 'fighter');
+  grantExperience(hero, 1_000_000);
+  assert.equal(hero.playerStats.level, 12);
+  assert.equal(Features.featuresAt('fighter', 20, { archetype: 'champion' }).some((f) => f.id === 'survivor'), true, 'what lies above 12 is still there');
+});
+
+test('Second Wind: refused at full health (nothing spent), a turquoise aura follows the fighter when used', async () => {
+  const level = arena(10, 6);
+  const fighter = casterAt(2, 2, 'fighter', 0);
+  fighter.inSafeRoom = false;
+  fighter.health.current = fighter.health.max;
+  assert.equal(usedFeature(fighter, 'second_wind', 0, level), 'hp_full');
+  bindSpell(fighter, 0, 'feature:second_wind', 0);
+  fighter.playerInput.spellSlot = 0;
+  fighter.castCooldown = 0;
+  cast(level, fighter, 1);
+  assert.equal(fighter.spellbook.recovery[0], 0, 'its square does not start recovering');
+  fighter.health.current = 1;
+  assert.equal(usedFeature(fighter, 'second_wind', 0, level), 'ok');
+  // The aura's sheet loads first (at once here: no art in the tests).
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const aura = world.entities.find((e) => e.fx?.follow === world.id(fighter));
+  assert.ok(aura, 'an aura that follows the fighter');
+  assert.equal(aura.visual.tint, 0x40e0d0, 'turquoise');
+});
+
+test('Action Surge doubles every swing\'s attacks for 6 seconds, and the whole chain still lands within the attack period', async () => {
+  const { characterSheet } = await load('rules/CharacterSheet');
+  const { updateFeatureTimers } = await load('systems/FeatureSystem');
+  const { ATTACK_PERIOD } = await load('entities/WeaponStats');
+  for (const [lvl, normal] of [[2, 1], [5, 2], [11, 3], [12, 3]]) {
+    const hero = heroWith('champion', lvl);
+    assert.equal(characterSheet(hero).attacks, normal, `level ${lvl}`);
+    assert.equal(usedFeature(hero, 'action_surge', 0, arena(6, 6)), 'ok');
+    assert.equal(characterSheet(hero).attacks, normal * 2, `level ${lvl} under Action Surge`);
+    hero.playerInput.intents.attack = true;
+    let blows = 0;
+    for (let t = 0; t < ATTACK_PERIOD; t++) {
+      updateSword();
+      hero.playerInput.intents.attack = false;
+      blows = Math.max(blows, (hero.swordSwing?.blow ?? -1) + 1);
+    }
+    assert.equal(blows, normal * 2, `level ${lvl}: every blow of the chain comes`);
+    assert.equal(hero.swordSwing, undefined, `level ${lvl}: and it is over within the second`);
+    for (let t = 0; t < 360; t++) updateFeatureTimers();
+    assert.equal(characterSheet(hero).attacks, normal, 'back to normal after 6 seconds');
+  }
+});
+
+test('Improved Extra Attack comes at level 11 in place of Extra Attack, and the level log names it', async () => {
+  const { attacksPerAction } = await load('rules/CharacterSheet');
+  const { CLASSES } = await load('rules/Classes');
+  assert.deepEqual([4, 5, 10, 11, 19, 20].map((lvl) => attacksPerAction(CLASSES.fighter, lvl)), [1, 2, 2, 3, 3, 4]);
+  assert.equal(attacksPerAction(CLASSES.fighter, 11, ['improved_extra_attack']), 1, 'switched off');
+  const at11 = Features.featuresAt('fighter', 11, { archetype: 'champion' }).filter((f) => f.level === 11).map((f) => f.name);
+  assert.deepEqual(at11, ['Improved Extra Attack']);
+  assert.equal(Features.featureOfClass('fighter', 'improved_extra_attack').kind, 'passive');
+});
+
+test('Indomitable rerolls a failed saving throw, then needs 30 seconds or a rest', async () => {
+  const { heroSavingThrow, updateFeatureTimers } = await load('systems/FeatureSystem');
+  const { takeRest } = await load('game/Rest');
+  const hero = heroWith('champion', 9);
+  const rolls = [1, 20, 1, 1];
+  const die = () => rolls.shift() ?? 1;
+  assert.equal(heroSavingThrow(hero, 'wisdom', 15, die), true, 'the 1 is rolled again: 20');
+  assert.equal(hero.indomitableCooldown, 30 * 60);
+  assert.equal(heroSavingThrow(hero, 'wisdom', 15, die), false, 'recovering: the 1 stands');
+  for (let t = 0; t < 30 * 60; t++) updateFeatureTimers();
+  assert.equal(hero.indomitableCooldown, 0);
+  hero.indomitableCooldown = 500;
+  takeRest('short');
+  assert.equal(hero.indomitableCooldown, 0, 'a rest makes it ready');
+  assert.equal(heroSavingThrow(heroWith('champion', 8), 'wisdom', 15, () => 1), false, 'not before level 9');
+});
+
+test('a Fighter becomes a Champion at level 3 by themselves; the other archetypes are not on offer', async () => {
+  const { CLASSES } = await load('rules/Classes');
+  const Build = await load('rules/Build');
+  const { updateBuildLock } = await load('game/Customize');
+  const level = arena(6, 6);
+  const hero = playerAt(2, 2, 'fighter');
+  hero.build.fightingStyle = 'defense';
+  hero.build.locked = true;
+  hero.playerStats.level = 2;
+  updateBuildLock(level);
+  assert.equal(hero.build.archetype, undefined, 'not before level 3');
+  hero.playerStats.level = 3;
+  updateBuildLock(level);
+  assert.equal(hero.build.archetype, 'champion');
+  assert.equal(Build.takeArchetype(CLASSES.fighter, playerAt(2, 2, 'fighter').build, 3, 'eldritch_knight'), false);
+});
+
+test('Tough: +2 for every level already gained when taken, and +2 with every level after', async () => {
+  const { applyCustomization } = await load('game/Customize');
+  const { grantExperience } = await load('systems/DeathSystem');
+  const { LEVEL_THRESHOLDS } = await load('game/Progress');
+  const fourth = () => {
+    const hero = playerAt(2, 2, 'fighter');
+    hero.build.fightingStyle = 'defense';
+    hero.build.locked = true;
+    hero.build.archetype = 'champion';
+    grantExperience(hero, LEVEL_THRESHOLDS[3]);
+    return hero;
+  };
+  const hero = fourth();
+  assert.equal(hero.playerStats.level, 4);
+  const before = hero.health.max;
+  assert.equal(applyCustomization(hero, { kind: 'improve', improvement: { feat: 'tough' } }), true);
+  assert.equal(hero.health.max, before + 2 * 4, 'four levels so far');
+  const plain = fourth();
+  applyCustomization(plain, { kind: 'improve', improvement: { stats: { wisdom: 1, intelligence: 1 } } });
+  const gap = hero.health.max - plain.health.max;
+  grantExperience(hero, LEVEL_THRESHOLDS[4] - LEVEL_THRESHOLDS[3]);
+  grantExperience(plain, LEVEL_THRESHOLDS[4] - LEVEL_THRESHOLDS[3]);
+  assert.equal(hero.health.max - plain.health.max, gap + 2, 'and 2 more at level 5');
+});
+
+test('feats: every Baldur\'s Gate 3 feat is listed; requirements, worked ones and the ability they raise decide which can be taken', async () => {
+  const { CLASSES } = await load('rules/Classes');
+  const Build = await load('rules/Build');
+  const { FEAT_IDS, FEATS } = await load('rules/Feats');
+  const { characterSheet } = await load('rules/CharacterSheet');
+  const { text } = await load('core/texts');
+  assert.equal(FEAT_IDS.length, 41);
+  for (const id of FEAT_IDS) assert.ok(text(`feat.${id}.name`) !== `feat.${id}.name` && text(`feat.${id}.description`) !== `feat.${id}.description`, id);
+  const wizard = createPlayer(0, 0, 'wizard').build;
+  const fighter = playerAt(2, 2, 'fighter').build;
+  assert.equal(Build.featOpen(CLASSES.wizard, 4, wizard, 'heavily_armoured'), false, 'a wizard is not trained in medium armour');
+  assert.equal(Build.featOpen(CLASSES.fighter, 4, fighter, 'heavily_armoured'), true);
+  assert.equal(Build.meetsRequirement(CLASSES.fighter, 4, fighter, FEATS.war_caster.requires), false, 'a fighter casts no spells');
+  assert.equal(Build.meetsRequirement(CLASSES.wizard, 4, wizard, FEATS.war_caster.requires), true);
+  assert.equal(Build.featOpen(CLASSES.wizard, 4, wizard, 'war_caster'), false, 'not worked yet');
+  assert.equal(Build.takeImprovement(CLASSES.wizard, wizard, 4, { feat: 'athlete' }), false, 'Athlete asks which ability it raises');
+  assert.equal(Build.takeImprovement(CLASSES.wizard, wizard, 4, { feat: 'athlete', ability: 'wisdom' }), false, 'one it offers');
+  const dex = Build.baseScores(CLASSES.wizard, 4, wizard).dexterity;
+  assert.equal(Build.takeImprovement(CLASSES.wizard, wizard, 4, { feat: 'athlete', ability: 'dexterity' }), true);
+  assert.equal(Build.baseScores(CLASSES.wizard, 4, wizard).dexterity, dex + 1);
+  const resilient = playerAt(2, 2, 'wizard');
+  resilient.playerStats.level = 4;
+  assert.equal(characterSheet(resilient).saves.constitution.proficient, false);
+  Build.takeImprovement(CLASSES.wizard, resilient.build, 4, { feat: 'resilient', ability: 'constitution' });
+  assert.equal(characterSheet(resilient).saves.constitution.proficient, true, 'Resilient: trained in its save');
+  const armoured = playerAt(2, 2, 'wizard');
+  armoured.playerStats.level = 4;
+  armoured.equipped = { armor: { type: 'armor', name: 'a', value: 1, gear: 'armor', base: 'leather' } };
+  assert.equal(characterSheet(armoured).armorClass.proficient, false);
+  Build.takeImprovement(CLASSES.wizard, armoured.build, 4, { feat: 'lightly_armoured', ability: 'strength' });
+  assert.equal(characterSheet(armoured).armorClass.proficient, true, 'Lightly Armoured: trained in light armour');
+});
+
+test('feats in play: Savage Attacker, Dual Wielder, Heavy Armour Master, Mobile, Observant, Durable', async () => {
+  const { CLASSES } = await load('rules/Classes');
+  const Build = await load('rules/Build');
+  const { characterSheet, heavyArmorReduction } = await load('rules/CharacterSheet');
+  const { resolveAttack } = await load('rules/Combat');
+  const { takeRest } = await load('game/Rest');
+  const hero = heroWith('champion', 12, { fightingStyle: 'defense', locked: true });
+  const take = (feat, ability) => assert.ok(Build.takeImprovement(CLASSES.fighter, hero.build, 12, { feat, ...(ability ? { ability } : {}) }), feat);
+  take('savage_attacker');
+  const rolls = [15, 2, 7];
+  const attack = characterSheet(hero).attack;
+  const outcome = resolveAttack(attack, 10, () => rolls.shift() ?? 1);
+  assert.equal(outcome.damage - attack.damage.bonus, 7, 'the higher of the two damage rolls');
+  hero.equipped = { primary: weaponItem('longsword'), secondary: weaponItem('rapier') };
+  const acBefore = characterSheet(hero).armorClass.total;
+  assert.equal(characterSheet(hero).offHand, null);
+  take('dual_wielder');
+  assert.equal(characterSheet(hero).offHand.base, 'rapier', 'two weapons that are not light');
+  assert.equal(characterSheet(hero).armorClass.total, acBefore + 1, '+1 AC');
+  take('heavy_armour_master', 'strength');
+  hero.equipped = { armor: { type: 'armor', name: 'p', value: 1, gear: 'armor', base: 'plate' } };
+  assert.equal(heavyArmorReduction(characterSheet(hero)), 3);
+  const speed = characterSheet(hero).speed;
+  take('mobile');
+  assert.equal(characterSheet(hero).speed, speed + 10);
+  const perception = characterSheet(hero).passivePerception;
+  // Four Improvements by level 12: the rest are put straight into the build.
+  hero.build.improvements.push({ feat: 'observant', ability: 'wisdom' });
+  assert.ok(characterSheet(hero).passivePerception >= perception + 5);
+  hero.build.improvements.push({ feat: 'durable' });
+  hero.health.current = 1;
+  hero.playerStats.hitDice = 0;
+  takeRest('short');
+  assert.equal(hero.health.current, hero.health.max, 'Durable: a short rest heals all');
 });

@@ -11,6 +11,13 @@ import type { Styles } from './FightingStyles';
 export const ARCHETYPES = ['champion', 'battle_master', 'eldritch_knight'] as const;
 export type ArchetypeId = (typeof ARCHETYPES)[number];
 
+/**
+ * The archetypes a hero can follow for now. The Battle Master and the Eldritch Knight stay in the rules (and in old
+ * builds), but are not offered; with only the Champion left, a Fighter is made a Champion on reaching level 3
+ * (`grantArchetype` in src/rules/Build.ts).
+ */
+export const PLAYABLE_ARCHETYPES: readonly ArchetypeId[] = ['champion'];
+
 export function isArchetype(value: unknown): value is ArchetypeId {
   return ARCHETYPES.some((id) => id === value);
 }

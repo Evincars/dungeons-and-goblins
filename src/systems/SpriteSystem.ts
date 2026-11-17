@@ -34,6 +34,7 @@ function createSprites(gameLayer: Container): void {
     if (v.scale) sprite.scale.set(v.scale);
     if (v.fit) sprite.scale.set(v.fit / Math.max(1, sprite.texture.width, sprite.texture.height));
     if (v.rotation) sprite.rotation = v.rotation;
+    if (v.tint !== undefined) sprite.tint = v.tint;
     gameLayer.addChild(sprite);
     world.addComponent(entity, 'sprite', sprite);
   }

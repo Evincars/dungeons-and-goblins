@@ -8,6 +8,11 @@ import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 import { screenToWorld } from '../render/Camera';
 import { TileType } from '../level/TileType';
 import { AIM_HEIGHT } from '../entities/ProjectileFactory';
+import { hasFeat } from '../rules/Build';
+import { heroClass } from '../rules/Classes';
+import { FEATS } from '../rules/Feats';
+import { BASE_SPEED_FT } from '../rules/CharacterSheet';
+import { athleteSpeedFactor } from './FeatureSystem';
 
 type Point = { x: number; y: number };
 type Body = (typeof q.physical)['entities'][number];
@@ -155,6 +160,12 @@ function moveBody(level: Level, entity: Body): void {
 
 type Walker = (typeof walkers)['entities'][number];
 
+/** The Mobile feat's extra feet, as a share of the walking pace (30 ft a round is the pace every hero walks at). */
+function featSpeedFactor(walker: Walker): number {
+  if (!walker.heroClass || !hasFeat(heroClass(walker.heroClass), walker.playerStats.level, walker.build, 'mobile')) return 1;
+  return (BASE_SPEED_FT + FEATS.mobile.speedFeet) / BASE_SPEED_FT;
+}
+
 /** Sprinting drains stamina while moving; letting go of the key (or running dry) recovers it. Returns the speed factor. */
 function sprintFactor(walker: Walker, moving: boolean): number {
   const stats = walker.playerStats;
@@ -200,7 +211,7 @@ function drivePlayer(walker: Walker): void {
     return;
   }
   const moving = pi.up || pi.down || pi.left || pi.right;
-  const spd = (walker.speed ?? 1.0) * sprintFactor(walker, moving);
+  const spd = (walker.speed ?? 1.0) * sprintFactor(walker, moving) * featSpeedFactor(walker) * athleteSpeedFactor(walker);
   const vel = walker.velocity;
   if (pi.up)    vel.y -= spd;
   if (pi.down)  vel.y += spd;

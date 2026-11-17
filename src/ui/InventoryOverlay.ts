@@ -704,10 +704,10 @@ export class InventoryOverlay {
   private compare(item: InventoryItem, other: InventoryItem, x: number, y: number): void {
     const bounds = { w: DESIGN_W, h: DESIGN_H };
     this.comparing = true;
-    this.tooltip.show(item, x, y, bounds, this.sheet?.heroClass);
+    this.tooltip.show(item, x, y, bounds, this.sheet?.heroClass, this.sheet?.feats.armor);
     const first = this.tooltip.view;
     const right = first.x + first.width + COMPARE_GAP;
-    this.compareTip.show(other, right - ItemTooltip.OFFSET, y, bounds, this.sheet?.heroClass);
+    this.compareTip.show(other, right - ItemTooltip.OFFSET, y, bounds, this.sheet?.heroClass, this.sheet?.feats.armor);
     if (this.compareTip.view.x < right) this.compareTip.view.x = Math.max(0, first.x - this.compareTip.view.width - COMPARE_GAP);
     this.compareTip.view.y = first.y;
   }
@@ -807,7 +807,7 @@ export class InventoryOverlay {
     if (this.comparing) return;
     if (this.activeTab === SKILLS_TAB) this.spells?.hover(p.x, p.y);
     const item = player && square && !this.dragging && !this.itemMenu.open ? this.itemIn(player, square.place) : undefined;
-    if (item) this.tooltip.show(item, p.x, p.y, { w: DESIGN_W, h: DESIGN_H }, this.sheet?.heroClass);
+    if (item) this.tooltip.show(item, p.x, p.y, { w: DESIGN_W, h: DESIGN_H }, this.sheet?.heroClass, this.sheet?.feats.armor);
     else this.tooltip.hide();
     this.updateInfoTip(p.x, p.y);
   }

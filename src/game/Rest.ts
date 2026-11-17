@@ -141,9 +141,11 @@ function wake(player: Player): void {
 function restHero(player: Player, kind: RestKind, dice: number): void {
   const before = player.health.current;
   player.spellbook?.recovery.fill(0);
+  player.indomitableCooldown = 0;
   restoreDice(player);
   const spent = kind === 'long' ? 0 : spendHitDice(player, dice);
   if (kind === 'long') wake(player);
+  else if (characterSheet(player).feats.shortRestFullHeal) player.health.current = player.health.max;
   recordEvent(player, kind === 'long' ? 'long_rest' : 'short_rest', { total: spent, amount: player.health.current - before });
 }
 

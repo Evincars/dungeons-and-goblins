@@ -20,6 +20,8 @@ export type AttackProfile = {
   attackBonus: number; damage: Dice; mode: D20Mode; extra?: Dice; rerollBelow?: number; critFrom?: number;
   /** A Battle Master's Precision Attack: a die of this size is added to a roll that misses, when that makes it hit. */
   precisionSides?: DieSides;
+  /** The damage dice are rolled twice and the higher total kept (the Savage Attacker feat). */
+  savage?: boolean;
 };
 
 export type AttackOutcome = AttackRoll & {
@@ -40,12 +42,18 @@ function precisionBonus(attack: AttackProfile, roll: AttackRoll, targetAC: numbe
   return roll.total + extra >= targetAC ? extra : 0;
 }
 
+/** The weapon's damage roll: once, or twice keeping the higher for a Savage Attacker. */
+function damageRoll(attack: AttackProfile, critical: boolean, die: DieRoller): number {
+  const first = rollDice(attack.damage, critical, die, attack.rerollBelow);
+  return attack.savage ? Math.max(first, rollDice(attack.damage, critical, die, attack.rerollBelow)) : first;
+}
+
 export function resolveAttack(attack: AttackProfile, targetAC: number, die: DieRoller = rollDie): AttackOutcome {
   const rolled = rollAttack(attack.attackBonus, targetAC, attack.mode, die, attack.critFrom);
   const precision = precisionBonus(attack, rolled, targetAC, die);
   const roll = precision > 0 ? { ...rolled, total: rolled.total + precision, hit: true } : rolled;
   const damageDice = roll.critical ? { ...attack.damage, count: attack.damage.count * 2 } : attack.damage;
   const extra = attack.extra && roll.hit ? rollDice(attack.extra, roll.critical, die) : 0;
-  const damage = roll.hit ? Math.max(MIN_HIT_DAMAGE, rollDice(attack.damage, roll.critical, die, attack.rerollBelow) + extra) : 0;
+  const damage = roll.hit ? Math.max(MIN_HIT_DAMAGE, damageRoll(attack, roll.critical, die) + extra) : 0;
   return { ...roll, attackBonus: attack.attackBonus, fumble: roll.natural === NATURAL_FUMBLE, damageDice, damage, precision };
 }

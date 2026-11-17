@@ -306,7 +306,7 @@ export type Entity = {
    * side is this many pixels, whatever size its art is — the whole picture, not a frame of it (icons of things
    * lying on the floor).
    */
-  visual?: { sheet: string; col?: number; row?: number; scale?: number; rotation?: number; fit?: number };
+  visual?: { sheet: string; col?: number; row?: number; scale?: number; rotation?: number; fit?: number; tint?: number };
   frame?: number;
   sprite?: Sprite;
   container?: Container;
@@ -331,6 +331,12 @@ export type Entity = {
   protectCooldown?: number;
   /** Ticks until a Champion's Survivor mends the hero again (systems/FeatureSystem.ts). */
   survivorCooldown?: number;
+  /** Ticks left of Action Surge: every swing and volley makes twice its attacks, played at double speed (systems/FeatureSystem.ts). */
+  actionSurge?: number;
+  /** Ticks left of a Champion's Remarkable Athlete: the hero moves at twice their speed (systems/FeatureSystem.ts). */
+  athleteBoost?: number;
+  /** Ticks until a Fighter's Indomitable rerolls a failed saving throw again (rules/Indomitable.ts; a rest makes it ready). */
+  indomitableCooldown?: number;
   /** The Battle Master's superiority dice left (none set: all of them; a rest restores them, systems/ManeuverSystem.ts). */
   superiorityLeft?: number;
   /**
@@ -395,6 +401,8 @@ export type Entity = {
     rise?: number;
     orderId?: number;
     orderBias?: number;
+    /** The entity (by id) the effect moves with: an aura. */
+    follow?: number;
   };
 
   // --- player ---

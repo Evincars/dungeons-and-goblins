@@ -133,7 +133,9 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `src/data/spells.json`; every spell of Baldur's Gate 3 the game knows (name, level, school, the classes that learn it,
   the Eldritch Knight's, its BG3 text and icon) in `src/data/spell-list.json`, made by `scripts/bg3-spells.mjs` from the BG3
   wiki (it matches spells to the icons `scripts/spell-icons.sh` pixelates in `public/spells-icons` into
-  `<name>_pixelart.png`; only spells with numbers in `spells.json` are cast, the rest show greyed out, not in the game yet);
+  `<name>_pixelart.png`, lightly and at twice the size, for tooltips; the class features' icons lie flat in
+  `public/class-features-icons` as `<class>-[<subclass>-]<feature>.png` beside a `_pixelart` copy made the same way, by
+  `scripts/class-feature-icons.sh` from what `scripts/download-class-features-icons.py` downloads from bg3.wiki; only spells with numbers in `spells.json` are cast, the rest show greyed out, not in the game yet);
   the D&D rules behind them (range in feet and px, dice, damage types, text, At Higher Levels) in `src/data/spellbook.json`,
   made by `scripts/scrape-spells.mjs`; the SRD class features by level (passive, active or info; `worked` says whether the game plays
   them) in `src/data/features.json`; every damage type, weapon and spell, in `src/rules/DamageTypes.ts`; sound effects (clips layered, re-pitched

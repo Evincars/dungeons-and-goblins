@@ -63,6 +63,12 @@ export class TextBox {
     this.redraw();
   }
 
+  /** Whether the input takes clicks (off while a menu drawn over the box needs them). */
+  set clickable(on: boolean) {
+    const events = on ? '' : 'none';
+    if (this.element.style.pointerEvents !== events) this.element.style.pointerEvents = events;
+  }
+
   set visible(on: boolean) {
     this.element.style.display = on ? '' : 'none';
     this.view.visible = on;
@@ -83,7 +89,7 @@ export class TextBox {
     this.view.addChild(frame, clip, this.label, this.caret);
   }
 
-  /** The real input: transparent, caret and all, so only the bitmap text shows. */
+  /** The real input: transparent, caret, OS pointer and all, so only the bitmap text (and the game's pointer, ui/Pointer.ts) shows. */
   private buildInput(options: TextBoxOptions): void {
     const input = this.element;
     input.type = 'text';
@@ -93,7 +99,7 @@ export class TextBox {
     if (options.maxLength) input.maxLength = options.maxLength;
     input.setAttribute('aria-label', options.ariaLabel);
     input.style.cssText = 'position:fixed;box-sizing:border-box;margin:0;padding:0;border:none;outline:none;'
-      + 'background:transparent;color:transparent;caret-color:transparent;z-index:10';
+      + 'background:transparent;color:transparent;caret-color:transparent;z-index:10;cursor:none';
     // Typing here must not walk the character or open menus.
     input.addEventListener('keydown', (event) => {
       if (event.code !== 'Escape') event.stopPropagation();

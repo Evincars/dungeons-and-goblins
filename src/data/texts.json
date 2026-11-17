@@ -50,6 +50,8 @@
   "inventory.sort.weight": "Weight",
   "inventory.sort.training": "Trained first",
   "inventory.menu.equip": "Equip",
+  "inventory.menu.equip_primary": "Primary hand",
+  "inventory.menu.equip_secondary": "Off-hand",
   "inventory.menu.take_off": "Take off",
 
   "item.tooltip.stat_bonus": "+{amount} {stat}",

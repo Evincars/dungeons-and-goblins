@@ -3,7 +3,8 @@ import type { DndClass } from './DndClasses';
 import { isSpellId } from './Spells';
 import type { SpellId } from './Spells';
 import { STAT_NAMES, isStatName } from '../world';
-import type { StatName } from '../world';
+import type { InventoryItem, StatName } from '../world';
+import { armorRule, weaponRule } from './Equipment';
 import { ensure } from '../core/errors';
 import { hasKey, isRecord } from '../core/guards';
 import { isDieSides } from './Dice';
@@ -162,4 +163,16 @@ export function armorProficient(cls: HeroClass, category: ArmorRule['category'])
 /** Trained in this weapon, by its kind or by name (adds the proficiency bonus to hit); everyone can punch. */
 export function weaponProficient(cls: HeroClass, base: WeaponBase): boolean {
   return base === 'unarmed' || cls.weapons.includes(weaponStats(base).category) || cls.weaponBases.includes(base);
+}
+
+/**
+ * Whether the hero is trained in an item: a weapon by its kind or name, armour or a shield by its kind (the class's
+ * training, or a feat's, `featArmor`); anything else needs no training.
+ */
+export function itemTrained(cls: HeroClass, item: InventoryItem, featArmor: readonly ArmorTraining[] = []): boolean {
+  const weapon = weaponRule(item);
+  if (weapon) return weaponProficient(cls, weapon.base);
+  const category = armorRule(item)?.rule.category;
+  if (!category) return true;
+  return armorProficient(cls, category) || (category !== 'clothes' && featArmor.includes(category));
 }

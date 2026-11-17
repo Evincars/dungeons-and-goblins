@@ -18,8 +18,8 @@ const NAME_H = 13;
 const NAME_Y = 3;
 const SCORE_SCALE = 0.75;
 const SCORE_Y = 16;
-const MODIFIER_SCALE = 2;
-const MODIFIER_Y = 25;
+const MODIFIER_SCALE = 1.5;
+const MODIFIER_Y = 28;
 const WELL_ALPHA = 0.85;
 /** The class's key abilities (rules/CharacterSheet.ts keyAbilities) are framed in gold this thick, their name band lit. */
 const KEY_EDGE = 2;

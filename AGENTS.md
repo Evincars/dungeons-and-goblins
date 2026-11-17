@@ -293,7 +293,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   (`Party.ts`: one synced `party` entity; rests and the lever ask through it, and act once everyone agrees), death
   (`Fallen.ts`: a hero who dies or falls into a pit stays down until the party goes deeper, leaving their gear and gold
   on the floor; the fallen get no share of experience or gold and no say in votes or loot rolls; the run is over when
-  the whole party is down, and `Run.ts` `descend` brings the fallen back with their experience but nothing else; in co-op
+  the whole party is down, and `Run.ts` `descend` brings the fallen back with their experience but nothing else (every hero
+  keeps their quick-bar bindings and switched features and feats); in co-op
   the fallen watch their companions, `Spectate.ts`), resting (`Rest.ts`: short and long rests; in a short rest each hero
   spends the hit dice they chose as they asked or agreed, and one refusal means nobody rests), pausing (`Pause.ts`: in
   co-op the game stops for everyone while anyone has the pause menu open), payments (`Purse.ts`: kills, chests and stashes pay straight into the
@@ -302,9 +303,15 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   buttons, `HudDialog`, `MinimapView`, `QuickBar`, `RestMenu`, `PartyBanner`, `LootRollPanel`), `PopupMenu`, `HeroPicker`,
   `ConsoleView`, combat log, the inventory (`InventoryOverlay`: the bag filtered, searched as typed — the letters of a name in order,
   `core/fuzzy.ts`, matched ones lit in the tooltip — and sorted by price, weight or training, `game/BagView.ts`, without moving a
-  thing; a right-click menu to equip, take off, drop, compare or send), its character sheet (`AbilityGrid`, `SheetField`,
-  `SheetInfoPanel`, `ProficiencyPanel`, tooltips in `SheetTopics`), panels, pause menu. On-screen controls call `claimPointer` (systems/InputSystem.ts) while
-  under the pointer, so their clicks are not attacks.
+  thing; a right-click menu to equip — a weapon in the primary hand or the off-hand — take off, drop, compare or send; a click
+  marks an item, Ctrl+click marks a second and the two are compared side by side, the second's AC, damage and weight marked
+  better or worse, `game/ItemCompare.ts`; gear the hero is not trained in, `itemTrained` in `rules/Classes.ts`, has a red aura
+  behind it), its character sheet (`AbilityGrid`, `SheetField`, `SheetInfoPanel`, `ProficiencyPanel`, tooltips in
+  `SheetTopics`; the column scrolls when it is too tall), the lists' scrollbars (`ScrollBar`), panels, pause menu. The game
+  draws its own pointer over every scene (`ui/Pointer.ts`, from `public/ui/pointer.png`, made from `public/dng-pointer.png` by
+  `scripts/pointer-sheet.py`; keep the hot spots in step): the hand over menus, the HUD and panels (pressing over anything
+  clickable), the battle cross in the world, red over an enemy; the level tells it which (`setPointerAim`). On-screen controls
+  call `claimPointer` (systems/InputSystem.ts) while under the pointer, so their clicks are not attacks.
 - `src/network/` — co-op: `protocol.ts` (messages and their validators), `CoopSession.ts` (PeerJS room),
   `WorldSync.ts` (the host's world snapshot, its validation and the guest's replica), `CoopGame.ts` (host and
   guest per-tick work). The host is the authority: it sends each guest the level it built (`level/LevelMap.ts`,

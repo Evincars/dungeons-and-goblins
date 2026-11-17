@@ -68,6 +68,8 @@ export type PixelLabelOptions = {
   shadow?: boolean;
   /** Dark halo on all four sides, for text drawn over the game world. */
   outline?: boolean;
+  /** How far apart the lines of a text of several lines stand (before scaling; the font's own spacing by default). */
+  lineHeight?: number;
 };
 
 /** Bitmap text drawn from the original's 8x8 font sheet, always on whole pixels. */
@@ -78,6 +80,7 @@ export class PixelLabel extends Container {
   private readonly align: PixelTextAlign;
   private readonly shadow: boolean;
   private readonly outline: boolean;
+  private readonly lineHeight: number;
   private widthPx = 0;
   private heightPx = 0;
   private built = false;
@@ -89,6 +92,7 @@ export class PixelLabel extends Container {
     this.align = opts.align ?? 'left';
     this.shadow = opts.shadow ?? false;
     this.outline = opts.outline ?? false;
+    this.lineHeight = opts.lineHeight ?? LINE_HEIGHT;
     this.text = text;
   }
 
@@ -138,7 +142,7 @@ export class PixelLabel extends Container {
     const lines = this.content.split('\n');
     const widths = lines.map((l) => this.lineWidth(l, ink));
     this.widthPx = Math.max(0, ...widths);
-    this.heightPx = lines.length * LINE_HEIGHT * s;
+    this.heightPx = lines.length * this.lineHeight * s;
 
     const passes: Array<{ dx: number; dy: number; tint: number }> = [];
     if (this.outline) {
@@ -155,7 +159,7 @@ export class PixelLabel extends Container {
         this.align === 'center' ? -Math.floor(widths[row] / 2)
         : this.align === 'right' ? -widths[row]
         : 0;
-      const y = row * LINE_HEIGHT * s;
+      const y = row * this.lineHeight * s;
 
       for (const ch of line) {
         if (ch === ' ') {

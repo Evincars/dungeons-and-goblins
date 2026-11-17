@@ -152,7 +152,7 @@ export class LootRollPanel {
     }
     const at = this.hovered.box.position;
     // Asked for at the row itself, it is kept inside the area above it: just over the row.
-    this.tooltip.show(item, at.x, at.y, { w: GAME_WIDTH, h: at.y - 2 }, me ? heroClass(me.heroClass) : undefined);
+    this.tooltip.show(item, at.x, at.y, { w: GAME_WIDTH, h: at.y - 2 }, { cls: me ? heroClass(me.heroClass) : undefined });
   }
 
   destroy(): void {

@@ -10,15 +10,21 @@ import { experienceTopic, hitDiceTopic, initiativeTopic, perceptionTopic, profic
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
 
-const LINE_H = 10;
+/** Each line this tall: the font's 8 pixels and room round them, so the rows read apart. */
+const LINE_H = 12;
 /** The saving throws' values are drawn this much smaller than plain text, under their abilities' columns. */
 const SAVE_SCALE = 0.75;
 const HIT_PAD = 1;
-/** The level stands out at this size beside the experience, with this gap between them. */
+/**
+ * The top row: the experience at its left; at its right the class and, larger, the level, this far apart. The row is
+ * this tall, the level this far down it (the smaller words stand on its foot), and the facts start this far under it.
+ */
 const LEVEL_SCALE = 1.5;
-const LEVEL_GAP = 8;
-/** The level row is this tall (the level being drawn larger). */
-const LEVEL_ROW_H = 14;
+const LEVEL_GAP = 6;
+const LEVEL_ROW_H = 16;
+const LEVEL_Y = 1;
+const GLYPH_H = 8;
+const ROW_GAP = 3;
 
 function experienceLine(s: CharacterSheet): string {
   const { xp, next } = s.experience;
@@ -40,8 +46,8 @@ const INFO: readonly InfoDef[] = [
 ];
 
 /**
- * The rest of the character sheet a player needs, under the Armor Class, hit points and damage: who the hero
- * is, their level ("Lvl", large) and experience on one gold row, the proficiency bonus, initiative, speed, passive
+ * The rest of the character sheet a player needs, under the Armor Class, hit points and damage: a row with their
+ * experience on the left and who the hero is and their level ("Lvl", large) on the right, the proficiency bonus, initiative, speed, passive
  * Perception, heal dice (gold while there are some to spend: a click spends one), spell attack and save DC, then the six saving
  * throws (the class's two trained ones in gold) lined up under the abilities. Each shows what it means under
  * the pointer.
@@ -50,8 +56,8 @@ export class SheetInfoPanel {
   readonly view = new Container();
   /** How tall it is, for what comes under it. */
   readonly height: number;
-  private readonly header = new PixelLabel('', { color: THEME.text, shadow: true });
-  private readonly level = new PixelLabel('', { color: THEME.title, scale: LEVEL_SCALE, outline: true });
+  private readonly header = new PixelLabel('', { color: THEME.text, align: 'right', shadow: true });
+  private readonly level = new PixelLabel('', { color: THEME.title, scale: LEVEL_SCALE, align: 'right', outline: true });
   private readonly xp = new PixelLabel('', { color: THEME.title, shadow: true });
   /** The level row, which tells about experience under the pointer. */
   private readonly levelHit: Rectangle;
@@ -61,12 +67,14 @@ export class SheetInfoPanel {
 
   /** `columns`: where each ability's column is centred (the saving throws line up under them). */
   constructor(x: number, y: number, w: number, columns: readonly number[]) {
-    this.header.position.set(x, y);
-    this.level.position.set(x, y + LINE_H);
-    this.xp.position.set(x, y + LINE_H + (LEVEL_ROW_H - LINE_H));
-    this.levelHit = new Rectangle(x - HIT_PAD, y + LINE_H - HIT_PAD, w, LEVEL_ROW_H);
+    // The smaller words stand on the same foot as the level.
+    const foot = y + LEVEL_Y + GLYPH_H * LEVEL_SCALE - GLYPH_H;
+    this.xp.position.set(x, foot);
+    this.level.position.set(x + w, y + LEVEL_Y);
+    this.header.position.set(x + w, foot);
+    this.levelHit = new Rectangle(x - HIT_PAD, y - HIT_PAD, w, LEVEL_ROW_H);
     this.view.addChild(this.header, this.level, this.xp);
-    const top = y + LINE_H + LEVEL_ROW_H;
+    const top = y + LEVEL_ROW_H + ROW_GAP;
     const half = Math.floor(w / 2);
     INFO.forEach((def, i) => {
       const label = new PixelLabel('', { color: THEME.text, shadow: true });
@@ -94,7 +102,7 @@ export class SheetInfoPanel {
     this.header.text = text('sheet.info.header', { hero: heroName(sheet.heroClass.id) });
     this.level.text = text('sheet.info.level', { level: sheet.level });
     this.xp.text = experienceLine(sheet);
-    this.xp.x = this.level.x + this.level.textWidth + LEVEL_GAP;
+    this.header.x = this.level.x - this.level.textWidth - LEVEL_GAP;
     for (const info of this.infos) {
       info.label.text = info.def.line(sheet);
       info.label.fill = info.def.spendsHitDie && sheet.hitDice.left > 0 ? THEME.title : THEME.text;

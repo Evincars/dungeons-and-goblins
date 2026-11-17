@@ -5219,3 +5219,43 @@ test('the inventory\'s search finds the letters typed in order, any case, spaces
   assert.deepEqual(bagView(bag, 6, query({ sort: 'training' }), []), [0, 2, 5, 3, 1, 4], 'trained first, ties as they lie');
   assert.equal(bag[0].name, 'Plate armour', 'the bag itself is left as it is');
 });
+
+test('the quick bar\'s bindings and the switched features and feats come down to the next level', () => {
+  startRun();
+  const hero = playerAt(2, 2, 'fighter');
+  hero.spellbook.bound = ['feature:second_wind', null, 'feature:action_surge'];
+  hero.featuresOff = ['fighting_style'];
+  hero.featsOn = ['great_weapon_master'];
+  descend();
+  world.clear();
+  const below = playerAt(2, 2, 'fighter');
+  restorePlayer(below);
+  assert.deepEqual(below.spellbook.bound, ['feature:second_wind', null, 'feature:action_surge']);
+  assert.deepEqual(below.featuresOff, ['fighting_style']);
+  assert.deepEqual(below.featsOn, ['great_weapon_master']);
+  hero.spellbook.bound[0] = null;
+  assert.equal(below.spellbook.bound[0], 'feature:second_wind', 'a copy, not the old hero\'s list');
+  startRun();
+});
+
+test('two items of a kind compared: more AC or damage is better, less weight is; different kinds are not weighed', async () => {
+  const { compareItems } = await load('game/ItemCompare');
+  const { itemTrained, heroClass } = await load('rules/Classes');
+  const armor = (base) => ARMORS.find((a) => a.base === base);
+  const weapon = (base) => WEAPONS.find((w) => w.base === base);
+  assert.deepEqual(compareItems(armor('plate'), armor('leather')), { ac: 1, weight: -1 }, 'plate: AC 18 over 11, but far heavier');
+  assert.deepEqual(compareItems(armor('leather'), armor('plate')), { ac: -1, weight: 1 });
+  assert.equal(compareItems(weapon('greataxe'), weapon('dagger')).damage, 1, 'd12 over d4');
+  assert.equal(compareItems({ ...weapon('dagger'), bonus: 3 }, weapon('dagger')).damage, 1, 'magic counts');
+  assert.equal(compareItems(weapon('dagger'), weapon('dagger')).damage, 0);
+  assert.deepEqual(compareItems(weapon('dagger'), armor('plate')), {}, 'a sword and a suit are not compared');
+  // Training: a wizard is trained in daggers and robes, not in plate or greataxes; a fighter in all of them.
+  const wizard = heroClass('wizard');
+  assert.ok(itemTrained(wizard, weapon('dagger')));
+  assert.ok(itemTrained(wizard, armor('robe')));
+  assert.ok(!itemTrained(wizard, armor('plate')));
+  assert.ok(!itemTrained(wizard, weapon('greataxe')));
+  assert.ok(itemTrained(wizard, armor('plate'), ['heavy']), 'a feat\'s armour training counts');
+  assert.ok(itemTrained(heroClass('fighter'), armor('plate')));
+  assert.ok(itemTrained(wizard, { type: 'medal', name: 'Medal', value: 1 }), 'a medal needs no training');
+});

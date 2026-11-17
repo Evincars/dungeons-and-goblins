@@ -208,6 +208,8 @@ const UI_SHEETS = [
 
   // Menu art from Catacomb Snatch Redux: three 128×24 button states, and the PAUSE title overlay.
   new SpriteSheet('button',       '/ui/button.png', { grid: { frameWidth: 128, frameHeight: 24 } }),
+  // The game's pointers (ui/Pointer.ts), drawn smaller than they are painted: hand, hand pressing, cross, red cross.
+  new SpriteSheet('pointer',      '/ui/pointer.png', { grid: { frameWidth: 64, frameHeight: 64 }, smooth: true }),
   new SpriteSheet('pause_screen', '/ui/pause_screen.png'),
   // Painted art: the menu background, and the inventory's two framed panels.
   new SpriteSheet('menu_background', '/menu-1.jpg', { smooth: true }),

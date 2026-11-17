@@ -19,6 +19,7 @@ import { hideLoadingScreen, loadingPart } from '../ui/LoadingScreen';
 import { settings } from './Settings';
 import { exposeForDebugging } from '../core/debugHooks';
 import { coop } from '../network/CoopSession';
+import { Pointer } from '../ui/Pointer';
 
 /** The simulation is tick-based (speeds, timers, animations), so it always runs at this rate. */
 const TICK_MS = 1000 / 60;
@@ -74,6 +75,8 @@ export class Game {
     this.manager.goto(joinParam() ? 'coop_join' : 'title');
     // The other effects arrive in the background while the menus are up.
     reportRejection(sound.load(SFX_NAMES), 'The sound effects could not be loaded', 'audio');
+    // The game draws its own pointer over every scene.
+    new Pointer(this.app);
     this.app.ticker.add(() => this.tick());
     exposeForDebugging({ __app: this.app, __scenes: this.manager, __coop: coop });
   }

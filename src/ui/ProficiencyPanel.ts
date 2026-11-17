@@ -8,7 +8,8 @@ import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
 import { wrapLines } from './InfoTooltip';
 
-const LINE_H = 10;
+/** Each line this tall: the font's 8 pixels and room round them, so the rows read apart. */
+const LINE_H = 12;
 /** A checkbox's side, the mark inside it, and the space after it and after its word. */
 const BOX = 7;
 const MARK = 3;
@@ -16,6 +17,8 @@ const BOX_GAP = 3;
 const ENTRY_GAP = 8;
 /** The warning when something worn or wielded is outside the hero's training. */
 const WARNING_COLOR = 0xff7060;
+/** The bitmap font's glyphs are this tall. */
+const GLYPH_H = 8;
 
 type Check = { box: Graphics; label: PixelLabel; trained: (sheet: CharacterSheet) => boolean };
 
@@ -40,6 +43,8 @@ export class ProficiencyPanel {
   private readonly extraWeapons: PixelLabel;
   private readonly checks: Check[] = [];
   private readonly width: number;
+  /** How tall it is, as last filled in (the extra weapons and the warnings take lines of their own). */
+  height = 5 * LINE_H;
 
   constructor(x: number, y: number, w: number) {
     this.width = w;
@@ -48,9 +53,9 @@ export class ProficiencyPanel {
     this.view.addChild(this.header);
     this.armorHit = this.addRow(text('proficiency.armor'), ARMOR_TRAININGS, (t: ArmorTraining) => (s) => armorProficient(s.heroClass, t) || s.feats.armor.includes(t), LINE_H, x, y, w);
     this.weaponHit = this.addRow(text('proficiency.weapons'), WEAPON_TRAININGS, (t: WeaponTraining) => (s) => s.heroClass.weapons.includes(t), 3 * LINE_H, x, y, w);
-    this.extraWeapons = new PixelLabel('', { color: THEME.text, shadow: true });
+    this.extraWeapons = new PixelLabel('', { color: THEME.text, shadow: true, lineHeight: LINE_H });
     this.extraWeapons.y = 5 * LINE_H;
-    this.warning = new PixelLabel('', { color: WARNING_COLOR, shadow: true });
+    this.warning = new PixelLabel('', { color: WARNING_COLOR, shadow: true, lineHeight: LINE_H });
     this.warning.y = 5 * LINE_H;
     this.view.addChild(this.extraWeapons, this.warning);
   }
@@ -65,7 +70,7 @@ export class ProficiencyPanel {
     let cx = 0;
     for (const training of trainings) {
       const box = new Graphics();
-      box.position.set(cx, top + LINE_H + 1);
+      box.position.set(cx, top + LINE_H + Math.round((GLYPH_H - BOX) / 2));
       const label = new PixelLabel(trainingName(training), { color: THEME.text, shadow: true });
       label.position.set(cx + BOX + BOX_GAP, top + LINE_H);
       this.view.addChild(box, label);
@@ -91,5 +96,6 @@ export class ProficiencyPanel {
     if (!sheet.armorClass.proficient) warnings.push(text('proficiency.warning_armor'));
     if (!sheet.attack.proficient) warnings.push(text('proficiency.warning_weapon'));
     this.warning.text = warnings.join('\n');
+    this.height = this.warning.y + warnings.length * LINE_H;
   }
 }

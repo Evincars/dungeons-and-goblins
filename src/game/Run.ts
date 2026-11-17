@@ -47,6 +47,13 @@ type Carry = {
   maxHealth: number;
   health: number;
   build: Build | undefined;
+  /**
+   * The player's own choices about their hero, which stay theirs from level to level: what they bound to the quick bar,
+   * the class features they switched off and the toggle feats they switched on.
+   */
+  bound: NonNullable<Entity['spellbook']>['bound'];
+  featuresOff: string[] | undefined;
+  featsOn: string[] | undefined;
 };
 
 /** Progress of the players in the run so far, by seat. */
@@ -81,6 +88,9 @@ function carryOf(player: Player): Carry {
     maxHealth: player.health.max,
     health: player.health.current,
     build: structuredClone(player.build),
+    bound: structuredClone(player.spellbook?.bound),
+    featuresOff: structuredClone(player.featuresOff),
+    featsOn: structuredClone(player.featsOn),
   };
 }
 
@@ -113,5 +123,13 @@ export function restorePlayer(player: Entity): void {
   player.equipped = structuredClone(carry.equipped);
   player.health.max = carry.maxHealth;
   if (carry.build) player.build = structuredClone(carry.build);
+  restoreChoices(player, carry);
   player.health.current = Math.min(carry.health, carry.maxHealth);
+}
+
+/** The quick bar's bindings and the switched features and feats come back as the player left them. */
+function restoreChoices(player: Entity, carry: Carry): void {
+  if (carry.bound && player.spellbook) player.spellbook.bound = structuredClone(carry.bound);
+  if (carry.featuresOff) player.featuresOff = structuredClone(carry.featuresOff);
+  if (carry.featsOn) player.featsOn = structuredClone(carry.featsOn);
 }

@@ -231,6 +231,11 @@ class TerrainBuilder {
   private readonly faceH: Int8Array;
   /** Sub-tiles covered by a framed pit's art, which loose-hole art must not draw over. */
   private readonly framed = new Set<number>();
+  /**
+   * Sub-tiles a slanted face's end column stands in (where the slant ends with no face running on): the wall beside it
+   * runs its rim up along it, as it does along a straight face's end.
+   */
+  private readonly endColumns = new Set<number>();
   readonly floorPieces: TerrainPiece[] = [];
   readonly wallPieces: TerrainPiece[] = [];
   readonly overlayPieces: TerrainPiece[] = [];
@@ -255,6 +260,7 @@ class TerrainBuilder {
 
   build(): TerrainPiece[] {
     forEachTile(0, 1, this.W - 1, this.H - 1, this.markFace);
+    for (const index of this.level.slopes.keys()) this.markSlantEnds(index % this.level.width, Math.floor(index / this.level.width));
     forEachTile(0, 0, this.level.width - 1, this.level.height - 1, this.addFloor);
     for (const p of this.level.pits) this.addPit(p);
     for (const g of this.level.grates) this.addGrate(g);
@@ -288,6 +294,11 @@ class TerrainBuilder {
 
   private isFace(sx: number, sy: number): boolean {
     return sx >= 0 && sy >= 0 && sx < this.W && sy < this.H && this.faceK[sx + sy * this.W] > 0;
+  }
+
+  /** A face sub-tile, or one a slanted face's end column stands in: the wall beside either shows its rim. */
+  private faceBeside(sx: number, sy: number): boolean {
+    return this.isFace(sx, sy) || this.endColumns.has(sx + sy * this.W);
   }
 
   /** Depth of a wall sub-tile whose tile has walkable floor directly north (drawn over characters there). */
@@ -548,8 +559,8 @@ class TerrainBuilder {
     const out = this.wallPieces;
     const t = this.top;
     const openN = !this.solid(sx, sy - 1);
-    const sideW = !this.solid(sx - 1, sy) || this.isFace(sx - 1, sy);
-    const sideE = !this.solid(sx + 1, sy) || this.isFace(sx + 1, sy);
+    const sideW = !this.solid(sx - 1, sy) || this.faceBeside(sx - 1, sy);
+    const sideE = !this.solid(sx + 1, sy) || this.faceBeside(sx + 1, sy);
     // A corner nub where floor touches only diagonally, unless the wall beside it is a raised south wall (its rim, drawn
     // higher, meets this side's rim on its own).
     const diagNW = !this.solid(sx - 1, sy - 1) && !this.raisedRim(sx - 1, sy);
@@ -641,11 +652,28 @@ class TerrainBuilder {
     if (this.slantEnds(slope, tx, ty, 1)) this.addFaceEnd('right', dx + TILE_WIDTH - SUB, slantFootY(slope, tx, ty, true), z, tx, ty);
   }
 
-  /** Whether a slanted face ends at slope tile (tx, ty) on the side `dx` (−1 west, 1 east): no slant nor face runs on. */
+  /** Notes the sub-tiles a north slope tile's end columns (if its slant ends there) will stand in. */
+  private markSlantEnds(tx: number, ty: number): void {
+    const slope = this.level.slopes.get(tx + ty * this.level.width);
+    if (!slope || !northCorner(slope.corner)) return;
+    for (const side of [-1, 1] as const) {
+      if (!this.slantEnds(slope, tx, ty, side)) continue;
+      const sx = tx * 2 + (side < 0 ? 0 : 1);
+      const footRow = slantFootY(slope, tx, ty, side > 0) / SUB;
+      for (let k = 1; k <= FACE_MAX; k++) this.endColumns.add(sx + (footRow - k) * this.W);
+    }
+  }
+
+  /**
+   * Whether a slanted face ends at slope tile (tx, ty) on the side `dx` (−1 west, 1 east): no slant runs on, nor a
+   * straight face standing on the same foot (the slant's end meets a face's foot, the tile row above it where the slant
+   * climbs to its end).
+   */
   private slantEnds(slope: Slope, tx: number, ty: number, dx: -1 | 1): boolean {
     if (this.slantNeighbour(slope, tx, ty, dx) >= 0) return false;
     const sx = (tx + dx) * 2 + (dx < 0 ? 1 : 0);
-    return this.faceK[sx + (ty * 2 + 1) * this.W] !== 1;
+    const footRow = slantFootY(slope, tx, ty, dx > 0) / SUB;
+    return this.faceK[sx + (footRow - 1) * this.W] !== 1;
   }
 
   /** A face's end column (a sub-tile wide) standing at x with its foot at `foot`, and its plinth under it. */

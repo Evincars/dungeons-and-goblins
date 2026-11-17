@@ -16,7 +16,7 @@ import { createPlayer } from '../entities/PlayerFactory';
 import { bindingFor, cleanName, settings } from '../game/Settings';
 import { camera, GAME_HEIGHT, GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
 import { TILE_WIDTH, TILE_HEIGHT, FOG_REVEAL_TILES } from '../level/TileType';
-import { initInput, resetInput, setInputCaptured } from '../systems/InputSystem';
+import { initInput, pointerFree, resetInput, setInputCaptured } from '../systems/InputSystem';
 import { runCommand } from '../game/Console';
 import { ConsoleView } from '../ui/ConsoleView';
 import { SIMULATION, PRESENTATION, runSystems } from '../systems/Simulation';
@@ -39,7 +39,9 @@ import { departure, inExitRoom, requestDeparture } from '../systems/ExitSystem';
 import { partyFallen, isStanding } from '../game/Fallen';
 import { seatOf } from '../game/Party';
 import { PixelLabel, makeText } from '../ui/PixelText';
-import { Crosshair } from '../ui/Crosshair';
+import { setPointerAim } from '../ui/Pointer';
+import type { PointerAim } from '../ui/Pointer';
+import { crosshairTarget } from '../systems/TargetSystem';
 import { sound } from '../audio/SoundPlayer';
 import { holdMusic, resetMusic } from '../systems/MusicSystem';
 import { resetAmbience } from '../systems/AmbienceSystem';
@@ -114,7 +116,11 @@ export class InGameScene implements Scene {
   private readonly shop = new ShopPanel();
   private readonly pause: PauseMenu;
   private shopWasOpen = false;
-  private readonly crosshair = new Crosshair();
+  /**
+   * What the game's pointer (ui/Pointer.ts) is over: a menu, a panel or the HUD (the hand), or the world (the cross,
+   * red over an enemy).
+   */
+  private readonly aim: PointerAim = () => (this.pointerOnUi() ? 'ui' : crosshairTarget());
   private readonly result = new ResultPanel();
   private readonly fallen = new FallenBanner();
   /** The companion this screen's fallen hero is watching (null: their own body). */
@@ -208,10 +214,9 @@ export class InGameScene implements Scene {
     }, this.mode === 'guest'
       ? text('menu.pause.warning_guest')
       : this.mode === 'host' ? text('menu.pause.warning_host') : text('menu.pause.warning_solo'));
-    // The crosshair replaces the OS pointer and is the player's focus in the world.
-    this.uiLayer.addChild(this.crosshair.graphics, this.console.container, this.pause.container, this.result.container, this.loading, this.fadeIn);
+    this.uiLayer.addChild(this.console.container, this.pause.container, this.result.container, this.loading, this.fadeIn);
     this.buildLoadingOverlay();
-    manager.canvas.style.cursor = 'none';
+    setPointerAim(this.aim);
     initInput(manager.canvas);
     this.inv.attachSearch(manager.canvas);
 
@@ -294,14 +299,12 @@ export class InGameScene implements Scene {
     else this.pause.hide();
     if (this.mode === 'host') setSeatPaused('host', paused);
     if (this.mode === 'guest') coop.sendCommand({ kind: 'pause', paused });
-    this.showPointer(paused);
+    resetInput();
   }
 
-  /** A menu needs the OS pointer; in the world the crosshair takes its place. */
-  private showPointer(visible: boolean): void {
-    this.crosshair.graphics.visible = !visible;
-    this.manager.canvas.style.cursor = visible ? '' : 'none';
-    resetInput();
+  /** Whether the pointer is the hand: over a menu, a sub-screen, a panel or a HUD control rather than the world. */
+  private pointerOnUi(): boolean {
+    return this.pause.open || this.result.open || this.manager.hasOverlay || !pointerFree();
   }
 
   /**
@@ -363,7 +366,6 @@ export class InGameScene implements Scene {
 
     this.darkness.update(this.app.renderer, this.level, this.tick);
     this.lights.update(this.app, this.gatherLights(), this.tick);
-    this.crosshair.update();
     this.console.update();
     this.updatePanels();
     this.updateStatus(player);
@@ -558,12 +560,12 @@ export class InGameScene implements Scene {
     this.prompt = prompt;
     if (prompt === 'none') {
       this.result.hide();
-      this.showPointer(this.pause.open);
+      resetInput();
       return;
     }
     if (prompt === 'ended') this.runEnded();
     else this.askToLeave(prompt === 'wait');
-    this.showPointer(true);
+    resetInput();
   }
 
   /** The level's summary, with the choice to go deeper or end the run here (once chosen, a wait for the others in the room). */
@@ -658,7 +660,7 @@ export class InGameScene implements Scene {
       lines: this.runLines(),
       buttons: this.endButtons(),
     });
-    this.showPointer(true);
+    resetInput();
   }
 
   /** A fresh run from the first level's starting safe room. */
@@ -680,8 +682,7 @@ export class InGameScene implements Scene {
     if (this.console.visible) setInputCaptured(false);
     this.host?.dispose();
     this.guest?.dispose();
-    this.manager.canvas.style.cursor = '';
-    this.crosshair.destroy();
+    setPointerAim(null, this.aim);
     this.darkness.destroy();
     this.lights.destroy();
     this.hud.destroy();

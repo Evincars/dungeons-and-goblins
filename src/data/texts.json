@@ -22,8 +22,8 @@
 
   "slot.head": "Head",
   "slot.armor": "Armor",
-  "slot.primary": "1st wpn",
-  "slot.secondary": "2nd wpn",
+  "slot.primary": "Prim hand",
+  "slot.secondary": "Off-hand",
   "slot.medal": "Medal",
   "slot.other": "Other",
 

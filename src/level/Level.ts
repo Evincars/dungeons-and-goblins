@@ -311,11 +311,21 @@ export class Level {
       const dx = xx - x0; const dy = yy - y0;
       if (dx * dx + dy * dy > radius * radius) return;
       this.markSeen(xx, yy);
+      this.seeSouthRim(xx, yy);
       if (!isWallType(this.getTile(xx, yy))) continue;
       // South faces are two tiles tall, so reveal the cap row as well.
       if (yy > 0) this.markSeen(xx, yy - 1);
       return;
     }
+  }
+
+  /**
+   * A south slant's rim and the dark under it reach on into the tile below its own (as far as feet step behind it): seen
+   * with it, so the fog doesn't cut the slanted rim into steps along the tiles' edges.
+   */
+  private seeSouthRim(tx: number, ty: number): void {
+    const slope = this.slopes.get(tx + ty * this.width);
+    if (slope && isSouthSlope(slope) && ty + 1 < this.height) this.markSeen(tx, ty + 1);
   }
 
   getTile(x: number, y: number): TileData | null {

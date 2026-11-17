@@ -122,8 +122,14 @@ const SHAPED_MIN_W = 6;
 const SHAPED_MIN_H = 6;
 const CORNER_MIN = 2;
 const CORNER_MAX_SHARE = 3;
-/** Chance a plain hall has drain grates set in its floor (two, or four in a tall room), and how tall that is. */
-const GRATE_CHANCE = 0.6;
+/**
+ * Chance a plain hall has drain grates set in its floor (two, or four in a tall room), and how tall that is; a crypt or
+ * a storeroom at least this big gets them now and then too.
+ */
+const GRATE_CHANCE = 0.8;
+const GRATE_ROOM_CHANCE = 0.35;
+const GRATE_ROOM_MIN_W = 8;
+const GRATE_ROOM_MIN_H = 6;
 const FOUR_GRATE_ROOM_H = 9;
 /** Grates keep this many tiles from the walls. */
 const GRATE_INSET = 2;
@@ -170,7 +176,7 @@ const CAMPFIRE_SPREAD = 3;
 const EXIT_BANNERS: readonly PropKind[] = ['banner_red', 'banner_blue', 'pennant_red', 'pennant_blue'];
 /** Casks, crates and heaps stood in the corners of the safe and exit rooms. */
 const GATHERING_CORNERS: readonly PropKind[] = [
-  'barrel', 'barrel2', 'supplies_barrel', 'supplies_crates', 'supplies_crate', 'supplies_heap', 'crate_stack', 'crate_stack2',
+  'barrel', 'barrel2', 'supplies_barrel', 'supplies_crates', 'supplies_crate', 'supplies_heap', 'crate_large', 'crate_large2',
 ];
 /** A campfire's art fills the middle of its tile; only its ring of stones blocks. */
 const CAMPFIRE_BLOCK: BlockRect = { x0: 3, y0: 14, x1: 29, y1: 24 };
@@ -888,9 +894,11 @@ export class DungeonBuilder {
       this.tombNiches(room, props, keep);
       middleTaken = !structured && room.w >= 8 && room.h >= 7 && this.sarcophagi(room, props, keep);
       centrepieces = CRYPT_CENTREPIECES;
+      this.someGrates(room);
     } else if (roll < 0.7) {
       this.crateCorners(room, props, keep);
       centrepieces = STORE_CENTREPIECES;
+      this.someGrates(room);
     } else {
       this.plainHall(room, structured, props, keep);
     }
@@ -1257,6 +1265,12 @@ export class DungeonBuilder {
     for (const y of ys) {
       for (const x of xs) this.placeGrate(x, y);
     }
+  }
+
+  /** Now and then a crypt or storeroom big enough has drain grates in its floor too. */
+  private someGrates(room: RoomData): void {
+    if (room.w < GRATE_ROOM_MIN_W || room.h < GRATE_ROOM_MIN_H || this.rng() >= GRATE_ROOM_CHANCE) return;
+    this.grates(room);
   }
 
   private placeGrate(x: number, y: number): void {

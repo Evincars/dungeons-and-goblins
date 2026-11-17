@@ -334,7 +334,8 @@ export type Entity = {
    * side is this many pixels, whatever size its art is — the whole picture, not a frame of it (icons of things
    * lying on the floor).
    */
-  visual?: { sheet: string; col?: number; row?: number; scale?: number; rotation?: number; fit?: number; tint?: number };
+  /** `size`: drawn exactly this big (px), whatever size its art is (a portcullis fills its doorway). */
+  visual?: { sheet: string; col?: number; row?: number; scale?: number; rotation?: number; fit?: number; tint?: number; size?: { w: number; h: number } };
   frame?: number;
   sprite?: Sprite;
   container?: Container;
@@ -692,7 +693,8 @@ export type Entity = {
    * A portcullis over a doorway tile: `lift` from 0 (down, barring the way) to 1 (risen out of sight); `dropping`
    * while it falls back down onto the doorway as the safe room is shut.
    */
-  gate?: { lift: number; dropping?: boolean };
+  /** `rest`: how far up (yOffset) it is drawn when down over its doorway; `lift` 0 (down) to 1 (risen into the wall). */
+  gate?: { lift: number; dropping?: boolean; rest: number };
   /**
    * The lever by the safe room's door: pulled opens the way into the dungeon (in co-op once everyone agrees).
    * `rest`: ticks before it can be pulled again after the others turned it down. The exit room's lever (`exit`) shuts

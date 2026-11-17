@@ -10,7 +10,7 @@ const load = (path) => server.ssrLoadModule(`/src/${path}.ts`);
 
 const { world, isMobType } = await load('world');
 const { Level } = await load('level/Level');
-const { createTile, TileType, TILE_WIDTH } = await load('level/TileType');
+const { createTile, TileType, TILE_WIDTH, TILE_HEIGHT } = await load('level/TileType');
 const { tileGraphOf } = await load('level/TileGraph');
 const { findRoute, reachableTiles } = await load('level/TileSearch');
 const { DungeonBuilder } = await load('level/generators/DungeonBuilder');
@@ -1600,9 +1600,10 @@ test('where kinds of ground meet, the softer spills over the edge of the harder'
   assert.equal(groundAt(level, 2, 2).kind, 'safe');
   assert.ok(blends.length > 0);
   assert.ok(blends.every((b) => b.from.kind !== 'safe'), 'the corridor spills onto the safe room, never the other way');
-  const onto = blends.map((b) => Math.floor(b.dx / TILE_WIDTH));
-  assert.ok(onto.every((x) => x === 3), 'only along the safe room\'s edge');
-  assert.ok(blends.some((b) => b.side === 'e'));
+  const ontoSafe = blends.filter((b) => groundAt(level, b.dx / TILE_WIDTH, b.dy / TILE_HEIGHT).kind === 'safe');
+  assert.ok(ontoSafe.length > 0);
+  assert.ok(ontoSafe.every((b) => b.dx / TILE_WIDTH === 3), 'onto the safe room only along its edge');
+  assert.ok(ontoSafe.some((b) => b.side === 'e'));
   assert.equal(groundAt(level, 0, 0), null, 'walls are not ground');
 });
 
@@ -5717,4 +5718,40 @@ test('a level box of a spell tells only what that level changes: dice, darts and
   assert.ok(!lines.some((line) => line.startsWith('Range')), 'the range does not change, so it is not told');
   assert.equal(castLevelTopic(Spellbook.CATALOG.fireball, 3, 5).detail, undefined, 'its own level: nothing changes');
   assert.ok(castLevelTopic(Spellbook.CATALOG.fireball, 4, 7).detail.map(String).some((line) => line.startsWith('Damage: 8d6 -> 9d6')));
+});
+
+test('ground spills over its neighbour along a ragged line that wanders across the tile and runs on from tile to tile', async () => {
+  const { blendCovers, BLEND_PERIOD } = await load('level/GroundBlend');
+  // How deep the spill from the north reaches in each column, over a whole period of tiles side by side.
+  const reach = [];
+  for (let v = 0; v < BLEND_PERIOD; v++) {
+    for (let x = 0; x < TILE_WIDTH; x++) {
+      let y = 0;
+      while (y < TILE_HEIGHT && blendCovers('n', v, x, y)) y++;
+      reach.push(y);
+    }
+  }
+  assert.ok(Math.min(...reach) >= 2 && Math.max(...reach) <= TILE_HEIGHT, 'it always spills a little, never past the tile');
+  assert.ok(Math.max(...reach) - Math.min(...reach) >= 10, 'reaching far into the tile here, only a little there');
+  assert.ok(reach.some((r) => r >= 20), 'well into the other ground somewhere');
+  // From one tile's edge to the next (and round the period) the line runs on without a jump.
+  for (let v = 0; v < BLEND_PERIOD; v++) {
+    const last = reach[v * TILE_WIDTH + TILE_WIDTH - 1];
+    const next = reach[((v + 1) % BLEND_PERIOD) * TILE_WIDTH];
+    assert.ok(Math.abs(last - next) <= 8, `tile ${v} meets the next: ${last} vs ${next}`);
+  }
+});
+
+test('the floor something stands on keeps the wall south of it drawn as any other: raised, its dark over the floor under it', async () => {
+  const { buildTerrainPieces } = await load('level/TerrainAutotile');
+  const level = arena(10, 8);
+  // A room's south wall, two rows thick down to the arena's own: its top row has the room's floor north of it.
+  for (let x = 1; x < 9; x++) for (const y of [5, 6]) level.setTile(x, y, createTile(TileType.Wall));
+  level.setTile(4, 4, createTile(TileType.Obstacle));
+  const pieces = buildTerrainPieces(level);
+  // The dark laid over the floor run on under a south wall, sorted among the entities: there under the pot as elsewhere.
+  const darkOver = (tx) => pieces.some((p) => p.z !== undefined && !p.floor && p.dx >= tx * TILE_WIDTH && p.dx < (tx + 1) * TILE_WIDTH
+    && p.dy >= 4 * TILE_HEIGHT && p.dy < 6 * TILE_HEIGHT && p.sx === 96 && p.sy === 80);
+  assert.ok(darkOver(3), 'beside the pot');
+  assert.ok(darkOver(4), 'under the pot too');
 });

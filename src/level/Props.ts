@@ -88,7 +88,7 @@ type Rect = { x: number; y: number; w: number; h: number };
 export const PROP_GROUND = TILE_HEIGHT - 4;
 /**
  * A solid prop blocks only a strip at its foot this deep (or its own height, if shorter), as wide as its
- * art less a little each side: characters walk right up to an urn, and behind a tall crate stack.
+ * art less a little each side: characters walk right up to an urn, and behind a large crate.
  */
 const BASE_DEPTH = 12;
 const BASE_INSET = 2;
@@ -211,8 +211,9 @@ export const PROPS = {
   sarcophagus_open2: { image: 'decorative', rect: { x: 5, y: 165, w: 37, h: 27 }, mount: 'floor', solid: true, base: { w: 30, d: 20 } },
   crate:             { image: 'decorative', rect: { x: 130, y: 75, w: 12, h: 21 }, mount: 'floor', solid: true },
   crate2:            { image: 'decorative', rect: { x: 170, y: 75, w: 12, h: 21 }, mount: 'floor', solid: true },
-  crate_stack:       { image: 'decorative', rect: { x: 144, y: 71, w: 16, h: 41 }, mount: 'floor', solid: true },
-  crate_stack2:      { image: 'decorative', rect: { x: 200, y: 71, w: 16, h: 41 }, mount: 'floor', solid: true },
+  // The large crates stand alone: the broken one drawn under each in the sheet is a prop of its own (crate_large_broken).
+  crate_large:       { image: 'decorative', rect: { x: 144, y: 71, w: 16, h: 25 }, mount: 'floor', solid: true },
+  crate_large2:      { image: 'decorative', rect: { x: 200, y: 71, w: 16, h: 25 }, mount: 'floor', solid: true },
   post:              { image: 'decorative', rect: { x: 1, y: 20, w: 13, h: 44 }, mount: 'floor', solid: true },
   post2:             { image: 'decorative', rect: { x: 65, y: 16, w: 13, h: 48 }, mount: 'floor', solid: true },
   urn:               { image: 'decorative', rect: { x: 144, y: 124, w: 16, h: 20 }, mount: 'floor', solid: true },
@@ -224,6 +225,8 @@ export const PROPS = {
   sarcophagus_broken:  { image: 'decorative', rect: { x: 5, y: 136, w: 37, h: 24 }, mount: 'floor', solid: true, base: { w: 30, d: 18 } },
   sarcophagus_broken2: { image: 'decorative', rect: { x: 5, y: 232, w: 37, h: 24 }, mount: 'floor', solid: true, base: { w: 30, d: 18 } },
   crate_broken2:     { image: 'decorative', rect: { x: 170, y: 97, w: 12, h: 15 }, mount: 'floor' },
+  crate_large_broken:  { image: 'decorative', rect: { x: 144, y: 96, w: 16, h: 16 }, mount: 'floor' },
+  crate_large_broken2: { image: 'decorative', rect: { x: 200, y: 96, w: 16, h: 16 }, mount: 'floor' },
   post_cauldron:     { image: 'decorative', rect: { x: 17, y: 16, w: 14, h: 48 }, mount: 'floor', solid: true },
   post_chain:        { image: 'decorative', rect: { x: 49, y: 22, w: 13, h: 42 }, mount: 'floor', solid: true },
   post_broken:       { image: 'decorative', rect: { x: 33, y: 36, w: 13, h: 28 }, mount: 'floor', solid: true },
@@ -724,9 +727,9 @@ function keysOf<T extends object>(table: T): Array<keyof T & string> {
 
 export const COFFINS: PropKind[] = ['coffin', 'coffin_cracked', 'coffin_open'];
 export const SARCOPHAGI: PropKind[] = ['sarcophagus', 'sarcophagus2', 'sarcophagus_open', 'sarcophagus_open2', 'sarcophagus_broken', 'sarcophagus_broken2'];
-export const CRATES: PropKind[] = ['crate', 'crate2', 'crate_stack', 'crate_stack2'];
+export const CRATES: PropKind[] = ['crate', 'crate2', 'crate_large', 'crate_large2'];
 /** Urns of every size and glaze, whole and broken, and a broken crate or two among them. */
-export const URNS: PropKind[] = [...propsStarting('urn'), 'crate_broken', 'crate_broken2'];
+export const URNS: PropKind[] = [...propsStarting('urn'), 'crate_broken', 'crate_broken2', 'crate_large_broken', 'crate_large_broken2'];
 export const POSTS: PropKind[] = ['post', 'post2', 'post_cauldron', 'post_chain', 'post_broken'];
 /** Burnt-out candles, left on crypt floors. */
 export const COLD_CANDLES: PropKind[] = ['candles_cold', 'candles_cold2', 'candle_cold', 'candle_stub'];
@@ -766,7 +769,7 @@ export const STORE_GOODS: PropKind[] = propsStarting('bowl_', 'sack');
 export const PEDESTALS: PropKind[] = propsStarting('pedestal_').filter((kind) => PROPS[kind].rect.w > 32);
 /** Something to stand in the middle of a room, by theme. */
 export const CRYPT_CENTREPIECES: PropKind[] = [...SARCOPHAGI, 'coffin_open'];
-export const STORE_CENTREPIECES: PropKind[] = ['crate_stack', 'crate_stack2', 'crate', 'crate2'];
+export const STORE_CENTREPIECES: PropKind[] = ['crate_large', 'crate_large2', 'crate', 'crate2'];
 /** Free-standing columns: in rows along a hall's long walls, or alone in its middle. */
 export const COLUMNS: PropKind[] = ['column', 'column_low', 'column_slender', 'column_slender_low'];
 export const HALL_CENTREPIECES: PropKind[] = [...PEDESTALS, ...POSTS, 'column', 'column_low'];

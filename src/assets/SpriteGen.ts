@@ -112,24 +112,30 @@ export function genExitButtonSheet(): HTMLCanvasElement {
 
 // ── SAFE-ROOM GATE AND LEVER ─────────────────────────────────────────────────
 
-/** A portcullis over one doorway tile, 32×40: iron bars and crossbars, spiked at the foot, rising above the tile. */
+/**
+ * A portcullis over a doorway two tiles tall, 32×72: iron bars and crossbars, spiked at the foot, rising a little above
+ * the doorway. Any art will do in its place: the game fits it to the doorway (createGates).
+ */
 export function genPortcullis(): HTMLCanvasElement {
-  const [c, ctx] = mkCanvas(32, 40);
+  const W = 32;
+  const H = 72;
+  const BAR_FOOT = H - 4;
+  const [c, ctx] = mkCanvas(W, H);
   const IRON = 0x2b2f36;
   const LIGHT = 0x5a626e;
   const DARK = 0x15171b;
-  for (let x = 2; x < 32; x += 6) {
-    rect(ctx, x, 0, 3, 36, IRON);
-    rect(ctx, x, 0, 1, 36, LIGHT);
-    rect(ctx, x + 2, 0, 1, 36, DARK);
-    rect(ctx, x, 36, 3, 2, IRON);
-    px(ctx, x + 1, 38, LIGHT);
-    px(ctx, x + 1, 39, IRON);
+  for (let x = 2; x < W; x += 6) {
+    rect(ctx, x, 0, 3, BAR_FOOT, IRON);
+    rect(ctx, x, 0, 1, BAR_FOOT, LIGHT);
+    rect(ctx, x + 2, 0, 1, BAR_FOOT, DARK);
+    rect(ctx, x, BAR_FOOT, 3, 2, IRON);
+    px(ctx, x + 1, H - 2, LIGHT);
+    px(ctx, x + 1, H - 1, IRON);
   }
-  for (const y of [4, 16, 28]) {
-    rect(ctx, 0, y, 32, 3, IRON);
-    rect(ctx, 0, y, 32, 1, LIGHT);
-    rect(ctx, 0, y + 2, 32, 1, DARK);
+  for (let y = 4; y < BAR_FOOT - 4; y += 12) {
+    rect(ctx, 0, y, W, 3, IRON);
+    rect(ctx, 0, y, W, 1, LIGHT);
+    rect(ctx, 0, y + 2, W, 1, DARK);
   }
   return c;
 }

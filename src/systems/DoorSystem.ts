@@ -4,7 +4,7 @@ import { text } from '../core/texts';
 import { logLine } from './RollLogSystem';
 import { createTile, TileType, TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
 import { sound } from '../audio/SoundPlayer';
-import { createGate, GATE_LIFT, GATE_RISE } from '../entities/DungeonFactory';
+import { createGates, GATE_RISE } from '../entities/DungeonFactory';
 
 /** A raised portcullis takes this many ticks to slide up out of sight… */
 const GATE_RISE_TICKS = 45;
@@ -46,7 +46,7 @@ function seal(level: Level, door: Door): void {
   const d = door.door;
   d.closingTicks = null;
   barUp(level, door);
-  for (const t of d.tiles) createGate(t.x, t.y, true);
+  createGates(d.tiles, true);
   d.closed = true;
   sound.playSound('door_open', door.position.x, door.position.y);
 }
@@ -98,7 +98,7 @@ export function closeExitDoor(): void {
 function raiseGate(gate: Gate): void {
   const g = gate.gate;
   g.lift = Math.min(1, g.lift + 1 / GATE_RISE_TICKS);
-  gate.yOffset = GATE_LIFT + g.lift * GATE_RISE;
+  gate.yOffset = g.rest + g.lift * GATE_RISE;
   if (gate.sprite) gate.sprite.alpha = 1 - g.lift;
   if (g.lift >= 1) world.addComponent(gate, 'removed', true);
 }
@@ -107,7 +107,7 @@ function raiseGate(gate: Gate): void {
 function dropGate(gate: Gate): void {
   const g = gate.gate;
   g.lift = Math.max(0, g.lift - 1 / GATE_DROP_TICKS);
-  gate.yOffset = GATE_LIFT + g.lift * GATE_RISE;
+  gate.yOffset = g.rest + g.lift * GATE_RISE;
   if (g.lift === 0) g.dropping = false;
 }
 

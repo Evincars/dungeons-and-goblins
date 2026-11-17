@@ -36,10 +36,10 @@ export type TerrainPiece = {
 };
 
 /**
- * The kinds of ground a floor tile can be, softest first: where two meet, the softer spills a little over the
- * edge of the other (cave earth over cobbles, rough earth over stone, corridor stone over the safe room's slabs).
+ * The kinds of ground a floor tile can be, softest first: where two meet, the softer spills over the edge of the other
+ * (cave earth over cobbles, rough earth and mossy patches over stone, corridor stone over the safe room's slabs).
  */
-export const GROUND_KINDS = ['cave', 'rough', 'stone', 'safe'] as const;
+export const GROUND_KINDS = ['cave', 'rough', 'patch', 'stone', 'safe'] as const;
 export type GroundKind = (typeof GROUND_KINDS)[number];
 
 /** A floor tile's ground: its kind, and the 32×32 rect of the tileset (or the cave sheet) it is drawn from. */
@@ -76,7 +76,14 @@ const FACE_MID_X = [80, 96, 112, 128];
 const PILLAR_X = [144, 160];           // 32px column centred on the pair
 const WINDOW_X = [272, 288, 304, 320, 336];
 const WINDOW_Y = [240, 224, 208];      // arched-window bricks, k=1..3
-const CRACKED_Y = [304, 288, 272];     // crumbling bricks for breakable walls
+const CRACKED_Y = [304, 288, 272];     // damp-stained, crumbling bricks (k=1..3): breakable walls, and stretches of any wall
+/**
+ * The cobblestone walls' own stretches of the same kind (cols 19–27, rows 21–27): four blocks 4 sub-tiles wide, of big
+ * stones, gravestones, stones and rubble set in the cobbles, each three brick rows tall.
+ */
+const COBBLE_STAINS: ReadonlyArray<Src> = [[304, 336], [384, 336], [304, 400], [384, 400]];
+/** One pair of plain full-height face tiles in this many (by hash) is such a stained (or stone-set) stretch. */
+const STAINED_EVERY = 7;
 const BASE_Y = 176;                    // 8px plinth under the face, drawn on the floor
 // Tomb niche face: bones in dark recesses (rows 12–15), 4 sub-tiles wide
 const NICHE_X = [80, 176];
@@ -205,6 +212,8 @@ const VOID_BELOW_WALL = 0.5;
  * SLANT_WIDE_EVERY starts a two-tile one (a niche, an alcove), one in SLANT_NARROW_EVERY holds a one-tile window.
  */
 const SLANT_WIDE_EVERY = 3;
+/** Under a south slant the floor run on under the wall is laid in strips this wide, each as deep as the slant there. */
+const UNDER_SLANT_STRIP = 2;
 const SLANT_NARROW_EVERY = 3;
 
 type FaceStyle = 'left' | 'right' | 'mid' | 'pillarL' | 'pillarR' | 'window' | 'slit' | 'cracked' | 'niche' | 'decor';
@@ -305,10 +314,18 @@ class TerrainBuilder {
     return this.isFace(sx, sy) || this.endColumns.has(sx + sy * this.W);
   }
 
-  /** Depth of a wall sub-tile whose tile has walkable floor directly north (drawn over characters there). */
+  /**
+   * Depth of a wall sub-tile whose tile has floor directly north (drawn over characters there): walkable floor, or floor
+   * something stands on (a pot, a crate, a closed portcullis), so the wall is drawn the same whatever stands before it;
+   * none under a slanted wall.
+   */
   private occluderZ(sx: number, sy: number): number | undefined {
     const tx = sx >> 1, ty = sy >> 1;
-    if (!this.level.getTile(tx, ty - 1)?.passable) return undefined;
+    const north = this.level.getTile(tx, ty - 1);
+    if (!north || !(north.passable || north.type === TileType.Obstacle)) return undefined;
+    // Under a slanted wall the slant's own rim and the dark under it stand for this wall's top (addSlant): a raised top
+    // here would cut a notch into the rim where the slant steps down a row.
+    if (this.level.slopes.has(tx + (ty - 1) * this.level.width)) return undefined;
     return (ty + 1) * TILE_HEIGHT;
   }
 
@@ -348,6 +365,8 @@ class TerrainBuilder {
     if (full && tx % PILLAR_EVERY === PILLAR_PHASE && this.pillarFits(tx, bottom)) return sx === tx * 2 ? 'pillarL' : 'pillarR';
     if (full && this.castle) return this.castleBareStyle(sx, bottom);
     if (full && hash(tx, bottom) % WINDOW_EVERY === 0) return 'window';
+    // Now and then a stretch two tiles wide is damp-stained (or, in cobblestone, set with stones).
+    if (full && (hash(tx >> 1, bottom) >>> 5) % STAINED_EVERY === 0) return 'cracked';
     return 'mid';
   }
 
@@ -388,8 +407,9 @@ class TerrainBuilder {
 
   /**
    * The floor of the room north of a south wall, run on under the wall as far as its dark reaches (the whole tile under a
-   * straight wall, down to the dark's foot under a slanted one): what shows where the wall clears over someone behind
-   * it (render/SeeThrough.ts).
+   * straight wall; under a slanted one, down along the slant, a few pixels' strip at a time, so where the wall clears its
+   * floor ends on the slant, not in steps): what shows where the wall clears over someone behind it
+   * (render/SeeThrough.ts).
    */
   private addFloorUnderWall(tx: number, ty: number): void {
     const tile = this.level.getTile(tx, ty);
@@ -398,11 +418,26 @@ class TerrainBuilder {
     const southSlant = !!slope && !northCorner(slope.corner);
     const above = groundAt(this.level, tx, ty - 1);
     if (!above || (slope && !southSlant)) return;
-    const reach = slope ? Math.min(TILE_HEIGHT, slantRimDepth(slope, tx, ty - 1) - ty * TILE_HEIGHT) : TILE_HEIGHT;
-    const h = reach - UNDER_WALL_INSET;
+    if (!slope) {
+      this.addUnderWallStrip(above, tx * TILE_WIDTH, ty * TILE_HEIGHT, 0, TILE_WIDTH, TILE_HEIGHT - UNDER_WALL_INSET);
+      return;
+    }
+    // The dark under the rim reaches WALL_SINK (and a little) past the slant, column by column.
+    const left = slantFootY(slope, tx, ty - 1, false);
+    const right = slantFootY(slope, tx, ty - 1, true);
+    const reachBelowFoot = slantRimDepth(slope, tx, ty - 1) - Math.max(left, right);
+    for (let x = 0; x < TILE_WIDTH; x += UNDER_SLANT_STRIP) {
+      const foot = left + ((right - left) * (x + UNDER_SLANT_STRIP / 2)) / TILE_WIDTH;
+      const h = Math.min(TILE_HEIGHT, Math.round(foot + reachBelowFoot) - ty * TILE_HEIGHT) - UNDER_WALL_INSET;
+      this.addUnderWallStrip(above, tx * TILE_WIDTH, ty * TILE_HEIGHT, x, UNDER_SLANT_STRIP, h);
+    }
+  }
+
+  /** A strip of the floor run on under a wall: `x` px in from the tile's left, this wide and tall. */
+  private addUnderWallStrip(ground: Ground, dx: number, dy: number, x: number, w: number, h: number): void {
     if (h <= 0) return;
-    const piece: TerrainPiece = { dx: tx * TILE_WIDTH, dy: ty * TILE_HEIGHT, sx: above.sx, sy: above.sy, w: TILE_WIDTH, h, floor: true };
-    if (above.sheet) piece.sheet = above.sheet;
+    const piece: TerrainPiece = { dx: dx + x, dy, sx: ground.sx + x, sy: ground.sy, w, h, floor: true };
+    if (ground.sheet) piece.sheet = ground.sheet;
     this.floorPieces.push(piece);
   }
 
@@ -519,9 +554,22 @@ class TerrainBuilder {
     const src = this.brickFaceSource(sx, sy);
     if (!this.cobble(sx, sy)) return src;
     const style = this.faceStyle(sx, sy);
-    if (style === 'cracked') return src;
+    if (style === 'cracked') return this.cobbleStainSource(sx, sy);
     if (style === 'window') return [FACE_MID_X[sx % 4], this.brickRowY(sx, sy) + COBBLE_DY];
     return [src[0], src[1] + COBBLE_DY];
+  }
+
+  /**
+   * A stained stretch of a cobblestone face: its cap as any other's; below it one of the stone-set blocks, picked for the
+   * stretch (two tiles) by hash, its columns running on across the stretch.
+   */
+  private cobbleStainSource(sx: number, sy: number): Src {
+    const i = sx + sy * this.W;
+    const k = this.faceK[i];
+    if (k === this.faceH[i]) return [FACE_MID_X[sx % 4], FACE_CAP_Y + COBBLE_DY];
+    const bottom = sy + k - 1;
+    const block = COBBLE_STAINS[hash(sx >> 2, bottom >> 1) % COBBLE_STAINS.length];
+    return [block[0] + (sx % 4) * SUB, block[1] + (FACE_MAX - 1 - k) * SUB];
   }
 
   /** The brick face row a face sub-tile shows: the cap at its top, plain bricks below. */
@@ -822,7 +870,7 @@ function stoneGround(level: Level, t: TileData, tx: number, ty: number): Ground 
   const n = noise(tx, ty, FLOOR_NOISE_SCALE);
   if (v % GRATE_EVERY === 0 && t.type === TileType.Floor) return at('stone', FLOOR_GRATES);
   if (n > FLOOR_ROUGH_LEVEL) return at('rough', FLOOR_ROUGH);
-  if (n > FLOOR_PATCH_LEVEL) return at('stone', FLOOR_PATCH);
+  if (n > FLOOR_PATCH_LEVEL) return at('patch', FLOOR_PATCH);
   return at('stone', FLOOR_MAIN);
 }
 

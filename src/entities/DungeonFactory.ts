@@ -6,7 +6,7 @@ import { PROPS, PROP_GROUND } from '../level/Props';
 import type { PropDef, PropKind, PropPlacement } from '../level/Props';
 import { stashCoins } from './LootFactory';
 import { ARMORS, HAND_WEAPONS, SHIELDS, catalogueItem } from './ItemCatalog';
-import type { DoorData, RoomData } from '../level/generators/DungeonBuilder';
+import type { DoorData, RoomData, TilePos } from '../level/generators/DungeonBuilder';
 
 /**
  * The fixtures of a generated dungeon: rooms, the safe-room door, torches, props, chests, exit and shop.
@@ -79,10 +79,8 @@ export function createRoom(room: RoomData): Entity {
 export function createSafeDoor(door: DoorData, level: Level): Entity {
   const first = door.tiles[0];
   const middle = door.tiles[Math.floor(door.tiles.length / 2)] ?? first;
-  for (const t of door.tiles) {
-    level.setTile(t.x, t.y, createTile(TileType.Obstacle, 0));
-    createGate(t.x, t.y);
-  }
+  for (const t of door.tiles) level.setTile(t.x, t.y, createTile(TileType.Obstacle, 0));
+  createGates(door.tiles);
   return world.add({
     position: { x: first.x * TILE_WIDTH + TILE_WIDTH / 2, y: middle.y * TILE_HEIGHT + TILE_HEIGHT / 2 },
     door: { tiles: door.tiles, boundaryX: door.boundaryX, closed: false, locked: true, closingTicks: null },
@@ -102,23 +100,37 @@ export function createExitDoor(door: DoorData): Entity {
   });
 }
 
-/** The portcullis is drawn this far up from the foot of its tile: it reaches a little above the doorway. */
-export const GATE_LIFT = 20;
+/** The portcullis reaches this far above its doorway, up into the wall over it. */
+export const GATE_ABOVE = 8;
 /** Raised all the way, a portcullis stands this much higher (up in the wall above the doorway). */
 export const GATE_RISE = 34;
 
 /**
- * A portcullis over one doorway tile, standing on the tile's foot so whoever is in front of it draws over it:
- * down (the locked door), or — `dropping` — raised, about to fall back down and bar the way again.
+ * The portcullis over a doorway: one gate per tile (each barred, raised and dropped with its door), the lowest of them
+ * drawing the grille, fitted to the whole doorway whatever size its art is (so new art needs no new numbers) and standing
+ * on the doorway's foot, so whoever is in front of it draws over it. Down (the locked door), or — `dropping` — raised,
+ * about to fall back down and bar the way again.
  */
-export function createGate(tx: number, ty: number, dropping = false): Entity {
+export function createGates(tiles: readonly TilePos[], dropping = false): void {
+  if (tiles.length === 0) return;
+  const top = Math.min(...tiles.map((t) => t.y));
+  const foot = tiles.reduce((low, t) => (t.y > low.y ? t : low), tiles[0]);
+  for (const t of tiles) createGate(t.x, t.y, dropping, t === foot ? foot.y - top + 1 : 0);
+}
+
+/** One doorway tile's gate; `span`: the doorway's height in tiles, when this gate draws the grille over it (else 0). */
+function createGate(tx: number, ty: number, dropping: boolean, span: number): Entity {
   const lift = dropping ? 1 : 0;
-  return world.add({
+  const h = span * TILE_HEIGHT + GATE_ABOVE;
+  // The sprite is drawn about its middle: raised by half its height it stands on the tile's foot.
+  const rest = span > 0 ? h / 2 - 1 : 0;
+  const gate: Entity = {
     position: { x: tx * TILE_WIDTH + TILE_WIDTH / 2, y: (ty + 1) * TILE_HEIGHT - 1 },
-    visual: { sheet: 'portcullis' },
-    yOffset: GATE_LIFT + lift * GATE_RISE,
-    gate: dropping ? { lift, dropping } : { lift },
-  });
+    yOffset: rest + lift * GATE_RISE,
+    gate: dropping ? { lift, dropping, rest } : { lift, rest },
+  };
+  if (span > 0) gate.visual = { sheet: 'portcullis', size: { w: TILE_WIDTH, h } };
+  return world.add(gate);
 }
 
 /** The lever beside the safe room's door; pulling it (E) raises the portcullis. The exit room's (`exit`) drops its own. */
@@ -259,7 +271,7 @@ export function createProp(p: PropPlacement): Entity {
 const OPENABLE_PROPS: ReadonlySet<PropKind> = new Set<PropKind>([
   'coffin', 'coffin_cracked', 'sarcophagus', 'sarcophagus2',
   'barrel', 'barrel2', 'supplies_barrel',
-  'crate', 'crate2', 'crate_stack', 'crate_stack2', 'supplies_crate', 'supplies_crates',
+  'crate', 'crate2', 'crate_large', 'crate_large2', 'supplies_crate', 'supplies_crates',
   'urn', 'urn_small', 'urn_m', 'urn_s', 'urn_xs', 'urn_green', 'urn_green_small', 'urn_green_m', 'urn_green_s', 'urn_green_xs',
   'supplies_vase', 'supplies_jar',
   'castle_barrel', 'castle_bucket', 'castle_chests', 'castle_urn', 'castle_urn_m', 'castle_pot', 'castle_pot_m',

@@ -236,8 +236,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   deep as their bulk stands, so nobody stands inside one), stalagmites, mushroom tables and roots strew the floor, reeds, flowers
   and mushrooms grow in clumps by the brinks of drops and holes, the rock's feet and the edges of other earth, pebbles and small
   stalagmites gather at the rock's feet (wall props hang as high as `PropDef.hang` says). Where two slants meet back to back (a spur's point) each corner of a body is pushed
-  back by the slant it lies over (`Level.pushOutOfSlopes`). Soft edges between kinds of ground (`GroundBlend.ts`, baked
-  into one atlas by `render/BlendAtlas.ts`), fog of war (`FogRenderer.ts`: per-corner fading buffer, blurred, with
+  back by the slant it lies over (`Level.pushOutOfSlopes`). Soft edges between kinds of ground (`GroundBlend.ts`: the softer, mossy patches included, runs over the harder along a
+  ragged line that wanders by world position and runs on from tile to tile; baked into one atlas by `render/BlendAtlas.ts`), fog of war (`FogRenderer.ts`: per-corner fading buffer, blurred, with
   drifting mist), lighting (`LightRenderer.ts`: a dim ambient multiplied over the scene; every flame, the torch each hero carries
   included, breathes in reach and brightness on three out-of-step waves; crystals shine steadily), and `LevelMap.ts` (a generated
   level as validated JSON, gzipped to send or save).

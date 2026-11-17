@@ -10,7 +10,7 @@ import { undeadOf } from '../systems/SummonSystem';
 import { superiorityDice, superioritySides } from '../rules/Maneuvers';
 import { passiveFeats } from '../rules/Build';
 import { FEATS } from '../rules/Feats';
-import { featName } from '../rules/Names';
+import { featName, spellName } from '../rules/Names';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
 
@@ -18,7 +18,7 @@ import { THEME } from './Theme';
 const MARGIN = 8;
 const LINE_H = 10;
 /** The most lines there can be (a class has fewer passives than this). */
-const MAX_LINES = 14;
+const MAX_LINES = 18;
 /** A passive that is ready is shown in this colour; one that is recovering is dimmed. */
 const READY_COLOR = THEME.title;
 /** The passives that need time to recover between uses, and the ticks each has left. */
@@ -37,6 +37,8 @@ const BOOSTS = [
 ] as const;
 /** Passives whose own line (systems/SchoolSystem.ts state) says more than their name. */
 const TOLD_APART: ReadonlySet<string> = new Set(['arcane_ward', 'portent']);
+/** Each buff a hero may carry and the spell it comes from. */
+const BUFF_NAMES = [['bladeWard', 'blade_ward'], ['shield', 'shield'], ['stoneskin', 'stoneskin']] as const;
 /** A boost that is running is shown in this colour. */
 const BOOST_COLOR = 0x40e0d0;
 /** Great Weapon Master's earned attack, waiting for the next swing, is shown in blue. */
@@ -60,10 +62,29 @@ function schoolLines(player: Player): Line[] {
   if (arcana.songTicks > 0) {
     const impeded = bladesongImpeded(player.equipped ?? {});
     lines.push({ content: text(impeded ? 'hud.passive.bladesong_impeded' : 'hud.passive.bladesong', { seconds: secondsOf(arcana.songTicks) }), color: impeded ? THEME.muted : BOOST_COLOR });
+    // The Bladesong Charges gathered for its Climax: all of them, then how many of each kind.
+    const charges = { total: arcana.damageCharges + arcana.healingCharges, damage: arcana.damageCharges, healing: arcana.healingCharges };
+    lines.push({ content: text('hud.passive.song_charges', charges), color: BOOST_COLOR });
   }
+  if (arcana.darkvision) lines.push({ content: text('hud.passive.darkvision'), color: READY_COLOR });
+  if (arcana.seeInvisible) lines.push({ content: text('hud.passive.see_invisible'), color: READY_COLOR });
   if (arcana.stone) lines.push({ content: text(arcana.stone === 'speed' ? 'hud.passive.stone_speed' : 'hud.passive.stone_constitution'), color: READY_COLOR });
   const undead = undeadOf(player);
   if (undead > 0) lines.push({ content: text('hud.passive.undead', { count: undead }), color: READY_COLOR });
+  return lines;
+}
+
+/** The spells lasting on the hero (Blade Ward, Shield, Stoneskin with their seconds; Mage Armour) and the one they concentrate on. */
+function spellLines(player: Player): Line[] {
+  const lines: Line[] = [];
+  const buffs = player.buffs;
+  for (const [key, id] of BUFF_NAMES) {
+    const left = buffs?.[key] ?? 0;
+    if (left > 0) lines.push({ content: text('hud.passive.recovering', { name: spellName(id), seconds: secondsOf(left) }), color: BOOST_COLOR });
+  }
+  if ((buffs?.mageArmor ?? 0) > 0) lines.push({ content: spellName('mage_armor'), color: BOOST_COLOR });
+  const held = player.concentration;
+  if (held) lines.push({ content: text('hud.passive.concentration', { spell: spellName(held.spell) }), color: BOOST_COLOR });
   return lines;
 }
 
@@ -97,7 +118,7 @@ export class PassiveHud {
     const dice = this.diceLine(player);
     const ready = player.maneuver?.id ?? '';
     const timers = [player.protectCooldown, player.indomitableCooldown, player.actionSurge, player.athleteBoost, player.duelistCooldown].map((t) => secondsOf(t ?? 0));
-    const school = schoolLines(player);
+    const school = [...schoolLines(player), ...spellLines(player)];
     const schoolTimers = Object.values(RECOVERING).map((left) => secondsOf(left(player)));
     const key = JSON.stringify([
       player.heroClass, player.playerStats.level, b?.fightingStyle, b?.extraStyle, b?.archetype, b?.maneuvers, b?.improvements, off, timers, dice, ready,

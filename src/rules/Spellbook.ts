@@ -12,16 +12,18 @@ import type { FeatureDef } from './ClassFeatures';
 import type { DndClass } from './Classes';
 import { KNIGHT_LIST, KNIGHT_SCHOOLS, KNIGHT_SLOT_LEVELS, knightSlotLevel } from './KnightSpells';
 import type { Picks } from './Archetypes';
-import { SPELLS, TICKS_PER_SECOND, isSpellId } from './Spells';
+import { SPELLS, SPELL_IDS, TICKS_PER_SECOND, isSpellId } from './Spells';
+import { text } from '../core/texts';
 import { bindLimit, hasBindLimits } from './Schools';
 import type { SpellDef, SpellId } from './Spells';
 import spellbook from '../data/spellbook.json';
 import spellList from '../data/spell-list.json';
 
 /**
- * Every spell of the 5th edition lists (src/data/spellbook.json, made by scripts/scrape-spells.mjs from
- * dnd5e.wikidot.com): who learns it and at which level, how far it reaches, what it rolls, and its text.
- * Only the few spells in src/data/spells.json can be cast yet; the rest can be learnt and put on the quick bar.
+ * The spells of Baldur's Gate 3 (src/data/spell-list.json, made by scripts/bg3-spells.mjs from the BG3 wiki): each one's
+ * name, level, school and the classes that learn it, with the D&D rules behind it (src/data/spellbook.json, made by
+ * scripts/scrape-spells.mjs from dnd5e.wikidot.com: how far it reaches, what it rolls, its text) where those have it.
+ * Only the spells in src/data/spells.json can be cast yet (`castable`); the rest show greyed out, not in the game yet.
  *
  * There are no spell slots. The slot level a spell is cast at is a choice instead: a higher level does more and
  * recovers more slowly. A class opens each spell level at the hero level the tabletop rules give it.
@@ -48,8 +50,10 @@ export type CatalogSpell = {
   /** 0 for a cantrip. */
   level: number;
   school: string;
-  /** The book it comes from (an Eldritch Knight learns from the Player's Handbook only). */
-  source: string;
+  /** On the Eldritch Knight's list (src/rules/KnightSpells.ts). */
+  knight: boolean;
+  /** Cast in the game (src/data/spells.json); the others are listed, greyed out, until they are. */
+  castable: boolean;
   ritual: boolean;
   castingTime: string;
   /** `feet` and `px` are null where the range is not a distance (sight, unlimited). */
@@ -104,56 +108,92 @@ function readEffect(id: string, raw: unknown): CatalogSpell['effect'] {
   };
 }
 
-/** One spell from the file, checked: a mistake there stops the game with a clear message instead of half-working. */
-function readSpell(id: string, raw: unknown): CatalogSpell {
-  ensure(isRecord(raw) && isRecord(raw.range) && isRecord(raw.classes), `Bad spell ${id}`, { id });
-  const range = isRecord(raw.range) ? raw.range : {};
+/** The schools of magic, as the lists name them. */
+export const SPELL_SCHOOLS = ['Abjuration', 'Conjuration', 'Divination', 'Enchantment', 'Evocation', 'Illusion', 'Necromancy', 'Transmutation'] as const;
+export type SpellSchool = (typeof SPELL_SCHOOLS)[number];
+const isSchool = (v: unknown): v is SpellSchool => SPELL_SCHOOLS.some((s) => s === v);
+
+/** The hero level at which a class opens a spell's level (a cantrip: level 1), or undefined if it never does. */
+function opensAt(cls: string, spellLevel: number): number | undefined {
+  if (spellLevel === 0) return 1;
+  const kind = hasKey(spellbook.casterKinds, cls) ? spellbook.casterKinds[cls] : null;
+  if (!kind || !hasKey(spellbook.unlockLevels, kind)) return undefined;
+  const unlocks: readonly (number | null)[] = spellbook.unlockLevels[kind];
+  return unlocks[spellLevel - 1] ?? undefined;
+}
+
+/** The D&D rules of a spell (src/data/spellbook.json), if they have it. */
+function rulesOf(key: unknown): Record<string, unknown> | null {
+  if (typeof key !== 'string' || !hasKey(spellbook.spells, key)) return null;
+  const raw: unknown = spellbook.spells[key];
+  return isRecord(raw) ? raw : null;
+}
+
+/** The classes that learn a spell, each with the hero level its spell level opens at (one that never opens it is left out). */
+function learners(list: unknown, level: number): Partial<Record<string, number>> {
   const classes: Partial<Record<string, number>> = {};
-  for (const [cls, level] of Object.entries(isRecord(raw.classes) ? raw.classes : {})) classes[cls] = num(level, 1);
-  return {
-    id,
-    name: str(raw.name),
-    level: num(raw.level),
-    school: str(raw.school),
-    source: str(raw.source),
-    ritual: raw.ritual === true,
-    castingTime: str(raw.castingTime),
-    range: { text: str(range.text), feet: typeof range.feet === 'number' ? range.feet : null, px: typeof range.px === 'number' ? range.px : null },
-    duration: str(raw.duration),
-    concentration: raw.concentration === true,
-    description: str(raw.description),
-    higherLevels: typeof raw.higherLevels === 'string' ? raw.higherLevels : null,
-    effect: readEffect(id, raw.effect),
-    classes,
-  };
+  for (const cls of Array.isArray(list) ? list : []) {
+    const at = typeof cls === 'string' ? opensAt(cls, level) : undefined;
+    if (typeof cls === 'string' && at !== undefined) classes[cls] = at;
+  }
+  return classes;
 }
 
 /**
- * The spells the game uses (src/data/spell-list.json), each with its icon under public/ (null: none yet). Every one
- * must be in the whole list; a mistake stops the game with a clear message.
+ * One spell of the list, checked (a mistake stops the game with a clear message instead of half-working): its BG3 name,
+ * level, school and learners, the rest from its D&D rules where they have it, else its BG3 text alone.
  */
-const GAME_SPELLS: ReadonlyMap<string, string | null> = new Map(Object.entries(spellList.spells).map(([id, entry]) => {
-  ensure(hasKey(spellbook.spells, id), `Spell list names an unknown spell ${id}`, { id });
-  const img: unknown = isRecord(entry) ? entry.img : undefined;
-  ensure(img === null || (typeof img === 'string' && img.length > 0), `Bad icon for spell ${id}`, { id });
+function readSpell(id: string, entry: unknown): CatalogSpell {
+  ensure(isRecord(entry) && typeof entry.name === 'string' && Array.isArray(entry.classes), `Bad spell ${id}`, { id });
+  const raw = isRecord(entry) ? entry : {};
+  ensure(isSchool(raw.school), `Unknown school for spell ${id}`, { id, school: String(raw.school) });
+  ensure(raw.img === null || (typeof raw.img === 'string' && raw.img.length > 0), `Bad icon for spell ${id}`, { id });
+  const level = num(raw.level);
+  const rules = rulesOf(raw.book);
+  const range = rules && isRecord(rules.range) ? rules.range : {};
+  return {
+    id,
+    name: str(raw.name),
+    level,
+    school: str(raw.school),
+    knight: raw.knight === true,
+    castable: isSpellId(id),
+    ritual: rules?.ritual === true,
+    castingTime: str(rules?.castingTime) || text('spell.tip.action'),
+    range: { text: str(range.text), feet: typeof range.feet === 'number' ? range.feet : null, px: typeof range.px === 'number' ? range.px : null },
+    duration: str(rules?.duration),
+    concentration: raw.concentration === true,
+    description: str(rules?.description) || str(raw.text),
+    higherLevels: typeof rules?.higherLevels === 'string' ? rules.higherLevels : null,
+    effect: rules ? readEffect(id, rules.effect) : null,
+    classes: learners(raw.classes, level),
+  };
+}
+
+/** Every spell the game knows, by id (src/data/spell-list.json). */
+export const CATALOG: Readonly<Record<string, CatalogSpell>> = Object.fromEntries(
+  Object.entries(spellList.spells).map(([id, entry]) => [id, readSpell(id, entry)]),
+);
+
+/** Each spell's icon under public/ (null: none). */
+const ICONS: ReadonlyMap<string, string | null> = new Map(Object.entries(spellList.spells).map(([id, entry]) => {
+  const img: unknown = isRecord(entry) ? entry.img : null;
   return [id, typeof img === 'string' ? img : null];
 }));
 
-/** The spells there are in play: the whole list cut down to the game's own. */
-export const CATALOG: Readonly<Record<string, CatalogSpell>> = Object.fromEntries(
-  Object.entries(spellbook.spells).filter(([id]) => GAME_SPELLS.has(id)).map(([id, raw]) => [id, readSpell(id, raw)]),
-);
+// Every castable spell (src/data/spells.json) must be one the list knows: a stray id stops the game with a clear message.
+for (const id of SPELL_IDS) ensure(hasKey(CATALOG, id), `Castable spell ${id} is not in the spell list`, { id });
 
 /** Every spell with an icon, and where it is under public/ (the art loads lazily, see assets/SheetCatalog.ts). */
 export function spellIcons(): Array<{ id: string; src: string }> {
   const icons: Array<{ id: string; src: string }> = [];
-  for (const [id, src] of GAME_SPELLS) if (src) icons.push({ id, src: `/${src}` });
+  for (const [id, src] of ICONS) if (src) icons.push({ id, src: `/${src}` });
   return icons;
 }
 
 /** The texture key of a spell's icon, if it has one. */
 export function spellIconKey(id: string): string | null {
-  return GAME_SPELLS.get(id) ? `spell_icon_${id}` : null;
+  return ICONS.get(id) ? `spell_icon_${id}` : null;
 }
 
 export function isCatalogSpell(id: unknown): id is string {
@@ -171,11 +211,11 @@ export function spellListOf(cls: DndClass, picks: Picks | undefined): SpellList 
 /** The highest spell level an Eldritch Knight can learn from the wizard list: 4th. */
 const KNIGHT_TOP_LEVEL = KNIGHT_SLOT_LEVELS.length;
 
-/** Whether the Eldritch Knight's list holds the spell: a Player's Handbook wizard spell, a cantrip to a 4th-level spell. */
+/** Whether the Eldritch Knight's list holds the spell: one BG3 gives the Eldritch Knight, a cantrip to a 4th-level spell. */
 export function knightListed(id: unknown): id is string {
   if (!isCatalogSpell(id)) return false;
   const spell = CATALOG[id];
-  return hasKey(spell.classes, 'wizard') && spell.source === "Player's Handbook" && spell.level <= KNIGHT_TOP_LEVEL;
+  return spell.knight && spell.level <= KNIGHT_TOP_LEVEL;
 }
 
 /** Whether an Eldritch Knight of this fighter level has slots for the spell (a cantrip needs none) and the list holds it. */
@@ -264,6 +304,8 @@ export function canBind(cls: SpellList, heroLevel: number, id: unknown, level: u
   }
   if (!isCatalogSpell(id) || typeof level !== 'number') return false;
   const spell = CATALOG[id];
+  // A spell the game does not cast yet is listed, not bound.
+  if (!spell.castable) return false;
   if (cls === KNIGHT_LIST && !known?.includes(id)) return false;
   return (learnLevel(cls, spell) ?? Infinity) <= heroLevel && castLevels(cls, heroLevel, spell).includes(level);
 }

@@ -129,12 +129,13 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `src/data/feats.json`, read by `src/rules/Feats.ts` and summed per hero as `FeatEffects` (`featEffects` in `rules/Build.ts`;
   Passive Feats have their own section in the Skills tab: a toggle one is bound to the quick bar as `feat:<id>` and its key
   switches it, `player.featsOn`); enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`;
-  castable spells (dice, recovery, save, area, effect) in `src/data/spells.json`; the spells the game uses at all
-  (only ones that act at once and can be drawn with our effects) and their icons in `src/data/spell-list.json`
-  (`img`, filled in by `scripts/spell-icons.sh`, which pixelates each icon in `public/spells-icons` into `<name>_pixelart.png`
-  and matches spells to icons by name); every spell of the D&D lists (who learns it
-  and at which level, range in feet and px, dice, damage types, text) in `src/data/spellbook.json`, made by
-  `scripts/scrape-spells.mjs`; the SRD class features by level (passive, active or info; `worked` says whether the game plays
+  castable spells (dice, recovery, save, area, effect; a buff, zone or puddle's duration and concentration) in
+  `src/data/spells.json`; every spell of Baldur's Gate 3 the game knows (name, level, school, the classes that learn it,
+  the Eldritch Knight's, its BG3 text and icon) in `src/data/spell-list.json`, made by `scripts/bg3-spells.mjs` from the BG3
+  wiki (it matches spells to the icons `scripts/spell-icons.sh` pixelates in `public/spells-icons` into
+  `<name>_pixelart.png`; only spells with numbers in `spells.json` are cast, the rest show greyed out, not in the game yet);
+  the D&D rules behind them (range in feet and px, dice, damage types, text, At Higher Levels) in `src/data/spellbook.json`,
+  made by `scripts/scrape-spells.mjs`; the SRD class features by level (passive, active or info; `worked` says whether the game plays
   them) in `src/data/features.json`; every damage type, weapon and spell, in `src/rules/DamageTypes.ts`; sound effects (clips layered, re-pitched
   and delayed into recipes; each enemy's cries, each spell's cast and impact), the music tracks and the ambient
   beds in `src/audio/SoundBank.ts` (recordings are `.webm`, the long music `.ogg`).
@@ -253,15 +254,21 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   in play goes through `systems/Strike.ts`, which logs the roll over the attacker's head (`RollLogSystem.ts`,
   drawn by `RollTextSystem.ts`) and into the level's combat log (`CombatLogSystem.ts`, one synced entity, shown by
   `ui/CombatLogPanel.ts`; `recordEvent` also writes rests, healing, kills, levels and level-panel choices, `LOG_EVENTS` in `world.ts`), and spends a won initiative's first strike as advantage (`systems/InitiativeSystem.ts`).
-  Spells (`Spells.ts`, from `src/data/spells.json`: bolt, missiles, burst with a save, heal) have no slots but a
+  Spells (`Spells.ts`, from `src/data/spells.json`: bolt, missiles, burst with a save, heal; buff, zone and water last, in
+  `systems/LastingSpells.ts`: buffs on the caster (`buffs`: Blade Ward, Shield, Mage Armour, Stoneskin; False Life's temporary
+  hit points), zones that strike every 6 s (`zone`, `q.zones`), puddles a thunder spell charges (`surface`, `q.surfaces`),
+  and one spell held by `concentration` that a failed Constitution save on being hurt ends; what lasts until a long rest also
+  ends on a fall, `endUntilRest`) have no slots but a
   recovery each (`spellbook.recovery`), sit on the quick bar (two rows of ten: Q R T 1–5 X C cast the first row's squares,
   Shift with them the second, whose squares hold the active class features until bound; `playerInput.spellSlot`) and are cast by
   `systems/SpellSystem.ts` with effects from the library (`assets/Effects.ts`). `Spellbook.ts` reads the whole list: a class opens
   spell levels as the tabletop does, a cantrip's dice grow at hero levels 5/11/17, and a spell cast above its own level
   (the Skills tab of the inventory offers a box per level, `ui/SpellsPanel.ts`) rolls more and recovers more slowly. A click binds it
   to a quick-bar square (`game/SpellBinding.ts`, `spellbook.bound`, the `bind_spell` command), and a right click on a square empties
-  it (`UNBOUND`, the `unbind_spell` command; nothing comes back in its place); every spell of
-  `spell-list.json` has its numbers in `spells.json` and goes off (a heal with a `radius` mends every hero within it). Tooltips with
+  it (`UNBOUND`, the `unbind_spell` command; nothing comes back in its place); only a spell with its numbers in `spells.json`
+  is bound and goes off (`castable`; a heal with a `radius` mends every hero within it). Damage reaching a hero carries its
+  type (`hurtPlayer`): resistances halve it and immunities take it all (`rules/Resistances.ts`, listed in the Armor Class
+  tooltip, `sheet.defences`). Tooltips with
   more to tell show it while Alt is held (`ui/InfoTooltip.ts`). Class features (`rules/ClassFeatures.ts`) fill the Skills tab above the cantrips: a worked passive is on from its
   level and a click switches it off and on (`featuresOff`, the `toggle_feature` command; `featureOn` is what effects ask, and the
   HUD's top left lists the ones on, `ui/PassiveHud.ts`); an active (Second Wind, Action Surge…) is bound to a quick-bar square as
@@ -281,9 +288,12 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   cantrips and spells of each level bound as its level allows (`rules/Schools.ts`, `roomToBind`; counted at the Skills tab's top
   right); Arcane Recovery readies the spells of 5th level and below, 60 s less 6 s a charge (`cuts` in `features.json`; `logOnly`
   entries are told only in the level panel). Its school, chosen at level 2 like an archetype (`WIZARD_SCHOOLS`), has a Skills tab
-  section of its own; the schools play out in `systems/SchoolSystem.ts` (`arcana`: Arcane Ward, Portent, charms through the
-  `status.charmed` hold, Illusory Self, Bladesong and Song of Defence, the Transmuter's Stone, Grim Harvest, Empowered Evocation,
-  Potent Cantrip; a turn is 6 s and a rest's charge a cooldown) and Animate Dead's undead in `systems/SummonSystem.ts`
+  section of its own (Transmutation is not offered for now, the Savants are left out); the schools play out in
+  `systems/SchoolSystem.ts` (`arcana`: Arcane Ward, fed by Abjuration spells, Portent, charms through the `status.charmed` hold,
+  Illusory Self, Create Water's puddle, the Third Eye's darkvision (the fog lifts twice as far) and the sight of the invisible,
+  Bladesong (a feature used by `charges`, shown on its square) with its Bladesong Charges and Climax, Song of Defence, the
+  Transmuter's Stone, Grim Harvest, Empowered Evocation, Potent Cantrip; Focused Conjuration and Inured to Undeath work through
+  concentration and resistance; a turn is 6 s and a rest's charge a cooldown) and Animate Dead's undead in `systems/SummonSystem.ts`
   (`entities/SummonFactory.ts`, `q.summons`: they follow their master and fight; foes touching one strike it). A feature with no
   counterpart in the game yet is an info entry, `worked: false`.
   Experience follows the SRD

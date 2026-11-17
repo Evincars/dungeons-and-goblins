@@ -1,6 +1,6 @@
 import { Sprite } from 'pixi.js';
 import type { Container, Texture } from 'pixi.js';
-import { q, world } from '../world';
+import { q, world, PUDDLE_FRAMES } from '../world';
 import type { Entity } from '../world';
 import { getTexture } from '../assets/Textures';
 import { frameTexture } from '../render/Sheets';
@@ -13,6 +13,7 @@ const NEST_CRACK_FRAMES = 3;
 
 const nests = world.with('spawner', 'visual', 'sprite', 'health');
 const chestSprites = world.with('chest', 'visual', 'sprite');
+const puddleSprites = world.with('surface', 'visual', 'sprite');
 
 /**
  * A still picture: a frame of its sheet, or — for an icon fitted to size (an item on the floor) — the whole
@@ -60,8 +61,19 @@ function showOpenedChests(): void {
   }
 }
 
+/** A puddle charged with lightning shows its crackling frame. */
+function showPuddles(): void {
+  for (const puddle of puddleSprites) {
+    const col = PUDDLE_FRAMES[puddle.surface.kind];
+    if (puddle.visual.col === col) continue;
+    puddle.visual.col = col;
+    setVisualFrame(puddle.sprite, puddle.visual.sheet, col, puddle.visual.row ?? 0);
+  }
+}
+
 export function updateSprites(gameLayer: Container): void {
   createSprites(gameLayer);
   crackNests();
   showOpenedChests();
+  showPuddles();
 }

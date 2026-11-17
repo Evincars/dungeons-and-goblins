@@ -26,6 +26,8 @@ import type { Picks } from './Archetypes';
 import { MONSTERS } from './Monsters';
 import { nextLevelXp } from '../game/Progress';
 import { MANEUVER_DC_BASE } from './Maneuvers';
+import { defences } from './Resistances';
+import type { DamageType } from './DamageTypes';
 
 /**
  * What the rules make of a character's class, gear and abilities: Armor Class, the damage and attack bonus
@@ -54,6 +56,8 @@ export type ArmorClass = {
   feat: number;
   /** What the hero's school adds (Bladesong: the proficiency bonus). */
   school: number;
+  /** What spells on the hero add: Mage Armour (13 + DEX instead of 10 + DEX, with no body armour) and Shield (+5). */
+  spell: number;
   /** Trained in the armour and shield worn; untrained, every attack roll has disadvantage. */
   proficient: boolean;
 };
@@ -108,7 +112,7 @@ export function armorClass(equipped: Equipped, modifiers: Modifiers, cls: HeroCl
   const { feature, featureName } = featureAC(styles, !!armor);
   const feat = meleeInBothHands(equipped) ? feats.dualWieldArmorClass : 0;
   const proficient = !cls || ((!armor || armorTrained(cls, feats, armor.category)) && (!shieldItem || armorTrained(cls, feats, 'shield')));
-  return { total: base + dex + magic + shield + feature + feat, armor, base, dex, magic, shield, feature, featureName, feat, school: 0, proficient };
+  return { total: base + dex + magic + shield + feature + feat, armor, base, dex, magic, shield, feature, featureName, feat, school: 0, spell: 0, proficient };
 }
 
 export type WeaponAttack = {
@@ -416,6 +420,8 @@ export type CharacterSheet = Abilities & {
   passivePerception: number;
   saves: Record<StatName, SavingThrow>;
   spell: Spellcasting;
+  /** The kinds of damage the hero resists (half) and is immune to (none), from their spells and features (src/rules/Resistances.ts). */
+  defences: { resist: DamageType[]; immune: DamageType[] };
 };
 
 /**
@@ -478,8 +484,20 @@ function withSchoolAC(ac: ArmorClass, school: SchoolBonuses): ArmorClass {
   return school.armorClass ? { ...ac, school: school.armorClass, total: ac.total + school.armorClass } : ac;
 }
 
+/** The Shield spell's +5 to Armor Class while it lasts. */
+const SHIELD_SPELL_AC = 5;
+/** Mage Armour's base Armor Class (instead of 10) for a hero in no body armour. */
+const MAGE_ARMOR_AC = 13;
+
+/** Armor Class with what the hero's spells add (systems/LastingSpells.ts): Mage Armour without body armour, and Shield. */
+function withSpellAC(ac: ArmorClass, buffs: Player['buffs']): ArmorClass {
+  const mage = buffs && buffs.mageArmor > 0 && !ac.armor ? MAGE_ARMOR_AC - UNARMORED_AC : 0;
+  const spell = mage + (buffs && buffs.shield > 0 ? SHIELD_SPELL_AC : 0);
+  return spell ? { ...ac, spell, total: ac.total + spell } : ac;
+}
+
 /** Everything the inventory's character sheet shows, from the player's class and what they wear. */
-export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' | 'health' | 'heroClass' | 'build' | 'featuresOff' | 'actionSurge' | 'featsOn' | 'arcana'>): CharacterSheet {
+export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' | 'health' | 'heroClass' | 'build' | 'featuresOff' | 'actionSurge' | 'featsOn' | 'arcana' | 'buffs'>): CharacterSheet {
   const equipped = player.equipped ?? {};
   // A Bladesinger is trained beyond the wizard's own (Training in War and Song).
   const cls = trainedClass(heroClass(player.heroClass), player.build);
@@ -491,7 +509,7 @@ export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' |
   const feats = featEffects(cls, level, player.build, player.featsOn ?? NONE_OFF);
   const proficiency = proficiencyBonus(level);
   const school = schoolNow(player, equipped, proficiency);
-  const ac = withSchoolAC(armorClass(equipped, scores.modifiers, cls, styles, feats), school);
+  const ac = withSpellAC(withSchoolAC(armorClass(equipped, scores.modifiers, cls, styles, feats), school), player.buffs);
   const surge = (player.actionSurge ?? 0) > 0 ? ACTION_SURGE_ATTACKS_FACTOR : 1;
   const offHand = offHandAttack(equipped, scores.modifiers, level, cls, ac.proficient, styles, feats);
   return {
@@ -517,5 +535,6 @@ export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' |
     passivePerception: PASSIVE_BASE + scores.modifiers.wisdom + feats.passivePerception,
     saves: savingThrows(scores.modifiers, cls, proficiency, feats, school),
     spell: spellcasting(cls, scores.modifiers, proficiency, player.build?.archetype === 'eldritch_knight'),
+    defences: defences(player),
   };
 }

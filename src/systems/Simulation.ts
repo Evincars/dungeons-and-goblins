@@ -48,6 +48,7 @@ import { updateProtection } from './ProtectionSystem';
 import { updateManeuvers } from './ManeuverSystem';
 import { updateFeatureTimers, updateSurvivor } from './FeatureSystem';
 import { updateSchools } from './SchoolSystem';
+import { updateLastingSpells } from './LastingSpells';
 import { updateSummons } from './SummonSystem';
 import { updateMusic } from './MusicSystem';
 import { updateAmbience } from './AmbienceSystem';
@@ -112,6 +113,7 @@ export const SIMULATION: readonly System[] = [
   () => updateSurvivor(),
   () => updateFeatureTimers(),
   () => updateSchools(),
+  () => updateLastingSpells(),
   (ctx) => { if (ctx.level.tilesDirty) ctx.rebuildTerrain(); },
 ];
 

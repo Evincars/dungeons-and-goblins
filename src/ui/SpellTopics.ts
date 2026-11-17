@@ -49,13 +49,19 @@ function kindLine(spell: CatalogSpell): string {
   return spell.level === 0 ? text('spell.tip.cantrip', { school: spell.school }) : text('spell.tip.level', { level: spell.level, school: spell.school });
 }
 
-/** How a spell the game casts reaches its target: a bolt rolls to hit, darts always land, a burst is saved against, a heal mends. */
+/**
+ * How a spell the game casts reaches its target: a bolt rolls to hit, darts always land, a burst (or a zone with a save) is
+ * saved against, a heal mends, a buff works on the caster, a puddle needs no roll.
+ */
 function castAttack(spell: CatalogSpell): string | null {
   if (!isSpellId(spell.id)) return null;
   const def = SPELLS[spell.id];
   if (def.kind === 'bolt') return text('spell.attack.ranged');
   if (def.kind === 'missiles') return text('spell.attack.auto');
   if (def.kind === 'heal') return text('spell.attack.heal');
+  if (def.kind === 'buff') return text('spell.attack.self');
+  if (def.kind === 'water') return text('spell.attack.none');
+  if (!def.save) return text('spell.attack.auto');
   return text('spell.attack.save', { ability: text(`stat.${def.save}.name`) });
 }
 
@@ -106,20 +112,28 @@ export function spellTopic(spell: CatalogSpell, castLevel: number, heroLevel: nu
   const detail = [kindLine(spell), rangeLine(spell), attackLine(spell, castLevel, heroLevel)];
   if (castLevel > spell.level) detail.push(text('spell.tip.cast_at', { level: castLevel }));
   if (learntAt !== undefined && learntAt > heroLevel) detail.push(text('spell.tip.learnt_at', { level: learntAt }));
+  if (!spell.castable) detail.push(text('spell.tip.not_in_game'));
   return { title: spell.name, body: shortText(spell.description), detail, more, icon };
 }
 
 /** Seconds as the tooltip writes them: whole when they are, else a tenth. */
 const seconds = (value: number): string => (Number.isInteger(value) ? String(value) : value.toFixed(1));
 
+/** What a feature's recovery line says: an active's recovery, one used by charges how many it has, none for one that has none. */
+function recoveryLine(feature: FeatureDef, heroLevel: number): string | null {
+  const wait = featureCooldown(feature, heroLevel);
+  if (feature.charges) return text('feature.tip.charges', { charges: featureUses(feature, heroLevel) });
+  return wait > 0 ? text('feature.tip.active', { seconds: seconds(wait) }) : text('feature.tip.active_now');
+}
+
 /** The tooltip of a class feature at the hero's level: what it is, when it came, and what a click does with it. */
 export function featureTopic(feature: FeatureDef, switchedOff: boolean, heroLevel: number): TipTopic {
   const detail = [text('feature.tip.level', { level: feature.level })];
   const uses = featureUses(feature, heroLevel);
   if (feature.kind === 'passive' && feature.worked) detail.push(text(switchedOff ? 'feature.tip.passive_off' : 'feature.tip.passive_on'));
-  else if (feature.kind === 'active') detail.push(text('feature.tip.active', { seconds: seconds(featureCooldown(feature, heroLevel)) }));
+  else if (feature.kind === 'active') detail.push(recoveryLine(feature, heroLevel) ?? '');
   else if (feature.kind === 'info') detail.push(text('feature.tip.info'));
-  if (uses > 1) detail.push(text('feature.tip.uses', { uses }));
+  if (uses > 1 && !feature.charges) detail.push(text('feature.tip.uses', { uses }));
   if (feature.kind !== 'info' && !feature.worked) detail.push(text('feature.tip.unworked'));
   return { title: feature.name, body: feature.description, detail, wide: true };
 }

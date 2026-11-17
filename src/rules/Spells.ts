@@ -4,8 +4,8 @@ import { ensure } from '../core/errors';
 import { hasKey, isRecord } from '../core/guards';
 import { EFFECT_COLOURS, EFFECT_SHAPES } from '../assets/Effects';
 import type { EffectColour, EffectShape } from '../assets/Effects';
-import { MAGICAL_DAMAGE_TYPES } from './DamageTypes';
-import type { MagicalDamageType } from './DamageTypes';
+import { DAMAGE_TYPES } from './DamageTypes';
+import type { DamageType } from './DamageTypes';
 import { parseDice } from './Dice';
 import type { Dice } from './Dice';
 import spells from '../data/spells.json';
@@ -23,6 +23,8 @@ export const SPELL_IDS = [
   'prayer_of_healing', 'scorching_ray', 'shatter', 'conjure_barrage', 'fireball', 'lightning_bolt',
   'mass_healing_word', 'blight', 'ice_storm', 'cone_of_cold', 'flame_strike', 'mass_cure_wounds',
   'chain_lightning', 'circle_of_death', 'disintegrate', 'harm', 'heal', 'otilukes_freezing_sphere',
+  'blade_ward', 'shield', 'mage_armor', 'false_life', 'stoneskin', 'arms_of_hadar', 'sunbeam', 'phantasmal_killer', 'vampiric_touch',
+  'cloud_of_daggers', 'cloudkill', 'hunger_of_hadar', 'spirit_guardians', 'insect_plague', 'create_or_destroy_water',
 ] as const;
 export type SpellId = (typeof SPELL_IDS)[number];
 
@@ -30,12 +32,22 @@ export function isSpellId(value: unknown): value is SpellId {
   return SPELL_IDS.some((id) => id === value);
 }
 
-/** bolt: a projectile, rolled to hit. missiles: darts that always hit. burst: an area, saved against. heal: the caster (and, with a radius, the heroes near). */
-export const SPELL_KINDS = ['bolt', 'missiles', 'burst', 'heal'] as const;
+/**
+ * bolt: a projectile, rolled to hit. missiles: darts that always hit. burst: an area, saved against. heal: the caster (and,
+ * with a radius, the heroes near). buff: something that lasts on the caster (systems/LastingSpells.ts). zone: an area that
+ * strikes whoever is in it every round while it lasts. water: a puddle where the caster aims.
+ */
+export const SPELL_KINDS = ['bolt', 'missiles', 'burst', 'heal', 'buff', 'zone', 'water'] as const;
 export type SpellKind = (typeof SPELL_KINDS)[number];
 
-export const SPELL_DAMAGE_TYPES = MAGICAL_DAMAGE_TYPES;
-export type SpellDamageType = MagicalDamageType;
+/** What a buff spell does to its caster: resist weapons (Blade Ward, Stoneskin), +5 AC (Shield), AC 13 + DEX (Mage Armour), temporary hit points (False Life). */
+export const BUFF_IDS = ['blade_ward', 'shield', 'mage_armor', 'false_life', 'stoneskin'] as const;
+export type BuffId = (typeof BUFF_IDS)[number];
+const isBuff = (v: unknown): v is BuffId => BUFF_IDS.some((b) => b === v);
+
+/** Every damage type, weapons' too: a cloud of daggers slashes, a swarm of insects pierces. */
+export const SPELL_DAMAGE_TYPES = DAMAGE_TYPES;
+export type SpellDamageType = DamageType;
 
 /** Ticks a second of recovery lasts (the game runs 60 a second). */
 export const TICKS_PER_SECOND = 60;
@@ -51,10 +63,17 @@ export type SpellDef = {
   recoveryTicks: number;
   /** Darts a missiles spell looses. */
   count: number;
-  /** A burst's saving throw, how far from the caster it may be centred (0: on the caster) and how wide it is (px). */
-  save: StatName;
+  /** A burst's or zone's saving throw (null: none, it always strikes), how far from the caster it may be centred (0: on the caster) and how wide it is (px). */
+  save: StatName | null;
   range: number;
   radius: number;
+  /** A buff spell's effect; how long a buff or zone lasts (ticks; 0: until a long rest). */
+  buff: BuffId | null;
+  durationTicks: number;
+  /** Held by concentration: casting another such spell, or failing a Constitution save when hurt, ends it. */
+  concentration: boolean;
+  /** The share of a bolt's damage its caster regains as hit points (Vampiric Touch: half). */
+  drain: number;
   effect: { shape: EffectShape; colour: EffectColour; scale: number };
 };
 
@@ -64,11 +83,16 @@ const isShape = (v: unknown): v is EffectShape => typeof v === 'string' && hasKe
 const isColour = (v: unknown): v is EffectColour => EFFECT_COLOURS.some((c) => c === v);
 const num = (v: unknown, fallback: number): number => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
 
+/** What a spell that rolls nothing has as its dice. */
+const NO_DICE: Dice = { count: 0, sides: 4, bonus: 0 };
+
 /** One spell from the file, checked: a mistake there stops the game with a clear message instead of half-working. */
 function readSpell(id: SpellId, raw: unknown): SpellDef {
-  ensure(isRecord(raw) && isKind(raw.kind) && isDamageType(raw.damageType), `Bad kind or damage type for spell ${id}`, { id });
-  const damage = typeof raw.damage === 'string' ? parseDice(raw.damage) : null;
+  ensure(isRecord(raw) && isKind(raw.kind) && (raw.damageType === undefined || isDamageType(raw.damageType)), `Bad kind or damage type for spell ${id}`, { id });
+  // A buff or a puddle rolls nothing: no dice in the file.
+  const damage = typeof raw.damage === 'string' ? parseDice(raw.damage) : NO_DICE;
   ensure(damage !== null, `Bad damage dice for spell ${id}`, { id });
+  ensure(raw.buff === undefined || isBuff(raw.buff), `Unknown buff for spell ${id}`, { id });
   const effect = Array.isArray(raw.effect) ? raw.effect : [];
   ensure(isShape(effect[0]) && isColour(effect[1]), `Unknown effect for spell ${id}`, { id });
   ensure(raw.save === undefined || isStatName(raw.save), `Unknown saving throw for spell ${id}`, { id });
@@ -80,9 +104,13 @@ function readSpell(id: SpellId, raw: unknown): SpellDef {
     damageType: isDamageType(raw.damageType) ? raw.damageType : 'force',
     recoveryTicks: Math.round(num(raw.recovery, 1) * TICKS_PER_SECOND),
     count: num(raw.count, 1),
-    save: isStatName(raw.save) ? raw.save : 'dexterity',
+    save: isStatName(raw.save) ? raw.save : raw.kind === 'zone' ? null : 'dexterity',
     range: num(raw.range, 0),
     radius: num(raw.radius, 0),
+    buff: isBuff(raw.buff) ? raw.buff : null,
+    durationTicks: Math.round(num(raw.seconds, 0) * TICKS_PER_SECOND),
+    concentration: raw.concentration === true,
+    drain: num(raw.drain, 0),
     effect: { shape: isShape(effect[0]) ? effect[0] : 'star_burst', colour: isColour(effect[1]) ? effect[1] : 'white', scale: num(raw.effectScale, 1) },
   };
 }
@@ -131,4 +159,19 @@ export const SPELLS = {
   harm: readSpell('harm', spells.harm),
   heal: readSpell('heal', spells.heal),
   otilukes_freezing_sphere: readSpell('otilukes_freezing_sphere', spells.otilukes_freezing_sphere),
+  blade_ward: readSpell('blade_ward', spells.blade_ward),
+  shield: readSpell('shield', spells.shield),
+  mage_armor: readSpell('mage_armor', spells.mage_armor),
+  false_life: readSpell('false_life', spells.false_life),
+  stoneskin: readSpell('stoneskin', spells.stoneskin),
+  arms_of_hadar: readSpell('arms_of_hadar', spells.arms_of_hadar),
+  sunbeam: readSpell('sunbeam', spells.sunbeam),
+  phantasmal_killer: readSpell('phantasmal_killer', spells.phantasmal_killer),
+  vampiric_touch: readSpell('vampiric_touch', spells.vampiric_touch),
+  cloud_of_daggers: readSpell('cloud_of_daggers', spells.cloud_of_daggers),
+  cloudkill: readSpell('cloudkill', spells.cloudkill),
+  hunger_of_hadar: readSpell('hunger_of_hadar', spells.hunger_of_hadar),
+  spirit_guardians: readSpell('spirit_guardians', spells.spirit_guardians),
+  insect_plague: readSpell('insect_plague', spells.insect_plague),
+  create_or_destroy_water: readSpell('create_or_destroy_water', spells.create_or_destroy_water),
 } as const satisfies Record<SpellId, SpellDef>;

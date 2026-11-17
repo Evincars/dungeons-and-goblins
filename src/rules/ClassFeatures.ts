@@ -38,6 +38,11 @@ export type FeatureDef = {
   cuts: readonly { level: number; seconds: number }[];
   /** Only told in the level panel (an Arcane Recovery charge, a cantrip more to bind): the Skills tab leaves it out. */
   logOnly: boolean;
+  /**
+   * Used by charges (Bladesong): its uses are charges, each spent on a use and all back only with a long rest or a new depth;
+   * the square needs no recovery between uses (its charges left show on it).
+   */
+  charges: boolean;
   /** Only for a hero who chose this fighting style, archetype or maneuver. */
   needs: string | null;
   /** Off the list once this choice is made (the entry that asks for a style or an archetype goes when it is picked). */
@@ -77,6 +82,7 @@ function readFeature(cls: string, raw: unknown): FeatureDef {
     uses: readByLevel(cls, r.uses, 'uses').map(({ level, value }) => ({ level, uses: value })),
     cuts: readByLevel(cls, r.cuts, 'cuts').map(({ level, value }) => ({ level, seconds: value })),
     logOnly: r.logOnly === true,
+    charges: r.charges === true,
     description: String(r.description ?? ''),
   };
 }

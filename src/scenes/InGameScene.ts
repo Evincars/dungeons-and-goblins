@@ -54,6 +54,8 @@ import { ResultPanel } from '../ui/ResultPanel';
 import { updateSeeThrough } from '../systems/SeeThroughSystem';
 import { attempt, report } from '../core/errors';
 
+/** The Third Eye's darkvision lifts the fog this many times as far round its hero. */
+const DARKVISION_FACTOR = 2;
 /** Tiles revealed around each player when the level starts (every tick after, FOG_REVEAL_TILES). */
 const START_REVEAL_TILES = 6;
 const TORCH_LIGHT_RADIUS = 120;
@@ -444,10 +446,11 @@ export class InGameScene implements Scene {
     this.fallen.show(watched, anyoneToWatch(player));
   }
 
-  /** The party shares its map: the fog lifts around every player. */
+  /** The party shares its map: the fog lifts around every player (twice as far round one with a diviner's Third Eye). */
   private revealAroundPlayers(): void {
     for (const p of q.players) {
-      this.level.reveal(Math.floor(p.position.x / TILE_WIDTH), Math.floor(p.position.y / TILE_HEIGHT), FOG_REVEAL_TILES);
+      const tiles = p.arcana?.darkvision ? FOG_REVEAL_TILES * DARKVISION_FACTOR : FOG_REVEAL_TILES;
+      this.level.reveal(Math.floor(p.position.x / TILE_WIDTH), Math.floor(p.position.y / TILE_HEIGHT), tiles);
     }
   }
 

@@ -220,9 +220,12 @@ export function hasChoices(cls: HeroClass, level: number, build: Build | undefin
 
 // ── Changes (each returns whether it was allowed) ────────────────────────────
 
-/** Buying the six scores: only at level 1 and before leaving the first safe room, within the point budget. */
-export function setScores(build: Build, level: number, scores: Readonly<Record<StatName, number>>): boolean {
-  if (build.locked || level !== 1 || !validPointBuy(scores)) return false;
+/**
+ * Buying the six scores: until the build is saved (or the first safe room left), whatever the hero's level, as the level
+ * panel offers it; within the point budget.
+ */
+export function setScores(build: Build, scores: Readonly<Record<StatName, number>>): boolean {
+  if (build.locked || !validPointBuy(scores)) return false;
   for (const stat of STAT_NAMES) build.scores[stat] = scores[stat];
   return true;
 }

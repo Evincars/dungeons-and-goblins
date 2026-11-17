@@ -422,3 +422,35 @@ export function genArrowSprite(): HTMLCanvasElement {
   return c;
 }
 
+
+/** A puddle's size: 64×32, a flat ellipse on the floor (a radius-32 puddle at scale 1). */
+const PUDDLE_W = 64;
+const PUDDLE_H = 32;
+/** Water: deep blue rimmed lighter, with glints; charged water: the same lit cold blue with white sparks. */
+const PUDDLE_FRAMES = [
+  { deep: 'rgba(40,78,130,0.70)', rim: 'rgba(120,170,220,0.55)', glint: 'rgba(210,235,255,0.75)', sparks: 0 },
+  { deep: 'rgba(70,120,210,0.78)', rim: 'rgba(170,215,255,0.80)', glint: 'rgba(255,255,255,0.95)', sparks: 9 },
+] as const;
+
+/** The puddle Create Water leaves: frame 0 water, frame 1 water charged with lightning (systems/LastingSpells.ts). */
+export function genPuddleSheet(): HTMLCanvasElement {
+  const [c, ctx] = mkCanvas(PUDDLE_W * PUDDLE_FRAMES.length, PUDDLE_H);
+  PUDDLE_FRAMES.forEach((frame, i) => {
+    const cx = i * PUDDLE_W + PUDDLE_W / 2;
+    const cy = PUDDLE_H / 2;
+    ctx.fillStyle = frame.rim;
+    ctx.beginPath(); ctx.ellipse(cx, cy, PUDDLE_W / 2 - 1, PUDDLE_H / 2 - 1, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = frame.deep;
+    ctx.beginPath(); ctx.ellipse(cx, cy + 1, PUDDLE_W / 2 - 4, PUDDLE_H / 2 - 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = frame.glint;
+    ctx.fillRect(cx - 12, cy - 5, 6, 1);
+    ctx.fillRect(cx + 6, cy + 3, 4, 1);
+    for (let s = 0; s < frame.sparks; s++) {
+      const sx = cx + (noise(s + 1) - 0.5) * (PUDDLE_W - 16);
+      const sy = cy + (noise(s + 31) - 0.5) * (PUDDLE_H - 10);
+      ctx.fillRect(Math.round(sx), Math.round(sy), 2, 1);
+      ctx.fillRect(Math.round(sx) + 1, Math.round(sy) - 1, 1, 3);
+    }
+  });
+  return c;
+}

@@ -3,6 +3,7 @@ import type { Player } from '../world';
 import { createItemPickup, groundNear, spillMoney } from '../entities/LootFactory';
 import type { ClearArea, Floor } from '../entities/LootFactory';
 import { applyLoadout, bagItems } from './PlayerActions';
+import { endUntilRest } from '../systems/LastingSpells';
 
 /**
  * Death in a run. A hero who dies — slain, or at the bottom of a pit — stays down where they fell until the party
@@ -56,4 +57,6 @@ export function leaveBelongings(player: Player, floor: Floor): void {
   const gold = player.playerStats.gold;
   player.playerStats.gold = 0;
   spillMoney(at.x, at.y, gold, PURSE_PIECES, true);
+  // What lasts until a long rest (Mage Armour, the Third Eye) ends with the fall, and so does concentration.
+  endUntilRest(player);
 }

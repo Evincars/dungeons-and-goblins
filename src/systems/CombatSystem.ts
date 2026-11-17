@@ -1,5 +1,5 @@
 import { Rectangle } from 'pixi.js';
-import { world, q, isActivePlayer, isMob } from '../world';
+import { world, q, isActivePlayer, isMob, isPlayer } from '../world';
 import type { Entity, Player, Summon } from '../world';
 import type { Level } from '../level/Level';
 import { boxAround } from '../core/geometry';
@@ -19,6 +19,13 @@ import { duelistTurnsAside, parried, riposted } from './Reactions';
 import { cheats } from '../game/Cheats';
 import { charmedAway, schoolShields, turnBlow } from './SchoolSystem';
 import { hurtUndead } from './SummonSystem';
+import { keepConcentration } from './LastingSpells';
+import { damageTaken } from '../rules/Resistances';
+import type { DamageType } from '../rules/DamageTypes';
+import { weaponStats } from '../rules/WeaponTable';
+import { logLine } from './RollLogSystem';
+import { text } from '../core/texts';
+import { damageTypeName } from '../rules/Names';
 
 const PLAYER_HURT_TIME = 25;
 const PLAYER_FREEZE_TIME = 15;
@@ -119,7 +126,7 @@ function turnedAside(player: Player): SfxName {
  */
 function mobStrike(mob: Entity, player: Player): void {
   if (!mob.mobType || !mob.mobWeapon) {
-    hurtPlayer(player, mob, MIN_HIT_DAMAGE);
+    hurtPlayer(player, mob, MIN_HIT_DAMAGE, 'bludgeoning');
     return;
   }
   // An enchanter's Instinctive Charm may turn the blow on another foe.
@@ -128,14 +135,14 @@ function mobStrike(mob: Entity, player: Player): void {
   const attack = protectFrom(player) ? { ...base, mode: 'disadvantage' as const } : base;
   // A diviner's Portent die or an illusionist's double may turn a blow that hit.
   const outcome = turnBlow(player, attack, strike(player, attack, mob));
-  if (outcome.hit && !duelistTurnsAside(player, outcome)) landBlow(player, mob, outcome.damage);
+  if (outcome.hit && !duelistTurnsAside(player, outcome)) landBlow(player, mob, outcome.damage, weaponStats(mob.mobWeapon).type);
   else missBlow(player, mob);
 }
 
 /** The blow got past the Armor Class: Heavy Armour Master takes 3 off in heavy armour, and a readied Parry may take some more. */
-function landBlow(player: Player, mob: Entity, damage: number): void {
+function landBlow(player: Player, mob: Entity, damage: number, type: DamageType): void {
   const dealt = parried(player, Math.max(0, damage - heavyArmorReduction(characterSheet(player))));
-  if (dealt > 0) hurtPlayer(player, mob, dealt);
+  if (dealt > 0) hurtPlayer(player, mob, dealt, type);
   else sound.playSound(turnedAside(player), player.position.x, player.position.y);
 }
 
@@ -221,13 +228,17 @@ function stagger(player: Entity, source: Entity): void {
 }
 
 /** A blow that got past the player's Armor Class: all of its damage counts (armour already did its job by turning misses). */
-export function hurtPlayer(player: Entity, source: Entity, damage: number): void {
+export function hurtPlayer(player: Entity, source: Entity, damage: number, type: DamageType): void {
   const h = player.health;
   // The console's god mode takes no harm.
   if (!h || player.godMode || player.falling || player.respawnTicks !== undefined || h.current <= 0) return;
 
-  // An abjurer's Arcane Ward, and a Bladesinger's Song of Defence, take their share first (and may take all of it).
-  const finalDamage = schoolShields(player, Math.max(MIN_HIT_DAMAGE, Math.round(damage)));
+  // A resistance halves the damage of its kind, an immunity takes it all (src/rules/Resistances.ts).
+  const raw = Math.max(MIN_HIT_DAMAGE, Math.round(damage));
+  const taken = damageTaken(player, raw, type);
+  if (taken < raw) logLine(player, text(taken > 0 ? 'roll.resisted' : 'roll.immune', { type: damageTypeName(type) }), 'hit');
+  // An abjurer's Arcane Ward, and a Bladesinger's Song of Defence, take their share next (and may take all of it).
+  const finalDamage = taken > 0 ? schoolShields(player, taken) : 0;
   if (finalDamage <= 0) return;
   player.lastHitBy = world.id(source);
   const absorbed = Math.min(player.tempHealth ?? 0, finalDamage);
@@ -235,6 +246,8 @@ export function hurtPlayer(player: Entity, source: Entity, damage: number): void
 
   h.current = Math.max(0, h.current - (finalDamage - absorbed));
   stagger(player, source);
+  // A spell held by concentration may slip (a Constitution save).
+  if (isPlayer(player)) keepConcentration(player, finalDamage);
 
   if (player.position) sound.playSound('hurt', player.position.x, player.position.y);
 }

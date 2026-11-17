@@ -207,6 +207,17 @@ export function isTransmuterStone(value: unknown): value is TransmuterStone {
   return TRANSMUTER_STONES.some((stone) => stone === value);
 }
 
+/** What a puddle on the floor is (systems/LastingSpells.ts): water, or water a thunder spell has charged with lightning. */
+export const SURFACE_KINDS = ['water', 'shock'] as const;
+export type SurfaceKind = (typeof SURFACE_KINDS)[number];
+
+export function isSurfaceKind(value: unknown): value is SurfaceKind {
+  return SURFACE_KINDS.some((kind) => kind === value);
+}
+
+/** The frame of the puddle art (assets/SpriteGen.ts genPuddleSheet) each kind of puddle shows. */
+export const PUDDLE_FRAMES = { water: 0, shock: 1 } as const satisfies Record<SurfaceKind, number>;
+
 /** Who controls a player character: the host, or one of up to three guests in a co-op room. */
 export const PLAYER_SLOTS = ['host', 'p2', 'p3', 'p4'] as const;
 export type PlayerSlot = (typeof PLAYER_SLOTS)[number];
@@ -379,12 +390,32 @@ export type Entity = {
   /**
    * What a wizard's school keeps going between uses (systems/SchoolSystem.ts): the Arcane Ward's strength; the Portent dice
    * foreseen and the ticks until a used one is foreseen again; the ticks until Grim Harvest, Instinctive Charm, Illusory Self and
-   * Song of Defence work again; the ticks of Bladesong left; and the Transmuter's Stone carried ('' for none).
+   * Song of Defence work again; the ticks of Bladesong left; and the Transmuter's Stone carried ('' for none). The Bladesong's
+   * charges to start it (`songCharges`, all back with a long rest or a new depth) and the Bladesong Charges gathered while
+   * it is sung, for its Climax (`damageCharges` from spells, `healingCharges` from weapon attacks). The Third Eye's
+   * darkvision and the sight of the invisible (Third Eye, an illusionist's See Invisibility), on until a long rest.
    */
   arcana?: {
     ward: number; portent: number[]; portentTicks: number; harvestTicks: number; charmTicks: number; illusoryTicks: number;
     songTicks: number; defenceTicks: number; stone: TransmuterStone | '';
+    songCharges: number; damageCharges: number; healingCharges: number;
+    darkvision: boolean; seeInvisible: boolean;
   };
+  /**
+   * Spells that last on a hero (systems/LastingSpells.ts), as ticks left (0: off): Blade Ward and Stoneskin (resistance to
+   * weapons' damage), Shield (+5 AC); Mage Armour is 1 while it lasts (until a long rest).
+   */
+  buffs?: { bladeWard: number; shield: number; mageArmor: number; stoneskin: number };
+  /** The spell a hero holds by concentration (one at a time; damage may break it), and the entity id of its zone (-1: none). */
+  concentration?: { spell: SpellId; zone: number };
+  /**
+   * A spell that lingers where it was cast (Cloud of Daggers, Cloudkill, Spirit Guardians…, systems/LastingSpells.ts): the
+   * spell, its caster's entity id, the level it was cast at, the ticks it lasts and until it strikes again; `follow`: it
+   * moves with its caster.
+   */
+  zone?: { spell: SpellId; owner: number; castLevel: number; ticks: number; pulse: number; follow: boolean };
+  /** A puddle on the floor (Create Water): water or charged water, how wide (px), its maker's entity id, and the ticks until it shocks again. */
+  surface?: { kind: SurfaceKind; radius: number; owner: number; pulse: number };
   /**
    * An undead a necromancer raised (systems/SummonSystem.ts): its kind, its master's entity id, and its blow (to hit,
    * damage), Armor Class and the ticks until it may strike again.
@@ -722,6 +753,8 @@ export const q = {
   glowing:     world.with('position', 'glow'),
   removed:     world.with('removed'),
   summons:     world.with('position', 'velocity', 'radius', 'health', 'summon'),
+  zones:       world.with('position', 'zone'),
+  surfaces:    world.with('position', 'surface'),
 };
 
 export type Player = (typeof q.players)['entities'][number];

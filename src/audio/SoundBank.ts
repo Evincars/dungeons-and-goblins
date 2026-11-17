@@ -310,6 +310,21 @@ export const SPELL_SOUNDS = {
   harm: 'cast_chill_touch',
   heal: 'cast_cure_wounds',
   otilukes_freezing_sphere: 'cast_ray_of_frost',
+  blade_ward: 'cast_healing_word',
+  shield: 'cast_healing_word',
+  mage_armor: 'cast_cure_wounds',
+  false_life: 'cast_chill_touch',
+  stoneskin: 'cast_cure_wounds',
+  arms_of_hadar: 'cast_chill_touch',
+  sunbeam: 'cast_guiding_bolt',
+  phantasmal_killer: 'cast_vicious_mockery',
+  vampiric_touch: 'cast_chill_touch',
+  cloud_of_daggers: 'cast_magic_missile',
+  cloudkill: 'cast_chill_touch',
+  hunger_of_hadar: 'cast_chill_touch',
+  spirit_guardians: 'cast_guiding_bolt',
+  insect_plague: 'cast_chill_touch',
+  create_or_destroy_water: 'cast_ray_of_frost',
 } as const satisfies Record<SpellId, SfxName>;
 
 export const SPELL_IMPACTS = {
@@ -323,6 +338,9 @@ export const SPELL_IMPACTS = {
   force: 'impact_force',
   lightning: 'impact_force',
   thunder: 'impact_force',
+  bludgeoning: 'impact_force',
+  piercing: 'impact_force',
+  slashing: 'impact_force',
 } as const satisfies Record<SpellDamageType, SfxName>;
 
 export const SFX_NAMES: readonly SfxName[] = Object.keys(SFX).filter((name) => hasKey(SFX, name));

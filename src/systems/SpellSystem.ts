@@ -13,6 +13,7 @@ import { heroClass, spellLevelFor } from '../rules/Classes';
 import { bindingFeatureId, featureCooldown, featureOn, featureOfClass, hasClassFeature } from '../rules/ClassFeatures';
 import { switchFeat, usedFeature } from './FeatureSystem';
 import { foreseeHit, foreseenSave, grimHarvest, savedDamage, spellCast, spellDamageBonus } from './SchoolSystem';
+import { castBuff, castWater, castZone, electrify } from './LastingSpells';
 import { bindingFeatId } from '../rules/Feats';
 import type { FeatId } from '../rules/Feats';
 import { SPELLS, TICKS_PER_SECOND, isSpellId } from '../rules/Spells';
@@ -39,7 +40,8 @@ import { text } from '../core/texts';
  * Spells (src/data/spells.json): a quick-bar key casts its square's spell; right click and the cast key cast the one last picked. There are
  * no spell slots — each spell recovers for a while after it is cast. A bolt flies and is rolled to hit; a
  * magic missile's darts always hit; a burst makes everyone in it save against the caster's spell DC (half
- * damage on a success); a heal mends the caster. Each strikes with its effect from the effects library.
+ * damage on a success); a heal mends the caster. Each strikes with its effect from the effects library. Buffs, zones and
+ * puddles of water last after the cast (systems/LastingSpells.ts).
  */
 
 const bolts = world.with('projectile', 'position', 'velocity');
@@ -102,6 +104,7 @@ function refuse(caster: Player, line: string): void {
 /** What is said when a feature can't be used. */
 const FEATURE_REFUSALS = {
   unworked: 'roll.feature_unworked', no_dice: 'roll.no_dice_left', no_ally: 'roll.no_ally', hp_full: 'roll.hp_full', no_foe: 'roll.no_foe', no_room: 'roll.no_room',
+  no_charges: 'roll.no_charges', not_singing: 'roll.not_singing',
 } as const;
 
 /** The cast key on a class feature: it is used at once if the hero has it, it is worked and its square has recovered. */
@@ -123,7 +126,8 @@ function startFeature(caster: Player, id: string, level: Level): void {
     refuse(caster, text(FEATURE_REFUSALS[result]));
     return;
   }
-  book.recovery[slot] = Math.round(featureCooldown(def, caster.playerStats.level) * TICKS_PER_SECOND);
+  // A feature used by charges (Bladesong) waits on its charges, not on its square.
+  book.recovery[slot] = def.charges ? 0 : Math.round(featureCooldown(def, caster.playerStats.level) * TICKS_PER_SECOND);
   caster.castCooldown = SPELL_STATS.cooldown;
 }
 
@@ -219,7 +223,8 @@ function burstCentre(caster: Player, def: SpellDef, targetX: number, targetY: nu
  * damage, a success half (a cantrip's nothing, but half with Potent Cantrip).
  */
 function burstHits(caster: Player, def: SpellDef, foe: Entity, dc: number): void {
-  const modifier = foe.mobType ? MONSTERS[foe.mobType].modifiers[def.save] : 0;
+  // A burst always has a save (Dexterity unless its spell names another).
+  const modifier = foe.mobType ? MONSTERS[foe.mobType].modifiers[def.save ?? 'dexterity'] : 0;
   const save = foreseenSave(foe, caster, modifier, dc);
   const rolled = Math.max(MIN_HIT_DAMAGE, rollDice(def.damage) + spellDamageBonus(caster, def.id));
   const damage = save.success ? savedDamage(caster, def.level, rolled) : rolled;
@@ -243,6 +248,8 @@ function castBurst(caster: Player, def: SpellDef, targetX: number, targetY: numb
     if (Math.hypot(foe.position.x - centre.x, foe.position.y - centre.y) > def.radius + Math.max(foe.radius.x, foe.radius.y)) continue;
     burstHits(caster, def, foe, dc);
   }
+  // Thunder charges the water it reaches with lightning.
+  if (def.damageType === 'thunder') electrify(centre.x, centre.y, def.radius);
 }
 
 /** The extra points a Disciple of Life adds to a healing spell: 2 + the spell's level. */
@@ -287,9 +294,14 @@ function release(caster: Player, cast: NonNullable<Entity['casting']>): void {
   const base = cast.spell ? SPELLS[cast.spell] : null;
   if (!base) return;
   const def = castDef(base, cast.level ?? base.level, caster.playerStats.level);
+  const targetX = cast.targetX ?? caster.position.x;
+  const targetY = cast.targetY ?? caster.position.y;
   if (def.kind === 'bolt') castBolt(caster, def, cast.dirX, cast.dirY);
   else if (def.kind === 'missiles') castMissiles(caster, def, cast.dirX, cast.dirY);
-  else if (def.kind === 'burst') castBurst(caster, def, cast.targetX ?? caster.position.x, cast.targetY ?? caster.position.y);
+  else if (def.kind === 'burst') castBurst(caster, def, targetX, targetY);
+  else if (def.kind === 'buff') castBuff(caster, def);
+  else if (def.kind === 'zone') castZone(caster, def, cast.level ?? base.level, targetX, targetY);
+  else if (def.kind === 'water') castWater(caster, def, targetX, targetY);
   else castHeal(caster, def);
   sound.playSound(SPELL_SOUNDS[def.id], caster.position.x, caster.position.y);
   warMagic(caster, base);
@@ -354,7 +366,18 @@ function strikeWith(bolt: Bolt, victim: Entity): boolean {
   const outcome = p.spell ? foreseeHit(shooter, victim, attack, rolled) : rolled;
   if (outcome.hit) hitMob(victim, bolt, outcome.damage);
   if (outcome.hit) harvestWith(shooter, victim, p, alive);
+  if (outcome.hit) drainWith(shooter, p, outcome.damage);
   return outcome.hit;
+}
+
+/** Vampiric Touch: its caster regains a share of the damage it dealt. */
+function drainWith(shooter: Entity | undefined, p: Bolt['projectile'], damage: number): void {
+  const drain = p.spell ? SPELLS[p.spell].drain : 0;
+  if (drain <= 0 || !isPlayer(shooter) || !isActivePlayer(shooter)) return;
+  const healed = Math.min(shooter.health.max - shooter.health.current, Math.floor(damage * drain));
+  if (healed <= 0) return;
+  shooter.health.current += healed;
+  logHeal(shooter, healed);
 }
 
 /** A spell's projectile struck: Grim Harvest, if it killed and its caster is a necromancer. */

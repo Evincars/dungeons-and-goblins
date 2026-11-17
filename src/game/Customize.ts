@@ -53,8 +53,24 @@ function carryOut(player: Player, command: CustomizeCommand): boolean {
   if (command.kind === 'pick') return command.level <= level && takePicks(cls, build, command.level, { maneuvers: command.maneuvers, spells: command.spells });
   if (command.kind === 'improve') return improve(player, cls, build, command.improvement);
   if (command.kind === 'lock_build') return saveBuild(cls, build, level);
-  if (!setScores(build, level, command.scores)) return false;
-  fitHitPoints(player);
+  return buyScores(player, cls, build, command.scores);
+}
+
+/**
+ * The point buy changed: the scores are the hero's at once (the inventory's sheet follows), and their hit points follow
+ * the new Constitution for every level they have (a hero may reach the panel above level 1 before saving it).
+ */
+function buyScores(player: Player, cls: HeroClass, build: Build, scores: Record<StatName, number>): boolean {
+  const level = player.playerStats.level;
+  const conBefore = abilityModifier(baseScores(cls, level, build).constitution);
+  if (!setScores(build, scores)) return false;
+  const gained = (abilityModifier(baseScores(cls, level, build).constitution) - conBefore) * level;
+  if (level === 1) {
+    fitHitPoints(player);
+    return true;
+  }
+  player.health.max = Math.max(1, player.health.max + gained);
+  player.health.current = Math.max(1, Math.min(player.health.max, player.health.current + gained));
   return true;
 }
 

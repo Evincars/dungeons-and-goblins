@@ -1,9 +1,9 @@
-import { world, q, isActivePlayer, isMob, isPlayer } from '../world';
+import { world, q, isActivePlayer, isMob, isPlayer, isTarget } from '../world';
 import type { Entity, Player, TransmuterStone } from '../world';
 import type { Level } from '../level/Level';
 import { text } from '../core/texts';
 import { characterSheet } from '../rules/CharacterSheet';
-import { featureOn, featureOfClass, hasClassFeature } from '../rules/ClassFeatures';
+import { featureOn, featureOfClass, featureUses, hasClassFeature } from '../rules/ClassFeatures';
 import { heroClass } from '../rules/Classes';
 import { schoolOf } from '../rules/Archetypes';
 import { bladesongImpeded } from '../rules/Schools';
@@ -12,7 +12,7 @@ import { SPELLS, isSpellId } from '../rules/Spells';
 import { MONSTERS } from '../rules/Monsters';
 import { resolveAttack } from '../rules/Combat';
 import type { AttackOutcome, AttackProfile } from '../rules/Combat';
-import { rollCheck, rollDie } from '../rules/Dice';
+import { rollCheck, rollDice, rollDie } from '../rules/Dice';
 import { monsterAttack } from '../rules/CharacterSheet';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
@@ -22,7 +22,8 @@ import type { Aura } from '../assets/Effects';
 import { charm, spellSaveMode } from './ManeuverSystem';
 import { armorClassOf, strike } from './Strike';
 import { hitMob } from './Hits';
-import { logHeal, logLine } from './RollLogSystem';
+import { logHeal, logLine, logSave } from './RollLogSystem';
+import { createPuddle } from './LastingSpells';
 import { recordEvent } from './CombatLogSystem';
 
 /**
@@ -61,8 +62,15 @@ const TELEPORT_REACH = 288;
 const SWAP_REACH = 24;
 /** Benign Transposition looks for a place to land in steps this long, from the far end back toward the wizard. */
 const TELEPORT_STEP = 12;
-/** Bladesong lasts 10 rounds. */
+/** Bladesong lasts 10 rounds (60 seconds). */
 const BLADESONG_TICKS = 10 * TURN_TICKS;
+/** Bladesong Climax goes off up to 30 feet away and reaches 10 feet round that point; it rolls a d6, and a d6 more a charge. */
+const CLIMAX_RANGE = 288;
+const CLIMAX_RADIUS = 96;
+const CLIMAX_DIE = 6;
+/** Create Water: a puddle up to 30 feet away, about 5 feet across each way. */
+const CREATE_WATER_RANGE = 288;
+const CREATE_WATER_RADIUS = 28;
 /** Song of Defence takes this much damage off for every level of the spell it spends. */
 const SONG_OF_DEFENCE_PER_LEVEL = 5;
 /** Grim Harvest gives back hit points of twice the spell's level, three times for a Necromancy spell. */
@@ -77,6 +85,10 @@ const CHARM_EFFECT = { shape: 'sparkle_ring', colour: 'mauve', scale: 0.8 } as c
 const ILLUSION_EFFECT = { shape: 'swirl_bloom', colour: 'violet', scale: 1.2 } as const;
 const TELEPORT_EFFECT = { shape: 'sparkle_ring', colour: 'azure', scale: 1 } as const;
 const WARD_EFFECT = { shape: 'ring_pulse', colour: 'azure', scale: 0.7 } as const;
+const CLIMAX_EFFECT = { shape: 'blade_pinwheel', colour: 'azure', scale: 2 } as const;
+const CLIMAX_HEAL_EFFECT = { shape: 'sparkle_ring', colour: 'green', scale: 1 } as const;
+const WATER_EFFECT = { shape: 'splash_curl', colour: 'azure', scale: 1.2 } as const;
+const SIGHT_AURA: Aura = { shape: 'eye_ring', tint: 0xd8c8ff, ticks: 40, lift: AIM_HEIGHT, scale: 0.8 };
 
 const scratch: Entity[] = [];
 
@@ -91,12 +103,19 @@ function portentDice(hero: Player): number {
 /** The Arcane Ward is never stronger than twice the wizard's level. */
 const wardCap = (hero: Player): number => 2 * hero.playerStats.level;
 
-/** A fresh state: the ward at the wizard's level (as after a long rest) and every Portent die foreseen. */
+/** How many Bladesong charges the hero has at their level (none without Bladesong). */
+function songChargesMax(hero: Player): number {
+  const def = featureOfClass(heroClass(hero.heroClass).dndClass, 'bladesong');
+  return def && hasClassFeature(hero, 'bladesong') ? featureUses(def, hero.playerStats.level) : 0;
+}
+
+/** A fresh state: the ward at the wizard's level (as after a long rest), every Portent die foreseen, every Bladesong charge ready. */
 function freshArcana(hero: Player): Arcana {
   return {
     ward: hasClassFeature(hero, 'arcane_ward') ? hero.playerStats.level : 0,
     portent: Array.from({ length: portentDice(hero) }, () => rollDie(D20)),
     portentTicks: 0, harvestTicks: 0, charmTicks: 0, illusoryTicks: 0, songTicks: 0, defenceTicks: 0, stone: '',
+    songCharges: songChargesMax(hero), damageCharges: 0, healingCharges: 0, darkvision: false, seeInvisible: false,
   };
 }
 
@@ -125,6 +144,14 @@ function regrowPortent(hero: Player, arcana: Arcana): void {
   arcana.portentTicks = each;
 }
 
+/** The Bladesong runs down; when it ends, the Bladesong Charges it gathered are lost. */
+function runDownSong(arcana: Arcana): void {
+  arcana.songTicks = tick(arcana.songTicks);
+  if (arcana.songTicks > 0) return;
+  arcana.damageCharges = 0;
+  arcana.healingCharges = 0;
+}
+
 /** Every wizard with a school: its recoveries run down a tick, and Portent's used dice come back in time. */
 export function updateSchools(): void {
   for (const hero of q.players) {
@@ -133,21 +160,23 @@ export function updateSchools(): void {
     arcana.harvestTicks = tick(arcana.harvestTicks);
     arcana.charmTicks = tick(arcana.charmTicks);
     arcana.illusoryTicks = tick(arcana.illusoryTicks);
-    arcana.songTicks = tick(arcana.songTicks);
     arcana.defenceTicks = tick(arcana.defenceTicks);
+    runDownSong(arcana);
     regrowPortent(hero, arcana);
   }
 }
 
 /**
- * A rest: everything that works by itself is ready again. A long rest sets the Arcane Ward to the wizard's level and
- * foresees every Portent die afresh; a short one grows the ward by the wizard's level with Improved Abjuration.
+ * A rest: everything that works by itself is ready again. A long rest sets the Arcane Ward to the wizard's level, foresees
+ * every Portent die afresh and gives back every Bladesong charge (as going deeper does: the hero starts the level afresh);
+ * a short one grows the ward by the wizard's level with Improved Abjuration.
  */
 export function restSchool(hero: Player, long: boolean): void {
   if (!hero.arcana) return;
   const arcana = hero.arcana;
   arcana.harvestTicks = arcana.charmTicks = arcana.illusoryTicks = arcana.defenceTicks = 0;
   if (long) {
+    arcana.songCharges = songChargesMax(hero);
     arcana.ward = freshArcana(hero).ward;
     arcana.portent = freshArcana(hero).portent;
     return;
@@ -158,6 +187,27 @@ export function restSchool(hero: Player, long: boolean): void {
 /** Whether the hero is singing their Bladesong now (impeded or not). */
 export function singing(hero: Pick<Player, 'arcana'>): boolean {
   return (hero.arcana?.songTicks ?? 0) > 0;
+}
+
+/** Singing and not impeded (by armour, a shield or the wrong weapon): only then does the Bladesong gather charges. */
+function singingFreely(hero: Player): boolean {
+  return singing(hero) && !bladesongImpeded(hero.equipped ?? {});
+}
+
+/** A song gathers Bladesong Charges of each kind up to the hero's level (12 damage and 12 healing at level 12). */
+const songChargeCap = (hero: Player): number => hero.playerStats.level;
+
+/** A weapon attack (a swing or a volley) during an unimpeded Bladesong gathers a Healing Charge for its Climax. */
+export function bladeAttack(hero: Player): void {
+  const arcana = hero.arcana;
+  if (!arcana || !singingFreely(hero)) return;
+  arcana.healingCharges = Math.min(songChargeCap(hero), arcana.healingCharges + 1);
+}
+
+/** The charges an active feature has left to use, if it is used by charges (Bladesong); null for any other. */
+export function featureCharges(hero: Player, id: string): number | null {
+  if (id !== 'bladesong') return null;
+  return hero.arcana ? hero.arcana.songCharges : songChargesMax(hero);
 }
 
 // ── Damage that reaches a hero ────────────────────────────────────────────────
@@ -370,6 +420,8 @@ export function spellCast(caster: Player, spell: string, castLevel: number): voi
   const school = schoolOfSpell(spell);
   if (school === 'Abjuration' && featureOn(caster, 'arcane_ward')) arcana.ward = Math.min(wardCap(caster), arcana.ward + castLevel);
   if (castLevel < 1) return;
+  // A spell of 1st level or higher during an unimpeded Bladesong gathers a Damage Charge for its Climax.
+  if (singingFreely(caster)) arcana.damageCharges = Math.min(songChargeCap(caster), arcana.damageCharges + 1);
   if (featureOn(caster, 'expert_divination') && arcana.portent.length < portentDice(caster)) arcana.portent.push(rollDie(D20));
   if (school === 'Transmutation') readyStones(caster);
 }
@@ -403,7 +455,7 @@ export function grimHarvest(caster: Player, foe: Entity, spell: string, castLeve
 // ── The schools' active features ──────────────────────────────────────────────
 
 /** What using a school's feature came to: done, or why not. */
-export type SchoolResult = 'ok' | 'no_foe' | 'no_room';
+export type SchoolResult = 'ok' | 'no_foe' | 'no_room' | 'no_charges' | 'not_singing';
 
 function featureName(hero: Player, id: string): string {
   return featureOfClass(heroClass(hero.heroClass).dndClass, id)?.name ?? id;
@@ -498,12 +550,80 @@ function transpose(level: Level, hero: Player, aim: { x: number; y: number }, ca
   return 'ok';
 }
 
-/** Bladesong: 10 rounds of song (it gives nothing while impeded, and says so). */
+/** Bladesong: a charge spent (back only with a long rest or a new depth) for 10 rounds of song (it gives nothing while impeded, and says so). */
 function bladesong(hero: Player): SchoolResult {
-  arcanaOf(hero).songTicks = BLADESONG_TICKS;
+  const arcana = arcanaOf(hero);
+  if (arcana.songCharges <= 0) return 'no_charges';
+  arcana.songCharges--;
+  arcana.songTicks = BLADESONG_TICKS;
   const id = world.id(hero);
   if (id !== undefined) playAura(BLADESONG_AURA, id, hero.position.x, hero.position.y);
   if (bladesongImpeded(hero.equipped ?? {})) logLine(hero, text('roll.impeded'), 'miss');
+  return 'ok';
+}
+
+/**
+ * Bladesong Climax: the song ends in one burst where the bladesinger aims (up to 30 feet away, 10 feet round). Every foe
+ * (or training dummy) there saves (Intelligence) against their spell DC or takes 1d6 force damage and a d6 more for each
+ * Damage Charge (half on a success), and the bladesinger and every ally there regain 1d6 hit points and a d6 more for each
+ * Healing Charge.
+ */
+function bladesongClimax(hero: Player, aim: { x: number; y: number }): SchoolResult {
+  const arcana = arcanaOf(hero);
+  if (!singing(hero)) return 'not_singing';
+  const at = within(hero, aim, CLIMAX_RANGE);
+  playEffect(CLIMAX_EFFECT.shape, CLIMAX_EFFECT.colour, at.x, at.y, AIM_HEIGHT, CLIMAX_EFFECT.scale);
+  climaxStrikes(hero, at, 1 + arcana.damageCharges);
+  climaxHeals(hero, at, 1 + arcana.healingCharges);
+  arcana.songTicks = 0;
+  arcana.damageCharges = 0;
+  arcana.healingCharges = 0;
+  return 'ok';
+}
+
+/** The Climax's force damage: each foe in reach saves (Intelligence) or takes `dice` d6s, half on a success. */
+function climaxStrikes(hero: Player, at: { x: number; y: number }, dice: number): void {
+  const dc = characterSheet(hero).spell.dc;
+  for (const foe of nearby(at.x, at.y, CLIMAX_RADIUS + MAX_MOB_RADIUS, Sense.mob, scratch)) {
+    if (!isTarget(foe) || foe.health.current <= 0) continue;
+    if (Math.hypot(foe.position.x - at.x, foe.position.y - at.y) > CLIMAX_RADIUS + foe.radius.x) continue;
+    const modifier = foe.mobType ? MONSTERS[foe.mobType].modifiers.intelligence : 0;
+    const save = foreseenSave(foe, hero, modifier, dc);
+    const rolled = rollDice({ count: dice, sides: CLIMAX_DIE, bonus: 0 });
+    logSave(foe, save.total, save.success);
+    hitMob(foe, hero, save.success ? Math.floor(rolled / 2) : rolled, true);
+  }
+}
+
+/** The Climax's healing: the bladesinger and every ally in reach regain `dice` d6s. */
+function climaxHeals(hero: Player, at: { x: number; y: number }, dice: number): void {
+  for (const ally of q.players) {
+    if (!isActivePlayer(ally)) continue;
+    if (ally !== hero && Math.hypot(ally.position.x - at.x, ally.position.y - at.y) > CLIMAX_RADIUS + (ally.radius?.x ?? 0)) continue;
+    const healed = Math.min(ally.health.max - ally.health.current, rollDice({ count: dice, sides: CLIMAX_DIE, bonus: 0 }));
+    playEffect(CLIMAX_HEAL_EFFECT.shape, CLIMAX_HEAL_EFFECT.colour, ally.position.x, ally.position.y, AIM_HEIGHT, CLIMAX_HEAL_EFFECT.scale);
+    if (healed <= 0) continue;
+    ally.health.current += healed;
+    logHeal(ally, healed);
+  }
+}
+
+/** Minor Conjuration: Create Water. A puddle where the conjurer aims (up to 30 feet away), for good. */
+function createWater(hero: Player, aim: { x: number; y: number }): SchoolResult {
+  const at = within(hero, aim, CREATE_WATER_RANGE);
+  createPuddle(hero, at.x, at.y, CREATE_WATER_RADIUS);
+  playEffect(WATER_EFFECT.shape, WATER_EFFECT.colour, at.x, at.y, 0, WATER_EFFECT.scale);
+  return 'ok';
+}
+
+/**
+ * The Third Eye (darkvision: the fog lifts twice as far round the hero) or the sight of the invisible (the Third Eye, an
+ * illusionist's See Invisibility): open until a long rest, death, a fall into a pit or going deeper.
+ */
+function openSight(hero: Player, sight: 'darkvision' | 'seeInvisible'): SchoolResult {
+  arcanaOf(hero)[sight] = true;
+  const id = world.id(hero);
+  if (id !== undefined) playAura(SIGHT_AURA, id, hero.position.x, hero.position.y);
   return 'ok';
 }
 
@@ -526,6 +646,10 @@ export function useSchoolFeature(
   if (id === 'improved_minor_illusion') return minorIllusion(hero, aim);
   if (id === 'benign_transposition') return transpose(level, hero, aim, canStand);
   if (id === 'bladesong') return bladesong(hero);
+  if (id === 'bladesong_climax') return bladesongClimax(hero, aim);
+  if (id === 'minor_conjuration') return createWater(hero, aim);
+  if (id === 'third_eye_darkvision') return openSight(hero, 'darkvision');
+  if (id === 'third_eye_see_invisibility' || id === 'see_invisibility') return openSight(hero, 'seeInvisible');
   if (id === 'transmuters_stone_speed') return makeStone(hero, 'speed');
   if (id === 'transmuters_stone_constitution') return makeStone(hero, 'constitution');
   return null;

@@ -1,5 +1,5 @@
 import {
-  world, isDepartChoice, isEquipSlot, isItemType, isLogEvent, isLogResult, isMobType, isPlayerSlot, isRestNotice, isRollTone, isSummonKind, isTransmuterStone,
+  world, isDepartChoice, isEquipSlot, isItemType, isLogEvent, isLogResult, isMobType, isPlayerSlot, isRestNotice, isRollTone, isSummonKind, isSurfaceKind, isTransmuterStone,
   isVoteKind, MOB_STATES, PLAYER_SLOTS,
   QUICK_SLOTS, TACTIC_ROLES,
 } from '../world';
@@ -107,7 +107,12 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   maneuver: { id: 'string', ticks: 'number', bonus: 'number' },
   status: { prone: 'number', frightened: 'number', goaded: 'number', distracted: 'number', eldritch: 'number', charmed: 'number', by: 'number' },
   arcana: { ward: 'number', portent: 'object', portentTicks: 'number', harvestTicks: 'number', charmTicks: 'number', illusoryTicks: 'number',
-    songTicks: 'number', defenceTicks: 'number', stone: 'string' },
+    songTicks: 'number', defenceTicks: 'number', stone: 'string', songCharges: 'number', damageCharges: 'number',
+    healingCharges: 'number', darkvision: 'boolean', seeInvisible: 'boolean' },
+  buffs: { bladeWard: 'number', shield: 'number', mageArmor: 'number', stoneskin: 'number' },
+  concentration: { spell: 'string', zone: 'number' },
+  zone: { spell: 'string', owner: 'number', castLevel: 'number', ticks: 'number', pulse: 'number', follow: 'boolean' },
+  surface: { kind: 'string', radius: 'number', owner: 'number', pulse: 'number' },
   summon: { kind: 'string', owner: 'number', attackBonus: 'number', damage: 'object', ac: 'number', cooldown: 'number' },
   loot: { value: 'number', kind: 'number', velX: 'number', velY: 'number', suckRadius: 'number', glide: 'number', age: 'number', life: 'number' },
   item: { type: 'string', name: 'string', value: 'number' },
@@ -146,7 +151,7 @@ const VALUES: Readonly<Record<string, FieldType>> = {
   dustTimer: 'number', respawnTicks: 'number', minimapColor: 'number', safeZone: 'boolean', inSafeRoom: 'boolean', playerSlot: 'string',
   playerName: 'string', heroClass: 'string', mobWeapon: 'string', protectCooldown: 'number', survivorCooldown: 'number',
   superiorityLeft: 'number', tempHealth: 'number', volley: 'number', actionSurge: 'number', athleteBoost: 'number', indomitableCooldown: 'number',
-  bonusAttack: 'boolean', duelistCooldown: 'number',
+  bonusAttack: 'boolean', duelistCooldown: 'number', flat: 'boolean',
 };
 
 function hasType(v: unknown, type: FieldType): boolean {
@@ -257,6 +262,9 @@ function checkDetails(data: EntityState): void {
   ensure(!data.maneuver || isFeatureId(data.maneuver.id), 'Invalid maneuver');
   ensure(!data.arcana || validArcana(data.arcana), 'Invalid school state');
   ensure(!data.summon || (isSummonKind(data.summon.kind) && isDice(data.summon.damage)), 'Invalid undead');
+  ensure(!data.concentration || isSpellId(data.concentration.spell), 'Invalid concentration');
+  ensure(!data.zone || isSpellId(data.zone.spell), 'Invalid spell zone');
+  ensure(!data.surface || isSurfaceKind(data.surface.kind), 'Invalid puddle');
   ensure(!data.spellbook || (isRecoveryList(data.spellbook.recovery) && (data.spellbook.bound === undefined || isBoundList(data.spellbook.bound))), 'Invalid spellbook');
   ensure(!data.casting?.spell || isSpellId(data.casting.spell), 'Invalid spell');
   ensure(!data.projectile?.spell || isSpellId(data.projectile.spell), 'Invalid spell');

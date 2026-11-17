@@ -16,6 +16,7 @@ import type { CatalogSpell, QuickBinding } from '../rules/Spellbook';
 import { abandonBinding, bindRefusal, cancelBinding, finishBinding, pendingBinding, setOverQuickSquare } from '../game/SpellBinding';
 import { bindingFeatureId, featureCooldown, featureOfClass } from '../rules/ClassFeatures';
 import { requestUnbind } from '../game/PlayerActions';
+import { featureCharges } from '../systems/SchoolSystem';
 import type { FeatureDef } from '../rules/ClassFeatures';
 import { reportRejection } from '../core/errors';
 import { text } from '../core/texts';
@@ -49,6 +50,8 @@ const BREATH_PERIOD = 60;
 const BREATH_SWELL = 0.25;
 /** The prompt while a spell waits for a square sits this far above the squares. */
 const PROMPT_GAP = 14;
+/** A square's charges count sits this far down from its top (in its top right corner). */
+const CHARGES_TAG_Y = 2;
 /** A square of the second row names its key with this before it ("sQ": Shift and Q). */
 const SHIFT_MARK = 's';
 
@@ -60,8 +63,11 @@ type SlotView = {
   /** The initials of a spell that has no effect to show, and the level it is cast at (when above its own). */
   initials: PixelLabel;
   levelTag: PixelLabel;
-  /** The key that casts it ("Q", or "sQ" in the second row). */
+  /** The key that casts it ("Q", or "sQ" in the second row), bottom right. */
   keyTag: PixelLabel;
+  /** A feature used by charges (Bladesong): how many are left, top right. */
+  chargesTag: PixelLabel;
+  charges: number | null;
   /** What it was last drawn as, so it is drawn again only when that changes. */
   bound: string | null;
   active: boolean;
@@ -209,7 +215,9 @@ export class QuickBar {
     levelTag.position.set(2, 2);
     const keyTag = new PixelLabel(codeLabel(QUICK_KEYS[i]), { color: THEME.buttonText, align: 'right', outline: true });
     keyTag.position.set(SLOT - 1, SLOT - 9);
-    square.addChild(frame, mask, icon, initials, shade, levelTag, keyTag);
+    const chargesTag = new PixelLabel('', { color: THEME.title, align: 'right', outline: true });
+    chargesTag.position.set(SLOT - 1, CHARGES_TAG_Y);
+    square.addChild(frame, mask, icon, initials, shade, levelTag, keyTag, chargesTag);
     square.eventMode = 'static';
     square.cursor = 'pointer';
     square.hitArea = new Rectangle(0, 0, SLOT, SLOT);
@@ -217,7 +225,7 @@ export class QuickBar {
     square.on('pointerout', () => { if (this.hovered === i) this.hovered = -1; claimPointer(square, false); setOverQuickSquare(false); });
     square.on('pointertap', () => this.pick(i));
     square.on('rightclick', () => this.unbind(i));
-    this.slots.push({ square, frame, icon, shade, initials, levelTag, keyTag, bound: null, active: false, locked: false, shadeH: -1 });
+    this.slots.push({ square, frame, icon, shade, initials, levelTag, keyTag, chargesTag, charges: null, bound: null, active: false, locked: false, shadeH: -1 });
     this.row.addChild(square);
     this.drawFrame(this.slots[i]);
   }
@@ -270,6 +278,16 @@ export class QuickBar {
       view.icon.alpha = locked ? LOCKED_ALPHA : 1;
     }
     this.updateShade(view, binding, player.spellbook?.recovery[slot] ?? 0, player);
+    this.updateCharges(view, binding, player);
+  }
+
+  /** A feature used by charges shows how many are left in the top right corner. */
+  private updateCharges(view: SlotView, binding: QuickBinding | null, player: Player): void {
+    const feature = featureOfBinding(binding, player.heroClass);
+    const charges = feature?.charges ? featureCharges(player, feature.id) : null;
+    if (view.charges === charges) return;
+    view.charges = charges;
+    view.chargesTag.text = charges === null ? '' : String(charges);
   }
 
   /** The shade over a spell recovering, by the share of its recovery left. */

@@ -23,11 +23,12 @@ export type WizardSchool = (typeof WIZARD_SCHOOLS)[number];
 /**
  * The subclasses each class can follow for now. The Battle Master and the Eldritch Knight stay in the rules (and in old
  * builds), but are not offered; with only the Champion left, a Fighter is made a Champion on reaching level 3
- * (`grantArchetype` in src/rules/Build.ts). A Wizard picks any of the schools.
+ * (`grantArchetype` in src/rules/Build.ts). A Wizard picks any school but Transmutation, which is hard to balance yet
+ * (its features stay in the rules).
  */
 const PLAYABLE = {
   fighter: ['champion'],
-  wizard: WIZARD_SCHOOLS,
+  wizard: WIZARD_SCHOOLS.filter((school) => school !== 'transmutation'),
   rogue: [], warlock: [], bard: [], cleric: [],
 } as const satisfies Record<DndClass, readonly ArchetypeId[]>;
 

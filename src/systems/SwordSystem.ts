@@ -8,6 +8,7 @@ import { LUNGE_REACH } from '../rules/Maneuvers';
 import { createSwordSwingFx } from '../entities/FxFactory';
 import { ATTACK_PERIOD, SWORD_STATS, swingRange } from '../entities/WeaponStats';
 import { strike } from './Strike';
+import { bladeAttack } from './SchoolSystem';
 import type { AttackProfile } from '../rules/Combat';
 import { hitMob } from './Hits';
 import { lungeReady } from './ManeuverSystem';
@@ -113,6 +114,8 @@ function startSwing(player: Player, fromKey = true): void {
   };
   world.addComponent(player, 'swordSwing', swing);
   player.swordCooldown = SWORD_STATS.cooldown;
+  // A weapon attack during the Bladesong gathers a Healing Charge for its Climax.
+  bladeAttack(player);
   if (swing.delay === 0) swingLands(player, swing);
 }
 

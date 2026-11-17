@@ -24,6 +24,7 @@ import { archetypeName, featName } from '../rules/Names';
 import { FEATS, featBinding } from '../rules/Feats';
 import type { FeatId } from '../rules/Feats';
 import { passiveFeats } from '../rules/Build';
+import { featureCharges } from '../systems/SchoolSystem';
 import { THEME } from './Theme';
 
 type Rect = { x: number; y: number; w: number; h: number };
@@ -33,6 +34,8 @@ type Box = { spell: CatalogSpell | null; feature: FeatureDef | null; feat: FeatI
 type Item = { spell?: CatalogSpell; feature?: FeatureDef; feat?: FeatId; locked?: boolean };
 /** A wizard's bind counter at the top right: the spell level it counts (0: cantrips) and its line. */
 type Counter = { level: number; label: PixelLabel };
+/** The count of charges left on a feature used by charges (Bladesong), in its box's top right corner. */
+type ChargeTag = { feature: FeatureDef; label: PixelLabel };
 /** One level a clicked spell can be cast at, as a box. */
 type Option = { level: number; rect: Rectangle };
 /** The boxes that open under a clicked spell that can be cast at several levels: one box per level. */
@@ -73,6 +76,8 @@ const COUNTER_OVER = UNSAFE_HINT;
 /** Space between the hint and the counters beside it; a line of the hint or a counter is this tall. */
 const COUNTER_GAP = 8;
 const LINE_H = 9;
+/** A charges count sits this far down from its box's top edge. */
+const CHARGE_TAG_DROP = 2;
 /** A refusal (no room to bind) stays in the hint this many updates. */
 const REFUSAL_UPDATES = 180;
 
@@ -85,7 +90,8 @@ const REFUSAL_UPDATES = 180;
  * be cast at several levels first opens a box for each level, each telling its own numbers. Spells are prepared only in
  * a safe room (game/PlayerActions.ts `mayPrepare`): elsewhere the hint at the top says so and a click on one does nothing.
  *
- * A wizard sees every wizard spell, those above their level greyed out, and their school's features in a section of their
+ * Spells the game does not cast yet are listed greyed out too, saying so under the pointer. A wizard sees every wizard
+ * spell, those above their level greyed out, and their school's features in a section of their
  * own above the 1st-level spells (also greyed out until their level comes; its actives are bound without counting). At
  * the top right, counters tell how many cantrips and spells of each level are bound and how many may be
  * (src/rules/Schools.ts); with a level full, the hint says so instead of starting to bind.
@@ -109,6 +115,7 @@ export class SpellsPanel {
   private refusal: string | null = null;
   private refusalLeft = 0;
   private counters: Counter[] = [];
+  private chargeTags: ChargeTag[] = [];
   private bead = 0;
   private boxes: Box[] = [];
   private choice: Choice | null = null;
@@ -145,6 +152,7 @@ export class SpellsPanel {
   private clearContent(): void {
     this.boxes = [];
     this.counters = [];
+    this.chargeTags = [];
     this.hovered = null;
     this.frames.clear();
     this.veils.clear();
@@ -173,6 +181,7 @@ export class SpellsPanel {
       this.boxes.push({ spell: item.spell ?? null, feature: item.feature ?? null, feat: item.feat ?? null, locked, rect });
       if (item.spell) this.addIcon(item.spell, rect, locked);
       if (item.feat) this.addInitials(item.feat, rect);
+      if (item.feature?.charges) this.addChargeTag(item.feature, rect);
     });
     const rows = Math.ceil(items.length / cols);
     return first + rows * (BOX + GAP) + SECTION_GAP;
@@ -212,7 +221,9 @@ export class SpellsPanel {
       if (spellLevel === 1 && school) y = this.addSchool(cls, school, level, y);
       if (!spells.length) return;
       const label = spellLevel === 0 ? text('skills.cantrips') : text('skills.level', { level: spellLevel });
-      y = this.addSection(label, spells.map((spell) => ({ spell, locked: (learnLevel(list, spell) ?? Infinity) > level })), y);
+      // Greyed out: above the hero's level, or not cast in the game yet.
+      const locked = (spell: CatalogSpell): boolean => !spell.castable || (learnLevel(list, spell) ?? Infinity) > level;
+      y = this.addSection(label, spells.map((spell) => ({ spell, locked: locked(spell) })), y);
     });
     this.contentH = y - this.area.y;
     this.finishLayout();
@@ -406,6 +417,24 @@ export class SpellsPanel {
     return FEATS[feat].passive === 'auto' || !!this.player?.featsOn?.includes(feat);
   }
 
+  /** A feature used by charges shows how many are left in its box's top right corner (kept up to date in `animate`), as on the quick bar. */
+  private addChargeTag(feature: FeatureDef, rect: Rectangle): void {
+    const label = new PixelLabel('', { color: THEME.title, align: 'right', outline: true });
+    label.position.set(Math.round(rect.x + BOX - 1), Math.round(rect.y + CHARGE_TAG_DROP));
+    this.content.addChild(label);
+    this.chargeTags.push({ feature, label });
+  }
+
+  /** Each charge tag says how many charges its feature has left. */
+  private updateChargeTags(): void {
+    const player = this.player;
+    if (!player) return;
+    for (const { feature, label } of this.chargeTags) {
+      const left = String(featureCharges(player, feature.id) ?? '');
+      if (label.text !== left) label.text = left;
+    }
+  }
+
   /** A Passive Feat's box shows its initials (feats have no icons). */
   private addInitials(feat: FeatId, rect: Rectangle): void {
     const label = new PixelLabel(featInitials(feat), { color: THEME.buttonText, align: 'center', shadow: true });
@@ -428,6 +457,7 @@ export class SpellsPanel {
   animate(): void {
     this.updateHint();
     this.updateCounters();
+    this.updateChargeTags();
     const g = this.beads.clear();
     this.bead = (this.bead + BEAD_SPEED) % (4 * BOX);
     for (const { feature, rect, locked } of this.boxes) {

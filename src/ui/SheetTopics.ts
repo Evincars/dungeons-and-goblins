@@ -8,9 +8,13 @@ import { armorName, damageTypeName, dndClassName, featName, featureName, fightin
 import { BASE_SPEED_FT } from '../rules/CharacterSheet';
 import type { TipDetail, TipTopic } from './InfoTooltip';
 import { THEME } from './Theme';
+import type { DamageType } from '../rules/DamageTypes';
 
 /** The note under an off-hand weapon that makes no blow. */
 const BLOCKED_COLOR = 0xe85a4f;
+
+/** Kinds of damage as a list ("slashing, piercing"), or "none". */
+const typeList = (types: readonly DamageType[]): string => (types.length ? types.map(damageTypeName).join(', ') : text('sheet.ac.no_types'));
 
 /** The character sheet's tooltips: what each value means, and how the player's own one adds up. */
 
@@ -33,7 +37,11 @@ export function armorClassTopic(sheet: CharacterSheet): TipTopic {
   if (ac.featureName) detail.push(text('sheet.ac.feature', { feature: fightingStyleName(ac.featureName), bonus: formatModifier(ac.feature) }));
   if (ac.feat) detail.push(text('sheet.ac.feat', { bonus: formatModifier(ac.feat) }));
   if (ac.school) detail.push(text('sheet.ac.school', { bonus: formatModifier(ac.school) }));
+  if (ac.spell) detail.push(text('sheet.ac.spell', { bonus: formatModifier(ac.spell) }));
   detail.push(text('sheet.ac.total', { total: ac.total }));
+  // What the hero resists (half damage) and is immune to (none), every kind of damage, weapons' and spells'.
+  const { resist, immune } = sheet.defences;
+  detail.push(text('sheet.ac.resistant', { types: typeList(resist) }), text('sheet.ac.immune', { types: typeList(immune) }));
   return { title: text('sheet.ac.name'), body: text('sheet.ac.description'), detail };
 }
 

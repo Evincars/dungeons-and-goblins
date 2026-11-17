@@ -2790,13 +2790,17 @@ const Spellbook = await load('rules/Spellbook');
 const DamageTypes = await load('rules/DamageTypes');
 const { bindSpell } = await load('game/PlayerActions');
 
-test('the game uses only the spells in its list, and every spell a class learns or casts is in it', async () => {
+test('the game knows the spells of BG3 and no others, and every spell a class learns or casts is in it', async () => {
   const { existsSync, readFileSync } = await import('node:fs');
   const { CLASSES } = await load('rules/Classes');
   const list = JSON.parse(readFileSync(new URL('../src/data/spell-list.json', import.meta.url), 'utf8'));
   assert.deepEqual(Object.keys(Spellbook.CATALOG).sort(), Object.keys(list.spells).sort());
-  assert.equal(Spellbook.CATALOG.find_familiar, undefined, 'summons are left out');
-  assert.equal(Spellbook.CATALOG.arms_of_hadar, undefined, 'and lasting tentacles');
+  assert.ok(Spellbook.CATALOG.find_familiar && !Spellbook.CATALOG.find_familiar.castable, 'a BG3 spell the game does not cast yet is listed, not castable');
+  assert.equal(Spellbook.CATALOG.wish, undefined, 'a D&D spell BG3 does not have is not');
+  assert.equal(Spellbook.CATALOG.selunes_dream, undefined, 'nor one only an item gives');
+  assert.equal(Spellbook.CATALOG.chill_touch.name, 'Bone Chill', 'spells go by their BG3 names');
+  assert.equal(Spellbook.CATALOG.acid_splash.school, 'Conjuration', 'and schools');
+  assert.equal(Spellbook.CATALOG.burning_hands.school, 'Evocation');
   const { SPELL_IDS } = await load('rules/Spells');
   for (const id of SPELL_IDS) assert.ok(Spellbook.CATALOG[id], `${id} can be cast, so it is in the list`);
   for (const cls of Object.values(CLASSES)) for (const id of cls.spells) assert.ok(Spellbook.CATALOG[id], `${cls.id} learns ${id}`);
@@ -2806,9 +2810,10 @@ test('the game uses only the spells in its list, and every spell a class learns 
   }
 });
 
-test('every spell on the game\'s list can be cast, and a heal with a radius mends the heroes near', async () => {
+test('the spells the game casts are the ones with numbers, and a heal with a radius mends the heroes near', async () => {
   const { SPELL_IDS } = await load('rules/Spells');
-  for (const id of Object.keys(Spellbook.CATALOG)) assert.ok(SPELL_IDS.includes(id), `${id} has its numbers in spells.json`);
+  for (const spell of Object.values(Spellbook.CATALOG)) assert.equal(spell.castable, SPELL_IDS.includes(spell.id), `${spell.id}: castable when it has its numbers in spells.json`);
+  assert.equal(Spellbook.canBind('wizard', 5, 'fly', 3), false, 'a spell not cast yet is not bound');
   const level = arena(12, 6);
   const cleric = casterAt(2, 2, 'cleric', 0);
   const ally = playerAt(3, 2);
@@ -2842,11 +2847,13 @@ test('the bag holds 120 items over 20 rows, and a guest\'s full bag still passes
 
 test('every spell of the lists is read with a range, the classes that learn it and the hero level they do', () => {
   const spells = Object.values(Spellbook.CATALOG);
-  assert.ok(spells.length >= 40 && spells.length < 100, 'the game\'s own list (src/data/spell-list.json)');
+  assert.ok(spells.length > 150 && spells.length < 250, 'the game\'s own list (src/data/spell-list.json, the BG3 spells)');
   for (const spell of spells) {
-    assert.ok(Object.keys(spell.classes).length > 0, `${spell.id} is learnt by some class`);
     assert.ok(Object.values(spell.classes).every((level) => level >= 1 && level <= 20), `${spell.id} is learnt at a real hero level`);
   }
+  // Only a subclass learns these in BG3 (a Hexblade, a Death Domain cleric): no hero learns them yet.
+  assert.deepEqual(Spellbook.CATALOG.booming_blade.classes, {});
+  assert.deepEqual(Spellbook.CATALOG.burning_hands.classes, { wizard: 1, sorcerer: 1, warlock: 1 }, 'a spell level opens with the class');
   const eldritch = Spellbook.CATALOG.eldritch_blast;
   assert.deepEqual([eldritch.range.feet, eldritch.range.px], [120, 1152], '5 feet are 48 px');
   assert.deepEqual(eldritch.classes, { warlock: 1 });
@@ -5494,4 +5501,188 @@ test('a Transmuter\'s Stone makes its carrier faster or trained in Constitution 
   const from = conjurer.position.x;
   assert.equal(usedFeature(conjurer, 'benign_transposition', 11, level, { x: from + 200, y: conjurer.position.y }), 'ok');
   assert.ok(conjurer.position.x > from + 150 && conjurer.position.x <= from + 288, 'it stepped through the air toward the aim');
+});
+
+// ── Lasting spells, resistances, and the schools' later features ─────────────
+
+const LastingSpells = await load('systems/LastingSpells');
+
+const Resistances = await load('rules/Resistances');
+
+/** Lasting spells run for `ticks` (the spatial index rebuilt each tick, as the game does). */
+function lastFor(ticks) {
+  for (let t = 0; t < ticks; t++) {
+    beginPerception();
+    LastingSpells.updateLastingSpells();
+  }
+}
+
+test('Blade Ward halves weapons\' damage while it lasts, and the Armor Class tooltip lists what the hero resists', async () => {
+  const level = arena(12, 6);
+  const wizard = casterAt(2, 2, 'wizard', 0);
+  wizard.health.max = wizard.health.current = 100;
+  assert.equal(bindSpell(wizard, 0, 'blade_ward', 0), true);
+  cast(level, wizard);
+  assert.ok(wizard.buffs.bladeWard > 0, 'Blade Ward is on');
+  const goblin = mobAt(level, 'goblin', 6, 2);
+  hurtPlayer(wizard, goblin, 10, 'slashing');
+  assert.equal(wizard.health.current, 95, 'half of 10 slashing');
+  hurtPlayer(wizard, goblin, 10, 'fire');
+  assert.equal(wizard.health.current, 85, 'fire is not resisted');
+  assert.deepEqual(sheetOf(wizard).defences, { resist: ['bludgeoning', 'piercing', 'slashing'], immune: [] });
+  const { armorClassTopic } = await load('ui/SheetTopics');
+  const lines = armorClassTopic(sheetOf(wizard)).detail.map(String);
+  assert.ok(lines.some((line) => line.startsWith('Resistant') && line.includes('slashing')), 'the tooltip lists the resistances');
+  assert.ok(lines.some((line) => line.startsWith('Immune') && line.endsWith('none')), 'and that there is no immunity');
+  lastFor(12 * 60);
+  assert.equal(sheetOf(wizard).defences.resist.length, 0, 'it wears off after 12 seconds');
+});
+
+test('Mage Armour makes a hero in no armour AC 13 + DEX until a long rest; Shield adds 5 for 6 seconds', () => {
+  const level = arena(12, 6);
+  // Squares 2 and 3 hold the wizard's own first-level spells: the new ones take their places (two of that level at level 1).
+  const wizard = casterAt(2, 2, 'wizard', 2);
+  wizard.equipped = {};
+  const bare = sheetOf(wizard).armorClass.total;
+  assert.equal(bindSpell(wizard, 2, 'mage_armor', 1), true);
+  cast(level, wizard);
+  assert.equal(sheetOf(wizard).armorClass.total, bare + 3);
+  assert.equal(bindSpell(wizard, 3, 'shield', 1), true);
+  wizard.playerInput.spellSlot = 3;
+  cast(level, wizard);
+  assert.equal(sheetOf(wizard).armorClass.total, bare + 8);
+  assert.equal(sheetOf(wizard).armorClass.spell, 8, 'told apart in the breakdown');
+  lastFor(6 * 60);
+  assert.equal(sheetOf(wizard).armorClass.total, bare + 3, 'Shield is gone, Mage Armour stays');
+  LastingSpells.endUntilRest(wizard);
+  assert.equal(sheetOf(wizard).armorClass.total, bare, 'a long rest (or a fall) ends Mage Armour');
+});
+
+test('a zone strikes the foes in it every round while its caster keeps concentration; Focused Conjuration keeps it whatever the damage', () => {
+  const level = arena(14, 6);
+  const wizard = wizardOf('conjuration', 10);
+  wizard.health.max = wizard.health.current = 200;
+  const goblin = mobAt(level, 'goblin', 5, 2);
+  goblin.health.max = goblin.health.current = 500;
+  wizard.aimWorld.x = goblin.position.x;
+  wizard.aimWorld.y = goblin.position.y;
+  assert.equal(bindSpell(wizard, 0, 'cloud_of_daggers', 2), true);
+  cast(level, wizard);
+  const [zone] = world.with('zone');
+  assert.ok(zone, 'the daggers stay where they were cast');
+  assert.equal(wizard.concentration.spell, 'cloud_of_daggers');
+  lastFor(1);
+  const first = goblin.health.current;
+  assert.ok(first < 500, 'they strike at once');
+  lastFor(360);
+  assert.ok(goblin.health.current < first, 'and again a round later');
+  useDieRoller(() => 1);
+  hurtPlayer(wizard, goblin, 40, 'slashing');
+  assert.equal(wizard.concentration?.spell, 'cloud_of_daggers', 'Focused Conjuration: no save, damage does not break it');
+  wizard.featuresOff = ['focused_conjuration'];
+  hurtPlayer(wizard, goblin, 40, 'slashing');
+  assert.equal(wizard.concentration, undefined, 'without it a failed Constitution save does');
+  assert.ok(zone.removed, 'and the daggers go');
+});
+
+test('Create Water leaves a puddle for good; thunder charges it, and then it shocks whoever stands in it every round', () => {
+  const level = arena(14, 6);
+  const conjurer = wizardOf('conjuration', 6);
+  const at = { x: conjurer.position.x + 48, y: conjurer.position.y };
+  assert.equal(usedFeature(conjurer, 'minor_conjuration', 11, level, at), 'ok');
+  const [puddle] = world.with('surface');
+  assert.equal(puddle.surface.kind, 'water');
+  const goblin = mobAt(level, 'goblin', 5, 2);
+  goblin.position.x = puddle.position.x;
+  goblin.position.y = puddle.position.y;
+  goblin.health.max = goblin.health.current = 500;
+  lastFor(400);
+  assert.equal(goblin.health.current, 500, 'still water hurts nobody');
+  assert.equal(bindSpell(conjurer, 2, 'thunderwave', 1), true, 'in place of Magic Missile');
+  conjurer.playerInput.spellSlot = 2;
+  cast(level, conjurer);
+  assert.equal(puddle.surface.kind, 'shock', 'thunder charged it');
+  const charged = goblin.health.current;
+  lastFor(1);
+  assert.equal(goblin.health.current, charged - 4, '1d4 lightning (the loaded die: 4)');
+  lastFor(360);
+  assert.equal(goblin.health.current, charged - 8, 'once a round');
+  assert.equal(conjurer.health.current, conjurer.health.max, 'the conjurer outside the puddle is not hurt');
+  world.addComponent(conjurer, 'playerSlot', 'host');
+  assert.doesNotThrow(() => validateNetState(JSON.parse(JSON.stringify(captureWorld(false, 7)))), 'puddles travel to guests');
+});
+
+test('Bladesong spends a charge and gathers Bladesong Charges for its Climax, which strikes and heals and ends the song', () => {
+  const level = arena(14, 6);
+  const singer = wizardOf('bladesinging', 3);
+  singer.health.max = 40;
+  singer.equipped = { primary: { ...WEAPONS.find((w) => w.base === 'rapier') } };
+  assert.equal(SchoolSystem.featureCharges(singer, 'bladesong'), 2, '2 charges at level 3');
+  assert.equal(usedFeature(singer, 'bladesong_climax', 12, level), 'not_singing');
+  assert.equal(usedFeature(singer, 'bladesong', 11, level), 'ok');
+  assert.equal(SchoolSystem.featureCharges(singer, 'bladesong'), 1, 'a charge spent');
+  for (let i = 0; i < 5; i++) SchoolSystem.bladeAttack(singer);
+  SchoolSystem.bladeAttack(singer);
+  for (let i = 0; i < 2; i++) SchoolSystem.spellCast(singer, 'magic_missile', 1);
+  SchoolSystem.spellCast(singer, 'fire_bolt', 0);
+  assert.deepEqual([singer.arcana.damageCharges, singer.arcana.healingCharges], [2, 3],
+    'spells of 1st level and up give damage, weapon attacks healing (a cantrip none), up to the hero\'s level of each');
+  const dummy = createTrainingDummy(centre(4), centre(2));
+  const full = dummy.health.current;
+  singer.health.current = 1;
+  assert.equal(usedFeature(singer, 'bladesong_climax', 12, level, dummy.position), 'ok');
+  assert.ok(dummy.health.current < full, 'the training dummy takes the force damage');
+  const goblin = mobAt(level, 'goblin', 4, 4);
+  goblin.health.max = goblin.health.current = 100;
+  assert.equal(singer.health.current, 1 + 24, '1d6 and 3d6 more for the Healing Charges (the loaded dice: 24)');
+  assert.equal(singer.arcana.songTicks, 0, 'the song ends');
+  assert.deepEqual([singer.arcana.damageCharges, singer.arcana.healingCharges], [0, 0]);
+  assert.equal(usedFeature(singer, 'bladesong', 11, level), 'ok', 'the last charge');
+  beginPerception();
+  assert.equal(usedFeature(singer, 'bladesong_climax', 12, level, goblin.position), 'ok', 'with no charges gathered it still rolls its own die');
+  assert.equal(goblin.health.current, 100 - 3, '1d6 force (the loaded die: 6), halved by a saved Intelligence throw');
+  for (let t = 0; t < 3600; t++) SchoolSystem.updateSchools();
+  SchoolSystem.restSchool(singer, false);
+  assert.equal(SchoolSystem.featureCharges(singer, 'bladesong'), 0, 'neither time nor a short rest brings a charge back');
+  assert.equal(usedFeature(singer, 'bladesong', 11, level), 'no_charges');
+  SchoolSystem.restSchool(singer, true);
+  assert.equal(SchoolSystem.featureCharges(singer, 'bladesong'), 2, 'a long rest brings them all back');
+});
+
+test('the point buy can be changed until it is saved, even past level 1, and the sheet and hit points follow it', async () => {
+  const { applyCustomization } = await load('game/Customize');
+  const hero = playerAt(2, 2, 'wizard');
+  hero.playerStats.level = 3;
+  hero.build = WizardBuild.newBuild(WizardClasses.wizard);
+  const scores = { ...hero.build.scores };
+  const before = sheetOf(hero);
+  const hp = hero.health.max;
+  // CON 14 to 15 costs the 2 points WIS 12 to 10 frees (27 in all); with the human's +1, CON 15 becomes 16.
+  const bought = { ...scores, constitution: scores.constitution + 1, wisdom: scores.wisdom - 2 };
+  assert.equal(applyCustomization(hero, { kind: 'scores', scores: bought }), true);
+  assert.equal(sheetOf(hero).scores.constitution, before.scores.constitution + 1, 'the inventory\'s sheet follows');
+  assert.equal(hero.health.max, hp + 3, '+1 Constitution modifier: a hit point for each of the 3 levels');
+  assert.equal(applyCustomization(hero, { kind: 'lock_build' }), true);
+  assert.equal(hero.build.scores.constitution, scores.constitution + 1, 'the saved scores are the bought ones');
+  assert.equal(applyCustomization(hero, { kind: 'scores', scores }), false, 'and final once saved');
+});
+
+test('the Third Eye and See Invisibility last until a long rest; Inured to Undeath halves necrotic damage; no Savants, no Transmutation on offer', async () => {
+  const level = arena(12, 6);
+  const diviner = wizardOf('divination', 10);
+  assert.equal(usedFeature(diviner, 'third_eye_darkvision', 11, level), 'ok');
+  assert.ok(diviner.arcana.darkvision);
+  LastingSpells.endUntilRest(diviner);
+  assert.equal(diviner.arcana.darkvision, false, 'closed by a long rest, a fall or death');
+  const illusionist = wizardOf('illusion', 6);
+  assert.equal(usedFeature(illusionist, 'see_invisibility', 11, level), 'ok');
+  assert.ok(illusionist.arcana.seeInvisible);
+  const necromancer = wizardOf('necromancy', 10);
+  assert.equal(Resistances.damageTaken(necromancer, 10, 'necrotic'), 5);
+  assert.equal(Resistances.damageTaken(wizardOf('necromancy', 9), 10, 'necrotic'), 10, 'from level 10');
+  const { playableArchetypes } = await load('rules/Archetypes');
+  assert.ok(!playableArchetypes('wizard').includes('transmutation'));
+  assert.equal(playableArchetypes('wizard').length, 8);
+  const Features = await load('rules/ClassFeatures');
+  assert.ok(!Features.CLASS_FEATURE_LIST.wizard.some((f) => f.id.endsWith('_savant')), 'the Savants are gone');
 });

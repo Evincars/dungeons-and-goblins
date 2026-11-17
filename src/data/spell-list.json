@@ -1,134 +1,3393 @@
 {
-  "$comment": "The spells the game uses, out of the whole list in src/data/spellbook.json: only ones that act at once (a bolt, darts, a burst with a save, a heal) and can be drawn with the effects we have; summons, walls, lasting zones, charms and utility spells are left out. img: the spell's icon under public/ (spells-icons/<name>_pixelart.png, the pixelated copy of the icon file named after the spell), or null when there is none; scripts/spell-icons.sh makes the copies and fills this in. A spell with no icon shows its effect instead.",
+  "$comment": "Every spell of Baldur's Gate 3 the game knows (made by scripts/bg3-spells.mjs from the BG3 wiki): its name, level (0: cantrip), school, whether it needs concentration, the classes that learn it (at the hero level their slots of its level open, src/data/spellbook.json casterKinds), knight: on the Eldritch Knight's list, the subclasses that learn it, book: its entry in src/data/spellbook.json (the D&D rules: range, dice, At Higher Levels), text: its in-game description, img: its icon under public/. Only the spells in src/data/spells.json can be cast yet; the others show greyed out as not in the game yet.",
   "spells": {
+    "booming_blade": {
+      "name": "Booming Blade",
+      "level": 0,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [],
+      "knight": false,
+      "subclasses": [
+        "Hexblade"
+      ],
+      "book": "booming_blade",
+      "text": "Strike with your weapon, afflicting your foe with a resonance that hurts them for 1d8 Thunder damage when they move.",
+      "img": "spells-icons/Booming-Blade-Spell-Baldurs-Gate-3-1_pixelart.png"
+    },
+    "toll_the_dead": {
+      "name": "Toll the Dead",
+      "level": 0,
+      "school": "Necromancy",
+      "concentration": false,
+      "classes": [],
+      "knight": false,
+      "subclasses": [
+        "Death Domain"
+      ],
+      "book": "toll_the_dead",
+      "text": "1~12 Damage",
+      "img": "spells-icons/Toll-of-the-Dead-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "bursting_sinew": {
+      "name": "Bursting Sinew",
+      "level": 0,
+      "school": "Necromancy",
+      "concentration": false,
+      "classes": [
+        "cleric",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": null,
+      "text": "1~10 Damage",
+      "img": "spells-icons/Bursting-Sinew-level-1-BG3-spell-1_pixelart.png"
+    },
+    "shadow_blade": {
+      "name": "Shadow Blade",
+      "level": 2,
+      "school": "Illusion",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "Arcane Trickster",
+        "Eldritch Knight"
+      ],
+      "book": "shadow_blade",
+      "text": "Weave a shadowy shortsword in your hand that deals 2~16 Psychic damage .",
+      "img": "spells-icons/Shadow_Blade_Icon_pixelart.png"
+    },
     "acid_splash": {
+      "name": "Acid Splash",
+      "level": 0,
+      "school": "Conjuration",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "Eldritch Knight"
+      ],
+      "book": "acid_splash",
+      "text": "1~6 Damage 1d6 Acid",
       "img": "spells-icons/Acid-Splash-Level-1-Spell-Baldurs-Gate-3-1_pixelart.png"
     },
+    "blade_ward": {
+      "name": "Blade Ward",
+      "level": 0,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "warlock",
+        "wizard",
+        "bard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "College of Lore",
+        "College of Valour",
+        "Eldritch Knight",
+        "Arcane Trickster"
+      ],
+      "book": "blade_ward",
+      "text": "Take only half of the damage from Bludgeoning, Piercing, and Slashing attacks 2 Turns",
+      "img": "spells-icons/Blade-Ward-Level-1-Spell-Slot-Baldurs-Gate-3_pixelart.png"
+    },
     "chill_touch": {
+      "name": "Bone Chill",
+      "level": 0,
+      "school": "Necromancy",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "Eldritch Knight"
+      ],
+      "book": "chill_touch",
+      "text": "1~8 Damage 1d8 Necrotic",
       "img": "spells-icons/Bone-Chill-Level-1-Spell-Baldurs-Gate-3_pixelart.png"
     },
+    "dancing_lights": {
+      "name": "Dancing Lights",
+      "level": 0,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "College of Lore",
+        "College of Valour",
+        "Eldritch Knight"
+      ],
+      "book": "dancing_lights",
+      "text": "Illuminate a 9m radius. 10 Turns 18m Concentration",
+      "img": "spells-icons/Dancing-Lights-Cantrip-BG3_pixelart.png"
+    },
     "eldritch_blast": {
+      "name": "Eldritch Blast",
+      "level": 0,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "warlock"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "eldritch_blast",
+      "text": "1~10 Damage 1d10 Force",
       "img": "spells-icons/Eldtrich-Blast-spell-Cantrip-Baldurs-Gate-3_pixelart.png"
     },
     "fire_bolt": {
+      "name": "Fire Bolt",
+      "level": 0,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "wizard",
+        "sorcerer"
+      ],
+      "knight": true,
+      "subclasses": [
+        "Eldritch Knight"
+      ],
+      "book": "fire_bolt",
+      "text": "1~10 Damage 1d10 Fire",
       "img": "spells-icons/Firebolt-spell-Cantrip-Baldurs-Gate-3_pixelart.png"
     },
+    "friends": {
+      "name": "Friends",
+      "level": 0,
+      "school": "Enchantment",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "College of Lore",
+        "College of Valour",
+        "Eldritch Knight"
+      ],
+      "book": "friends",
+      "text": "Gain Advantage on Charisma Checks against a non-hostile creature. Once the spell ends, the creature knows it was Charmed and might accuse the spellcaster. 10 Turns In higher difficulty modes, the target might accuse you of enchanting them.",
+      "img": "spells-icons/Friends-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "guidance": {
+      "name": "Guidance",
+      "level": 0,
+      "school": "Divination",
+      "concentration": false,
+      "classes": [
+        "cleric",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "guidance",
+      "text": "Bestow guidance upon an ally. They gain a +1d4 bonus to Ability Checks . 10 turns",
+      "img": "spells-icons/Guidance-Spell-BG3_pixelart.png"
+    },
+    "light": {
+      "name": "Light",
+      "level": 0,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "cleric",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "College of Lore",
+        "College of Valour",
+        "Eldritch Knight"
+      ],
+      "book": "light",
+      "text": "Infuse an object with an aura of light. Until Long Rest",
+      "img": "spells-icons/Light-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "mage_hand": {
+      "name": "Mage Hand",
+      "level": 0,
+      "school": "Conjuration",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "College of Lore",
+        "College of Valour",
+        "Eldritch Knight"
+      ],
+      "book": "mage_hand",
+      "text": "Create a spectral hand that can manipulate and interact with objects.",
+      "img": "spells-icons/Mage-Hand-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "minor_illusion": {
+      "name": "Minor Illusion",
+      "level": 0,
+      "school": "Illusion",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "College of Lore",
+        "College of Valour",
+        "Eldritch Knight"
+      ],
+      "book": "minor_illusion",
+      "text": "Create an illusory image that distracts nearby creatures, compelling them to investigate. You can remain hidden while casting this spell. 10 turns",
+      "img": "spells-icons/Minor-Illusion-Baldurs-Gate-3-Spells_pixelart.png"
+    },
     "poison_spray": {
+      "name": "Poison Spray",
+      "level": 0,
+      "school": "Conjuration",
+      "concentration": false,
+      "classes": [
+        "druid",
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "Eldritch Knight"
+      ],
+      "book": "poison_spray",
+      "text": "1~12 Damage 1d12 Poison",
       "img": "spells-icons/Poison-Spray-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "produce_flame": {
+      "name": "Produce Flame",
+      "level": 0,
+      "school": "Conjuration",
+      "concentration": false,
+      "classes": [
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "produce_flame",
+      "text": "A flickering flame appears in your hand. It sheds bright light in a 9m radius and deals 1~8 Fire damage when thrown. Throwing the flame immediately after you conjure it does not cost an action. Extinguishing or throwing it on subsequent turns costs an action",
       "img": "spells-icons/Produce-Flame-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "ray_of_frost": {
+      "name": "Ray of Frost",
+      "level": 0,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "Eldritch Knight"
+      ],
+      "book": "ray_of_frost",
+      "text": "1~8 Damage 1d8 Cold",
       "img": "spells-icons/Ray-of-Frost-Baldurs-Gate-3-Spells_pixelart.png"
     },
+    "resistance": {
+      "name": "Resistance",
+      "level": 0,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "cleric",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "resistance",
+      "text": "Make a target more resistant to spell effects and conditions: it receives a +1d4 bonus to Saving Throws.",
+      "img": "spells-icons/Resistance-Baldurs-Gate-3-Spells_pixelart.png"
+    },
     "sacred_flame": {
+      "name": "Sacred Flame",
+      "level": 0,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "sacred_flame",
+      "text": "1~8 Damage 1d8 Radiant Conjure a flame-like radiance that deals 1d8 Radiant. 18m DEX Save",
       "img": "spells-icons/Sacred-Flame-Baldurs-Gate-3-Spells_pixelart.png"
     },
+    "shillelagh": {
+      "name": "Shillelagh",
+      "level": 0,
+      "school": "Transmutation",
+      "concentration": false,
+      "classes": [
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "shillelagh",
+      "text": "Imbue your staff or club with nature's power. It becomes magical, deals 1d8+2 Bludgeoning damage, and uses your Spellcasting Ability for Attack Rolls .",
+      "img": "spells-icons/Shillelagh-Baldurs-Gate-3-Spells_pixelart.png"
+    },
     "shocking_grasp": {
+      "name": "Shocking Grasp",
+      "level": 0,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "Eldritch Knight"
+      ],
+      "book": "shocking_grasp",
+      "text": "1~8 Damage 1d8 Lightning",
       "img": "spells-icons/Shocking-grasp-spell-BG3_pixelart.png"
     },
+    "thaumaturgy": {
+      "name": "Thaumaturgy",
+      "level": 0,
+      "school": "Transmutation",
+      "concentration": false,
+      "classes": [
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "thaumaturgy",
+      "text": "Manifest a sign of supernatural power that grants you advantage on Intimidation and Performance checks.",
+      "img": "spells-icons/Thraumaturgy-Spell-BG3_pixelart.png"
+    },
     "thorn_whip": {
+      "name": "Thorn Whip",
+      "level": 0,
+      "school": "Transmutation",
+      "concentration": false,
+      "classes": [
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "thorn_whip",
+      "text": "Strike at a target with a thorny, vine-like whip. It deals 1d6 Piercing damage and pulls the target 3m closer to you if it is Large or Smaller in size.",
       "img": "spells-icons/Thorn_Whip_pixelart.png"
     },
-    "toll_the_dead": {
-      "img": "spells-icons/Toll-of-the-Dead-Baldurs-Gate-3-Spells_pixelart.png"
+    "true_strike": {
+      "name": "True Strike",
+      "level": 0,
+      "school": "Divination",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "warlock",
+        "wizard",
+        "ranger"
+      ],
+      "knight": true,
+      "subclasses": [
+        "College of Lore",
+        "College of Valour",
+        "Eldritch Knight",
+        "Arcane Trickster",
+        "Mage Breaker"
+      ],
+      "book": "true_strike",
+      "text": "Gain Advantage on your next Attack Roll. 2 turns",
+      "img": "spells-icons/True-Strike-Spell-BG3_pixelart.png"
     },
     "vicious_mockery": {
+      "name": "Vicious Mockery",
+      "level": 0,
+      "school": "Enchantment",
+      "concentration": false,
+      "classes": [
+        "bard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "College of Lore",
+        "College of Valour"
+      ],
+      "book": "vicious_mockery",
+      "text": "1~4 Damage 1d4 Psychic",
       "img": "spells-icons/Vicious-Mockery-Baldurs-Gate-3-Spells_pixelart.png"
     },
+    "animal_friendship": {
+      "name": "Animal Friendship",
+      "level": 1,
+      "school": "Enchantment",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "druid",
+        "ranger"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Nature Domain"
+      ],
+      "book": "animal_friendship",
+      "text": "10 Turns Convince a beast not to attack you. 18m WIS Save",
+      "img": "spells-icons/Animal-friendship-Level-1-Spell_pixelart.png"
+    },
+    "armor_of_agathys": {
+      "name": "Armour of Agathys",
+      "level": 1,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "warlock"
+      ],
+      "knight": false,
+      "subclasses": [
+        "College of Lore"
+      ],
+      "book": "armor_of_agathys",
+      "text": "Gain 5 temporary hit ponts and deal 5 Cold Damge to any creature that hits you with a melee attacks. Can only have temporary hit points from one source. Until Long Rest",
+      "img": "spells-icons/Armour-of-Agathys-Level-1-Spel_pixelart.png"
+    },
+    "arms_of_hadar": {
+      "name": "Arms of Hadar",
+      "level": 1,
+      "school": "Conjuration",
+      "concentration": false,
+      "classes": [
+        "warlock"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "arms_of_hadar",
+      "text": "2~12 Damage 2d6 Necrotic Call forth tendrils of dark energy that prevent targets from taking reactions. 1 Turn 9m 3m STR Save",
+      "img": "spells-icons/Arms-of-Hadar-Level-1-Spell_pixelart.png"
+    },
+    "bane": {
+      "name": "Bane",
+      "level": 1,
+      "school": "Enchantment",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Oath of Vengeance"
+      ],
+      "book": "bane",
+      "text": "Target up to 3 creatures. They receive a 1d4 penalty to Attack Rolls and Saving Throws . 10 Turns 9m 9m CHA Save Concentration",
+      "img": "spells-icons/Bane-Level-1-Spell-Baldurs-Gate-3_pixelart.png"
+    },
+    "bless": {
+      "name": "Bless",
+      "level": 1,
+      "school": "Enchantment",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "cleric",
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [
+        "College of Lore",
+        "Life Domain"
+      ],
+      "book": "bless",
+      "text": "Bless up to 3 creatures. They gain a +1d4 bonus to Attack Rolls and Saving Throws . 10 turns 9m Concentration",
+      "img": "spells-icons/Bless-Level-1-Spell-Baldurs-Gate-3_pixelart.png"
+    },
     "burning_hands": {
+      "name": "Burning Hands",
+      "level": 1,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "Light Domain",
+        "Eldritch Knight",
+        "Arcane Trickster"
+      ],
+      "book": "burning_hands",
+      "text": "3~18 Damage 3d6 Fire Each flammable targets is thi with 3∼18 Fire damage . On Save: Targets still take half damage. 5m DEX Save",
       "img": "spells-icons/Burning-Hands-level-1-spell-Baldurs-Gate-3_pixelart.png"
     },
+    "charm_person": {
+      "name": "Charm Person",
+      "level": 1,
+      "school": "Enchantment",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "druid",
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Trickery Domain"
+      ],
+      "book": "charm_person",
+      "text": "Charm a humanoid to prevent in from attacking you. You gain Advantage on Charisma Checks in dialogue and prevent it from attacking. Enemies have Advantage on Saving Throws against being Charmed. When the spell ends, the target might accuse you of Charming them. 10 Turns 18m/60ft WIS Save",
+      "img": "spells-icons/Charm-person-BG3-Level-1-spell_pixelart.png"
+    },
     "chromatic_orb": {
+      "name": "Chromatic Orb",
+      "level": 1,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "Eldritch Knight",
+        "Arcane Trickster"
+      ],
+      "book": "chromatic_orb",
+      "text": "Hurl a sphere of energy. It deals 3d8 Thunder damage, or deals 2d8 Acid, Cold; Fire, Lightning, or Poison damage and creates a surface. 18m 2m Attack Roll",
       "img": "spells-icons/Chromatic-Orb-Level-1-Spell-Slot-Baldurs-Gate-3_pixelart.png"
     },
+    "color_spray": {
+      "name": "Colour Spray",
+      "level": 1,
+      "school": "Illusion",
+      "concentration": false,
+      "classes": [
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [
+        "College of Lore"
+      ],
+      "book": "color_spray",
+      "text": "Blind creatures up to a combined 33 hit points. 1 Turn 5m/17ft",
+      "img": "spells-icons/Colour-Spray-leve-1-Spell-BG3_pixelart.png"
+    },
+    "command": {
+      "name": "Command",
+      "level": 1,
+      "school": "Enchantment",
+      "concentration": false,
+      "classes": [
+        "cleric",
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "command",
+      "text": "Command a creature to flee, move closer, freeze, drop to the ground or drop their weapon. 1 Turn 18m/60ft WIS Save",
+      "img": "spells-icons/Command-level-1-spell-Baldurs-Gate-3_pixelart.png"
+    },
+    "compelled_duel": {
+      "name": "Compelled Duel",
+      "level": 1,
+      "school": "Enchantment",
+      "concentration": true,
+      "classes": [
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "compelled_duel",
+      "text": "Compel an enemy to attack only you. It cannot attack other creatures. 3 Turns 9m WIS Save Concentration",
+      "img": "spells-icons/Compelled-Duel-Level-1-Spell-Bg3_pixelart.png"
+    },
+    "create_or_destroy_water": {
+      "name": "Create or Destroy Water",
+      "level": 1,
+      "school": "Transmutation",
+      "concentration": false,
+      "classes": [
+        "cleric",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Storm Sorcery"
+      ],
+      "book": "create_or_destroy_water",
+      "text": "Call forth rain or destroy a water-based. 9m",
+      "img": "spells-icons/Create-or-Destroy-Water-Level-1-Spell_pixelart.png"
+    },
     "cure_wounds": {
+      "name": "Cure Wounds",
+      "level": 1,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "cleric",
+        "druid",
+        "paladin",
+        "ranger"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Life Domain"
+      ],
+      "book": "cure_wounds",
+      "text": "3~8 Healing 1d8+2 Heal a creature you can touch. No effect on undead or constructs. Melee",
       "img": "spells-icons/Cure-Wounds-Level-1-Spell-BG3_pixelart.png"
     },
+    "disguise_self": {
+      "name": "Disguise Self",
+      "level": 1,
+      "school": "Illusion",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Trickery Domain",
+        "Gloom Stalker"
+      ],
+      "book": "disguise_self",
+      "text": "Magically change all aspects of your appearance. (Lasts until the end of a long rest)",
+      "img": "spells-icons/Disguise-self-Cantrip-Bg3_pixelart.png"
+    },
     "dissonant_whispers": {
+      "name": "Dissonant Whispers",
+      "level": 1,
+      "school": "Enchantment",
+      "concentration": false,
+      "classes": [
+        "bard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "The Great Old One"
+      ],
+      "book": "dissonant_whispers",
+      "text": "3~18 Damage 3d6 Psychic Whisper a discordant melody to a creature and Frighten it. 2 turns On Save: Target still takes half damage 18m WIS Save",
       "img": "spells-icons/Dissonant-Whispers-Bg3-spell_pixelart.png"
     },
+    "divine_favor": {
+      "name": "Divine Favour",
+      "level": 1,
+      "school": "Evocation",
+      "concentration": true,
+      "classes": [
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [
+        "War Domain"
+      ],
+      "book": "divine_favor",
+      "text": "Your weapon attacks deal an additional 1∼4 Radiant Damage . 3 Turns Concentration",
+      "img": "spells-icons/Divine-favour-Level-1-Spell-Baldurs-Gate-3_pixelart.png"
+    },
+    "ensnaring_strike": {
+      "name": "Ensnaring Strike",
+      "level": 1,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "ranger"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Oath of the Ancients"
+      ],
+      "book": "ensnaring_strike",
+      "text": "Your attack summons thorny vines that possibly Ensnare your target. 10 Turns Melee STR Save Concentration",
+      "img": "spells-icons/Ensnaring_Strike_Ranged_Icon_pixelart.png"
+    },
+    "entangle": {
+      "name": "Entangle",
+      "level": 1,
+      "school": "Conjuration",
+      "concentration": false,
+      "classes": [
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "entangle",
+      "text": "Vines sprout from the ground, slowing creatures within and possibly Entangling them. 18m 2m DEX Save Concentration",
+      "img": "spells-icons/Entangle-Level-1-Spell-Baldurs-Gate-3_pixelart.png"
+    },
+    "expeditious_retreat": {
+      "name": "Expeditious Retreat",
+      "level": 1,
+      "school": "Transmutation",
+      "concentration": true,
+      "classes": [
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "Eldritch Knight"
+      ],
+      "book": "expeditious_retreat",
+      "text": "Gain Dash immediately and as a bonus action on each of your turns until this spell ends. Until Long Rest Concentration",
+      "img": "spells-icons/Expeditious-retreat-Baldurs-Gate-3-Spell-level-1_pixelart.png"
+    },
+    "faerie_fire": {
+      "name": "Faerie Fire",
+      "level": 1,
+      "school": "Evocation",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Light Domain"
+      ],
+      "book": "faerie_fire",
+      "text": "Encase multiple targets in colourful light. The targets turns visible, and Attack Rolls against the targets have Advantage . 10 Turns Range: 18m/60ft 6m DEX Save Concentration",
+      "img": "spells-icons/Faerie-Fire-Spell-Baldurs-Gate-3_pixelart.png"
+    },
+    "false_life": {
+      "name": "False Life",
+      "level": 1,
+      "school": "Necromancy",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "College of Lore"
+      ],
+      "book": "false_life",
+      "text": "Gain 7 temporary hit points . Until Long Rest Can only have temporary hit points from one source.",
+      "img": "spells-icons/False-Life-Spell-Baldurs-Gate-3_pixelart.png"
+    },
+    "feather_fall": {
+      "name": "Feather Fall",
+      "level": 1,
+      "school": "Transmutation",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "feather_fall",
+      "text": "You and nerby allies Immunity to Falling damage. 10 Turns 9m",
+      "img": "spells-icons/Feather-Fall-Spell-Baldurs-Gate-3_pixelart.png"
+    },
+    "find_familiar": {
+      "name": "Find Familiar",
+      "level": 1,
+      "school": "Conjuration",
+      "concentration": false,
+      "classes": [
+        "wizard",
+        "ranger"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "find_familiar",
+      "text": "Gain the service of a familiar, a fey spirit that takes an animal from of your choose. Range: 18m",
+      "img": "spells-icons/Find-Familiar-Baldurs-Gate-3-spell_pixelart.png"
+    },
+    "fog_cloud": {
+      "name": "Fog Cloud",
+      "level": 1,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "druid",
+        "ranger",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Tempest Domain"
+      ],
+      "book": "fog_cloud",
+      "text": "The cloud Blinds and Heavily Obscures creatures within it. 10 Turns 5m 18m Concentration",
+      "img": "spells-icons/Fog-Cloud-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "goodberry": {
+      "name": "Goodberry",
+      "level": 1,
+      "school": "Transmutation",
+      "concentration": false,
+      "classes": [
+        "druid",
+        "ranger"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "goodberry",
+      "text": "4~16 Healing 4d4 Conjure four magical berries into your or a companion's inventory. Creatures who eat a berry regain 1~4 hit points . Berries disappear after a Long Rest . Until Long Rest Melee",
+      "img": "spells-icons/Goodberry_pixelart.png"
+    },
+    "grease": {
+      "name": "Grease",
+      "level": 1,
+      "school": "Conjuration",
+      "concentration": false,
+      "classes": [
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "Eldritch Knight"
+      ],
+      "book": "grease",
+      "text": "Cover the ground in grease, slowing creatures within and possibly making them fall Prone 10 Turns 18m 4m DEX Save",
+      "img": "spells-icons/Grease-Baldurs-Gate-3-Spells_pixelart.png"
+    },
     "guiding_bolt": {
+      "name": "Guiding Bolt",
+      "level": 1,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [
+        "College of Lore"
+      ],
+      "book": "guiding_bolt",
+      "text": "2~18 Damage 4d6 Radiant Call forth a beam of light that grants Advantage on the next Attack Roll against the target. 2 Turns. 18m/60ft",
       "img": "spells-icons/Guiding-Bolt-Baldurs-Gate-3-Spells_pixelart.png"
     },
+    "hail_of_thorns": {
+      "name": "Hail of Thorns",
+      "level": 1,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "ranger"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "hail_of_thorns",
+      "text": "+1d10 Piercing The thorns deal Weapon Damage to the target and then explode. The explosion deals an additional 1~10 Piercing damage to the target and surrounding creatures. On Miss: Thorns still explode. On Save: Targets still take half damage from the explosion. 18m DEX Save",
+      "img": "spells-icons/Hail-of-thorns-BG3-spell_pixelart.png"
+    },
     "healing_word": {
+      "name": "Healing Word",
+      "level": 1,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "cleric",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "healing_word",
+      "text": "1~4 Healing 1d4 Heal a creature you can see. No effect on undead and constructs. 18m",
       "img": "spells-icons/Healing-Word-Baldurs-Gate-3-Spells_pixelart.png"
     },
+    "hellish_rebuke": {
+      "name": "Hellish Rebuke",
+      "level": 1,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "warlock"
+      ],
+      "knight": false,
+      "subclasses": [
+        "College of Lore"
+      ],
+      "book": "hellish_rebuke",
+      "text": "2~20 Damage 2d10 Fire (Delayed) The next time you take damage, you use your reaction to surround your attacker in hellish flames. On Save: Target still takes half damage. DEX Save",
+      "img": "spells-icons/Hellish-Rebuke_pixelart.png"
+    },
+    "heroism": {
+      "name": "Heroism",
+      "level": 1,
+      "school": "Enchantment",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "heroism",
+      "text": "Make yourself or a target immune to Frightened and gains 5 temporary hit points each turn. 10 Turns Can only have temporary hit points from one source. Melee Concentration",
+      "img": "spells-icons/Heroism-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "hex": {
+      "name": "Hex",
+      "level": 1,
+      "school": "Enchantment",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "warlock"
+      ],
+      "knight": false,
+      "subclasses": [
+        "College of Lore"
+      ],
+      "book": "hex",
+      "text": "1~6 Damage 1d6 Necrotic (Conditional) Curse a creature so it takes additional damage whenever you attack it and to inflict Disadvantage on Ability Checks with an Ability of your choosing. If the target dies before the spell ends. you can Hex a new creature without expending a spell slot . 18m Concentration",
+      "img": "spells-icons/Hex-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "hunters_mark": {
+      "name": "Hunter's Mark",
+      "level": 1,
+      "school": "Divination",
+      "concentration": true,
+      "classes": [
+        "ranger"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Oath of Vengeance"
+      ],
+      "book": "hunters_mark",
+      "text": "1~6 Damage 1d6 Slashing Mark a creature as your quarry to deal an additional 1d6 Slashing Damage whenever you hit it with a weapon attacks. If the target dies before the spell ends, you can mark a new creature without expanding a Spell Slot. Until Long Rest 18m Concentration",
+      "img": "spells-icons/Hunters-Mark-Baldurs-Gate-3-Spells_pixelart.png"
+    },
     "ice_knife": {
+      "name": "Ice Knife",
+      "level": 1,
+      "school": "Conjuration",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "druid",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "College of Lore"
+      ],
+      "book": "ice_knife",
+      "text": "1~10(target) / 2~12(area) 1d10 Piercing +2d6 Cold Throw a shard of ice that deals 1∼10 Piercing damage . It explodes and deals 2-12 Cold damage to anyone nearby. It leaves an ice surface. On Miss: The shard of ice still explodes. 2m 18m DEX Save",
       "img": "spells-icons/Ice-Knife-spell-BG3_pixelart.png"
     },
     "inflict_wounds": {
+      "name": "Inflict Wounds",
+      "level": 1,
+      "school": "Necromancy",
+      "concentration": false,
+      "classes": [
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Oathbreaker"
+      ],
+      "book": "inflict_wounds",
+      "text": "3~30 Damage 3d10 Necrotic Putrfy a creature with the nectrotic energy filling your hands. Melee",
       "img": "spells-icons/Inflict-Wounds-Baldurs-Gate-3-Spells_pixelart.png"
     },
+    "jump": {
+      "name": "Enhance Leap",
+      "level": 1,
+      "school": "Transmutation",
+      "concentration": false,
+      "classes": [
+        "druid",
+        "ranger",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Arcane Trickster"
+      ],
+      "book": "jump",
+      "text": "Triple a creature's jumping distance. 10 Turns Melee",
+      "img": "spells-icons/Enhance-Leap-Level-1-Spell-Baldurs-Gate-3_pixelart.png"
+    },
+    "longstrider": {
+      "name": "Longstrider",
+      "level": 1,
+      "school": "Transmutation",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "druid",
+        "ranger",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "longstrider",
+      "text": "Touch a creature to increase its Movement Speed by 3m. Until Long Rest Melee",
+      "img": "spells-icons/Longstrider-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "mage_armor": {
+      "name": "Mage Armour",
+      "level": 1,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "Arcane Trickster",
+        "Eldritch Knight"
+      ],
+      "book": "mage_armor",
+      "text": "Protect a target from attacks: increase its Armour Class to 13 + its Dexterity modifier. Until Long Rest The target can't be wearing armour Mele",
+      "img": "spells-icons/Mage-Armour-Baldurs-Gate-3-Spells_pixelart.png"
+    },
     "magic_missile": {
+      "name": "Magic Missile",
+      "level": 1,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "College of Lore",
+        "Eldritch Knight",
+        "Arcane Trickster"
+      ],
+      "book": "magic_missile",
+      "text": "6~15 Damage 3d4+3 Force Shoot 3 magical darts, each dealing 2∼5 Force damage. They always hit their target. 18m",
       "img": "spells-icons/Magic-Missile-Spell-BG3_pixelart.png"
     },
+    "protection_from_evil_and_good": {
+      "name": "Protection from Evil and Good",
+      "level": 1,
+      "school": "Abjuration",
+      "concentration": true,
+      "classes": [
+        "cleric",
+        "paladin",
+        "ranger",
+        "warlock",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "Eldritch Knight",
+        "Arcane Trickster"
+      ],
+      "book": "protection_from_evil_and_good",
+      "text": "Protect a creature against aberrations, celestials, elementals, fey, fiends, and undead. The target can't be Charmed , Frightened , or possessed by them, and when these creatures attack it, they do so with disadvantage . Inflicts Protection from Evil and Good Melee Concentration",
+      "img": "spells-icons/Protection-from-Evil-and-Good-Baldurs-Gate-3-Spells_pixelart.png"
+    },
     "ray_of_sickness": {
+      "name": "Ray of Sickness",
+      "level": 1,
+      "school": "Necromancy",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "Eldritch Knight"
+      ],
+      "book": "ray_of_sickness",
+      "text": "2~16 Damage 2d8 Poison Possibly Poisons the target. 2 Turns 18m CON Save",
       "img": "spells-icons/Ray-of-Sickness-Baldurs-Gate-3-Spells_pixelart.png"
     },
+    "sanctuary": {
+      "name": "Sanctuary",
+      "level": 1,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Oath of Devotion"
+      ],
+      "book": "sanctuary",
+      "text": "You or an ally cannot be target until you attack or harm a creature. You can still take damage from area spells. Until the affected entity attacks or harms another creature, it cannot be targeted by enemy attacks. However, it can still take damage from spells that influence a large area. 10 Turns 18m Always Prepared",
+      "img": "spells-icons/Sanctuary-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "searing_smite": {
+      "name": "Searing Smite",
+      "level": 1,
+      "school": "Evocation",
+      "concentration": true,
+      "classes": [
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "searing_smite",
+      "text": "+1d6 Fire Deal an extra 1~6 Fire Damage and set your target on fire: it takes 1~6 Fire damage every turn. 10 Turns Melee Concentration",
+      "img": "spells-icons/Searing-Smite-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "shield": {
+      "name": "Shield",
+      "level": 1,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "Eldritch Knight",
+        "Arcane Trickster"
+      ],
+      "book": "shield",
+      "text": "When you are about to be hit by an enemy, increase your Armour Class by 5. You take no damage from Magic Missile . Until Long Rest",
+      "img": "spells-icons/Shield-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "shield_of_faith": {
+      "name": "Shield of Faith",
+      "level": 1,
+      "school": "Abjuration",
+      "concentration": true,
+      "classes": [
+        "cleric",
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [
+        "War Domain"
+      ],
+      "book": "shield_of_faith",
+      "text": "Protect a creature from attacks: increases its Armour Class by 2. Until Long Rest 18m/60ft Concentration",
+      "img": "spells-icons/Shield-of-Faith-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "sleep": {
+      "name": "Sleep",
+      "level": 1,
+      "school": "Enchantment",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Knowledge Domain"
+      ],
+      "book": "sleep",
+      "text": "Put creatures into a magical slumber. Select targets up to a combined 24 hit points. 2 Turns The condition ends upon taking damage. 18m",
+      "img": "spells-icons/Sleep-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "speak_with_animals": {
+      "name": "Speak with Animals",
+      "level": 1,
+      "school": "Divination",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "druid",
+        "ranger"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Nature Domain",
+        "Oath of the Ancients"
+      ],
+      "book": "speak_with_animals",
+      "text": "Gain the ability to comprehend and verbally communicate with beasts. Until Long Rest",
+      "img": "spells-icons/Speak-with-Animals-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "tashas_hideous_laughter": {
+      "name": "Tasha's Hideous Laughter",
+      "level": 1,
+      "school": "Enchantment",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "The Great Old One"
+      ],
+      "book": "tashas_hideous_laughter",
+      "text": "Leve a creture Prone with laughter, without the ability to get up. 10 turns The creature must have an Intelligence of 5 or more. The target can try to shake off the effect each time it takes damage. 18m WIS Save Concentration",
+      "img": "spells-icons/Tashas-Hideous-Laughter-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "thunderous_smite": {
+      "name": "Thunderous Smite",
+      "level": 1,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "thunderous_smite",
+      "text": "+2d6 Thunder Pushes your target 3m away and possibly knocks it Prone . 1 turn Melee STR Save Action Bonus Action Level 1 Spell Slot",
+      "img": "spells-icons/Thunderous_Smite-Baldurs-Gate-3-Spells_pixelart.png"
+    },
     "thunderwave": {
+      "name": "Thunderwave",
+      "level": 1,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "druid",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "Tempest Domain",
+        "Eldritch Knight",
+        "Arcane Trickster"
+      ],
+      "book": "thunderwave",
+      "text": "2~16 Damage 2d8 Thunder Release a wave of thunderous force that pushes away all creatures and objects. 5m CON Save",
       "img": "spells-icons/Thunderwave-spell-BG3_pixelart.png"
     },
+    "wrathful_smite": {
+      "name": "Wrathful Smite",
+      "level": 1,
+      "school": "Evocation",
+      "concentration": true,
+      "classes": [
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "wrathful_smite",
+      "text": "+1d6 Psychic Possibly Frightens your target. They will be easier to hit and cannot move. 2 Turns Melee WIS Save Concentration",
+      "img": "spells-icons/Wrathful-Smite-Baldurs-Gate-3-Spells_pixelart.png"
+    },
     "witch_bolt": {
+      "name": "Witch Bolt",
+      "level": 1,
+      "school": "Evocation",
+      "concentration": true,
+      "classes": [
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": true,
+      "subclasses": [
+        "Eldritch Knight",
+        "Arcane Trickster"
+      ],
+      "book": "witch_bolt",
+      "text": "1~12 Damage 1d12 Lightning Link yourself to a target with a bolt of lightning. Deal an additional 1∼12 Lightning Damage each turn by activating it. 10 Turns 18m Concentration",
       "img": "spells-icons/Witch-Bolt-Spell-BG3_pixelart.png"
     },
+    "aid": {
+      "name": "Aid",
+      "level": 2,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Oath of Devotion",
+        "Oath of the Ancients"
+      ],
+      "book": "aid",
+      "text": "5 Healing Heal your allies and increase their hit point maximum by 5 hit points . Until Long Rest 9m 9m",
+      "img": "spells-icons/Aid-Spell-BG3_pixelart.png"
+    },
+    "arcane_lock": {
+      "name": "Arcane Lock",
+      "level": 2,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "arcane_lock",
+      "text": "Close a door or container with a magical lock.It can no longer be lockpicked or opened with Knock . 10 Turns Melee",
+      "img": "spells-icons/Arcane-Lock-spell-BG3_pixelart.png"
+    },
+    "barkskin": {
+      "name": "Barkskin",
+      "level": 2,
+      "school": "Transmutation",
+      "concentration": true,
+      "classes": [
+        "ranger",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "barkskin",
+      "text": "Protect a creature from attacks: increase its Armour Class up to 16. Until Long Rest Melee Concentration",
+      "img": "spells-icons/Barkskin-Spell-BG3_pixelart.png"
+    },
+    "blindness": {
+      "name": "Blindness",
+      "level": 2,
+      "school": "Necromancy",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "cleric",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "The Fiend"
+      ],
+      "book": "blindness_deafness",
+      "text": "Limit a foes sight range. It is easier to hit, and the creature will miss more often. Attack Rolls against it have Advantage and the foe attacks with Disadvantage . 10 turns 18m CON Save",
+      "img": "spells-icons/Blindness-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "blur": {
+      "name": "Blur",
+      "level": 2,
+      "school": "Illusion",
+      "concentration": true,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "blur",
+      "text": "Attackers have Disadvantage on Attack rolls against you. Doesn't affect creatures that don't rely on sight or that can see through illusions. 10 turns Concentration",
+      "img": "spells-icons/Blur-Spell-BG3_pixelart.png"
+    },
+    "branding_smite": {
+      "name": "Branding Smite",
+      "level": 2,
+      "school": "Evocation",
+      "concentration": true,
+      "classes": [],
+      "knight": false,
+      "subclasses": [
+        "Oath of Devotion",
+        "Oath of the Ancients"
+      ],
+      "book": "branding_smite",
+      "text": "+2d6 Radiant Your weapon gleams with astral radiance as you strike and possibly marks your target with light, preventing it from turning Invisible. 10 turns Melee CON Save Concentration",
+      "img": "spells-icons/Branding-Smite-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "calm_emotions": {
+      "name": "Calm Emotions",
+      "level": 2,
+      "school": "Enchantment",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "calm_emotions",
+      "text": "Suppress strong emotions in an area, making all humanoids immune to being Charmed or Frightened . 10 turns 18m 6m Concentration",
+      "img": "spells-icons/Calm-Emotions-Spell-BG3_pixelart.png"
+    },
+    "cloud_of_daggers": {
+      "name": "Cloud of Daggers",
+      "level": 2,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "cloud_of_daggers",
+      "text": "4~16 Damage 4d4 Slashing Conjure a cloud ofspinning daggers that attack anyone inside. 10 turns Range: 18m Concentration",
+      "img": "spells-icons/Cloud-of-Daggers-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "crown_of_madness": {
+      "name": "Crown of Madness",
+      "level": 2,
+      "school": "Enchantment",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Oathbreaker"
+      ],
+      "book": "crown_of_madness",
+      "text": "Instil madness in a humanoid enemy, making them attack the creature closest to them (other than you), even if it's allied. 3 turns 18m WIS Save Concentration",
+      "img": "spells-icons/Crown-of-Madness-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "darkness": {
+      "name": "Darkness",
+      "level": 2,
+      "school": "Evocation",
+      "concentration": true,
+      "classes": [
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Oathbreaker"
+      ],
+      "book": "darkness",
+      "text": "Create a cloud of magical darkness that Heavily Obscures and Blinds creatures within. Creatures cannot make ranged attacks into or out of it. 10 turns 5m 18m Concentration",
+      "img": "spells-icons/Darkness-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "darkvision": {
+      "name": "Darkvision",
+      "level": 2,
+      "school": "Transmutation",
+      "concentration": false,
+      "classes": [
+        "ranger",
+        "sorcerer",
+        "wizard",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "darkvision",
+      "text": "Grant a creature the ability to see in the dark out to a range of 12m. Until Long Rest Melee",
+      "img": "spells-icons/Darkvision-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "detect_thoughts": {
+      "name": "Detect Thoughts",
+      "level": 2,
+      "school": "Divination",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "The Great Old One"
+      ],
+      "book": "detect_thoughts",
+      "text": "Focus your mind to read the thoughts of certain creatures while talking to them. Until Long Rest Concentration",
+      "img": "spells-icons/Detect-Thoughts-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "enhance_ability": {
+      "name": "Enhance Ability",
+      "level": 2,
+      "school": "Transmutation",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "cleric",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "enhance_ability",
+      "text": "Bestow a magical enhancement upon an ally. They gain Advantage on Ability Checks with a chosen Ability . Melee Concentration",
+      "img": "spells-icons/Enhance-Ability-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "enlarge_reduce": {
+      "name": "Enlarge/Reduce",
+      "level": 2,
+      "school": "Transmutation",
+      "concentration": true,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "enlarge_reduce",
+      "text": "Make a creature larger or smaller to affect their weapon damage and Strength Checks and Saving Throws. 9m CON Save Concentration",
+      "img": "spells-icons/Enlarge_Reduce-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "flame_blade": {
+      "name": "Flame Blade",
+      "level": 2,
+      "school": "Evocation",
+      "concentration": true,
+      "classes": [
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "flame_blade",
+      "text": "Conjure a flaming scimitar in your hand that deals 3d6 Fire damage and sheds bright light in a 3m radius and dim light in a 6m radius. The blade can be unequipped and equipped again, but has to stay on the spellcaster's person. Concentration",
+      "img": "spells-icons/Flame-Blade-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "flaming_sphere": {
+      "name": "Flaming Sphere",
+      "level": 2,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "wizard",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "flaming_sphere",
+      "text": "2~12 Damage 2d6 Fire Summon a flaming sphere that damages nearby enemies and objects. The sphere sheds bright light in a 6m radius, and dim light for an additional 6m. 10 turns 18m 2m DEX Save Concentration",
+      "img": "spells-icons/Flaming-Sphere-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "gust_of_wind": {
+      "name": "Gust of Wind",
+      "level": 2,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "druid",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "gust_of_wind",
+      "text": "Summon a strong wind that clears all clouds and pushes creautes back 5m, forcing them Off Balance . 1 Turn 12m STR Save",
+      "img": "spells-icons/Gust-of-Wind-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "heat_metal": {
+      "name": "Heat Metal",
+      "level": 2,
+      "school": "Transmutation",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "heat_metal",
+      "text": "2~16 Damage 2d8 Fire Cause a metal weapon or armour to glow red-hot and force the creature touching it to let go or receive Disadvantage on Attack Rolls and Ability Checks. If the creature is only wearing metal armour, it always rcccivcs Disadvantage. If the creature is still touching the metal, you can use a bonus action on subsequent turns to deal another 2d8 Fire damage and force the creature to let go or receive Disadvantage. 10 turns",
+      "img": "spells-icons/Heat-Metal-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "hold_person": {
+      "name": "Hold Person",
+      "level": 2,
+      "school": "Enchantment",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "warlock",
+        "cleric",
+        "wizard",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "hold_person",
+      "text": "Hold a humanoid enemy still. They can't move, act or react. Attacks from within 3m are always Critical Hits. 10 turns 18m WIS Save Concentration",
+      "img": "spells-icons/Hold-Person-Spell-BG3_pixelart.png"
+    },
+    "invisibility": {
+      "name": "Invisibility",
+      "level": 2,
+      "school": "Illusion",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "invisibility",
+      "text": "Touch a creature to turn it Invisible. Attacks against it have Disadvantage. It attacks with Advantage. 10 turns Condition ends early if the creature attacks or casts a spell. Melee Concentration",
+      "img": "spells-icons/Invisibility-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "knock": {
+      "name": "Knock",
+      "level": 2,
+      "school": "Transmutation",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "bard",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "knock",
+      "text": "Unlock an object that is held shut by a mundane lock. 18m",
+      "img": "spells-icons/Knock-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "lesser_restoration": {
+      "name": "Lesser Restoration",
+      "level": 2,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "ranger",
+        "cleric",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Oath of Devotion",
+        "Oath of the Ancients"
+      ],
+      "book": "lesser_restoration",
+      "text": "Cure a creature from disease, poison, paralysis or blindness. Melee",
+      "img": "spells-icons/Lesser-Restoration-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "magic_weapon": {
+      "name": "Magic Weapon",
+      "level": 2,
+      "school": "Transmutation",
+      "concentration": true,
+      "classes": [
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Oath of Devotion",
+        "Oath of the Ancients"
+      ],
+      "book": "magic_weapon",
+      "text": "Infuse a weapon with arcane energy. The weapon becomes magical, receiving a +1 bonus to Attack and Damage Rolls. Until Long Rest Melee Concentration",
+      "img": "spells-icons/Magic-Weapon-Baldurs-Gate-3-Spells_pixelart.png"
+    },
     "melfs_acid_arrow": {
+      "name": "Melf's Acid Arrow",
+      "level": 2,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "melfs_acid_arrow",
+      "text": "4~16 + 2~8(Delayed) 4d4 Acid + 2d4 Acid (Delayed) Shoot a green arrow that covers the target and the ground with acid. Deals 4d4 Acid damage immediately and 2d4 Acid damage at the end of the target's turn. 1 turn On Missing: Target still takes half the initial damage. 18m",
       "img": "spells-icons/Melfs-Acid-Arrow-Baldurs-Gate-3-Spells_pixelart.png"
     },
+    "mirror_image": {
+      "name": "Mirror Image",
+      "level": 2,
+      "school": "Illusion",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Circle of the Land"
+      ],
+      "book": "mirror_image",
+      "text": "Create 3 illusory duplicates of yourself that distract attackers. Each duplicate increases your Armour Class by 3. Whenever you successfully evade an attack, one of the duplicates disappears. 10 turns",
+      "img": "spells-icons/Mirror-Image-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "misty_step": {
+      "name": "Misty Step",
+      "level": 2,
+      "school": "Conjuration",
+      "concentration": false,
+      "classes": [
+        "warlock",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Oath of the Ancients",
+        "Circle of the Land"
+      ],
+      "book": "misty_step",
+      "text": "Surrounded by silver mist, you teleport to an unoccupied space you can see. 18m",
+      "img": "spells-icons/Misty-Step-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "moonbeam": {
+      "name": "Moonbeam",
+      "level": 2,
+      "school": "Evocation",
+      "concentration": true,
+      "classes": [
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Oath of the Ancients"
+      ],
+      "book": "moonbeam",
+      "text": "2~20 Damage 2d10 Radiant Call down a silvery beam ofpale light that damages any creature that enters the beam or starts its turn in the light. You can use an action to move the beam 18m. 10 turns 18m 1m CON Save Concentration",
+      "img": "spells-icons/Moonbeam-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "pass_without_trace": {
+      "name": "Pass without Trace",
+      "level": 2,
+      "school": "Abjuration",
+      "concentration": true,
+      "classes": [
+        "ranger",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "pass_without_trace",
+      "text": "Call forth a veil of shadows and silence that gives you and all nearby companions a +10 bonus to Stealth Checks . Until Long Rest Concentration",
+      "img": "spells-icons/Pass-Without-Trace-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "phantasmal_force": {
+      "name": "Phantasmal Force",
+      "level": 2,
+      "school": "Illusion",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "The Great Old One"
+      ],
+      "book": "phantasmal_force",
+      "text": "1~6 Damage 1d6 Phychic Deal damage to a creature each turn. The type of damage changes to the last type the creature suffered. 10 turns",
+      "img": "spells-icons/Phantasmal-Force-Baldurs-Gate-3-Spells_pixelart.png"
+    },
     "prayer_of_healing": {
+      "name": "Prayer of Healing",
+      "level": 2,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "prayer_of_healing",
+      "text": "2~16 Healing 2d8 Heal all allies you can see. 9m 9m",
       "img": "spells-icons/Prayer-of-Healing-Baldurs-Gate-3-Spells_pixelart.png"
     },
+    "protection_from_poison": {
+      "name": "Protection from Poison",
+      "level": 2,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "ranger",
+        "cleric",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Oath of Devotion",
+        "Oath of the Ancients"
+      ],
+      "book": "protection_from_poison",
+      "text": "Touch a creature to neutraise all poisons affecting it, and grants it protection against poisonous influences. Grants Advantage on Saving Throws against being Poisoned , and grant it Resistance to Poison damage. Until Long Rest Melee",
+      "img": "spells-icons/Protection-from-Poison-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "ray_of_enfeeblement": {
+      "name": "Ray of Enfeeblement",
+      "level": 2,
+      "school": "Necromancy",
+      "concentration": true,
+      "classes": [
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "ray_of_enfeeblement",
+      "text": "Weaken a Foe: they deal half damage with weapon attacks using Strength . 10 Turns 18m Concentration",
+      "img": "spells-icons/Ray-of-Enfeeblement-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "see_invisibility": {
+      "name": "See Invisibility",
+      "level": 2,
+      "school": "Divination",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "see_invisibility",
+      "text": "Become able to see Invisible creatures, and possibly reveal them to others. Untial Long Rest 9m Dex Save",
+      "img": "spells-icons/See-Invisibility-Baldurs-Gate-3-Spell_pixelart.png"
+    },
     "scorching_ray": {
+      "name": "Scorching Ray",
+      "level": 2,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [
+        "The Fiend"
+      ],
+      "book": "scorching_ray",
+      "text": "6~48 Damage 6 d6 Fire Hur1 3 rays offire. Each ray deals 2∼12 Fire damage . 18m",
       "img": "spells-icons/Scorching-Ray-Baldurs-Gate-3-Spell_pixelart.png"
     },
     "shatter": {
+      "name": "Shatter",
+      "level": 2,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "shatter",
+      "text": "3~24 Damage 3d8 Thunder Damage all nearby creatures and objects. Creatures made of inorganic material such as stone have Disadvantage on their Saving Throw . On Save: Targets still take half damage. Range: 18m CON Save",
       "img": "spells-icons/Shatter-Baldurs-Gate-3-Spell_pixelart.png"
     },
+    "silence": {
+      "name": "Silence",
+      "level": 2,
+      "school": "Illusion",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "ranger",
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [
+        "Oath of Devotion"
+      ],
+      "book": "silence",
+      "text": "Create a sound-proof sphere. All within are Silenced and Immune to Thunder damage. 100 turns Using this spell might turn targets hostile. Range: 18m Concentration Always Prepared",
+      "img": "spells-icons/Silence-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "spike_growth": {
+      "name": "Spike Growth",
+      "level": 2,
+      "school": "Transmutation",
+      "concentration": true,
+      "classes": [
+        "druid",
+        "ranger"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "spike_growth",
+      "text": "2~8 Damage 2d4 Piercing Shape a piece of ground into hard spikes. Movement is halved. A creature walking on the spikes takes 2-8 Piercing damage for every 1.5m it moves.",
+      "img": "spells-icons/Spike-Growth-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "web": {
+      "name": "Web",
+      "level": 2,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "wizard",
+        "sorcerer"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "web",
+      "text": "Cover an area in thick, flammable webbing that slows creatures within and possibly Enwebs them. 18m 4m DEX Save Concentration",
+      "img": "spells-icons/Web-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "enthral": {
+      "name": "Enthral",
+      "level": 2,
+      "school": "Enchantment",
+      "concentration": true,
+      "classes": [
+        "warlock"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "enthrall",
+      "text": "Reduce a creature's peripheral vision and make it look at you. 10 turns Range: 6m",
+      "img": "spells-icons/Enthrall-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "warding_bond": {
+      "name": "Warding Bond",
+      "level": 2,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "warding_bond",
+      "text": "Ward an ally. They gain Resistance to all damage, and a +1 bonus to their Armour Class and Saving Throws Until Long Rest Melee",
+      "img": "spells-icons/Warding-Bond-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "spiritual_weapon": {
+      "name": "Spiritual Weapon",
+      "level": 2,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "spiritual_weapon",
+      "text": "Summon a floating, spectral weapon that attacks your enemies alongside you. 10 turns 18m",
+      "img": "spells-icons/Spiritual-weapon_pixelart.png"
+    },
+    "animate_dead": {
+      "name": "Animate Dead",
+      "level": 3,
+      "school": "Necromancy",
+      "concentration": false,
+      "classes": [
+        "cleric",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "animate_dead",
+      "text": "Create an undead servant from a corpse. The target must be a Medium or Small corpse. 3m",
+      "img": "spells-icons/Animate-Dead-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "beacon_of_hope": {
+      "name": "Beacon of Hope",
+      "level": 3,
+      "school": "Abjuration",
+      "concentration": true,
+      "classes": [
+        "cleric",
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "beacon_of_hope",
+      "text": "Your allies will regain the maximum hit points possible when healed. They also gain Advantage on Wisdom Saving Throws and Death Saving Throws. 10 Turns 9m Concentration Always Prepared",
+      "img": "spells-icons/Beacon-of-Hope-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "bestow_curse": {
+      "name": "Bestow Curse",
+      "level": 3,
+      "school": "Necromancy",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "cleric",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "bestow_curse",
+      "text": "Curse a creature with your touch. The curse either bestows Disadvantage on checks and Saving Throws or attacks , lets you deal additional damage to the target, or robs it of its actions. 10 turns Melee WIS Save Concentration",
+      "img": "spells-icons/Bestow-Curse-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "blinding_smite": {
+      "name": "Blinding Smite",
+      "level": 3,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "blinding_smite",
+      "text": "+3d8 Radiant Evoke a heavenly flare, and possibly Blind your target. Melee CON Save",
+      "img": "spells-icons/Blinding-Smite-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "blink": {
+      "name": "Blink",
+      "level": 3,
+      "school": "Transmutation",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "blink",
+      "text": "At the end of your turn, roll a d20. On 11 or higher, you vanish into the Ethereal Plane. While there, you can't be harmed or seen in this world. 10 Turns",
+      "img": "spells-icons/Blink-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "call_lightning": {
+      "name": "Call Lightning",
+      "level": 3,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "druid",
+        "sorcerer"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "call_lightning",
+      "text": "3d10 Lightning Lightning strikes all targets within range. Then for 10 turns, you can call down lightning again without expending a spell slot . 10 Turns 18m DEX Save Concentration",
+      "img": "spells-icons/Call-Lightning-Baldurs-Gate-3-Spells_pixelart.png"
+    },
     "conjure_barrage": {
+      "name": "Conjure Barrage",
+      "level": 3,
+      "school": "Conjuration",
+      "concentration": false,
+      "classes": [
+        "ranger"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "conjure_barrage",
+      "text": "2d8 Slashing",
       "img": "spells-icons/Conjure-Barrage-Baldurs-Gate-3-Spells_pixelart.png"
     },
+    "counterspell": {
+      "name": "Counterspell",
+      "level": 3,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "counterspell",
+      "text": "Nullify another creature's spell as a reaction. The spell must be 3rd level or lower. If it is higher, you must succed a Check to nullify it, the difficulty of which is based on the spell's Level. 18m",
+      "img": "spells-icons/Counterspell-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "crusaders_mantle": {
+      "name": "Crusader's Mantle",
+      "level": 3,
+      "school": "Evocation",
+      "concentration": true,
+      "classes": [
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "crusaders_mantle",
+      "text": "Radiate a holy power that emboldens nearby allies. Thei weapon attacks deal an additional 1∼4 Radiant damage . 10 Turns Concentration",
+      "img": "spells-icons/Crusaders-Mantle-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "daylight": {
+      "name": "Daylight",
+      "level": 3,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "cleric",
+        "druid",
+        "paladin",
+        "ranger",
+        "sorcerer"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "daylight",
+      "text": "Enchant an item to shine like the sun or summon a sphere of sunlight that dispels all darkness around it. Until Long Rest 18m",
+      "img": "spells-icons/Daylight-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "elemental_weapon": {
+      "name": "Elemental Weapon",
+      "level": 3,
+      "school": "Transmutation",
+      "concentration": true,
+      "classes": [
+        "druid",
+        "paladin",
+        "ranger"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "elemental_weapon",
+      "text": "Imbue a weapon with elemental power. It receives a +1 bonus to Attack Rolls , and deals an additional 1d4 damage of your choice. Melee Concentration",
+      "img": "spells-icons/Elemental-Weapon-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "fear": {
+      "name": "Fear",
+      "level": 3,
+      "school": "Illusion",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "fear",
+      "text": "Project an image so frightening it makes targets drop everything and become Fearful. They will be easier to hit and cannot move. 3 Turns 1 Turn 9m WIS Save Concentration",
+      "img": "spells-icons/Fear-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "feign_death": {
+      "name": "Feign Death",
+      "level": 3,
+      "school": "Necromancy",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "cleric",
+        "druid",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "feign_death",
+      "text": "Put an ally in a protective, magical coma deep enough to imitate death. The Ally becomes Resistant to all damage except psychic damage, and disease and poison no longer have any effect. 10 Turns Melee",
+      "img": "spells-icons/Feign-Death-Baldurs-Gate-3-Spell_pixelart.png"
+    },
     "fireball": {
+      "name": "Fireball",
+      "level": 3,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "fireball",
+      "text": "8d6 Fire Shoot a bright flame from your fingers that explodes upon contact, torching everything in the vicinity. On Save: Targets still take half damage. 18m 6m DEX Save",
       "img": "spells-icons/Flaming-Sphere-Baldurs-Gate-3-Spells_pixelart.png"
     },
+    "fly": {
+      "name": "Fly",
+      "level": 3,
+      "school": "Transmutation",
+      "concentration": true,
+      "classes": [
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "fly",
+      "text": "Bestow you or an ally with the ability to Fly. 10 Turns",
+      "img": "spells-icons/Grant-Flight-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "gaseous_form": {
+      "name": "Gaseous Form",
+      "level": 3,
+      "school": "Transmutation",
+      "concentration": true,
+      "classes": [
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "gaseous_form",
+      "text": "Transform yourself or an ally into a tiny gas cloud. It can't fall, and fits through small openings. It is very hard to damage. Until Long Rest While transformed, the target won't be able to attack, cast spells, or talk. Melee Concentration",
+      "img": "spells-icons/Gaseous-Form-Baldurs-Gate-3_pixelart.png"
+    },
+    "glyph_of_warding": {
+      "name": "Glyph of Warding",
+      "level": 3,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "cleric",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "glyph_of_warding",
+      "text": "Inscribe a circle of arcane glyphs on the ground that trigger a magical effect when stepped on by an enemy. 3m 8m Dex Save",
+      "img": "spells-icons/Gluph-of-Warding-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "haste": {
+      "name": "Haste",
+      "level": 3,
+      "school": "Transmutation",
+      "concentration": true,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "haste",
+      "text": "Target yourself or an ally to become Hastened : gain an action, become faster and harder to hit. 10 Turns When the condition ends, become Lethargic . 9m Concentration",
+      "img": "spells-icons/Haste-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "hunger_of_hadar": {
+      "name": "Hunger of Hadar",
+      "level": 3,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "warlock"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "hunger_of_hadar",
+      "text": "2d6 +2d6 Create a sphere of cold blackness, teeming with unknown horrors. Creatures starting their turn in the take 2d6 Cold damage . Creatures ending their turn in the area possibly take 2d6 Acid damage . The area is Difficult Terrain and creatures within are Blinded . 10Turns 18m 6m DEX Save Concentration",
+      "img": "spells-icons/Hunger-of-Hadar-Baldurs-Gate-3_pixelart.png"
+    },
+    "hypnotic_pattern": {
+      "name": "Hypnotic Pattern",
+      "level": 3,
+      "school": "Illusion",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "hypnotic_pattern",
+      "text": "Hypnotise creatures that can see the pattern. They cannot attack you. They cannot move or act. 2 Turns 18m WIS Save Concentration",
+      "img": "spells-icons/Hypnotic-Pattern-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "lightning_arrow": {
+      "name": "Lightning Arrow",
+      "level": 3,
+      "school": "Transmutation",
+      "concentration": false,
+      "classes": [
+        "ranger"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "lightning_arrow",
+      "text": "6~48 Damage 4d8+2d8 Lightning After the arrow hits, smaller bolts snake out from the target toward nearby creatures.",
+      "img": "spells-icons/Lightning-Arrow-Baldurs-Gate-3-Spell_pixelart.png"
+    },
     "lightning_bolt": {
+      "name": "Lightning Bolt",
+      "level": 3,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "lightning_bolt",
+      "text": "8d6 Lightning Call forth a blast of lightning that hits all creatures in the line of the eruption. On save: Targets still take half damage. 30m DEX Save",
       "img": "spells-icons/Lightning-Bolt-Baldurs-Gate-3-Spell_pixelart.png"
     },
     "mass_healing_word": {
+      "name": "Mass Healing Word",
+      "level": 3,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "mass_healing_word",
+      "text": "1d4+3 Call out words of restoration to heal up to 6 creatures. No effect on undead and constructs. 18m 18m",
       "img": "spells-icons/Mass-Healing-Word-Baldurs-Gate-3-Spell_pixelart.png"
     },
+    "plant_growth": {
+      "name": "Plant Growth",
+      "level": 3,
+      "school": "Transmutation",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "druid",
+        "ranger"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "plant_growth",
+      "text": "Make weeds burst from the ground and smother the area. Creatures moving through the weeds have their Movement Speed quartered. 18m 6m",
+      "img": "spells-icons/Plant-Growth-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "protection_from_energy": {
+      "name": "Protection from Energy",
+      "level": 3,
+      "school": "Abjuration",
+      "concentration": true,
+      "classes": [
+        "cleric",
+        "druid",
+        "ranger",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "protection_from_energy",
+      "text": "Touch a creature to grant it Resistance to Acid, Cold, Fire, Lightning, or Thunder damage. Melee Concentration",
+      "img": "spells-icons/Protection-from-Energy-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "remove_curse": {
+      "name": "Remove Curse",
+      "level": 3,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "cleric",
+        "paladin",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "remove_curse",
+      "text": "Touch a creature or object to remove all Curses and Hex affecting it. Melee",
+      "img": "spells-icons/Remove_Curse_Icon_pixelart.png"
+    },
+    "revivify": {
+      "name": "Revivify",
+      "level": 3,
+      "school": "Necromancy",
+      "concentration": false,
+      "classes": [
+        "cleric",
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "revivify",
+      "text": "Revive a companion. They return to life with 1 hit point. 9m 9m",
+      "img": "spells-icons/Revify-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "sleet_storm": {
+      "name": "Sleet Storm",
+      "level": 3,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "druid",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "sleet_storm",
+      "text": "Call forth a storm that disrupts the Concentration of spellcasters, douses fires, and creaates an ice surface. 10 Turns 18m CON Save Concentration",
+      "img": "spells-icons/Sleet-Storm-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "slow": {
+      "name": "Slow",
+      "level": 3,
+      "school": "Transmutation",
+      "concentration": true,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "slow",
+      "text": "Alter time around up to 6 enemies to Slow them. They won't get far, they can't do much, and they're easier to hit. 10 Turns 18m WIS Save Concentration",
+      "img": "spells-icons/Slow-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "speak_with_dead": {
+      "name": "Speak with Dead",
+      "level": 3,
+      "school": "Necromancy",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "cleric",
+        "warlock"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "speak_with_dead",
+      "text": "Grant a semblance of life to a humanoid corpse, allowing it to answer up to 5 questions.",
+      "img": "spells-icons/Speak-with-Dead-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "spirit_guardians": {
+      "name": "Spirit Guardians",
+      "level": 3,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "spirit_guardians",
+      "text": "Call forth spirits to protect the area around you. Nearby enemies take 3d8 Radiant damage or 3d8 Necrotic damage per turn, and their Movement Speed is halved. On Save: Targets still take half damage. 3m 3m WIS Save Concentration",
+      "img": "spells-icons/Spirit-Guardians-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "stinking_cloud": {
+      "name": "Stinking Cloud",
+      "level": 3,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "stinking_cloud",
+      "text": "Create a cloud of gas so nauseating it prevents creatures from taking actions. 10 Turns 3m 8m Dex Save Concentration",
+      "img": "spells-icons/Stinking-Cloud-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "vampiric_touch": {
+      "name": "Vampiric Touch",
+      "level": 3,
+      "school": "Necromancy",
+      "concentration": false,
+      "classes": [
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "vampiric_touch",
+      "text": "3~18 3d6 Necrotic Touch an enemy to syphon their life force. You regain half as many hit points as hit points as the damage they take. For 10 turns, you can use Vampiric Touch again without expending an additional spell slot. 10 Turns Melee Concentration",
+      "img": "spells-icons/Vampiric-Touch-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "warden_of_vitality": {
+      "name": "Warden of Vitality",
+      "level": 3,
+      "school": "Transmutation",
+      "concentration": false,
+      "classes": [
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": null,
+      "text": "While this aura lasts, you can cast Restore Vitality as a bonus action to heal yourself or nearby allies. 10 Turns 18m",
+      "img": "spells-icons/Warden-of-Vitality-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "banishment": {
+      "name": "Banishment",
+      "level": 4,
+      "school": "Abjuration",
+      "concentration": true,
+      "classes": [
+        "cleric",
+        "paladin",
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "banishment",
+      "text": "Temporarily Banish your target to another plane of existence. 2 Turns 18m CHA Save Concentration",
+      "img": "spells-icons/Banishment-Baldurs-Gate-3-Spell_pixelart.png"
+    },
     "blight": {
+      "name": "Blight",
+      "level": 4,
+      "school": "Necromancy",
+      "concentration": false,
+      "classes": [
+        "druid",
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "blight",
+      "text": "8~64 8d8 Necrotic Plants are more susceptible to this spell: they roll with Disadvantage , and still take half of all the damage if they succeed the roll.",
       "img": "spells-icons/Blight-Baldurs-Gate-3-Spell_pixelart.png"
     },
+    "confusion": {
+      "name": "Confusion",
+      "level": 4,
+      "school": "Enchantment",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "druid",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "confusion",
+      "text": "Befuddle a group creatures, causing them to attack at random, wander around aimlessly, and occasionally skip turns in the stupor. 3 Turns 18m WIS Save Concentration",
+      "img": "spells-icons/Confusion-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "conjure_minor_elemental": {
+      "name": "Conjure Minor Elemental",
+      "level": 4,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "druid",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "conjure_minor_elementals",
+      "text": "Conjure a minor elemental to fight alongside you. 18m",
+      "img": "spells-icons/Conjure-Minor-Elemental-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "conjure_woodland_beings": {
+      "name": "Conjure Woodland Beings",
+      "level": 4,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "druid",
+        "ranger"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "conjure_woodland_beings",
+      "text": "Summon from 1 fey of CR 2 to 8 fey of CR 1/4, friendly (nbr of creatures/lvl).",
+      "img": "spells-icons/conjure-Woodland-Being-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "death_ward": {
+      "name": "Death Ward",
+      "level": 4,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "cleric",
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "death_ward",
+      "text": "When the target drops to 0 hp for the first time, it automatically returns to 1 hp.",
+      "img": "spells-icons/Death-Ward-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "dimension_door": {
+      "name": "Dimension Door",
+      "level": 4,
+      "school": "Conjuration",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "dimension_door",
+      "text": "Teleport yourself and up to 1 adjacent ally to a place you can see. The ally cannot be larger than medium. Melee",
+      "img": "spells-icons/Dimension-Door-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "dominate_beast": {
+      "name": "Dominate Beast",
+      "level": 4,
+      "school": "Enchantment",
+      "concentration": true,
+      "classes": [
+        "druid",
+        "sorcerer"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "dominate_beast",
+      "text": "Make a beast fight alongside you. Every time the beast takes damage, it makes a Wisdom Saving Throw against your domination. 10 Turns 18m WIS Save Concentration",
+      "img": "spells-icons/Dominate-Beast-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "evards_black_tentacles": {
+      "name": "Evard's Black Tentacles",
+      "level": 4,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "wizard",
+        "warlock"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "evards_black_tentacles",
+      "text": "3~18 Damage 3d6 Bludgeoning Tentacles sprout from the ground, turning the area into Difficult Terrain , attacking and Smothering creatures within.",
+      "img": "spells-icons/Edvards-Black-Tentacles-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "fire_shield": {
+      "name": "Fire Shield",
+      "level": 4,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "fire_shield",
+      "text": "The caster gains resistance to cold or fire damage, and deals 2d8 damage to attackers who hit him within 5 ft.",
+      "img": "spells-icons/Fire-shield-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "freedom_of_movement": {
+      "name": "Freedom of Movement",
+      "level": 4,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "cleric",
+        "druid",
+        "ranger"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "freedom_of_movement",
+      "text": "Target's movement is unaffected by difficult terrain, spells or water.",
+      "img": "spells-icons/Freedom-of-Movement-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "grasping_vine": {
+      "name": "Grasping Vine",
+      "level": 4,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "druid",
+        "ranger"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "grasping_vine",
+      "text": "The target must succeed on a Dex. save or be pulled 20 ft toward the vine.",
+      "img": "spells-icons/Graping-Vine-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "greater_invisibility": {
+      "name": "Greater Invisibility",
+      "level": 4,
+      "school": "Illusion",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "greater_invisibility",
+      "text": "Turn a creature Invisible. Attack against it have Disadvantage . It attacks with Advantage . 10 Turns Melee Concentration",
+      "img": "spells-icons/Greater-Invisibility-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "guardian_of_faith": {
+      "name": "Guardian of Faith",
+      "level": 4,
+      "school": "Conjuration",
+      "concentration": false,
+      "classes": [
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "guardian_of_faith",
+      "text": "Hostiles creatures within a 10-ft radius of the created guardian must succeed on a Dex. save or take 20 radiant damage.",
+      "img": "spells-icons/Guardian-of-Faith-Baldurs-Gate-3-Spell_pixelart.png"
+    },
     "ice_storm": {
+      "name": "Ice Storm",
+      "level": 4,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "druid",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "ice_storm",
+      "text": "2d8 Bludgeoning +4 d6 Cold Impel a storm of hail ice to crash from the sky, covering the ground and striking all objectas and creatures within range. 2Turns On Save: Targets still take half damage. 6m 18m DEX Save",
       "img": "spells-icons/Ice-Storm-Baldurs-Gate-3-Spell_pixelart.png"
     },
+    "otilukes_resilient_sphere": {
+      "name": "Otiluke's Resilient Sphere",
+      "level": 4,
+      "school": "Evocation",
+      "concentration": true,
+      "classes": [
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "otilukes_resilient_sphere",
+      "text": "The Large size or smaller target must succeedd on a Dex. save or be enclosed for the spell duration.",
+      "img": "spells-icons/Otilukes-Resilient-Sphere-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "phantasmal_killer": {
+      "name": "Phantasmal Killer",
+      "level": 4,
+      "school": "Illusion",
+      "concentration": true,
+      "classes": [
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "phantasmal_killer",
+      "text": "The target must succeed on a Wis. save or be frightened then take 4d10 psychic damage (damage/lvl) on each of it's turn.",
+      "img": "spells-icons/Phantasmal-Killer-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "polymorph": {
+      "name": "Polymorph",
+      "level": 4,
+      "school": "Transmutation",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "druid",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "polymorph",
+      "text": "Transform a creature into a harmless sheep. 5 Turns 18m DEX Save Concentration",
+      "img": "spells-icons/Polymorph-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "staggering_smite": {
+      "name": "Staggering Smite",
+      "level": 4,
+      "school": "Evocation",
+      "concentration": true,
+      "classes": [
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "staggering_smite",
+      "text": "If the attack hits, deals an extra 4d6 pyschic damage and the target must succeed on a Wis. save or have a disadvantage.",
+      "img": null
+    },
+    "stoneskin": {
+      "name": "Stoneskin",
+      "level": 4,
+      "school": "Abjuration",
+      "concentration": true,
+      "classes": [
+        "druid",
+        "ranger",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "stoneskin",
+      "text": "Turn a creature's flesh hard as stone. It takes only half the damage of all non-magical Bludgeoning, Piercing, and Slashing damage. Until Long Rest Melee Concentration",
+      "img": "spells-icons/Stoneskin-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "wall_of_fire": {
+      "name": "Wall of Fire",
+      "level": 4,
+      "school": "Evocation",
+      "concentration": true,
+      "classes": [
+        "druid",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "wall_of_fire",
+      "text": "5d8 Fire Create a blazing wall of fire, burning anyone who dares stand too close. 18m DEX Save Concentration",
+      "img": "spells-icons/Wall-of-fire-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "cloudkill": {
+      "name": "Cloudkill",
+      "level": 5,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "cloudkill",
+      "text": "5d8 Poison Craft a large cloud that inflicts 5∼40 Poison damage per turn. You can reposition the cloud every turn. 1 Turn 18m WIS Save Concentration",
+      "img": "spells-icons/Cloudkill-Baldurs-Gate-3-Spell_pixelart.png"
+    },
     "cone_of_cold": {
+      "name": "Cone of Cold",
+      "level": 5,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "cone_of_cold",
+      "text": "8 d8 Cold Make a flurry of frost, crisp air, and condensed snow crystals erupt from your hands. On save: Targets still take half damage. 9m STR Save",
       "img": "spells-icons/Cone-of-Cold-Baldurs-Gate-3-Spell_pixelart.png"
     },
+    "conjure_elemental": {
+      "name": "Conjure Elemental",
+      "level": 5,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "druid",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "conjure_elemental",
+      "text": "Bend the barrier between the Planes until they disgorge an elemental ally to follow and fight for you. 18m",
+      "img": "spells-icons/Conjure-Elemental-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "contagion": {
+      "name": "Contagion",
+      "level": 5,
+      "school": "Necromancy",
+      "concentration": false,
+      "classes": [
+        "cleric",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "contagion",
+      "text": "If the spell attack hits, target is afflicted with a disease to choose from 6 proposed.",
+      "img": "spells-icons/Contagion-Filfth-Fever-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "destructive_wave": {
+      "name": "Destructive Wave",
+      "level": 5,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "destructive_wave",
+      "text": "5d6 Thunder + 5d6 Radiant damage . Create a shockwave of either divine or malevolent thunder that damages nearby creatures and possibly knocks them Prone. 1 Turn On Save: Targets still take half damage",
+      "img": null
+    },
+    "dispel_evil_and_good": {
+      "name": "Dispel Evil and Good",
+      "level": 5,
+      "school": "Abjuration",
+      "concentration": true,
+      "classes": [
+        "cleric",
+        "paladin"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "dispel_evil_and_good",
+      "text": "End a condition (charmed, frightened, or possessed) or bannish a creature to its home plane (Cha. save).",
+      "img": "spells-icons/Dispell-Evil-and-Good-Evil-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "dominate_person": {
+      "name": "Dominate Person",
+      "level": 5,
+      "school": "Enchantment",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "dominate_person",
+      "text": "Make a humanoid fight alongside you. Every time the creature takes damage, it makes a Wisdom Saving Throw against your domination. Allies cannot be dominated. 10 Turns 18m WIS Save Concentration",
+      "img": "spells-icons/Dominate-Person-Baldurs-Gate-3-Spell_pixelart.png"
+    },
     "flame_strike": {
+      "name": "Flame Strike",
+      "level": 5,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "flame_strike",
+      "text": "+5d6 Radiant Make a pillar of divine fire roar down from the heavens like the wrath of affronted angels. On Save: Targets still take half damage. 18m DEX Save",
       "img": "spells-icons/Flame-Strike-Baldurs-Gate-3-Spell_pixelart.png"
     },
+    "greater_restoration": {
+      "name": "Greater Restoration",
+      "level": 5,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "cleric",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "greater_restoration",
+      "text": "End one condition (charmed or petrified), one curse, any ability scores or hp reduction, or one exhaustion level.",
+      "img": "spells-icons/Greater-Restoration-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "hold_monster": {
+      "name": "Hold Monster",
+      "level": 5,
+      "school": "Enchantment",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "hold_monster",
+      "text": "Paralyse a creature. It can't move, act or react. Attacks from within 3m are always Critical Hits. 10 Turns No affect on undead. 18m WIS Save Concentration",
+      "img": "spells-icons/Hold-Monster-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "insect_plague": {
+      "name": "Insect Plague",
+      "level": 5,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "cleric",
+        "druid",
+        "sorcerer"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "insect_plague",
+      "text": "4d10 Piercing Locust attack everyone within range, make the area Difficult Terrain , and impose Disadvantage on Perception Checks . 10 Turns On save: Targets still take half damage. 18m CON Save Concentration",
+      "img": "spells-icons/Insect-Plague-Baldurs-Gate-3-Spell_pixelart.png"
+    },
     "mass_cure_wounds": {
+      "name": "Mass Cure Wounds",
+      "level": 5,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "cleric",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "mass_cure_wounds",
+      "text": "Up to 6 creatures regain 3d8+Spell.Ability.Mod (+1d8 hp/lvl).",
       "img": "spells-icons/Mass-Cure-Wounds-Baldurs-Gate-3-Spells_pixelart.png"
     },
+    "planar_binding": {
+      "name": "Planar Binding",
+      "level": 5,
+      "school": "Abjuration",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "cleric",
+        "druid",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "planar_binding",
+      "text": "Target an otherworldly creature and attach its consciousness to your own. It will follow and fight for you as an ally. 10 Turns Target must be a celestial, an elemental, a fey, or a fiend. 18m WIS Save Concentration",
+      "img": "spells-icons/Planar-Binding-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "seeming": {
+      "name": "Seeming",
+      "level": 5,
+      "school": "Illusion",
+      "concentration": false,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "seeming",
+      "text": "Disguise up to 4 memebers of your adventuring party. 18m",
+      "img": "spells-icons/Seeming-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "telekinesis": {
+      "name": "Telekinesis",
+      "level": 5,
+      "school": "Transmutation",
+      "concentration": true,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "telekinesis",
+      "text": "Throw a creature or object up to 18m with a thought. Once per turn, you can use Telekinesis again without expending a spell slot . Heavier items deal more damage. 10 Turns STR Save Concentration",
+      "img": "spells-icons/Telekinesis-Spell-BG3_pixelart.png"
+    },
+    "wall_of_stone": {
+      "name": "Wall of Stone",
+      "level": 5,
+      "school": "Evocation",
+      "concentration": true,
+      "classes": [
+        "druid",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "wall_of_stone",
+      "text": "Raise a wall of non-magical, solid stone. 18m Concentration",
+      "img": "spells-icons/Wall-of-Stone-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "arcane_gate": {
+      "name": "Arcane Gate",
+      "level": 6,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "arcane_gate",
+      "text": "Create two liked teleportation portals. 10 Turns. 18m Concentration",
+      "img": "spells-icons/Arcane-Gate-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "blade_barrier": {
+      "name": "Blade Barrier",
+      "level": 6,
+      "school": "Evocation",
+      "concentration": true,
+      "classes": [
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "blade_barrier",
+      "text": "6d10 Slashing Summons a wall of razor-sharp blades that turns the area into Difficult Terrain and damages anyone foolish enough to come close. 1 Turn 18m DEX Save Concentration",
+      "img": "spells-icons/Blade-Barrier-Baldurs-Gate-3-Spell_pixelart.png"
+    },
     "chain_lightning": {
+      "name": "Chain Lightning",
+      "level": 6,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "chain_lightning",
+      "text": "10~80 Damage 10d8 Lightning Strike an enemy with lightning. Three more bolts will leap from the target, electrifying as many as three other enemies within 18m. On Save: Targets still take half damage. 18m DEX Save",
       "img": "spells-icons/Chain-Lightning-Spell-Baldurs-Gate-3_pixelart.png"
     },
     "circle_of_death": {
+      "name": "Circle of Death",
+      "level": 6,
+      "school": "Necromancy",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "circle_of_death",
+      "text": "8d6 Necrotic Sculpt a massive sphere of entropic energy around a creature. Devastate the target and all surrounding creatures. On Save: Targets still take half damage. 18m CON Save",
       "img": "spells-icons/Circle-of-Death-Baldurs-Gate-3-Spells_pixelart.png"
     },
+    "create_undead": {
+      "name": "Create Undead",
+      "level": 6,
+      "school": "Necromancy",
+      "concentration": false,
+      "classes": [
+        "cleric",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "create_undead",
+      "text": "Raise a corpse as a heinous mummy that fights by your side. Until Long Rest The target must be a Medium or small corpse. 18m",
+      "img": "spells-icons/Create-Undead-Baldurs-Gate-3-Spells_pixelart.png"
+    },
     "disintegrate": {
+      "name": "Disintegrate",
+      "level": 6,
+      "school": "Transmutation",
+      "concentration": false,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "disintegrate",
+      "text": "46~100 Damage 10d6 + 40 Force Shoot a thin green ray from your finger. If the 50∼100 Force damage reduces the target to 0 hit points , it disintegrates into a crumbly ash. 9m DEX Save",
       "img": "spells-icons/Disintegrate-Baldurs-Gate-3-Spell_pixelart.png"
     },
+    "eyebite": {
+      "name": "Eyebite",
+      "level": 6,
+      "school": "Necromancy",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "sorcerer",
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "eyebite",
+      "text": "Your eyes become black corridors walled in teeth, your gaze capable of inflicting dread, sickness, or putting creatures to sleep. While Concentrating , you may cast Eyebite without expending a spell slot . 100 Turns 18m WIS Save Concentration",
+      "img": "spells-icons/Eyebite-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "flesh_to_stone": {
+      "name": "Flesh to Stone",
+      "level": 6,
+      "school": "Transmutation",
+      "concentration": true,
+      "classes": [
+        "warlock",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "flesh_to_stone",
+      "text": "Atrophy a foe, Restraining them until they temporarity turn to stone. Target will Petrify if it does not succed its Saving Thorw within 3 turns. 3 Turns 18m CON Save Concentration",
+      "img": "spells-icons/Flesh-to-Stone-Baldurs-Gate-3-Spell_pixelart.png"
+    },
+    "globe_of_invulnerability": {
+      "name": "Globe of Invulnerability",
+      "level": 6,
+      "school": "Abjuration",
+      "concentration": true,
+      "classes": [
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "globe_of_invulnerability",
+      "text": "Creates a barrier that makes creatures and objetcs inside it Immune to all damage. 3 Turns 3m Concentration",
+      "img": "spells-icons/Globe-of-Invulnerability-Baldurs-Gate-3-Spells_pixelart.png"
+    },
     "harm": {
+      "name": "Harm",
+      "level": 6,
+      "school": "Necromancy",
+      "concentration": false,
+      "classes": [
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "harm",
+      "text": "14d6 Necrotic Reduce a target's maximum hit points, but never below 1 Until Long Rest On Save: Targets still take half damage 18m CON Save",
       "img": "spells-icons/Harm-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "heal": {
+      "name": "Heal",
+      "level": 6,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "cleric",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "heal",
+      "text": "70 Healing Heal a target's wounds and remove Blindness and any diseases. No effect on undead and constructs. Melee",
       "img": "spells-icons/Heal-Baldurs-Gate-3-Spells_pixelart.png"
     },
+    "heroes_feast": {
+      "name": "Heroes' Feast",
+      "level": 6,
+      "school": "Conjuration",
+      "concentration": false,
+      "classes": [
+        "cleric",
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "heroes_feast",
+      "text": "Produce a feast for 12 guests that cures diseases, immunizes to poison and increases hp by 2d10 for 24 hours.",
+      "img": "spells-icons/Heroes-Feast-Baldurs-Gate-3-Spells_pixelart.png"
+    },
     "otilukes_freezing_sphere": {
+      "name": "Otiluke's Freezing Sphere",
+      "level": 6,
+      "school": "Evocation",
+      "concentration": false,
+      "classes": [
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "otilukes_freezing_sphere",
+      "text": "10~60 Damage 10d6 Cold Create a ball of churning ice that can be lauched instantly to generete a frosty explosion or store for later use. Melee CON Save",
       "img": "spells-icons/Otilukes-Freezing-Sphere-Launch_pixelart.png"
+    },
+    "ottos_irresistible_dance": {
+      "name": "Otto's Irresistible Dance",
+      "level": 6,
+      "school": "Enchantment",
+      "concentration": true,
+      "classes": [
+        "bard",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "ottos_irresistible_dance",
+      "text": "Cause a creature to start dancing, making it unable to take actions or move. It attackers have Advantage on Attack Rolls. The dancer has Disadvantage on Attack Rolls and Dexterity Saving Throws . 10 Turns 9m WIS Save Concentration",
+      "img": "spells-icons/Ottos-Irresistible-Dance-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "planar_ally": {
+      "name": "Planar Ally",
+      "level": 6,
+      "school": "Conjuration",
+      "concentration": false,
+      "classes": [
+        "cleric"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "planar_ally",
+      "text": "Summon a deva, djinn or cambion that will help the caster until a long rest.",
+      "img": "spells-icons/Planar-Ally-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "sunbeam": {
+      "name": "Sunbeam",
+      "level": 6,
+      "school": "Evocation",
+      "concentration": true,
+      "classes": [
+        "druid",
+        "sorcerer",
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "sunbeam",
+      "text": "6d8 Radiant A beam fo brilliant light sears and Blinds all creatures in its path. Until the spell ends, you can recast Sunbeam without expending a spell slot . 10 Turns On save: Targets still take half damage. 18m CON Save Concentration",
+      "img": "spells-icons/Sunbeam-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "wall_of_ice": {
+      "name": "Wall of Ice",
+      "level": 6,
+      "school": "Evocation",
+      "concentration": true,
+      "classes": [
+        "wizard"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "wall_of_ice",
+      "text": "10d6 Cold +10d6 Cold (Conditional) Raise a wall of solid ice that deals 10∼60 Cold Damage to anyone standing in its way. When the ice is broken, it leaves behind a cloud of frigid air that deals 10∼60 Cold damage per turn to creatures within. 18m DEX Save Concentration",
+      "img": "spells-icons/Wall-of-Ice-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "wall_of_thorns": {
+      "name": "Wall of Thorns",
+      "level": 6,
+      "school": "Conjuration",
+      "concentration": true,
+      "classes": [
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "wall_of_thorns",
+      "text": "Create an 60-ft-long, 10-ft-high, 5-ft-thick wall of brush that slows movement and can inflict 7d8 piercing damage (damage/lvl).",
+      "img": "spells-icons/Wall-of-Thorns-Baldurs-Gate-3-Spells_pixelart.png"
+    },
+    "wind_walk": {
+      "name": "Wind Walk",
+      "level": 6,
+      "school": "Transmutation",
+      "concentration": false,
+      "classes": [
+        "druid"
+      ],
+      "knight": false,
+      "subclasses": [],
+      "book": "wind_walk",
+      "text": "Transform yourself and all nearby party members into tiny clouds of mist to avoid attacks. Until Long Rest While transformed, you won't be able to attack, cast, spells, or talk. 9m",
+      "img": "spells-icons/Wind-Walk-Baldurs-Gate-3-Spells_pixelart.png"
     }
   }
 }

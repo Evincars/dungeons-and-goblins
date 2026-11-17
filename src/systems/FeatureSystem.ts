@@ -56,7 +56,7 @@ const SURVIVOR_TICKS = 360;
 const SURVIVOR_BASE = 5;
 
 /** What using a feature came to: done, or why it was not. */
-export type FeatureResult = 'ok' | 'unworked' | 'no_dice' | 'no_ally' | 'hp_full' | 'no_foe' | 'no_room';
+export type FeatureResult = 'ok' | 'unworked' | 'no_dice' | 'no_ally' | 'hp_full' | 'no_foe' | 'no_room' | 'no_charges' | 'not_singing';
 
 /** What a hero's feature is called (its id if the class does not list it). */
 function nameOfFeature(hero: Player, id: string): string {

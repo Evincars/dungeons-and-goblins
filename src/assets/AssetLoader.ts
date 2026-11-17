@@ -6,7 +6,7 @@ import { loadSheets } from './SpriteSheet';
 import { registerSheet } from '../render/Sheets';
 import { allSheets, registerLazyArt } from './SheetCatalog';
 import {
-  genSpellBoltSheet,
+  genSpellBoltSheet, genPuddleSheet,
   genSpawnerSheet, genExitButtonSheet, genLeverSheet, genPortcullis,
   genSwordSwingSheet, genDeathFxSheet,
   genDarkSheet,
@@ -32,6 +32,7 @@ const INVENTORY_PANEL = { w: 320, h: 240 };
 const PROCEDURAL: Record<string, () => HTMLCanvasElement> = {
   spell_bolt:         genSpellBoltSheet,
   spawner:            genSpawnerSheet,
+  puddle:             genPuddleSheet,
   exit_button:        genExitButtonSheet,
   portcullis:         genPortcullis,
   lever:              genLeverSheet,

@@ -10,6 +10,7 @@ import { metresToPx } from '../rules/Scale';
 import type { ShotReach } from '../entities/ProjectileFactory';
 import { world } from '../world';
 import { attackTempo } from './SwordSystem';
+import { bladeAttack } from './SchoolSystem';
 
 /**
  * Archery: a player fighting with a ranged weapon (bow, crossbow, sling, darts) shoots at the crosshair on
@@ -52,6 +53,8 @@ function loose(player: Player, followedBy: number): void {
 export function shoot(player: Player, followedBy = 0): void {
   player.arrowCooldown = ARROW_STATS.cooldown;
   loose(player, followedBy);
+  // A weapon attack during the Bladesong gathers a Healing Charge for its Climax.
+  bladeAttack(player);
 }
 
 /**

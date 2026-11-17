@@ -272,6 +272,11 @@ export class HudPanel {
    * Closes the topmost of the HUD's dialog, the rest menu and the hit dice to agree a rest with, if one is open; returns
    * whether one was (Escape uses this before the pause menu).
    */
+  /** Whether a dialog, the rest menu or the hit-dice menu of a rest vote is open (clicks then fight nobody). */
+  get panelOpen(): boolean {
+    return this.dialog.open || this.restMenu.open || this.partyBanner.menuOpen;
+  }
+
   closeDialog(): boolean {
     return this.partyBanner.hideMenu() || this.restMenu.hide() || this.dialog.hide();
   }

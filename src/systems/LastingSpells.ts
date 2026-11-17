@@ -20,7 +20,7 @@ import { heroSavingThrow } from './FeatureSystem';
 import { hitMob } from './Hits';
 import { hurtPlayer } from './CombatSystem';
 import { hurtUndead } from './SummonSystem';
-import { logLine, logSave } from './RollLogSystem';
+import { logLine, logSaveDamage } from './RollLogSystem';
 import { recordSpell } from './CombatLogSystem';
 
 /**
@@ -154,10 +154,13 @@ function zoneStrikes(caster: Player, def: SpellDef, foe: Entity, dc: number): vo
   if (def.save) {
     const modifier = foe.mobType ? MONSTERS[foe.mobType].modifiers[def.save] : 0;
     const save = foreseenSave(foe, caster, modifier, dc);
-    logSave(foe, save.total, save.success);
     if (save.success) damage = savedDamage(caster, def.level, rolled);
+    logSaveDamage(foe, save.total, save.success, damage);
     recordSpell(caster, def.id, save.success ? 'saved' : 'auto', damage, save.total);
-  } else recordSpell(caster, def.id, 'auto', damage);
+  } else {
+    logLine(foe, text('roll.damage', { amount: damage }), 'damage');
+    recordSpell(caster, def.id, 'auto', damage);
+  }
   if (damage > 0) hitMob(foe, caster, damage, true);
 }
 

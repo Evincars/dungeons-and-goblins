@@ -86,6 +86,11 @@ export class PartyBanner {
   }
 
   /** Closes the hit dice to spend if they are open; returns whether they were (Escape uses this before the pause menu). */
+  /** Whether the hit-dice menu is open. */
+  get menuOpen(): boolean {
+    return this.diceMenu.open;
+  }
+
   hideMenu(): boolean {
     return this.diceMenu.hide();
   }

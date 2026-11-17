@@ -16,7 +16,7 @@ import { createPlayer } from '../entities/PlayerFactory';
 import { bindingFor, cleanName, settings } from '../game/Settings';
 import { camera, GAME_HEIGHT, GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
 import { TILE_WIDTH, TILE_HEIGHT, FOG_REVEAL_TILES } from '../level/TileType';
-import { initInput, pointerFree, resetInput, setInputCaptured } from '../systems/InputSystem';
+import { initInput, pointerFree, resetInput, setInputCaptured, setPanelsOpen } from '../systems/InputSystem';
 import { runCommand } from '../game/Console';
 import { ConsoleView } from '../ui/ConsoleView';
 import { SIMULATION, PRESENTATION, runSystems } from '../systems/Simulation';
@@ -487,6 +487,8 @@ export class InGameScene implements Scene {
   }
 
   private updatePanels(): void {
+    // While a panel is open a click is the interface's, never a blow or a cast.
+    setPanelsOpen(isInventoryOpen() || isShopOpen() || this.hud.panelOpen || this.pause.open || this.result.open || this.manager.hasOverlay);
     this.loading.visible = this.mode === 'guest' && coop.loadingLevel;
     this.hud.update(this.level);
     this.combatLog.update();

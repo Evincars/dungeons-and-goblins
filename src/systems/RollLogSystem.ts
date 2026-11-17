@@ -60,6 +60,12 @@ export function logSave(target: Entity, total: number, saved: boolean): void {
   logLine(target, text(saved ? 'roll.save_half' : 'roll.save_fail', { total }), saved ? 'miss' : 'damage');
 }
 
+/** A saving throw against a spell and the damage it let through, over the one who rolled it: "save 14 - half", then "9 dmg". */
+export function logSaveDamage(target: Entity, total: number, saved: boolean, damage: number): void {
+  logSave(target, total, saved);
+  if (damage > 0) logLine(target, text('roll.damage', { amount: damage }), 'damage');
+}
+
 /** Hit points given back, over the one healed: "+24 HP". */
 export function logHeal(target: Entity, amount: number): void {
   logLine(target, text('roll.heal', { amount }), 'heal');

@@ -19,7 +19,7 @@ import { reportRejection } from '../core/errors';
 import { preparesSpells, requestToggleFeature } from '../game/PlayerActions';
 import type { TipTopic } from './InfoTooltip';
 import { PixelLabel } from './PixelText';
-import { featTopic, featureTopic, spellTopic } from './SpellTopics';
+import { castLevelTopic, featTopic, featureTopic, spellTopic } from './SpellTopics';
 import { archetypeName, featName } from '../rules/Names';
 import { FEATS, featBinding } from '../rules/Feats';
 import type { FeatId } from '../rules/Feats';
@@ -370,10 +370,23 @@ export class SpellsPanel {
     beginBinding({ spell: spell.id, level });
   }
 
-  /** What the pointer is over tells about itself: a level box its numbers at that level, a spell box its base ones, a feature its text. */
-  topicAt(x: number, y: number): TipTopic | null {
+  /**
+   * A level box under the pointer: a small tooltip of what casting at that level changes, and the row of level boxes it
+   * must keep clear of (it sits under or over them, never on them).
+   */
+  levelTipAt(x: number, y: number): { topic: TipTopic; clear: Rect } | null {
     const option = this.optionAt(x, y);
-    if (option && this.choice) return spellTopic(this.choice.spell, option.level, this.heroLevel);
+    const choice = this.choice;
+    if (!option || !choice?.options.length) return null;
+    const first = choice.options[0].rect;
+    const last = choice.options[choice.options.length - 1].rect;
+    const clear = { x: first.x - GAP, y: first.y - GAP, w: last.x + last.width - first.x + 2 * GAP, h: first.height + 2 * GAP };
+    return { topic: castLevelTopic(choice.spell, option.level, this.heroLevel), clear };
+  }
+
+  /** What the pointer is over tells about itself: a spell box its base numbers, a feature its text (a level box has `levelTipAt`). */
+  topicAt(x: number, y: number): TipTopic | null {
+    if (this.optionAt(x, y)) return null;
     const box = this.boxAt(x, y);
     if (!box || !this.list) return null;
     if (box.feature) return featureTopic(box.feature, this.isOff(box.feature), this.heroLevel);

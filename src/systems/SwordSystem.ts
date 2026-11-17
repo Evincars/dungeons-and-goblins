@@ -114,8 +114,6 @@ function startSwing(player: Player, fromKey = true): void {
   };
   world.addComponent(player, 'swordSwing', swing);
   player.swordCooldown = SWORD_STATS.cooldown;
-  // A weapon attack during the Bladesong gathers a Healing Charge for its Climax.
-  bladeAttack(player);
   if (swing.delay === 0) swingLands(player, swing);
 }
 
@@ -137,6 +135,8 @@ function swingLands(player: Player, swing: Swing): void {
     createSwordSwingFx(pos.x + swing.dirX * swing.range * 0.5, pos.y + swing.dirY * swing.range * 0.5, swing.dirX, swing.dirY);
   }
   sound.playSound(swingSound(player), pos.x, pos.y);
+  // Every blow during the Bladesong (Extra Attack's too) gathers a Healing Charge for its Climax.
+  bladeAttack(player);
 }
 
 /** Whether a target stands inside the swing's arc and reach (to the edge of its body), and has not been hit by this blow yet. */

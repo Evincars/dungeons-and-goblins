@@ -5,7 +5,7 @@ import { bonusSwing, hitMob } from './SwordSystem';
 import { bonusShot, holdsBow } from './ArrowSystem';
 import { spellSaveMode } from './ManeuverSystem';
 import { strike } from './Strike';
-import { logHeal, logLine, logSave, logSpellDamage } from './RollLogSystem';
+import { logHeal, logLine, logSaveDamage, logSpellDamage } from './RollLogSystem';
 import { recordSpell } from './CombatLogSystem';
 import { characterSheet } from '../rules/CharacterSheet';
 import type { CharacterSheet } from '../rules/CharacterSheet';
@@ -228,7 +228,7 @@ function burstHits(caster: Player, def: SpellDef, foe: Entity, dc: number): void
   const save = foreseenSave(foe, caster, modifier, dc);
   const rolled = Math.max(MIN_HIT_DAMAGE, rollDice(def.damage) + spellDamageBonus(caster, def.id));
   const damage = save.success ? savedDamage(caster, def.level, rolled) : rolled;
-  logSave(foe, save.total, save.success);
+  logSaveDamage(foe, save.total, save.success, damage);
   recordSpell(caster, def.id, save.success ? 'saved' : 'auto', damage, save.total);
   if (damage <= 0) return;
   const alive = (foe.health?.current ?? 0) > 0;

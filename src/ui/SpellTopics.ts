@@ -4,7 +4,7 @@ import { formatDamage } from '../rules/Dice';
 import { damageTypeName, featDescription, featName } from '../rules/Names';
 import { FEATS } from '../rules/Feats';
 import type { FeatId } from '../rules/Feats';
-import { spellIconKey, spellStats } from '../rules/Spellbook';
+import { castDef, spellIconKey, spellStats } from '../rules/Spellbook';
 import { SPELLS, isSpellId } from '../rules/Spells';
 import { featureCooldown, featureUses } from '../rules/ClassFeatures';
 import type { FeatureDef } from '../rules/ClassFeatures';
@@ -114,6 +114,33 @@ export function spellTopic(spell: CatalogSpell, castLevel: number, heroLevel: nu
   if (learntAt !== undefined && learntAt > heroLevel) detail.push(text('spell.tip.learnt_at', { level: learntAt }));
   if (!spell.castable) detail.push(text('spell.tip.not_in_game'));
   return { title: spell.name, body: shortText(spell.description), detail, more, icon };
+}
+
+/** "from -> to" when a number changes with the cast level, else null. */
+function change(label: string, from: string, to: string): string | null {
+  return from === to ? null : text('spell.tip.change', { label, from, to });
+}
+
+/**
+ * The small tooltip of a level box: only what casting the spell at `castLevel` changes from its own level (its dice, a
+ * magic missile's darts, its range, its cooldown).
+ */
+export function castLevelTopic(spell: CatalogSpell, castLevel: number, heroLevel: number): TipTopic {
+  const own = spellStats(spell, spell.level, heroLevel);
+  const at = spellStats(spell, castLevel, heroLevel);
+  const dice = (stats: typeof own): string => (stats.dice ? formatDamage(stats.dice.roll, stats.dice.extra) : '-');
+  const darts = (level: number): string => (isSpellId(spell.id) && SPELLS[spell.id].kind === 'missiles' ? String(castDef(SPELLS[spell.id], level, heroLevel).count) : '');
+  const range = (stats: typeof own): string => (stats.rangeFeet === null ? spell.range.text : text('spell.tip.feet', { feet: stats.rangeFeet }));
+  const label = spell.effect?.kind === 'heal' ? text('spell.tip.change_heal') : text('spell.tip.change_damage');
+  const lines = [
+    change(label, dice(own), dice(at)),
+    change(text('spell.tip.change_darts'), darts(spell.level), darts(castLevel)),
+    change(text('spell.tip.change_range'), range(own), range(at)),
+    change(text('spell.tip.change_cooldown'), `${seconds(own.cooldown)}s`, `${seconds(at.cooldown)}s`),
+  ].filter((line): line is string => line !== null);
+  const title = text('spell.tip.cast_at', { level: castLevel });
+  if (castLevel === spell.level) return { title, body: text('spell.tip.own_level') };
+  return { title, body: text('spell.tip.compared', { level: spell.level }), detail: lines };
 }
 
 /** Seconds as the tooltip writes them: whole when they are, else a tenth. */

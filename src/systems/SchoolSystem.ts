@@ -22,7 +22,7 @@ import type { Aura } from '../assets/Effects';
 import { charm, spellSaveMode } from './ManeuverSystem';
 import { armorClassOf, strike } from './Strike';
 import { hitMob } from './Hits';
-import { logHeal, logLine, logSave } from './RollLogSystem';
+import { logHeal, logLine, logSaveDamage } from './RollLogSystem';
 import { createPuddle } from './LastingSpells';
 import { recordEvent } from './CombatLogSystem';
 
@@ -197,7 +197,7 @@ function singingFreely(hero: Player): boolean {
 /** A song gathers Bladesong Charges of each kind up to the hero's level (12 damage and 12 healing at level 12). */
 const songChargeCap = (hero: Player): number => hero.playerStats.level;
 
-/** A weapon attack (a swing or a volley) during an unimpeded Bladesong gathers a Healing Charge for its Climax. */
+/** Each weapon attack (every blow of a swing, Extra Attack's too, and every arrow) during an unimpeded Bladesong gathers a Healing Charge for its Climax. */
 export function bladeAttack(hero: Player): void {
   const arcana = hero.arcana;
   if (!arcana || !singingFreely(hero)) return;
@@ -573,6 +573,7 @@ function bladesongClimax(hero: Player, aim: { x: number; y: number }): SchoolRes
   if (!singing(hero)) return 'not_singing';
   const at = within(hero, aim, CLIMAX_RANGE);
   playEffect(CLIMAX_EFFECT.shape, CLIMAX_EFFECT.colour, at.x, at.y, AIM_HEIGHT, CLIMAX_EFFECT.scale);
+  recordEvent(hero, 'feature', { item: featureName(hero, 'bladesong_climax') });
   climaxStrikes(hero, at, 1 + arcana.damageCharges);
   climaxHeals(hero, at, 1 + arcana.healingCharges);
   arcana.songTicks = 0;
@@ -590,8 +591,9 @@ function climaxStrikes(hero: Player, at: { x: number; y: number }, dice: number)
     const modifier = foe.mobType ? MONSTERS[foe.mobType].modifiers.intelligence : 0;
     const save = foreseenSave(foe, hero, modifier, dc);
     const rolled = rollDice({ count: dice, sides: CLIMAX_DIE, bonus: 0 });
-    logSave(foe, save.total, save.success);
-    hitMob(foe, hero, save.success ? Math.floor(rolled / 2) : rolled, true);
+    const damage = save.success ? Math.floor(rolled / 2) : rolled;
+    logSaveDamage(foe, save.total, save.success, damage);
+    hitMob(foe, hero, damage, true);
   }
 }
 

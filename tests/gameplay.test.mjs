@@ -5146,11 +5146,11 @@ test('the DMG tooltip names both weapons: the off hand with its whole blow, or w
   const sheet = characterSheet(hero);
   assert.equal(sheet.offHand, null, 'a longsword is not light');
   assert.equal(sheet.offHandBlocked.base, 'dagger');
-  const lines = damageTopic(sheet).detail.map((l) => (typeof l === 'string' ? l : l.text));
+  const lines = damageTopic(sheet).more.detail.map((l) => (typeof l === 'string' ? l : l.text));
   assert.ok(lines.includes('Main hand:') && lines.includes('Off hand:'));
   assert.ok(lines.some((l) => l.startsWith('The off hand makes no blow')));
   hero.equipped = { primary: weaponItem('shortsword'), secondary: weaponItem('dagger') };
-  const both = damageTopic(characterSheet(hero)).detail.map((l) => (typeof l === 'string' ? l : l.text));
+  const both = damageTopic(characterSheet(hero)).more.detail.map((l) => (typeof l === 'string' ? l : l.text));
   assert.ok(both.includes('Off hand:') && !both.some((l) => l.startsWith('The off hand makes no blow')));
   assert.equal(both.filter((l) => l.startsWith('To hit:')).length, 2, 'each hand with its to-hit');
 });
@@ -5685,4 +5685,36 @@ test('the Third Eye and See Invisibility last until a long rest; Inured to Undea
   assert.equal(playableArchetypes('wizard').length, 8);
   const Features = await load('rules/ClassFeatures');
   assert.ok(!Features.CLASS_FEATURE_LIST.wizard.some((f) => f.id.endsWith('_savant')), 'the Savants are gone');
+});
+
+test('every blow of a swing during the Bladesong (Extra Attack\'s too) gathers a Healing Charge, and the Climax shows its damage over the dummy', () => {
+  const level = arena(14, 6);
+  const singer = wizardOf('bladesinging', 6);
+  singer.equipped = { primary: { ...WEAPONS.find((w) => w.base === 'rapier') } };
+  assert.equal(sheetOf(singer).attacks, 2, 'Extra Attack at level 6');
+  assert.equal(usedFeature(singer, 'bladesong', 11, level), 'ok');
+  singer.playerInput.intents.attack = true;
+  for (let t = 0; t < 50; t++) {
+    beginPerception();
+    updateSword();
+    singer.playerInput.intents.attack = false;
+  }
+  assert.equal(singer.arcana.healingCharges, 2, 'one swing, two blows, two charges');
+  const dummy = createTrainingDummy(centre(4), centre(2));
+  beginPerception();
+  assert.equal(usedFeature(singer, 'bladesong_climax', 12, level, dummy.position), 'ok');
+  const lines = rollLines(dummy);
+  assert.ok(lines.some((line) => line.startsWith('save')), 'the save over the dummy');
+  assert.ok(lines.some((line) => line.endsWith('dmg')), 'and the damage under it');
+});
+
+test('a level box of a spell tells only what that level changes: dice, darts and cooldown', async () => {
+  const { castLevelTopic } = await load('ui/SpellTopics');
+  const missile = castLevelTopic(Spellbook.CATALOG.magic_missile, 3, 5);
+  const lines = missile.detail.map(String);
+  assert.ok(lines.some((line) => line.startsWith('Darts: 3 -> 5')), 'two darts more');
+  assert.ok(lines.some((line) => line.startsWith('Cooldown')), 'and a longer cooldown');
+  assert.ok(!lines.some((line) => line.startsWith('Range')), 'the range does not change, so it is not told');
+  assert.equal(castLevelTopic(Spellbook.CATALOG.fireball, 3, 5).detail, undefined, 'its own level: nothing changes');
+  assert.ok(castLevelTopic(Spellbook.CATALOG.fireball, 4, 7).detail.map(String).some((line) => line.startsWith('Damage: 8d6 -> 9d6')));
 });

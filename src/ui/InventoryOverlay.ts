@@ -1203,6 +1203,12 @@ export class InventoryOverlay {
   private updateInfoTip(x: number, y: number): void {
     const bounds = { w: DESIGN_W, h: DESIGN_H };
     const skills = this.activeTab === SKILLS_TAB;
+    // A level box of a spell being bound: a small tooltip of what that level changes, clear of the row of level boxes.
+    const level = !this.dragging && skills ? this.spells?.levelTipAt(x, y) : null;
+    if (level) {
+      this.infoTip.showAt(level.topic, level.clear, bounds, 'clear');
+      return;
+    }
     const topic = this.dragging ? null : skills ? this.spells?.topicAt(x, y) ?? null : this.topicAt(x, y);
     if (topic) this.infoTip.show(topic, x, y, bounds);
     else this.infoTip.hide();

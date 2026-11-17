@@ -47,14 +47,14 @@ function loose(player: Player, followedBy: number): void {
   // Hold the release pose for a moment (the attack clip plays while attackTime is above the recovery); half as long under Action Surge.
   player.attackTime = ATTACK_RECOVERY + Math.ceil(ARROW_STATS.drawTicks / attackTempo(player));
   sound.playSound('bow_shot', player.position.x, player.position.y);
+  // Every arrow of a volley during the Bladesong gathers a Healing Charge for its Climax.
+  bladeAttack(player);
 }
 
 /** A volley starts: the first arrow flies, the rest follow within the second, and the next volley is a second off. */
 export function shoot(player: Player, followedBy = 0): void {
   player.arrowCooldown = ARROW_STATS.cooldown;
   loose(player, followedBy);
-  // A weapon attack during the Bladesong gathers a Healing Charge for its Climax.
-  bladeAttack(player);
 }
 
 /**

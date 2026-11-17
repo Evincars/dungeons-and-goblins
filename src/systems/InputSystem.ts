@@ -21,6 +21,22 @@ let captured = false;
 
 /** On-screen controls under the pointer (HUD buttons, the combat log, a dialog): their clicks are not attacks. */
 const pointerOwners = new Set<object>();
+/** A panel is open (the inventory, the shop, a HUD dialog, the rest menu): no click is an attack or a cast, wherever it lands. */
+let panelsOpen = false;
+/**
+ * A button press that began on a control or while a panel was open is the interface's: it fights nobody, even once the
+ * panel it closed is gone, until the button is let go.
+ */
+let leftForUi = false;
+let rightForUi = false;
+
+/** The level says whether one of its panels is open (every frame). */
+export function setPanelsOpen(open: boolean): void {
+  panelsOpen = open;
+}
+
+/** Whether a press now would be the interface's: over a control, or with a panel open. */
+const uiTakesPress = (): boolean => panelsOpen || pointerOwners.size > 0;
 
 /** A control says the pointer is over it (or has left); while any is under it, mouse buttons don't fight. */
 export function claimPointer(owner: object, over: boolean): void {
@@ -119,13 +135,20 @@ function onKeyDown(e: KeyboardEvent): void {
 }
 
 function onMouseDown(e: MouseEvent): void {
-  if (e.button === LEFT_BUTTON) { mouseDown = true; clickPending = true; }
-  if (e.button === RIGHT_BUTTON) rightDown = true;
+  if (e.button === LEFT_BUTTON) {
+    mouseDown = true;
+    clickPending = true;
+    leftForUi = uiTakesPress();
+  }
+  if (e.button === RIGHT_BUTTON) {
+    rightDown = true;
+    rightForUi = uiTakesPress();
+  }
 }
 
 function onMouseUp(e: MouseEvent): void {
-  if (e.button === LEFT_BUTTON) mouseDown = false;
-  if (e.button === RIGHT_BUTTON) rightDown = false;
+  if (e.button === LEFT_BUTTON) mouseDown = leftForUi = false;
+  if (e.button === RIGHT_BUTTON) rightDown = rightForUi = false;
 }
 
 export function initInput(canvas: HTMLCanvasElement): void {
@@ -167,8 +190,11 @@ export function updateInput(): void {
     pi.left  = isActionDown('left');
     pi.right = isActionDown('right');
     pi.sprint = isActionDown('sprint');
-    const mouseFree = pointerFree();
-    pi.attack = !captured && ((mouseDown && mouseFree) || isActionDown('attack'));
+    // A mouse button fights only when it was pressed on the world, with no panel open and no control under the pointer.
+    const mouseFree = pointerFree() && !panelsOpen;
+    const leftFights = mouseDown && mouseFree && !leftForUi;
+    const rightFights = rightDown && mouseFree && !rightForUi;
+    pi.attack = !captured && (leftFights || isActionDown('attack'));
     pi.use    = !captured && isActionDown('use');
     pi.mouseX = mouse.x;
     pi.mouseY = mouse.y;
@@ -176,8 +202,8 @@ export function updateInput(): void {
     pi.spellSlot = chosenSlot;
 
     const it = pi.intents;
-    it.attack       = !captured && (wasActionPressed('attack') || (mouseDown && mouseFree));
-    it.cast         = !captured && (wasActionPressed('cast') || quickCast >= 0 || (rightDown && mouseFree));
+    it.attack       = !captured && (wasActionPressed('attack') || leftFights);
+    it.cast         = !captured && (wasActionPressed('cast') || quickCast >= 0 || rightFights);
     it.use          = wasActionPressed('use');
     it.inventoryOpen = wasActionPressed('inventory');
     it.swap         = !captured && wasActionPressed('swap');

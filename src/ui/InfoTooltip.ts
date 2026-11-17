@@ -71,8 +71,11 @@ type DetailLine = { text: string; color: number };
 
 type Bounds = { w: number; h: number };
 type Anchor = { x: number; y: number; w: number; h: number };
-/** Where a tooltip shown for a box sits: beside it (to its right, or its left where there is no room), or above it. */
-export type TipSide = 'beside' | 'above';
+/**
+ * Where a tooltip shown for a box sits: beside it (to its right, or its left where there is no room), above it, or clear
+ * of it (under it, or over it where there is no room below), never covering it.
+ */
+export type TipSide = 'beside' | 'above' | 'clear';
 
 /** The whole story, laid out wide (made once per topic). */
 const wideStories = new WeakMap<TipTopic, TipTopic>();
@@ -153,6 +156,11 @@ export class InfoTooltip {
     const h = this.view.height;
     if (side === 'above') {
       this.place(anchor.x, anchor.y - h, bounds);
+      return;
+    }
+    if (side === 'clear') {
+      const below = anchor.y + anchor.h;
+      this.place(anchor.x, below + h <= bounds.h ? below : anchor.y - h, bounds);
       return;
     }
     const right = anchor.x + anchor.w;

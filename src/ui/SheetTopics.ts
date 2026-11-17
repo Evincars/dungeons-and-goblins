@@ -72,7 +72,19 @@ export function damageTopic(sheet: CharacterSheet): TipTopic {
   // A weapon in the second hand that makes no blow: two-weapon fighting asks for light weapons without Dual Wielder.
   if (!sheet.offHand && sheet.offHandBlocked) detail.push({ text: text('sheet.dmg.off_hand_blocked'), color: BLOCKED_COLOR });
   if (sheet.battleMaster) detail.push(text('sheet.dmg.maneuver_dc', { dc: sheet.maneuverDc }));
-  return { title: text('sheet.dmg.name'), body: text('sheet.dmg.description'), detail };
+  const full: TipTopic = { title: text('sheet.dmg.name'), body: text('sheet.dmg.description'), detail };
+  // Short, two lines: what each hand deals and how it hits; holding Alt shows the whole breakdown and the rules.
+  const short: TipDetail[] = [];
+  if (sheet.offHand) short.push(text('sheet.dmg.short_hand', { hand: text('sheet.dmg.off_hand'), line: shortAttack(sheet.offHand) }));
+  if (sheet.attacks > 1) short.push(text('sheet.dmg.attacks', { count: sheet.attacks }));
+  const main = shortAttack(attack);
+  return { title: text('sheet.dmg.name'), body: sheet.offHand ? text('sheet.dmg.short_hand', { hand: text('sheet.dmg.main_hand'), line: main }) : main, detail: short, more: full };
+}
+
+/** One hand's blow in a line: "Rapier 1d8+3 piercing, +5 to hit". */
+function shortAttack(attack: WeaponAttack): string {
+  const name = attack.item?.name ?? weaponName(attack.base);
+  return text('sheet.dmg.short_line', { name, dice: formatDamage(attack.damage, attack.extra), type: damageTypeName(attack.rule.type), bonus: formatModifier(attack.attackBonus) });
 }
 
 /** One weapon's blow: its dice, every bonus to damage, the total, and the to-hit with what it is made of. */

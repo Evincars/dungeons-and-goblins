@@ -28,6 +28,7 @@ import { chooseDeparture } from '../systems/ExitSystem';
 import { characterSheet } from '../rules/CharacterSheet';
 import { endMageArmour } from '../systems/LastingSpells';
 import { needsBothHands, strengthNeeded, strongEnough } from '../rules/Equipment';
+import { MAX_CARRY_KG as CARRY_KG } from '../rules/Encumbrance';
 
 /**
  * What players do from the shop and inventory panels. In a lone game or on the host it happens at once;
@@ -50,8 +51,8 @@ export type Loadout = { inventory: BagSquare[]; equipped: Partial<Record<EquipSl
 /** A square of the inventory screen: one in the bag's grid, or an equipment slot. */
 export type ItemPlace = ItemSquare;
 
-/** Kilograms a player can carry, bag and worn gear together, without strain. */
-export const MAX_CARRY_KG = 100;
+/** Kilograms a player can carry, bag and worn gear together, without strain (past 80 % of it they slow, rules/Encumbrance.ts). */
+export const MAX_CARRY_KG = CARRY_KG;
 /** A hero can strain under up to this share of that (115 kg); anything more and they are overloaded. */
 const OVERLOAD_SHARE = 1.15;
 
@@ -262,19 +263,29 @@ export function buyFrom(player: Player, keeper: Entity, index: number): boolean 
   const shop = keeper.shopNpc;
   const item = shop ? shopWares(keeper)[index] : undefined;
   if (!shop || !item || !buy(player, item)) return false;
+  if (shop.gold !== undefined) shop.gold += item.value;
   const resaleAt = index - shop.items.length;
   if (resaleAt >= 0) shop.resale?.splice(resaleAt, 1);
   return true;
 }
 
-/** Sells the item on a square of the hero's bag to the trader: it pays sellPrice, and keeps the item for buying back. */
+/**
+ * Sells the item on a square of the hero's bag to the trader: it pays sellPrice (if it has the gold), and keeps the item
+ * for buying back.
+ */
 export function sell(player: Player, keeper: Entity, index: number): boolean {
   const shop = keeper.shopNpc;
   const inventory = player.inventory;
   const item = inventory?.[index];
   if (!shop || !inventory || !item) return false;
+  const price = sellPrice(item);
+  if (shop.gold !== undefined && shop.gold < price) {
+    sound.playSound('fail', player.position.x, player.position.y);
+    return false;
+  }
   inventory[index] = null;
-  player.playerStats.gold += sellPrice(item);
+  player.playerStats.gold += price;
+  if (shop.gold !== undefined) shop.gold -= price;
   const resale = shop.resale ?? (shop.resale = []);
   resale.push(item);
   if (resale.length > MAX_RESALE) resale.shift();

@@ -1,24 +1,29 @@
 import { world } from '../world';
 import type { Entity } from '../world';
 import { setVisualFrame } from '../render/AnimatedVisual';
-import { PLAIN_IDLE_SHARE, TRADER_FRAMES, TRADER_FRAME_TICKS, TRADER_SHEETS } from '../entities/Trader';
+import { COAT_HELD_LAST, COAT_HELD_TICKS, COAT_OPEN, PLAIN_IDLE_SHARE, TRADER_FRAMES, TRADER_FRAME_TICKS, TRADER_SHEETS } from '../entities/Trader';
 import type { TraderClip } from '../entities/Trader';
 import { activeTrader, isShopOpen } from './ShopSystem';
 
 /**
- * The traders' animation, on every screen alike (presentation, not synced): one of its idles, again and again (another
- * picked at random each time one ends); talking while this screen has its trade panel open; a nod once after a trade.
+ * The traders' animation, on every screen alike (presentation, not synced). A trader idles (one of its idles, another
+ * picked at random each time one ends). When this screen opens its trade panel it throws its coat open on its wares
+ * once, then holds it open (a slow sway) for as long as the panel is open; when the panel closes it closes the coat, and
+ * nods if a trade went through meanwhile.
  */
 
-const traders = world.with('shopNpc', 'sprite');
-type Pose = { clip: TraderClip; frame: number; ticks: number };
-const poses = new WeakMap<Entity, Pose>();
-/** The trader this screen just traded with, to nod once. */
-let nodding: Entity | null = null;
+/** What a trader is doing: an idle or the nod (whole clips), or a part of the dialogue clip (the coat). */
+type Act = 'idle' | 'opening' | 'open' | 'closing' | 'nod';
+type Pose = { act: Act; clip: TraderClip; frame: number; ticks: number; traded: boolean; sway: 1 | -1 };
 
-/** A trade went through with this screen's trader: it nods (once its current frame is done). */
+const traders = world.with('shopNpc', 'sprite');
+const poses = new WeakMap<Entity, Pose>();
+
+/** A trade went through with this screen's trader: it will nod once its coat is closed. */
 export function traderApproves(): void {
-  nodding = activeTrader();
+  const trader = activeTrader();
+  const pose = trader ? poses.get(trader) : undefined;
+  if (pose) pose.traded = true;
 }
 
 function nextIdle(): TraderClip {
@@ -27,34 +32,48 @@ function nextIdle(): TraderClip {
   return roll < (1 + PLAIN_IDLE_SHARE) / 2 ? 'idle2' : 'idle3';
 }
 
-/** What the trader should be doing now, given what it is doing. */
-function wantedClip(trader: Entity, pose: Pose): TraderClip | null {
-  if (nodding === trader) return 'approval';
-  const talking = isShopOpen() && activeTrader() === trader;
-  if (talking && pose.clip !== 'dialogue' && pose.clip !== 'approval') return 'dialogue';
-  if (!talking && pose.clip === 'dialogue') return nextIdle();
-  return null;
-}
-
-function start(pose: Pose, clip: TraderClip): void {
+function begin(pose: Pose, act: Act, clip: TraderClip, frame = 0): void {
+  pose.act = act;
   pose.clip = clip;
-  pose.frame = 0;
+  pose.frame = frame;
   pose.ticks = 0;
 }
 
-/** One tick of a trader: a new clip when one is wanted, else the next frame (a finished clip starts what follows it). */
+/** The panel opened or closed: the coat starts opening (from an idle or a nod) or closing (from where it is). */
+function followPanel(pose: Pose, open: boolean): void {
+  const coatOpen = pose.act === 'opening' || pose.act === 'open';
+  if (open && !coatOpen) begin(pose, 'opening', 'dialogue');
+  if (!open && coatOpen) begin(pose, 'closing', 'dialogue', Math.max(pose.frame, COAT_HELD_LAST + 1));
+}
+
+/** Held open, the coat sways between its held frames, back and forth. */
+function sway(pose: Pose): void {
+  const next = pose.frame + pose.sway;
+  if (next < COAT_OPEN || next > COAT_HELD_LAST) pose.sway = pose.sway > 0 ? -1 : 1;
+  pose.frame += pose.sway;
+}
+
+/** One frame on: the opening ends held open; the closing ends in a nod (after a trade) or an idle; a whole clip in the next idle. */
+function step(pose: Pose): void {
+  if (pose.act === 'open') return sway(pose);
+  pose.frame++;
+  if (pose.act === 'opening' && pose.frame >= COAT_OPEN) return begin(pose, 'open', 'dialogue', COAT_OPEN);
+  if (pose.frame < TRADER_FRAMES[pose.clip]) return;
+  if (pose.act === 'closing' && pose.traded) {
+    pose.traded = false;
+    return begin(pose, 'nod', 'approval');
+  }
+  begin(pose, 'idle', nextIdle());
+}
+
 function animate(trader: Entity & { sprite: NonNullable<Entity['sprite']> }): void {
   let pose = poses.get(trader);
-  if (!pose) poses.set(trader, (pose = { clip: 'idle', frame: 0, ticks: 0 }));
-  const wanted = wantedClip(trader, pose);
-  if (wanted) {
-    if (wanted === 'approval') nodding = null;
-    start(pose, wanted);
-  } else if (++pose.ticks >= TRADER_FRAME_TICKS) {
+  if (!pose) poses.set(trader, (pose = { act: 'idle', clip: 'idle', frame: 0, ticks: 0, traded: false, sway: 1 }));
+  followPanel(pose, isShopOpen() && activeTrader() === trader);
+  const frameTicks = pose.act === 'open' ? COAT_HELD_TICKS : TRADER_FRAME_TICKS;
+  if (++pose.ticks >= frameTicks) {
     pose.ticks = 0;
-    pose.frame++;
-    // A clip played through: talking goes on talking, a nod or an idle gives way to the next idle (or talk).
-    if (pose.frame >= TRADER_FRAMES[pose.clip]) start(pose, pose.clip === 'dialogue' ? 'dialogue' : nextIdle());
+    step(pose);
   }
   setVisualFrame(trader.sprite, TRADER_SHEETS[pose.clip], pose.frame, 0);
 }

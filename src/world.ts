@@ -697,9 +697,9 @@ export type Entity = {
   // --- shop NPC ---
   /**
    * A trader: `items` its wares (never sold out), `resale` what heroes sold it, each bought back once (oldest first gone
-   * when it holds MAX_RESALE, game/PlayerActions.ts).
+   * when it holds MAX_RESALE, game/PlayerActions.ts); `gold` what it has to buy with (what heroes pay it adds to it).
    */
-  shopNpc?: { items: InventoryItem[]; resale?: InventoryItem[] };
+  shopNpc?: { items: InventoryItem[]; resale?: InventoryItem[]; gold?: number };
 
   // --- door (seals the safe room once players leave) ---
   /**

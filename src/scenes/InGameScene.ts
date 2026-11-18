@@ -220,6 +220,7 @@ export class InGameScene implements Scene {
     setPointerAim(this.aim);
     initInput(manager.canvas);
     this.inv.attachSearch(manager.canvas);
+    this.shop.attachSearch(manager.canvas);
 
     this.onKeyDown = (e) => this.handleKey(e);
     window.addEventListener('keydown', this.onKeyDown);
@@ -264,7 +265,7 @@ export class InGameScene implements Scene {
       return true;
     }
     if (isShopOpen()) {
-      closeShop();
+      if (!this.shop.handleEscape()) closeShop();
       return true;
     }
     return this.hud.closeDialog();

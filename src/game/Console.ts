@@ -122,7 +122,7 @@ export function runCommand(line: string, ctx: ConsoleContext): string[] {
   if (!ctx.allowed) return [text('console.coop')];
   if (!player) return [text('console.no_player')];
   switch (command) {
-    case 'money': return giveMoney(player, parseAmount(args[0]));
+    case 'money': case 'gold': return giveMoney(player, parseAmount(args[0]));
     case 'give': return args[0]?.toLowerCase() === 'money' ? giveMoney(player, parseAmount(args[1])) : [text('console.give.usage')];
     case 'god': return setGod(player, args[0]?.toLowerCase());
     case 'xp': case 'exp': case 'addxp': return giveExperience(player, parseAmount(args[0]));

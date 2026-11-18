@@ -1,4 +1,5 @@
 import { Rectangle } from 'pixi.js';
+import { fullyLaden, loadKg, loadPace } from '../rules/Encumbrance';
 import { world, q } from '../world';
 import type { Level } from '../level/Level';
 import { BoxPool, boxAround } from '../core/geometry';
@@ -177,10 +178,13 @@ function schoolSpeedFactor(walker: Walker): number {
   return (BASE_SPEED_FT + feet) / BASE_SPEED_FT;
 }
 
-/** Sprinting drains stamina while moving; letting go of the key (or running dry) recovers it. Returns the speed factor. */
-function sprintFactor(walker: Walker, moving: boolean): number {
+/**
+ * Sprinting drains stamina while moving; letting go of the key (or running dry) recovers it. Returns the speed factor. A
+ * fully laden hero cannot sprint.
+ */
+function sprintFactor(walker: Walker, moving: boolean, laden: boolean): number {
   const stats = walker.playerStats;
-  const held = walker.playerInput.sprint;
+  const held = walker.playerInput.sprint && !laden;
   if (!held) stats.sprintLocked = false;
   stats.sprinting = moving && held && !stats.sprintLocked && stats.sprint < stats.maxSprint;
   if (stats.sprinting) {
@@ -222,7 +226,10 @@ function drivePlayer(walker: Walker): void {
     return;
   }
   const moving = pi.up || pi.down || pi.left || pi.right;
-  const spd = (walker.speed ?? 1.0) * sprintFactor(walker, moving) * featSpeedFactor(walker) * athleteSpeedFactor(walker) * schoolSpeedFactor(walker);
+  // A heavy load slows the hero past 80 % of what they can carry, to a walk at all of it (rules/Encumbrance.ts).
+  const kg = loadKg(walker.inventory, walker.equipped);
+  const pace = sprintFactor(walker, moving, fullyLaden(kg)) * loadPace(kg);
+  const spd = (walker.speed ?? 1.0) * pace * featSpeedFactor(walker) * athleteSpeedFactor(walker) * schoolSpeedFactor(walker);
   const vel = walker.velocity;
   if (pi.up)    vel.y -= spd;
   if (pi.down)  vel.y += spd;

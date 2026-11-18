@@ -324,10 +324,15 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   and the menus' sounds load behind the loading screen in `index.html` (`ui/LoadingScreen.ts`); audio is otherwise
   lazy: the other effects load in the background once the title is up, a bed when first heard, music streams.
 - `src/entities/` — factories and stat tables. The safe rooms' trader (`entities/Trader.ts`, `public/trader`; animated by
-  `systems/TraderSystem.ts`: idles, talks while its panel is open, nods after a trade) opens the trade screen
-  (`ui/ShopPanel.ts`, as in Baldur's Gate 3: its wares left, the hero's bag right, the trader and the gold between; a row's
-  icon, a line of what it does (`ui/ItemSummary.ts`) and price, the inventory's tooltip under the pointer; it buys for half the
-  price, `SELL_SHARE`, and offers what it bought back once, `shopNpc.resale`). Blood splashes from a hero or a foe a blow
+  `systems/TraderSystem.ts`: it idles, throws its coat open when its panel opens and holds it open, closes it when the panel
+  closes, nodding if they traded) sells everything there is for now (`SHOP_ITEMS`) and has a purse of its own
+  (`shopNpc.gold`, `TRADER_GOLD`). Its trade screen (`ui/ShopPanel.ts`, as in Baldur's Gate 3: its wares left, the hero's bag
+  right, the trader and both sides' gold between; each column with the inventory's filters and search; a row's icon, a line of
+  what it does (`ui/ItemSummary.ts`) and price, the inventory's tooltip under the pointer) asks before each trade; it buys for
+  half the price, `SELL_SHARE`, and offers what it bought back once, `shopNpc.resale`. Heroes set out with 10 gold
+  (`STARTING_GOLD`) and one of each weapon, shield and armour they are trained in, as long as it does not slow them
+  (`giveStartingKit`); past 80 % of what they carry they slow, to a walk with no sprint at all of it (`rules/Encumbrance.ts`).
+  Blood splashes from a hero or a foe a blow
   hurts (`entities/Blood.ts`, `public/blood`, small). `src/render/` — sheets, camera, terrain layers.
 - The picture is 16:9 (`render/Camera.ts`), wider (up to 21:9) only on an ultrawide monitor, by the monitor's shape, not the
   window's; the window shows it as large as fits, with bars.

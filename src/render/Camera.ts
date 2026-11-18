@@ -1,17 +1,25 @@
 /** The game is always this many pixels tall; its width follows the shape of the window. */
 export const GAME_HEIGHT = 384;
-/** The narrowest picture (4:3) and the widest (21:9), in game pixels. */
+/** The narrowest picture (4:3), the normal one (16:9) and the widest (21:9), in game pixels. */
 const MIN_WIDTH = 512;
+const NORMAL_WIDTH = 682;
 const MAX_WIDTH = 896;
+/** A monitor this much wider than tall (21:9 is 2.33, 32:9 3.56) is an ultrawide one, and gets a wider picture. */
+const ULTRAWIDE_ASPECT = 2.1;
 
 /**
- * A width that matches the window's shape when the game starts, so a widescreen monitor is filled edge
- * to edge (more dungeon to the sides) instead of showing a 4:3 box. Outside a browser it is 4:3.
+ * The picture's width, from the shape of the monitor (not of the browser window, whose toolbars make a normal 16:9
+ * screen look wider than it is): 16:9, or narrower on a squarer monitor (16:10, 4:3); only an ultrawide monitor gets more
+ * dungeon to the sides, up to 21:9. The window shows it as large as fits, black bars filling the rest. Outside a browser
+ * it is 16:9.
  */
 function fittedWidth(): number {
-  if (typeof window === 'undefined' || !window.innerWidth || !window.innerHeight) return MIN_WIDTH;
-  const width = Math.round((GAME_HEIGHT * window.innerWidth) / window.innerHeight / 2) * 2;
-  return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, width));
+  const screen = typeof window === 'undefined' ? undefined : window.screen;
+  if (!screen?.width || !screen.height) return NORMAL_WIDTH;
+  const aspect = Math.max(screen.width, screen.height) / Math.min(screen.width, screen.height);
+  const width = Math.round((GAME_HEIGHT * aspect) / 2) * 2;
+  if (aspect >= ULTRAWIDE_ASPECT) return Math.min(MAX_WIDTH, width);
+  return Math.min(NORMAL_WIDTH, Math.max(MIN_WIDTH, width));
 }
 
 export const GAME_WIDTH = fittedWidth();

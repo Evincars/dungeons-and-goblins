@@ -1,8 +1,11 @@
 import { SpriteSheet, frameRun } from './SpriteSheet';
+import { bloodSheets } from '../entities/Blood';
+import { TRADER_CLIPS, TRADER_FILES, TRADER_FRAME, TRADER_SHEETS } from '../entities/Trader';
 import { registerLazy } from './LazyArt';
 import { registerEffects } from './Effects';
 import { ARMOR_SHEET, armorIconRegions, catalogIconSources } from '../entities/ItemCatalog';
 import { spellIconKey, spellIcons } from '../rules/Spellbook';
+import { featureIconSources } from '../rules/ClassFeatures';
 import type { Rect, SheetRegion } from './SpriteSheet';
 import { characterSheets } from '../characters/Characters';
 import { PROPS, PROP_IMAGES } from '../level/Props';
@@ -208,6 +211,10 @@ const UI_SHEETS = [
 
   // Menu art from Catacomb Snatch Redux: three 128×24 button states, and the PAUSE title overlay.
   new SpriteSheet('button',       '/ui/button.png', { grid: { frameWidth: 128, frameHeight: 24 } }),
+  // Blood splashing from those hit (entities/Blood.ts): each splash's 6×6 grid read as one strip.
+  ...bloodSheets().map(({ key, src, frames }) => new SpriteSheet(`${key}_sheet`, src, { regions: { [key]: { frames } } })),
+  // The trader of the safe rooms (entities/DungeonFactory.ts, systems/TraderSystem.ts): strips of 128 px frames.
+  ...TRADER_CLIPS.map((clip) => new SpriteSheet(TRADER_SHEETS[clip], `/trader/${TRADER_FILES[clip]}.png`, { grid: { frameWidth: TRADER_FRAME, frameHeight: TRADER_FRAME } })),
   // The game's pointers (ui/Pointer.ts), drawn smaller than they are painted: hand, hand pressing, cross, red cross.
   new SpriteSheet('pointer',      '/ui/pointer.png', { grid: { frameWidth: 64, frameHeight: 64 }, smooth: true }),
   new SpriteSheet('pause_screen', '/ui/pause_screen.png'),
@@ -274,10 +281,13 @@ export function registerLazyArt(): void {
   registerLazy(new SpriteSheet('armor_suits', ARMOR_SHEET, { regions: suits }), Object.keys(suits));
   numberedIcons('gate', 'gates', GATES);
   numberedIcons('treasure', 'treasures', TREASURES);
-  // Spell icons are pixelated on purpose (scripts/spell-icons.sh), so drawn crisp.
+  // Spell and class feature icons are pixelated already (scripts/spell-icons.sh, class-feature-icons.sh) at twice their
+  // size, for tooltips: drawn smaller in the boxes and on the quick bar, they are scaled smoothly (mipmapped) so they keep
+  // their look instead of shimmering.
   for (const { id, src } of spellIcons()) {
     const key = spellIconKey(id);
-    if (key) registerLazy(new SpriteSheet(key, src), [key]);
+    if (key) registerLazy(new SpriteSheet(key, src, { smooth: true }), [key]);
   }
+  for (const { key, src } of featureIconSources()) registerLazy(new SpriteSheet(key, src, { smooth: true }), [key]);
   registerEffects();
 }

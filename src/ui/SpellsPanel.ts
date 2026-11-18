@@ -183,7 +183,8 @@ export class SpellsPanel {
       const rect = new Rectangle(this.area.x + PAD + (i % cols) * (BOX + GAP), first + Math.floor(i / cols) * (BOX + GAP), BOX, BOX);
       const locked = item.locked ?? false;
       this.boxes.push({ spell: item.spell ?? null, feature: item.feature ?? null, feat: item.feat ?? null, locked, taught: item.taught ?? false, rect });
-      if (item.spell) this.addIcon(item.spell, rect, locked);
+      if (item.spell) this.addIcon(spellIconKey(item.spell.id), rect, locked);
+      if (item.feature) this.addIcon(item.feature.icon, rect, locked);
       if (item.feat) this.addInitials(item.feat, rect);
       if (item.feature?.charges) this.addChargeTag(item.feature, rect);
     });
@@ -191,9 +192,11 @@ export class SpellsPanel {
     return first + rows * (BOX + GAP) + SECTION_GAP;
   }
 
-  /** A spell's icon (src/data/spell-list.json) inside its box, once it has loaded (faint while locked); a spell without one keeps an empty box. */
-  private addIcon(spell: CatalogSpell, rect: Rectangle, locked: boolean): void {
-    const key = spellIconKey(spell.id);
+  /**
+   * A spell's or a class feature's icon (src/data/spell-list.json, feature-icons.json) inside its box, once it has loaded
+   * (faint while locked); one without an icon keeps an empty box.
+   */
+  private addIcon(key: string | null, rect: Rectangle, locked: boolean): void {
     if (!key) return;
     const icon = new Sprite(Texture.EMPTY);
     icon.alpha = locked ? LOCKED_ICON_ALPHA : 1;
@@ -204,7 +207,7 @@ export class SpellsPanel {
       icon.texture = lazyTexture(key);
       icon.scale.set((BOX - 2 * ICON_INSET) / Math.max(1, icon.texture.width));
     };
-    reportRejection(requestArt(key).then(show), `Spell icon ${spell.id} did not load`, 'render');
+    reportRejection(requestArt(key).then(show), `Icon ${key} did not load`, 'render');
   }
 
   private layout(cls: DndClass, level: number, build: Build | undefined): void {

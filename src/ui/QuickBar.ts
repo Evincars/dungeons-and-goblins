@@ -253,8 +253,9 @@ export class QuickBar {
   private showBinding(view: SlotView, binding: QuickBinding | null, castWith: Player['heroClass']): void {
     view.bound = bindingKey(binding);
     const spell = binding ? CATALOG[binding.spell] : null;
-    // Its icon if it has one (castable yet or not), else the effect of a castable spell, else its initials.
-    const iconKey = binding ? spellIconKey(binding.spell) : null;
+    // Its icon if it has one (a spell's, castable yet or not, or a class feature's), else the effect of a castable spell,
+    // else its initials.
+    const iconKey = binding ? spellIconKey(binding.spell) ?? featureOfBinding(binding, castWith)?.icon ?? null : null;
     const pictured = !!iconKey || (!!binding && isSpellId(binding.spell));
     view.icon.visible = pictured;
     if (binding && iconKey) showSpellIcon(view, binding.spell, iconKey);

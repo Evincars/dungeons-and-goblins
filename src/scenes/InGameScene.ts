@@ -34,7 +34,7 @@ import { isGamePaused, setSeatPaused } from '../game/Pause';
 import { anyoneToWatch, nextWatched, stillWatchable } from '../game/Spectate';
 import { FallenBanner } from '../ui/FallenBanner';
 import { cancelBinding, pendingBinding } from '../game/SpellBinding';
-import { isShopOpen, activeShopItems, closeShop } from '../systems/ShopSystem';
+import { isShopOpen, activeTrader, closeShop } from '../systems/ShopSystem';
 import { departure, inExitRoom, requestDeparture } from '../systems/ExitSystem';
 import { partyFallen, isStanding } from '../game/Fallen';
 import { seatOf } from '../game/Party';
@@ -117,7 +117,6 @@ export class InGameScene implements Scene {
   private readonly inv = new InventoryOverlay();
   private readonly shop = new ShopPanel();
   private readonly pause: PauseMenu;
-  private shopWasOpen = false;
   /**
    * What the game's pointer (ui/Pointer.ts) is over: a menu, a panel or the HUD (the hand), or the world (the cross,
    * red over an enemy).
@@ -494,11 +493,8 @@ export class InGameScene implements Scene {
     this.combatLog.update();
     this.inv.setVisible(isInventoryOpen());
     this.inv.update();
-    // Shop: refresh its rows on the open transition, then track visibility
-    const shopOpen = isShopOpen();
-    if (shopOpen && !this.shopWasOpen) this.shop.setItems(activeShopItems());
-    this.shopWasOpen = shopOpen;
-    this.shop.setVisible(shopOpen);
+    // The trade panel follows the trader this screen's hero is trading with.
+    this.shop.setVisible(isShopOpen(), activeTrader());
     this.shop.update();
   }
 

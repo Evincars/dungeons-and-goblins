@@ -6052,3 +6052,57 @@ test('Dungeon Delver makes the gear in a chest magical more often; Shield Master
   useDieRoller(() => (++rolls === 1 ? 1 : 20));
   assert.equal(FeatSystemForSaves.heroSavingThrow(slayer, 'wisdom', 15, undefined, caster), true, 'advantage against a caster at arm\'s length');
 });
+
+test('the trader buys from a hero for half the price and keeps what it bought, to sell back once; its wares never run out', () => {
+  const { sell, buyFrom, sellPrice, shopWares } = PlayerActions;
+  const hero = playerAt(2, 2);
+  const keeper = createShopNpc(2 * TILE_WIDTH + 20, 2 * TILE_WIDTH);
+  const sword = { ...SHOP_ITEMS.find((i) => i.base === 'longsword') };
+  hero.inventory = [sword, null];
+  hero.playerStats.gold = 0;
+  const wares = keeper.shopNpc.items.length;
+  assert.ok(sell(hero, keeper, 0));
+  assert.equal(hero.inventory[0], null, 'gone from the bag');
+  assert.equal(hero.playerStats.gold, sellPrice(sword));
+  assert.equal(sellPrice(sword), Math.floor(sword.value / 2));
+  assert.equal(sellPrice({ ...sword, value: 1 }), 1, 'never less than a gold piece');
+  assert.equal(shopWares(keeper).length, wares + 1, 'the trader offers it back');
+  assert.ok(!sell(hero, keeper, 0), 'an empty square sells nothing');
+  hero.playerStats.gold = 1000;
+  assert.ok(buyFrom(hero, keeper, wares), 'bought back');
+  assert.equal(shopWares(keeper).length, wares, 'once');
+  assert.ok(buyFrom(hero, keeper, 0));
+  assert.equal(shopWares(keeper).length, wares, 'a ware stays on offer');
+  world.remove(keeper);
+});
+
+test('class features show their bg3.wiki icons: every icon named in feature-icons.json is in public/, keyed by class', async () => {
+  const { readFileSync, existsSync } = await import('node:fs');
+  const { featureOfClass, featureIconSources } = await load('rules/ClassFeatures');
+  const icons = JSON.parse(readFileSync('src/data/feature-icons.json', 'utf8'));
+  for (const cls of ['fighter', 'rogue', 'cleric', 'wizard']) {
+    for (const [id, src] of Object.entries(icons[cls])) {
+      assert.ok(existsSync(`public/${src}`), `${cls}.${id}: ${src}`);
+      assert.ok(featureOfClass(cls, id), `${cls} has a feature ${id}`);
+    }
+  }
+  assert.equal(featureOfClass('fighter', 'second_wind').icon, 'feature_icon_fighter_second_wind');
+  assert.notEqual(featureOfClass('fighter', 'extra_attack').icon, featureOfClass('wizard', 'extra_attack').icon, 'each class its own');
+  assert.equal(featureOfClass('fighter', 'fighting_style').icon, null, 'a feature with no icon shows its initials');
+  assert.ok(featureIconSources().every((s) => s.src.startsWith('/class-features-icons/')));
+});
+
+test('a blow that hurts a hero or a foe splashes blood from their body; a dummy does not bleed', async () => {
+  const { bleeds, spawnBlood, bloodSheets } = await load('entities/Blood');
+  const goblin = mobAt(arena(8, 8), 'goblin', 3, 3);
+  const before = world.entities.filter((e) => e.fx).length;
+  assert.ok(bleeds(goblin));
+  spawnBlood(goblin);
+  const splash = world.entities.filter((e) => e.fx).at(-1);
+  assert.equal(world.entities.filter((e) => e.fx).length, before + 1);
+  assert.ok(splash.visual.sheet.startsWith('blood_'));
+  assert.ok(splash.visual.scale < 0.5, 'drawn small');
+  assert.equal(splash.fx.follow, world.id(goblin), 'moving with the one hit');
+  assert.ok(!bleeds({ position: { x: 0, y: 0 }, dummy: { row: 0 } }));
+  assert.ok(bloodSheets().every((s) => s.frames.length > 10 && s.frames.every((f) => f.x < 600 && f.y < 600)));
+});

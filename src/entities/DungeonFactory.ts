@@ -1,4 +1,5 @@
 import { world, Team } from '../world';
+import { TRADER_FRAME, TRADER_SCALE, TRADER_SHEETS } from './Trader';
 import type { Entity, InventoryItem } from '../world';
 import { createTile, TileType, TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
 import type { Level } from '../level/Level';
@@ -364,14 +365,16 @@ export function createExitButton(x: number, y: number): Entity {
   });
 }
 
+/** The trader of the safe room (entities/Trader.ts): it stands on its feet at (x, y), animated by systems/TraderSystem.ts. */
 export function createShopNpc(x: number, y: number): Entity {
   return world.add({
     position: { x, y },
-    shopNpc: { items: SHOP_ITEMS.map((item) => ({ ...item })) },
+    shopNpc: { items: SHOP_ITEMS.map((item) => ({ ...item })), resale: [] },
     radius: { x: 10, y: 10 },
     blocking: true,
-    visual: { sheet: 'spawner', col: 0, row: 0 },
-    yOffset: 8,
+    visual: { sheet: TRADER_SHEETS.idle, col: 0, row: 0, scale: TRADER_SCALE },
+    // The sprite is drawn about its middle: raised by half its height, its feet stand on its position.
+    yOffset: (TRADER_FRAME * TRADER_SCALE) / 2,
     minimapColor: 0xffaa00,
   });
 }

@@ -259,6 +259,7 @@ function checkDetails(data: EntityState): void {
   ensure(!data.item || isInventoryItem(data.item), 'Invalid item');
   ensure(!data.equipped || Object.entries(data.equipped).every(([slot, item]) => isEquipSlot(slot) && isInventoryItem(item)), 'Invalid equipment');
   ensure(!data.shopNpc || (Array.isArray(data.shopNpc.items) && data.shopNpc.items.every(isInventoryItem)), 'Invalid shop');
+  ensure(!data.shopNpc?.resale || (Array.isArray(data.shopNpc.resale) && data.shopNpc.resale.every(isInventoryItem)), 'Invalid shop resale');
   ensure(!data.door || (Array.isArray(data.door.tiles) && data.door.tiles.length <= MAX_DOOR_TILES && data.door.tiles.every(isTile)), 'Invalid door');
   ensure(!data.swordSwing || isIntList(data.swordSwing.hitIds), 'Invalid sword swing');
   ensure(!data.build || validBuild(data.build), 'Invalid build');

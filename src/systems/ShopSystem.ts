@@ -1,13 +1,14 @@
 import { world, isPlayer } from '../world';
-import type { Entity, InventoryItem } from '../world';
+import type { Entity } from '../world';
 import { playerUsing, REACH } from './TargetSystem';
 import { nearby, Sense } from '../ai/perception/spatial';
 
 let shopOpen = false;
-let activeItems: InventoryItem[] = [];
+let activeKeeper: Entity | null = null;
 
 export function isShopOpen(): boolean { return shopOpen; }
-export function activeShopItems(): InventoryItem[] { return activeItems; }
+/** The trader whose trade panel this screen has open (or last had). */
+export function activeTrader(): Entity | null { return activeKeeper; }
 export function closeShop(): void { shopOpen = false; }
 
 const keepers = world.with('position', 'shopNpc');
@@ -22,7 +23,7 @@ function visit(keeper: (typeof keepers)['entities'][number]): boolean {
     near = true;
     if (playerUsing(keeper) !== e) continue;
     shopOpen = !shopOpen;
-    activeItems = keeper.shopNpc.items;
+    activeKeeper = keeper;
   }
   return near;
 }

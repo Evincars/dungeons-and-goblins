@@ -7,6 +7,7 @@ import type { DndClass } from './DndClasses';
 import { hasPick } from './Archetypes';
 import type { Picks } from './Archetypes';
 import features from '../data/features.json';
+import featureIcons from '../data/feature-icons.json';
 
 /**
  * Every class feature of the 5th edition SRD for the classes in play, read from src/data/features.json: the Skills
@@ -52,9 +53,29 @@ export type FeatureDef = {
   /** The feature that takes this one's place, found when the file is read. */
   supersededBy: FeatureDef | null;
   description: string;
+  /** The texture key of its icon (src/data/feature-icons.json), if it has one; without one it shows its initials. */
+  icon: string | null;
 };
 
 const isKind = (v: unknown): v is FeatureKind => FEATURE_KINDS.some((k) => k === v);
+
+/** Each class's feature icons under public/ (scripts/feature-icons.py), by feature id. */
+function iconSrc(cls: string, id: string): string | null {
+  const byClass: unknown = hasKey(featureIcons, cls) ? featureIcons[cls] : null;
+  const src: unknown = isRecord(byClass) ? byClass[id] : null;
+  return typeof src === 'string' ? src : null;
+}
+
+/** The texture key of a class's feature's icon (the same id may be in several classes, each with its own icon). */
+const iconKey = (cls: string, id: string): string => `feature_icon_${cls}_${id}`;
+
+/** Every class feature with an icon: its texture key and where it is under public/ (the art loads lazily, assets/SheetCatalog.ts). */
+export function featureIconSources(): Array<{ key: string; src: string }> {
+  return DND_CLASSES.flatMap((cls) => CLASS_FEATURE_LIST[cls].flatMap((f) => {
+    const src = iconSrc(cls, f.id);
+    return src ? [{ key: iconKey(cls, f.id), src: `/${src}` }] : [];
+  }));
+}
 
 /** Whole numbers by hero level, as `{ "2": 1, "17": 2 }` in the file (an active's uses, or the seconds cut off its recovery). */
 function readByLevel(cls: string, raw: unknown, what: string): { level: number; value: number }[] {
@@ -84,6 +105,7 @@ function readFeature(cls: string, raw: unknown): FeatureDef {
     logOnly: r.logOnly === true,
     charges: r.charges === true,
     description: String(r.description ?? ''),
+    icon: iconSrc(cls, String(r.id)) ? iconKey(cls, String(r.id)) : null,
   };
 }
 

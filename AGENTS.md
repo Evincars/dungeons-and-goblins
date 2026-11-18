@@ -139,7 +139,10 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `src/data/spells.json`; every spell of Baldur's Gate 3 the game knows (name, level, school, the classes that learn it,
   the Eldritch Knight's, its BG3 text and icon) in `src/data/spell-list.json`, made by `scripts/bg3-spells.mjs` from the BG3
   wiki (it matches spells to the icons `scripts/spell-icons.sh` pixelates in `public/spells-icons` into
-  `<name>_pixelart.png`; only spells with numbers in `spells.json` are cast, the rest show greyed out, not in the game yet);
+  `<name>_pixelart.png`, lightly and at twice the size, for tooltips; the class features' icons lie flat in
+  `public/class-features-icons` as `<class>-[<subclass>-]<feature>.png` beside a `_pixelart` copy made the same way, by
+  `scripts/class-feature-icons.sh` from what `scripts/download-class-features-icons.py` downloads from bg3.wiki, and which
+  feature shows which icon in `src/data/feature-icons.json`, made by `scripts/feature-icons.py` (by name, the rest by its `ALIASES`); only spells with numbers in `spells.json` are cast, the rest show greyed out, not in the game yet);
   the D&D rules behind them (range in feet and px, dice, damage types, text, At Higher Levels) in `src/data/spellbook.json`,
   made by `scripts/scrape-spells.mjs`; the SRD class features by level (passive, active or info; `worked` says whether the game plays
   them) in `src/data/features.json`; every damage type, weapon and spell, in `src/rules/DamageTypes.ts`; sound effects (clips layered, re-pitched
@@ -318,7 +321,19 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   player's first click or key: `AudioUnlock.ts` holds music back until Howler has unlocked the audio on it. Only the art
   and the menus' sounds load behind the loading screen in `index.html` (`ui/LoadingScreen.ts`); audio is otherwise
   lazy: the other effects load in the background once the title is up, a bed when first heard, music streams.
-- `src/entities/` — factories and stat tables. `src/render/` — sheets, camera, terrain layers.
+- `src/entities/` — factories and stat tables. The safe rooms' trader (`entities/Trader.ts`, `public/trader`; animated by
+  `systems/TraderSystem.ts`: it idles, throws its coat open when its panel opens and holds it open, closes it when the panel
+  closes, nodding if they traded) sells everything there is for now (`SHOP_ITEMS`) and has a purse of its own
+  (`shopNpc.gold`, `TRADER_GOLD`). Its trade screen (`ui/ShopPanel.ts`, as in Baldur's Gate 3: its wares left, the hero's bag
+  right, the trader and both sides' gold between; each column with the inventory's filters and search; a row's icon, a line of
+  what it does (`ui/ItemSummary.ts`) and price, the inventory's tooltip under the pointer) asks before each trade; it buys for
+  half the price, `SELL_SHARE`, and offers what it bought back once, `shopNpc.resale`. Heroes set out with 10 gold
+  (`STARTING_GOLD`) and one of each weapon, shield and armour they are trained in, as long as it does not slow them
+  (`giveStartingKit`); past 80 % of what they carry they slow, to a walk with no sprint at all of it (`rules/Encumbrance.ts`).
+  Blood splashes from a hero or a foe a blow
+  hurts (`entities/Blood.ts`, `public/blood`, small). `src/render/` — sheets, camera, terrain layers.
+- The picture is 16:9 (`render/Camera.ts`), wider (up to 21:9) only on an ultrawide monitor, by the monitor's shape, not the
+  window's; the window shows it as large as fits, with bars.
 - `src/core/` — cross-cutting: `errors/`, `log/`, `geometry.ts`, `guards.ts`, `debugHooks.ts`, `compression.ts` (gzip with a size limit).
 - `src/game/` — game loop, `SceneManager`, persisted settings, player actions (item gifts too), the party's votes
   (`Party.ts`: one synced `party` entity; rests and the lever ask through it, and act once everyone agrees), death

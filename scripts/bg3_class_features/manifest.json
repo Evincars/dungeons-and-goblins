@@ -1,0 +1,1362 @@
+[
+  {
+    "class": "Fighter",
+    "level": 1,
+    "subclass": null,
+    "feature": "Second Wind",
+    "url": "https://bg3.wiki/w/images/9/95/Second_Wind_Icon.webp",
+    "file": "Fighter/Level 01/Second Wind.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 1,
+    "subclass": null,
+    "feature": "Archery",
+    "url": "https://bg3.wiki/w/images/8/83/Archery_Icon.webp",
+    "file": "Fighter/Level 01/Archery.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 1,
+    "subclass": null,
+    "feature": "Defence",
+    "url": "https://bg3.wiki/w/images/e/e2/Defence_Icon.webp",
+    "file": "Fighter/Level 01/Defence.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 1,
+    "subclass": null,
+    "feature": "Duelling",
+    "url": "https://bg3.wiki/w/images/a/ae/Duelling_Icon.webp",
+    "file": "Fighter/Level 01/Duelling.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 1,
+    "subclass": null,
+    "feature": "Great Weapon Fighting",
+    "url": "https://bg3.wiki/w/images/1/1f/Great_Weapon_Fighting_Icon.webp",
+    "file": "Fighter/Level 01/Great Weapon Fighting.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 1,
+    "subclass": null,
+    "feature": "Protection",
+    "url": "https://bg3.wiki/w/images/7/73/Protection_Icon.webp",
+    "file": "Fighter/Level 01/Protection.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 1,
+    "subclass": null,
+    "feature": "Two-Weapon Fighting",
+    "url": "https://bg3.wiki/w/images/5/54/Two-Weapon_Fighting_Icon.webp",
+    "file": "Fighter/Level 01/Two-Weapon Fighting.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 2,
+    "subclass": null,
+    "feature": "Action Surge",
+    "url": "https://bg3.wiki/w/images/4/4d/Action_Surge_Icon.webp",
+    "file": "Fighter/Level 02/Action Surge.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 3,
+    "subclass": "Champion",
+    "feature": "Improved Critical Hit",
+    "url": "https://bg3.wiki/w/images/8/83/Improved_Critical_Hit_Icon.webp",
+    "file": "Fighter/Level 03/Champion/Improved Critical Hit.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 3,
+    "subclass": "Eldritch Knight",
+    "feature": "Weapon Bond",
+    "url": "https://bg3.wiki/w/images/2/24/Weapon_Bond_Icon.webp",
+    "file": "Fighter/Level 03/Eldritch Knight/Weapon Bond.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 5,
+    "subclass": null,
+    "feature": "Extra Attack",
+    "url": "https://bg3.wiki/w/images/5/5a/Extra_Attack_Icon.webp",
+    "file": "Fighter/Level 05/Extra Attack.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 7,
+    "subclass": "Arcane Archer",
+    "feature": "Curving Shot",
+    "url": "https://bg3.wiki/w/images/b/bf/Curving_Shot_Icon.webp",
+    "file": "Fighter/Level 07/Arcane Archer/Curving Shot.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 7,
+    "subclass": "Arcane Archer",
+    "feature": "Magic Arrow",
+    "url": "https://bg3.wiki/w/images/a/aa/Magic_Arrow_Icon.webp",
+    "file": "Fighter/Level 07/Arcane Archer/Magic Arrow.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 7,
+    "subclass": "Champion",
+    "feature": "Remarkable Athlete: Jump",
+    "url": "https://bg3.wiki/w/images/2/2b/Remarkable_Athlete_Jump_Icon.webp",
+    "file": "Fighter/Level 07/Champion/Remarkable Athlete - Jump.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 7,
+    "subclass": "Champion",
+    "feature": "Remarkable Athlete: Proficiency",
+    "url": "https://bg3.wiki/w/images/2/29/Remarkable_Athlete_Proficiency_Icon.webp",
+    "file": "Fighter/Level 07/Champion/Remarkable Athlete - Proficiency.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 7,
+    "subclass": "Eldritch Knight",
+    "feature": "War Magic",
+    "url": "https://bg3.wiki/w/images/1/1a/War_Magic_Icon.webp",
+    "file": "Fighter/Level 07/Eldritch Knight/War Magic.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 9,
+    "subclass": null,
+    "feature": "Indomitable",
+    "url": "https://bg3.wiki/w/images/3/3a/Indomitable_Unfaded_Icon.webp",
+    "file": "Fighter/Level 09/Indomitable.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 10,
+    "subclass": "Battle Master",
+    "feature": "Improved Combat Superiority",
+    "url": "https://bg3.wiki/w/images/c/c1/Generic_Damage_Icon.webp",
+    "file": "Fighter/Level 10/Battle Master/Improved Combat Superiority.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 10,
+    "subclass": "Eldritch Knight",
+    "feature": "Eldritch Strike",
+    "url": "https://bg3.wiki/w/images/9/95/Eldritch_Strike_Icon.webp",
+    "file": "Fighter/Level 10/Eldritch Knight/Eldritch Strike.png"
+  },
+  {
+    "class": "Fighter",
+    "level": 11,
+    "subclass": null,
+    "feature": "Improved Extra Attack",
+    "url": "https://bg3.wiki/w/images/5/5a/Extra_Attack_Icon.webp",
+    "file": "Fighter/Level 11/Improved Extra Attack.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 1,
+    "subclass": null,
+    "feature": "Arcane Recovery",
+    "url": "https://bg3.wiki/w/images/e/ed/Arcane_Recovery_Icon.webp",
+    "file": "Wizard/Level 01/Arcane Recovery.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 2,
+    "subclass": "Abjuration School",
+    "feature": "Arcane Ward",
+    "url": "https://bg3.wiki/w/images/7/79/Arcane_Ward_Icon.webp",
+    "file": "Wizard/Level 02/Abjuration School/Arcane Ward.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 2,
+    "subclass": "Bladesinging",
+    "feature": "Bladesong",
+    "url": "https://bg3.wiki/w/images/8/80/Bladesong_Icon.webp",
+    "file": "Wizard/Level 02/Bladesinging/Bladesong.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 2,
+    "subclass": "Bladesinging",
+    "feature": "Training in War and Song",
+    "url": "https://bg3.wiki/w/images/d/d2/Training_in_War_and_Song_Icon.webp",
+    "file": "Wizard/Level 02/Bladesinging/Training in War and Song.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 2,
+    "subclass": "Conjuration School",
+    "feature": "Minor Conjuration: Create Water",
+    "url": "https://bg3.wiki/w/images/d/d1/Create_Water_Icon.webp",
+    "file": "Wizard/Level 02/Conjuration School/Minor Conjuration - Create Water.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 2,
+    "subclass": "Divination School",
+    "feature": "Portent",
+    "url": "https://bg3.wiki/w/images/1/1d/Portent_Icon.webp",
+    "file": "Wizard/Level 02/Divination School/Portent.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 2,
+    "subclass": "Enchantment School",
+    "feature": "Hypnotic Gaze",
+    "url": "https://bg3.wiki/w/images/f/f6/Hypnotic_Gaze_Icon.webp",
+    "file": "Wizard/Level 02/Enchantment School/Hypnotic Gaze.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 2,
+    "subclass": "Evocation School",
+    "feature": "Sculpt Spells",
+    "url": "https://bg3.wiki/w/images/9/97/Sculpt_Spells_Icon.webp",
+    "file": "Wizard/Level 02/Evocation School/Sculpt Spells.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 2,
+    "subclass": "Illusion School",
+    "feature": "Improved Minor Illusion",
+    "url": "https://bg3.wiki/w/images/3/37/Improved_Minor_Illusion_Icon.webp",
+    "file": "Wizard/Level 02/Illusion School/Improved Minor Illusion.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 2,
+    "subclass": "Necromancy School",
+    "feature": "Grim Harvest",
+    "url": "https://bg3.wiki/w/images/5/59/Grim_Harvest_Icon.webp",
+    "file": "Wizard/Level 02/Necromancy School/Grim Harvest.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 2,
+    "subclass": "Transmutation School",
+    "feature": "Experimental Alchemy",
+    "url": "https://bg3.wiki/w/images/e/e8/Experimental_Alchemy_Icon.webp",
+    "file": "Wizard/Level 02/Transmutation School/Experimental Alchemy.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 6,
+    "subclass": "Abjuration School",
+    "feature": "Projected Ward",
+    "url": "https://bg3.wiki/w/images/7/79/Projected_Ward_Icon.webp",
+    "file": "Wizard/Level 06/Abjuration School/Projected Ward.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 6,
+    "subclass": "Bladesinging",
+    "feature": "Extra Attack",
+    "url": "https://bg3.wiki/w/images/5/5a/Extra_Attack_Icon.webp",
+    "file": "Wizard/Level 06/Bladesinging/Extra Attack.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 6,
+    "subclass": "Conjuration School",
+    "feature": "Benign Transposition",
+    "url": "https://bg3.wiki/w/images/a/a6/Benign_Transposition_Teleport_Icon.webp",
+    "file": "Wizard/Level 06/Conjuration School/Benign Transposition.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 6,
+    "subclass": "Divination School",
+    "feature": "Expert Divination",
+    "url": "https://bg3.wiki/w/images/f/f4/Expert_Divination_Icon.webp",
+    "file": "Wizard/Level 06/Divination School/Expert Divination.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 6,
+    "subclass": "Enchantment School",
+    "feature": "Instinctive Charm",
+    "url": "https://bg3.wiki/w/images/9/92/Instinctive_Charm_Icon.webp",
+    "file": "Wizard/Level 06/Enchantment School/Instinctive Charm.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 6,
+    "subclass": "Evocation School",
+    "feature": "Potent Cantrip",
+    "url": "https://bg3.wiki/w/images/c/c9/Potent_Cantrip_Icon.webp",
+    "file": "Wizard/Level 06/Evocation School/Potent Cantrip.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 6,
+    "subclass": "Illusion School",
+    "feature": "See Invisibility (class action)",
+    "url": "https://bg3.wiki/w/images/c/c3/See_Invisibility_Icon.webp",
+    "file": "Wizard/Level 06/Illusion School/See Invisibility (class action).png"
+  },
+  {
+    "class": "Wizard",
+    "level": 6,
+    "subclass": "Necromancy School",
+    "feature": "Undead Thralls: Animate Dead",
+    "url": "https://bg3.wiki/w/images/1/11/Undead_Thralls_Animate_Dead_Icon.webp",
+    "file": "Wizard/Level 06/Necromancy School/Undead Thralls - Animate Dead.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 6,
+    "subclass": "Necromancy School",
+    "feature": "Undead Thralls: Additional Undead",
+    "url": "https://bg3.wiki/w/images/0/0a/Undead_Thralls_Additional_Undead_Icon.webp",
+    "file": "Wizard/Level 06/Necromancy School/Undead Thralls - Additional Undead.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 6,
+    "subclass": "Necromancy School",
+    "feature": "Undead Thralls: Better Summons",
+    "url": "https://bg3.wiki/w/images/9/9a/Undead_Thralls_Better_Summons_Icon.webp",
+    "file": "Wizard/Level 06/Necromancy School/Undead Thralls - Better Summons.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 6,
+    "subclass": "Transmutation School",
+    "feature": "Transmuter's Stone",
+    "url": "https://bg3.wiki/w/images/1/13/Transmuter%27s_Stone_Constitution_Icon.webp",
+    "file": "Wizard/Level 06/Transmutation School/Transmuter's Stone.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 10,
+    "subclass": "Abjuration School",
+    "feature": "Improved Abjuration",
+    "url": "https://bg3.wiki/w/images/4/4a/Improved_Abjuration_Icon.webp",
+    "file": "Wizard/Level 10/Abjuration School/Improved Abjuration.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 10,
+    "subclass": "Bladesinging",
+    "feature": "Song of Defence",
+    "url": "https://bg3.wiki/w/images/f/f9/Song_of_Defence_Icon.webp",
+    "file": "Wizard/Level 10/Bladesinging/Song of Defence.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 10,
+    "subclass": "Conjuration School",
+    "feature": "Focused Conjuration",
+    "url": "https://bg3.wiki/w/images/1/1e/Focused_Conjuration_Icon.webp",
+    "file": "Wizard/Level 10/Conjuration School/Focused Conjuration.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 10,
+    "subclass": "Divination School",
+    "feature": "Third Eye: Darkvision",
+    "url": "https://bg3.wiki/w/images/b/b0/Third_Eye_Darkvision_Icon.webp",
+    "file": "Wizard/Level 10/Divination School/Third Eye - Darkvision.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 10,
+    "subclass": "Divination School",
+    "feature": "Third Eye: See Invisibility",
+    "url": "https://bg3.wiki/w/images/b/bd/Third_Eye_See_Invisibility_Icon.webp",
+    "file": "Wizard/Level 10/Divination School/Third Eye - See Invisibility.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 10,
+    "subclass": "Enchantment School",
+    "feature": "Split Enchantment",
+    "url": "https://bg3.wiki/w/images/b/b1/Split_Enchantment_Icon.webp",
+    "file": "Wizard/Level 10/Enchantment School/Split Enchantment.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 10,
+    "subclass": "Evocation School",
+    "feature": "Empowered Evocation",
+    "url": "https://bg3.wiki/w/images/d/d0/Empowered_Evocation_Icon.webp",
+    "file": "Wizard/Level 10/Evocation School/Empowered Evocation.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 10,
+    "subclass": "Illusion School",
+    "feature": "Illusory Self",
+    "url": "https://bg3.wiki/w/images/a/a8/Illusory_Self_Icon.webp",
+    "file": "Wizard/Level 10/Illusion School/Illusory Self.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 10,
+    "subclass": "Necromancy School",
+    "feature": "Inured to Undeath",
+    "url": "https://bg3.wiki/w/images/c/c0/Inured_to_Undeath_Icon.webp",
+    "file": "Wizard/Level 10/Necromancy School/Inured to Undeath.png"
+  },
+  {
+    "class": "Wizard",
+    "level": 10,
+    "subclass": "Transmutation School",
+    "feature": "Shapechanger",
+    "url": "https://bg3.wiki/w/images/9/9d/Shapechanger_Icon.webp",
+    "file": "Wizard/Level 10/Transmutation School/Shapechanger.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 1,
+    "subclass": null,
+    "feature": "Sneak Attack (Melee)",
+    "url": "https://bg3.wiki/w/images/e/e0/Sneak_Attack_Melee_Icon.webp",
+    "file": "Rogue/Level 01/Sneak Attack (Melee).png"
+  },
+  {
+    "class": "Rogue",
+    "level": 1,
+    "subclass": null,
+    "feature": "Sneak Attack (Ranged)",
+    "url": "https://bg3.wiki/w/images/c/ca/Sneak_Attack_Ranged_Icon.webp",
+    "file": "Rogue/Level 01/Sneak Attack (Ranged).png"
+  },
+  {
+    "class": "Rogue",
+    "level": 2,
+    "subclass": null,
+    "feature": "Cunning Action: Dash",
+    "url": "https://bg3.wiki/w/images/8/8e/Dash_bonus_action_Icon.webp",
+    "file": "Rogue/Level 02/Cunning Action - Dash.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 2,
+    "subclass": null,
+    "feature": "Cunning Action: Disengage",
+    "url": "https://bg3.wiki/w/images/4/4b/Disengage_Bonus_Action_Icon.webp",
+    "file": "Rogue/Level 02/Cunning Action - Disengage.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 2,
+    "subclass": null,
+    "feature": "Cunning Action: Hide",
+    "url": "https://bg3.wiki/w/images/e/ec/Hide_Bonus_Action_Icon.webp",
+    "file": "Rogue/Level 02/Cunning Action - Hide.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 3,
+    "subclass": "Arcane Trickster",
+    "feature": "Mage Hand Legerdemain",
+    "url": "https://bg3.wiki/w/images/f/f9/Mage_Hand_Icon.webp",
+    "file": "Rogue/Level 03/Arcane Trickster/Mage Hand Legerdemain.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 3,
+    "subclass": "Assassin",
+    "feature": "Assassin's Alacrity",
+    "url": "https://bg3.wiki/w/images/b/bd/Generic_Tactical_Icon.webp",
+    "file": "Rogue/Level 03/Assassin/Assassin's Alacrity.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 3,
+    "subclass": "Assassin",
+    "feature": "Assassinate: Ambush",
+    "url": "https://bg3.wiki/w/images/8/86/Generic_Threat_Icon.webp",
+    "file": "Rogue/Level 03/Assassin/Assassinate - Ambush.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 3,
+    "subclass": "Assassin",
+    "feature": "Assassinate: Initiative",
+    "url": "https://bg3.wiki/w/images/2/2e/Generic_Death_Icon.webp",
+    "file": "Rogue/Level 03/Assassin/Assassinate - Initiative.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 3,
+    "subclass": "Swashbuckler",
+    "feature": "Fancy Footwork",
+    "url": "https://bg3.wiki/w/images/5/5b/Fancy_Footwork_Icon.webp",
+    "file": "Rogue/Level 03/Swashbuckler/Fancy Footwork.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 3,
+    "subclass": "Swashbuckler",
+    "feature": "Rakish Audacity",
+    "url": "https://bg3.wiki/w/images/b/ba/Rakish_Audacity_Icon.webp",
+    "file": "Rogue/Level 03/Swashbuckler/Rakish Audacity.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 3,
+    "subclass": "Swashbuckler",
+    "feature": "Rakish Sneak Attack (Melee)",
+    "url": "https://bg3.wiki/w/images/3/34/Rakish_Sneak_Attack_Melee_Icon.webp",
+    "file": "Rogue/Level 03/Swashbuckler/Rakish Sneak Attack (Melee).png"
+  },
+  {
+    "class": "Rogue",
+    "level": 3,
+    "subclass": "Swashbuckler",
+    "feature": "Rakish Sneak Attack (Ranged)",
+    "url": "https://bg3.wiki/w/images/7/7b/Rakish_Sneak_Attack_Ranged_Icon.webp",
+    "file": "Rogue/Level 03/Swashbuckler/Rakish Sneak Attack (Ranged).png"
+  },
+  {
+    "class": "Rogue",
+    "level": 3,
+    "subclass": "Thief",
+    "feature": "Fast Hands",
+    "url": "https://bg3.wiki/w/images/d/dc/Fast_Hands_Icon.webp",
+    "file": "Rogue/Level 03/Thief/Fast Hands.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 3,
+    "subclass": "Thief",
+    "feature": "Second-Story Work: Falling",
+    "url": "https://bg3.wiki/w/images/4/40/Second-Story_Work_Falling_Icon.webp",
+    "file": "Rogue/Level 03/Thief/Second-Story Work - Falling.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 4,
+    "subclass": "Swashbuckler",
+    "feature": "Dirty Trick: Flick o' the Wrist",
+    "url": "https://bg3.wiki/w/images/f/fa/Dirty_Trick_Flick_o%27_the_Wrist_Icon.webp",
+    "file": "Rogue/Level 04/Swashbuckler/Dirty Trick - Flick o' the Wrist.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 4,
+    "subclass": "Swashbuckler",
+    "feature": "Dirty Trick: Sand Toss",
+    "url": "https://bg3.wiki/w/images/b/b2/Dirty_Trick_Sand_Toss_Icon.webp",
+    "file": "Rogue/Level 04/Swashbuckler/Dirty Trick - Sand Toss.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 4,
+    "subclass": "Swashbuckler",
+    "feature": "Dirty Trick: Vicious Mockery",
+    "url": "https://bg3.wiki/w/images/d/dc/Dirty_Trick_Vicious_Mockery_Icon.webp",
+    "file": "Rogue/Level 04/Swashbuckler/Dirty Trick - Vicious Mockery.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 5,
+    "subclass": null,
+    "feature": "Uncanny Dodge",
+    "url": "https://bg3.wiki/w/images/4/4d/Uncanny_Dodge_Icon.webp",
+    "file": "Rogue/Level 05/Uncanny Dodge.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 7,
+    "subclass": null,
+    "feature": "Evasion",
+    "url": "https://bg3.wiki/w/images/7/7c/Evasion_Icon.webp",
+    "file": "Rogue/Level 07/Evasion.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 9,
+    "subclass": "Arcane Trickster",
+    "feature": "Magical Ambush",
+    "url": "https://bg3.wiki/w/images/e/e1/Magical_Ambush_Icon.webp",
+    "file": "Rogue/Level 09/Arcane Trickster/Magical Ambush.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 9,
+    "subclass": "Assassin",
+    "feature": "Infiltration Expertise",
+    "url": "https://bg3.wiki/w/images/d/d3/Infiltration_Expertise_Icon.webp",
+    "file": "Rogue/Level 09/Assassin/Infiltration Expertise.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 9,
+    "subclass": "Swashbuckler",
+    "feature": "Panache",
+    "url": "https://bg3.wiki/w/images/a/a4/Panache_Icon.webp",
+    "file": "Rogue/Level 09/Swashbuckler/Panache.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 9,
+    "subclass": "Thief",
+    "feature": "Supreme Sneak",
+    "url": "https://bg3.wiki/w/images/b/b7/Supreme_Sneak_Icon.webp",
+    "file": "Rogue/Level 09/Thief/Supreme Sneak.png"
+  },
+  {
+    "class": "Rogue",
+    "level": 11,
+    "subclass": null,
+    "feature": "Reliable Talent",
+    "url": "https://bg3.wiki/w/images/4/43/Reliable_Talent_Icon.webp",
+    "file": "Rogue/Level 11/Reliable Talent.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 1,
+    "subclass": "Death",
+    "feature": "Reaper",
+    "url": "https://bg3.wiki/w/images/9/98/Reaper_Icon.webp",
+    "file": "Cleric/Level 01/Death/Reaper.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 1,
+    "subclass": "Knowledge",
+    "feature": "Blessings of Knowledge",
+    "url": "https://bg3.wiki/w/images/c/c5/Blessings_of_Knowledge_Icon.webp",
+    "file": "Cleric/Level 01/Knowledge/Blessings of Knowledge.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 1,
+    "subclass": "Life",
+    "feature": "Disciple of Life",
+    "url": "https://bg3.wiki/w/images/9/9b/Disciple_of_Life_Icon.webp",
+    "file": "Cleric/Level 01/Life/Disciple of Life.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 1,
+    "subclass": "Light",
+    "feature": "Warding Flare",
+    "url": "https://bg3.wiki/w/images/9/9a/Warding_Flare_passive_feature_Icon.webp",
+    "file": "Cleric/Level 01/Light/Warding Flare.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 1,
+    "subclass": "Nature",
+    "feature": "Acolyte of Nature",
+    "url": "https://bg3.wiki/w/images/0/06/Generic_Nature_Icon.webp",
+    "file": "Cleric/Level 01/Nature/Acolyte of Nature.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 1,
+    "subclass": "Tempest",
+    "feature": "Wrath of the Storm",
+    "url": "https://bg3.wiki/w/images/7/7b/Generic_Thunder_Icon.webp",
+    "file": "Cleric/Level 01/Tempest/Wrath of the Storm.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 1,
+    "subclass": "Trickery",
+    "feature": "Blessing of the Trickster",
+    "url": "https://bg3.wiki/w/images/1/1e/Blessing_of_the_Trickster_Icon.webp",
+    "file": "Cleric/Level 01/Trickery/Blessing of the Trickster.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 1,
+    "subclass": "War",
+    "feature": "War Priest",
+    "url": "https://bg3.wiki/w/images/b/b2/War_Priest_Icon.webp",
+    "file": "Cleric/Level 01/War/War Priest.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 2,
+    "subclass": null,
+    "feature": "Turn Undead",
+    "url": "https://bg3.wiki/w/images/4/4c/Turn_Undead_Icon.webp",
+    "file": "Cleric/Level 02/Turn Undead.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 2,
+    "subclass": "Death Domain",
+    "feature": "Channel Divinity: Touch of Death",
+    "url": "https://bg3.wiki/w/images/5/53/Channel_Divinity_Touch_of_Death_Icon.webp",
+    "file": "Cleric/Level 02/Death Domain/Channel Divinity - Touch of Death.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 2,
+    "subclass": "Life Domain",
+    "feature": "Preserve Life",
+    "url": "https://bg3.wiki/w/images/7/72/Preserve_Life_Icon.webp",
+    "file": "Cleric/Level 02/Life Domain/Preserve Life.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 2,
+    "subclass": "Light Domain",
+    "feature": "Radiance of the Dawn",
+    "url": "https://bg3.wiki/w/images/c/c8/Radiance_of_the_Dawn_Icon.webp",
+    "file": "Cleric/Level 02/Light Domain/Radiance of the Dawn.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 2,
+    "subclass": "Knowledge Domain",
+    "feature": "Knowledge of the Ages",
+    "url": "https://bg3.wiki/w/images/b/b9/Knowledge_of_the_Ages_Icon.webp",
+    "file": "Cleric/Level 02/Knowledge Domain/Knowledge of the Ages.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 2,
+    "subclass": "Nature Domain",
+    "feature": "Charm Animals and Plants",
+    "url": "https://bg3.wiki/w/images/6/6e/Charm_Animals_and_Plants_Icon.webp",
+    "file": "Cleric/Level 02/Nature Domain/Charm Animals and Plants.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 2,
+    "subclass": "Tempest Domain",
+    "feature": "Destructive Wrath",
+    "url": "https://bg3.wiki/w/images/c/ca/Destructive_Wrath_Icon.webp",
+    "file": "Cleric/Level 02/Tempest Domain/Destructive Wrath.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 2,
+    "subclass": "Trickery Domain",
+    "feature": "Invoke Duplicity",
+    "url": "https://bg3.wiki/w/images/f/fd/Invoke_Duplicity_Icon.webp",
+    "file": "Cleric/Level 02/Trickery Domain/Invoke Duplicity.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 2,
+    "subclass": "War Domain",
+    "feature": "Guided Strike",
+    "url": "https://bg3.wiki/w/images/3/38/Guided_Strike_Icon.webp",
+    "file": "Cleric/Level 02/War Domain/Guided Strike.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 5,
+    "subclass": null,
+    "feature": "Destroy Undead",
+    "url": "https://bg3.wiki/w/images/a/a7/Destroy_Undead_Icon.webp",
+    "file": "Cleric/Level 05/Destroy Undead.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 6,
+    "subclass": "Death Domain",
+    "feature": "Inescapable Destruction",
+    "url": "https://bg3.wiki/w/images/f/f7/Inescapable_Destruction_Icon.webp",
+    "file": "Cleric/Level 06/Death Domain/Inescapable Destruction.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 6,
+    "subclass": "Life Domain",
+    "feature": "Blessed Healer",
+    "url": "https://bg3.wiki/w/images/3/3f/Generic_Healing_Icon.webp",
+    "file": "Cleric/Level 06/Life Domain/Blessed Healer.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 6,
+    "subclass": "Light Domain",
+    "feature": "Improved Warding Flare",
+    "url": "https://bg3.wiki/w/images/2/20/Improved_Warding_Flare_Icon.webp",
+    "file": "Cleric/Level 06/Light Domain/Improved Warding Flare.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 6,
+    "subclass": "Knowledge Domain",
+    "feature": "Read Thoughts",
+    "url": "https://bg3.wiki/w/images/7/7a/Read_Thoughts_Icon.webp",
+    "file": "Cleric/Level 06/Knowledge Domain/Read Thoughts.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 6,
+    "subclass": "Knowledge Domain",
+    "feature": "Speak with Animals (cleric)",
+    "url": "https://bg3.wiki/w/images/2/24/Speak_with_Animals_Icon.webp",
+    "file": "Cleric/Level 06/Knowledge Domain/Speak with Animals (cleric).png"
+  },
+  {
+    "class": "Cleric",
+    "level": 6,
+    "subclass": "Nature Domain",
+    "feature": "Dampen Elements",
+    "url": "https://bg3.wiki/w/images/d/d4/Dampen_Elements_Icon.webp",
+    "file": "Cleric/Level 06/Nature Domain/Dampen Elements.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 6,
+    "subclass": "Tempest Domain",
+    "feature": "Thunderbolt Strike",
+    "url": "https://bg3.wiki/w/images/8/86/Thunderbolt_Strike_Icon.webp",
+    "file": "Cleric/Level 06/Tempest Domain/Thunderbolt Strike.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 6,
+    "subclass": "Trickery Domain",
+    "feature": "Channel Divinity: Cloak of Shadows",
+    "url": "https://bg3.wiki/w/images/3/3f/Cloak_of_Shadows_Icon.webp",
+    "file": "Cleric/Level 06/Trickery Domain/Channel Divinity - Cloak of Shadows.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 6,
+    "subclass": "War Domain",
+    "feature": "Channel Divinity: War God's Blessing",
+    "url": "https://bg3.wiki/w/images/c/ce/War_God%27s_Blessing_Icon.webp",
+    "file": "Cleric/Level 06/War Domain/Channel Divinity - War God's Blessing.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 8,
+    "subclass": "Death Domain",
+    "feature": "Divine Strike: Necrotic",
+    "url": "https://bg3.wiki/w/images/d/de/Divine_Strike_Necrotic_Melee_Icon.webp",
+    "file": "Cleric/Level 08/Death Domain/Divine Strike - Necrotic.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 8,
+    "subclass": "Life Domain",
+    "feature": "Divine Strike: Radiant",
+    "url": "https://bg3.wiki/w/images/d/d7/Divine_Strike_Radiant_Melee_Icon.webp",
+    "file": "Cleric/Level 08/Life Domain/Divine Strike - Radiant.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 8,
+    "subclass": "Light Domain",
+    "feature": "Potent Spellcasting",
+    "url": "https://bg3.wiki/w/images/9/9c/Potent_Spellcasting_Icon.webp",
+    "file": "Cleric/Level 08/Light Domain/Potent Spellcasting.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 8,
+    "subclass": "Knowledge Domain",
+    "feature": "Potent Spellcasting",
+    "url": "https://bg3.wiki/w/images/9/9c/Potent_Spellcasting_Icon.webp",
+    "file": "Cleric/Level 08/Knowledge Domain/Potent Spellcasting.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 8,
+    "subclass": "Nature Domain",
+    "feature": "Divine Strike: Elemental Fury",
+    "url": "https://bg3.wiki/w/images/6/65/Divine_Strike_Melee_Icon.webp",
+    "file": "Cleric/Level 08/Nature Domain/Divine Strike - Elemental Fury.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 8,
+    "subclass": "Tempest Domain",
+    "feature": "Divine Strike: Thunder",
+    "url": "https://bg3.wiki/w/images/8/88/Divine_Strike_Thunder_Melee_Icon.webp",
+    "file": "Cleric/Level 08/Tempest Domain/Divine Strike - Thunder.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 8,
+    "subclass": "Trickery Domain",
+    "feature": "Divine Strike: Poison",
+    "url": "https://bg3.wiki/w/images/f/fe/Divine_Strike_Poison_Melee_Icon.webp",
+    "file": "Cleric/Level 08/Trickery Domain/Divine Strike - Poison.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 8,
+    "subclass": "War Domain",
+    "feature": "Divine Strike: Weapon",
+    "url": "https://bg3.wiki/w/images/6/65/Divine_Strike_Melee_Icon.webp",
+    "file": "Cleric/Level 08/War Domain/Divine Strike - Weapon.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 10,
+    "subclass": null,
+    "feature": "Divine Intervention",
+    "url": "https://bg3.wiki/w/images/6/61/Divine_Intervention_Sunder_the_Heretical_Icon.webp",
+    "file": "Cleric/Level 10/Divine Intervention.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 10,
+    "subclass": null,
+    "feature": "Divine Intervention: Sunder the Heretical",
+    "url": "https://bg3.wiki/w/images/6/61/Divine_Intervention_Sunder_the_Heretical_Icon.webp",
+    "file": "Cleric/Level 10/Divine Intervention - Sunder the Heretical.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 10,
+    "subclass": null,
+    "feature": "Divine Intervention: Arm Thy Servant",
+    "url": "https://bg3.wiki/w/images/1/14/Divine_Intervention_Arm_Thy_Servant_Icon.webp",
+    "file": "Cleric/Level 10/Divine Intervention - Arm Thy Servant.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 10,
+    "subclass": null,
+    "feature": "Divine Intervention: Opulent Revival",
+    "url": "https://bg3.wiki/w/images/f/f9/Divine_Intervention_Opulent_Revival_Icon.webp",
+    "file": "Cleric/Level 10/Divine Intervention - Opulent Revival.png"
+  },
+  {
+    "class": "Cleric",
+    "level": 10,
+    "subclass": null,
+    "feature": "Divine Intervention: Golden Generosity",
+    "url": "https://bg3.wiki/w/images/7/7f/Divine_Intervention_Golden_Generosity_Icon.webp",
+    "file": "Cleric/Level 10/Divine Intervention - Golden Generosity.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 1,
+    "subclass": "Draconic Bloodline",
+    "feature": "Draconic Resilience",
+    "url": "https://bg3.wiki/w/images/3/3d/Draconic_Resilience_Icon.webp",
+    "file": "Sorcerer/Level 01/Draconic Bloodline/Draconic Resilience.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 1,
+    "subclass": "Shadow Magic",
+    "feature": "Eyes of the Dark",
+    "url": "https://bg3.wiki/w/images/4/4f/Eyes_of_the_Dark_Icon.webp",
+    "file": "Sorcerer/Level 01/Shadow Magic/Eyes of the Dark.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 1,
+    "subclass": "Shadow Magic",
+    "feature": "Strength of the Grave",
+    "url": "https://bg3.wiki/w/images/9/9e/Strength_of_the_Grave_Icon.webp",
+    "file": "Sorcerer/Level 01/Shadow Magic/Strength of the Grave.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 1,
+    "subclass": "Storm Sorcery",
+    "feature": "Tempestuous Magic",
+    "url": "https://bg3.wiki/w/images/5/59/Tempestuous_Magic_Icon.webp",
+    "file": "Sorcerer/Level 01/Storm Sorcery/Tempestuous Magic.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 1,
+    "subclass": "Wild Magic",
+    "feature": "Wild Magic (passive feature)",
+    "url": "https://bg3.wiki/w/images/2/2a/Wild_Magic_passive_feature_Icon.webp",
+    "file": "Sorcerer/Level 01/Wild Magic/Wild Magic (passive feature).png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 1,
+    "subclass": "Wild Magic",
+    "feature": "Tides of Chaos",
+    "url": "https://bg3.wiki/w/images/8/8d/Tides_of_Chaos_Icon.webp",
+    "file": "Sorcerer/Level 01/Wild Magic/Tides of Chaos.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 2,
+    "subclass": null,
+    "feature": "Create Spell Slot",
+    "url": "https://bg3.wiki/w/images/1/17/Create_Spell_Slot_Icon.webp",
+    "file": "Sorcerer/Level 02/Create Spell Slot.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 2,
+    "subclass": null,
+    "feature": "Create Sorcery Points",
+    "url": "https://bg3.wiki/w/images/a/a7/Create_Sorcery_Points_Icon.webp",
+    "file": "Sorcerer/Level 02/Create Sorcery Points.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 2,
+    "subclass": null,
+    "feature": "Metamagic: Careful Spell",
+    "url": "https://bg3.wiki/w/images/f/f4/Metamagic_Careful_Spell_Icon.webp",
+    "file": "Sorcerer/Level 02/Metamagic - Careful Spell.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 2,
+    "subclass": null,
+    "feature": "Metamagic: Distant Spell",
+    "url": "https://bg3.wiki/w/images/c/ca/Metamagic_Distant_Spell_Icon.webp",
+    "file": "Sorcerer/Level 02/Metamagic - Distant Spell.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 2,
+    "subclass": null,
+    "feature": "Metamagic: Extended Spell",
+    "url": "https://bg3.wiki/w/images/9/96/Metamagic_Extended_Spell_Icon.webp",
+    "file": "Sorcerer/Level 02/Metamagic - Extended Spell.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 2,
+    "subclass": null,
+    "feature": "Metamagic: Twinned Spell",
+    "url": "https://bg3.wiki/w/images/f/fe/Metamagic_Twinned_Spell_Icon.webp",
+    "file": "Sorcerer/Level 02/Metamagic - Twinned Spell.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 3,
+    "subclass": null,
+    "feature": "Metamagic: Heightened Spell",
+    "url": "https://bg3.wiki/w/images/5/56/Metamagic_Heightened_Spell_Icon.webp",
+    "file": "Sorcerer/Level 03/Metamagic - Heightened Spell.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 3,
+    "subclass": null,
+    "feature": "Metamagic: Quickened Spell",
+    "url": "https://bg3.wiki/w/images/a/a9/Metamagic_Quickened_Spell_Icon.webp",
+    "file": "Sorcerer/Level 03/Metamagic - Quickened Spell.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 3,
+    "subclass": null,
+    "feature": "Metamagic: Subtle Spell",
+    "url": "https://bg3.wiki/w/images/a/a5/Metamagic_Subtle_Spell_Icon.webp",
+    "file": "Sorcerer/Level 03/Metamagic - Subtle Spell.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 6,
+    "subclass": "Draconic Bloodline",
+    "feature": "Elemental Affinity: Damage",
+    "url": "https://bg3.wiki/w/images/0/01/Elemental_Affinity_Damage_Icon.webp",
+    "file": "Sorcerer/Level 06/Draconic Bloodline/Elemental Affinity - Damage.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 6,
+    "subclass": "Draconic Bloodline",
+    "feature": "Elemental Affinity: Resistance",
+    "url": "https://bg3.wiki/w/images/a/ab/Elemental_Affinity_Resistance_Icon.webp",
+    "file": "Sorcerer/Level 06/Draconic Bloodline/Elemental Affinity - Resistance.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 6,
+    "subclass": "Shadow Magic",
+    "feature": "Hound of Ill Omen",
+    "url": "https://bg3.wiki/w/images/1/14/Hound_of_Ill_Omen_Icon.webp",
+    "file": "Sorcerer/Level 06/Shadow Magic/Hound of Ill Omen.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 6,
+    "subclass": "Storm Sorcery",
+    "feature": "Heart of the Storm: Lightning",
+    "url": "https://bg3.wiki/w/images/1/16/Heart_of_the_Storm_Lightning_Icon.webp",
+    "file": "Sorcerer/Level 06/Storm Sorcery/Heart of the Storm - Lightning.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 6,
+    "subclass": "Storm Sorcery",
+    "feature": "Heart of the Storm: Thunder",
+    "url": "https://bg3.wiki/w/images/2/21/Heart_of_the_Storm_Thunder_Icon.webp",
+    "file": "Sorcerer/Level 06/Storm Sorcery/Heart of the Storm - Thunder.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 6,
+    "subclass": "Storm Sorcery",
+    "feature": "Heart of the Storm: Resistance",
+    "url": "https://bg3.wiki/w/images/6/66/Heart_of_the_Storm_Resistance_Icon.webp",
+    "file": "Sorcerer/Level 06/Storm Sorcery/Heart of the Storm - Resistance.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 6,
+    "subclass": "Wild Magic",
+    "feature": "Bend Luck",
+    "url": "https://bg3.wiki/w/images/5/55/Bend_Luck_Icon.webp",
+    "file": "Sorcerer/Level 06/Wild Magic/Bend Luck.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 11,
+    "subclass": "Draconic Bloodline",
+    "feature": "Fly (class action)",
+    "url": "https://bg3.wiki/w/images/f/f3/Fly_Icon.webp",
+    "file": "Sorcerer/Level 11/Draconic Bloodline/Fly (class action).png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 11,
+    "subclass": "Shadow Magic",
+    "feature": "Shadow Walk",
+    "url": "https://bg3.wiki/w/images/7/7e/Shadow_Walk_Icon.webp",
+    "file": "Sorcerer/Level 11/Shadow Magic/Shadow Walk.png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 11,
+    "subclass": "Storm Sorcery",
+    "feature": "Storm's Fury (passive feature)",
+    "url": "https://bg3.wiki/w/images/b/ba/Generic_Lightning_Icon.webp",
+    "file": "Sorcerer/Level 11/Storm Sorcery/Storm's Fury (passive feature).png"
+  },
+  {
+    "class": "Sorcerer",
+    "level": 11,
+    "subclass": "Wild Magic",
+    "feature": "Controlled Chaos",
+    "url": "https://bg3.wiki/w/images/2/2a/Wild_Magic_passive_feature_Icon.webp",
+    "file": "Sorcerer/Level 11/Wild Magic/Controlled Chaos.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 1,
+    "subclass": null,
+    "feature": "Rage",
+    "url": "https://bg3.wiki/w/images/c/c9/Rage_Icon.webp",
+    "file": "Barbarian/Level 01/Rage.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 1,
+    "subclass": null,
+    "feature": "Unarmoured Defence (barbarian)",
+    "url": "https://bg3.wiki/w/images/5/52/Unarmoured_Defence_barbarian_Icon.webp",
+    "file": "Barbarian/Level 01/Unarmoured Defence (barbarian).png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 2,
+    "subclass": null,
+    "feature": "Reckless Attack",
+    "url": "https://bg3.wiki/w/images/2/21/Reckless_Attack_Icon.webp",
+    "file": "Barbarian/Level 02/Reckless Attack.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 2,
+    "subclass": null,
+    "feature": "Danger Sense",
+    "url": "https://bg3.wiki/w/images/9/93/Danger_Sense_Icon.webp",
+    "file": "Barbarian/Level 02/Danger Sense.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 3,
+    "subclass": "Berserker",
+    "feature": "Frenzy",
+    "url": "https://bg3.wiki/w/images/6/68/Frenzy_Icon.webp",
+    "file": "Barbarian/Level 03/Berserker/Frenzy.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 3,
+    "subclass": "Berserker",
+    "feature": "Frenzied Strike",
+    "url": "https://bg3.wiki/w/images/e/ee/Frenzied_Strike_Icon.webp",
+    "file": "Barbarian/Level 03/Berserker/Frenzied Strike.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 3,
+    "subclass": "Berserker",
+    "feature": "Enraged Throw",
+    "url": "https://bg3.wiki/w/images/c/cf/Enraged_Throw_Icon.webp",
+    "file": "Barbarian/Level 03/Berserker/Enraged Throw.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 3,
+    "subclass": "Giant",
+    "feature": "Giant's Rage",
+    "url": "https://bg3.wiki/w/images/0/02/Giant%27s_Rage_Icon.webp",
+    "file": "Barbarian/Level 03/Giant/Giant's Rage.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 3,
+    "subclass": "Giant",
+    "feature": "Vaprak's Greed",
+    "url": "https://bg3.wiki/w/images/d/da/Vaprak%27s_Greed_Icon.webp",
+    "file": "Barbarian/Level 03/Giant/Vaprak's Greed.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 3,
+    "subclass": "Wild Magic",
+    "feature": "Rage: Wild Magic",
+    "url": "https://bg3.wiki/w/images/8/8a/Rage_Wild_Magic_Icon.webp",
+    "file": "Barbarian/Level 03/Wild Magic/Rage - Wild Magic.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 3,
+    "subclass": "Wild Magic",
+    "feature": "Magic Awareness",
+    "url": "https://bg3.wiki/w/images/c/c6/Magic_Awareness_Icon.webp",
+    "file": "Barbarian/Level 03/Wild Magic/Magic Awareness.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 5,
+    "subclass": null,
+    "feature": "Extra Attack",
+    "url": "https://bg3.wiki/w/images/5/5a/Extra_Attack_Icon.webp",
+    "file": "Barbarian/Level 05/Extra Attack.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 5,
+    "subclass": null,
+    "feature": "Fast Movement",
+    "url": "https://bg3.wiki/w/images/4/4f/Fast_Movement_Icon.webp",
+    "file": "Barbarian/Level 05/Fast Movement.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 5,
+    "subclass": "Giant",
+    "feature": "Boot of the Giants",
+    "url": "https://bg3.wiki/w/images/b/b3/Boot_of_the_Giants_Icon.webp",
+    "file": "Barbarian/Level 05/Giant/Boot of the Giants.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 6,
+    "subclass": "Berserker",
+    "feature": "Mindless Rage",
+    "url": "https://bg3.wiki/w/images/e/e5/Mindless_Rage_Icon.webp",
+    "file": "Barbarian/Level 06/Berserker/Mindless Rage.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 6,
+    "subclass": "Giant",
+    "feature": "Elemental Cleaver",
+    "url": "https://bg3.wiki/w/images/1/1e/Elemental_Cleaver_acid_Icon.webp",
+    "file": "Barbarian/Level 06/Giant/Elemental Cleaver.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 6,
+    "subclass": "Wild Magic",
+    "feature": "Bolstering Magic: Boon",
+    "url": "https://bg3.wiki/w/images/4/48/Bolstering_Magic_Boon_Icon.webp",
+    "file": "Barbarian/Level 06/Wild Magic/Bolstering Magic - Boon.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 6,
+    "subclass": "Wild Magic",
+    "feature": "Bolstering Magic: Level 1 Spell Slot",
+    "url": "https://bg3.wiki/w/images/2/2b/Bolstering_Magic_Level_1_Spell_Slot_Icon.webp",
+    "file": "Barbarian/Level 06/Wild Magic/Bolstering Magic - Level 1 Spell Slot.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 6,
+    "subclass": "Wild Magic",
+    "feature": "Bolstering Magic: Level 2 Spell Slot",
+    "url": "https://bg3.wiki/w/images/0/08/Bolstering_Magic_Level_2_Spell_Slot_Icon.webp",
+    "file": "Barbarian/Level 06/Wild Magic/Bolstering Magic - Level 2 Spell Slot.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 7,
+    "subclass": null,
+    "feature": "Feral Instinct",
+    "url": "https://bg3.wiki/w/images/4/4e/Feral_Instinct_Icon.webp",
+    "file": "Barbarian/Level 07/Feral Instinct.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 8,
+    "subclass": "Wildheart",
+    "feature": "Land's Stride: Difficult Terrain",
+    "url": "https://bg3.wiki/w/images/7/7f/Land%27s_Stride_Difficult_Terrain_Icon.webp",
+    "file": "Barbarian/Level 08/Wildheart/Land's Stride - Difficult Terrain.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 9,
+    "subclass": null,
+    "feature": "Brutal Critical",
+    "url": "https://bg3.wiki/w/images/e/e1/Brutal_Critical_Icon.webp",
+    "file": "Barbarian/Level 09/Brutal Critical.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 9,
+    "subclass": "Wild Magic",
+    "feature": "Bolstering Magic: Level 3 Spell Slot",
+    "url": "https://bg3.wiki/w/images/a/ae/Bolstering_Magic_Level_3_Spell_Slot_Icon.webp",
+    "file": "Barbarian/Level 09/Wild Magic/Bolstering Magic - Level 3 Spell Slot.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 10,
+    "subclass": "Berserker",
+    "feature": "Intimidating Presence",
+    "url": "https://bg3.wiki/w/images/2/24/Intimidating_Presence_Icon.webp",
+    "file": "Barbarian/Level 10/Berserker/Intimidating Presence.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 10,
+    "subclass": "Giant",
+    "feature": "Mighty Impel",
+    "url": "https://bg3.wiki/w/images/0/09/Mighty_Impel_Icon.webp",
+    "file": "Barbarian/Level 10/Giant/Mighty Impel.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 10,
+    "subclass": "Wild Magic",
+    "feature": "Unstable Backlash",
+    "url": "https://bg3.wiki/w/images/2/21/Unstable_Backlash_Icon.webp",
+    "file": "Barbarian/Level 10/Wild Magic/Unstable Backlash.png"
+  },
+  {
+    "class": "Barbarian",
+    "level": 11,
+    "subclass": null,
+    "feature": "Relentless Rage",
+    "url": "https://bg3.wiki/w/images/e/e8/Relentless_Rage_Icon.webp",
+    "file": "Barbarian/Level 11/Relentless Rage.png"
+  }
+]

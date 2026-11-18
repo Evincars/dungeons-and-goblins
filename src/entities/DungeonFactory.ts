@@ -1,11 +1,12 @@
 import { world, Team } from '../world';
+import { TRADER_FRAME, TRADER_SCALE, TRADER_SHEETS } from './Trader';
 import type { Entity, InventoryItem } from '../world';
 import { createTile, TileType, TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
 import type { Level } from '../level/Level';
 import { PROPS, PROP_GROUND } from '../level/Props';
 import type { PropDef, PropKind, PropPlacement } from '../level/Props';
 import { stashCoins } from './LootFactory';
-import { ARMORS, HAND_WEAPONS, SHIELDS, catalogueItem } from './ItemCatalog';
+import { ARMORS, HAND_WEAPONS, MEDALS, SHIELDS, catalogueItem } from './ItemCatalog';
 import type { DoorData, RoomData, TilePos } from '../level/generators/DungeonBuilder';
 
 /**
@@ -56,16 +57,26 @@ const CHEST_HEALTH = 20;
 const CHEST_SCALE = 0.75;
 const CHEST_LIFT = 12;
 
-/** What the shop keeper sells: gear for every slot, its weapons, shield and armour the D&D ones of the catalogue. */
-const sold = (from: readonly InventoryItem[], bases: readonly string[]): InventoryItem[] => bases.flatMap((base) => catalogueItem(from, base) ?? []);
+/** One of each D&D base of a catalogue list (its first picture), in the order the list has them. */
+function onePerBase(from: readonly InventoryItem[]): InventoryItem[] {
+  const bases = [...new Set(from.flatMap((item) => (item.base ? [item.base] : [])))];
+  return bases.flatMap((base) => catalogueItem(from, base) ?? []);
+}
 
+/**
+ * What the trader sells (for now everything there is, to try it all out): one of every weapon, shield and armour of the
+ * D&D tables, a helm and a ring, and every medal.
+ */
 export const SHOP_ITEMS: readonly InventoryItem[] = [
-  ...sold(HAND_WEAPONS, ['shortsword', 'longsword', 'handaxe']),
-  ...sold(SHIELDS, ['shield']),
+  ...onePerBase(HAND_WEAPONS),
+  ...onePerBase(SHIELDS),
   { type: 'helmet', name: 'Iron Helm',     value: 40,  gear: 'head',    icon: 'prop_armor_bust2', stats: { dexterity: 1 }, weight: 2.0 },
-  ...sold(ARMORS, ['chain_mail']),
+  ...onePerBase(ARMORS),
   { type: 'ring',   name: 'Copper Ring',   value: 60,  gear: 'trinket', icon: 'icon_ring', stats: { charisma: 2 }, weight: 0.1 },
+  ...MEDALS.map((medal) => ({ ...medal })),
 ];
+/** The gold a trader has to buy with at the start of each level. */
+export const TRADER_GOLD = 1000;
 
 /** ECS metadata for a room of the layout. */
 export function createRoom(room: RoomData): Entity {
@@ -364,14 +375,16 @@ export function createExitButton(x: number, y: number): Entity {
   });
 }
 
+/** The trader of the safe room (entities/Trader.ts): it stands on its feet at (x, y), animated by systems/TraderSystem.ts. */
 export function createShopNpc(x: number, y: number): Entity {
   return world.add({
     position: { x, y },
-    shopNpc: { items: SHOP_ITEMS.map((item) => ({ ...item })) },
+    shopNpc: { items: SHOP_ITEMS.map((item) => ({ ...item })), resale: [], gold: TRADER_GOLD },
     radius: { x: 10, y: 10 },
     blocking: true,
-    visual: { sheet: 'spawner', col: 0, row: 0 },
-    yOffset: 8,
+    visual: { sheet: TRADER_SHEETS.idle, col: 0, row: 0, scale: TRADER_SCALE },
+    // The sprite is drawn about its middle: raised by half its height, its feet stand on its position.
+    yOffset: (TRADER_FRAME * TRADER_SCALE) / 2,
     minimapColor: 0xffaa00,
   });
 }

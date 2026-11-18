@@ -869,19 +869,43 @@ test('weapons and armour come from their JSON tables alone: D&D stats, the table
   assert.equal(ARMOR_BASES.includes('robe') && ARMOR_BASES.includes('shield') && ARMOR_BASES.includes('tower_shield'), true);
 });
 
-test('a new run starts with one weapon of every type, a shield and every type of armour in the bag', async () => {
-  const { WEAPON_BASES } = await load('rules/WeaponTable');
-  const { ARMOR_BASES } = await load('rules/ArmorTable');
-  const player = playerAt(2, 2);
-  giveStartingKit(player);
-  const bag = player.inventory;
-  const bases = new Set(bag.map((i) => i.base));
-  const inCatalogue = new Set([...HAND_WEAPONS, ...SHIELDS, ...ARMORS].flatMap((i) => (i.base ? [i.base] : [])));
-  for (const base of [...WEAPON_BASES, ...ARMOR_BASES].filter((b) => inCatalogue.has(b))) assert.ok(bases.has(base), `${base} is in the bag`);
-  assert.equal(bases.size, inCatalogue.size, 'every weapon and armour type the catalogue has');
-  assert.equal(bag.length, bases.size, 'one of each');
-  assert.ok(bag.length <= PlayerActions.MAX_INVENTORY, 'and it all fits');
-  assert.notEqual(bag[0], HAND_WEAPONS.find((w) => w.base === bag[0].base), 'copies, not the catalogue entries');
+test('a new run starts with one of each weapon, shield and armour the hero is trained in, light enough not to slow them', async () => {
+  const { itemTrained, heroClass } = await load('rules/Classes');
+  const { MAX_CARRY_KG, LOAD_EASY } = await load('rules/Encumbrance');
+  const wizard = playerAt(2, 2, 'wizard');
+  giveStartingKit(wizard);
+  const bases = new Set(wizard.inventory.map((i) => i.base));
+  for (const base of ['dagger', 'quarterstaff', 'light_crossbow', 'robe']) assert.ok(bases.has(base), `a wizard has a ${base}`);
+  for (const base of ['longsword', 'plate', 'shield']) assert.ok(!bases.has(base), `but no ${base}`);
+  assert.ok(wizard.inventory.every((item) => itemTrained(heroClass('wizard'), item)), 'nothing a wizard is not trained in');
+  assert.equal(wizard.inventory.length, bases.size, 'one of each');
+  const fighter = playerAt(2, 2, 'fighter');
+  giveStartingKit(fighter);
+  const kg = fighter.inventory.reduce((sum, i) => sum + (i.weight ?? 0), 0);
+  assert.ok(kg <= MAX_CARRY_KG * LOAD_EASY, `a fighter's kit is not a burden: ${kg} kg`);
+  assert.ok(fighter.inventory.some((i) => i.base === 'longsword'), 'martial arms');
+  assert.notEqual(fighter.inventory[0], HAND_WEAPONS.find((w) => w.base === fighter.inventory[0].base), 'copies, not the catalogue entries');
+});
+
+test('a load past 80 % of what a hero carries slows them, to a walk at all of it; then they cannot sprint', async () => {
+  const { loadPace, fullyLaden, loadKg } = await load('rules/Encumbrance');
+  assert.equal(loadPace(50), 1);
+  assert.equal(loadPace(80), 1, 'free up to 80 %');
+  assert.ok(loadPace(90) < 1 && loadPace(90) > loadPace(100), 'slower and slower');
+  assert.equal(loadPace(100), loadPace(115), 'a walk at the whole load and past it');
+  assert.ok(fullyLaden(100) && !fullyLaden(99));
+  assert.equal(loadKg([{ weight: 2 }, null, { weight: 3 }], { armor: { weight: 10 } }), 15);
+  const hero = playerAt(2, 2);
+  hero.inventory = [];
+  hero.equipped = {};
+  hero.playerInput.right = true;
+  updateMovement(arena(10, 10));
+  const free = hero.velocity.x;
+  hero.velocity.x = 0;
+  hero.inventory = [{ type: 'armor', name: 'Lead', value: 1, weight: 100 }];
+  updateMovement(arena(10, 10));
+  assert.ok(hero.velocity.x < free * 0.6, `laden: ${hero.velocity.x} vs ${free}`);
+  hero.playerInput.right = false;
 });
 
 test('worn gear applies all its stats, and an item dropped on the gear panel finds its slot', () => {
@@ -6051,4 +6075,88 @@ test('Dungeon Delver makes the gear in a chest magical more often; Shield Master
   let rolls = 0;
   useDieRoller(() => (++rolls === 1 ? 1 : 20));
   assert.equal(FeatSystemForSaves.heroSavingThrow(slayer, 'wisdom', 15, undefined, caster), true, 'advantage against a caster at arm\'s length');
+});
+
+test('the trader buys from a hero for half the price and keeps what it bought, to sell back once; its wares never run out', () => {
+  const { sell, buyFrom, sellPrice, shopWares } = PlayerActions;
+  const hero = playerAt(2, 2);
+  const keeper = createShopNpc(2 * TILE_WIDTH + 20, 2 * TILE_WIDTH);
+  const sword = { ...SHOP_ITEMS.find((i) => i.base === 'longsword') };
+  hero.inventory = [sword, null];
+  hero.playerStats.gold = 0;
+  const wares = keeper.shopNpc.items.length;
+  assert.ok(sell(hero, keeper, 0));
+  assert.equal(hero.inventory[0], null, 'gone from the bag');
+  assert.equal(hero.playerStats.gold, sellPrice(sword));
+  assert.equal(sellPrice(sword), Math.floor(sword.value / 2));
+  assert.equal(sellPrice({ ...sword, value: 1 }), 1, 'never less than a gold piece');
+  assert.equal(shopWares(keeper).length, wares + 1, 'the trader offers it back');
+  assert.ok(!sell(hero, keeper, 0), 'an empty square sells nothing');
+  hero.playerStats.gold = 1000;
+  assert.ok(buyFrom(hero, keeper, wares), 'bought back');
+  assert.equal(shopWares(keeper).length, wares, 'once');
+  assert.ok(buyFrom(hero, keeper, 0));
+  assert.equal(shopWares(keeper).length, wares, 'a ware stays on offer');
+  world.remove(keeper);
+});
+
+test('class features show their bg3.wiki icons: every icon named in feature-icons.json is in public/, keyed by class', async () => {
+  const { readFileSync, existsSync } = await import('node:fs');
+  const { featureOfClass, featureIconSources } = await load('rules/ClassFeatures');
+  const icons = JSON.parse(readFileSync('src/data/feature-icons.json', 'utf8'));
+  for (const cls of ['fighter', 'rogue', 'cleric', 'wizard']) {
+    for (const [id, src] of Object.entries(icons[cls])) {
+      assert.ok(existsSync(`public/${src}`), `${cls}.${id}: ${src}`);
+      assert.ok(featureOfClass(cls, id), `${cls} has a feature ${id}`);
+    }
+  }
+  assert.equal(featureOfClass('fighter', 'second_wind').icon, 'feature_icon_fighter_second_wind');
+  assert.notEqual(featureOfClass('fighter', 'extra_attack').icon, featureOfClass('wizard', 'extra_attack').icon, 'each class its own');
+  assert.equal(featureOfClass('fighter', 'fighting_style').icon, null, 'a feature with no icon shows its initials');
+  assert.ok(featureIconSources().every((s) => s.src.startsWith('/class-features-icons/')));
+});
+
+test('a blow that hurts a hero or a foe splashes blood from their body; a dummy does not bleed', async () => {
+  const { bleeds, spawnBlood, bloodSheets } = await load('entities/Blood');
+  const goblin = mobAt(arena(8, 8), 'goblin', 3, 3);
+  const before = world.entities.filter((e) => e.fx).length;
+  assert.ok(bleeds(goblin));
+  spawnBlood(goblin);
+  const splash = world.entities.filter((e) => e.fx).at(-1);
+  assert.equal(world.entities.filter((e) => e.fx).length, before + 1);
+  assert.ok(splash.visual.sheet.startsWith('blood_'));
+  assert.ok(splash.visual.scale < 0.5, 'drawn small');
+  assert.equal(splash.fx.follow, world.id(goblin), 'moving with the one hit');
+  assert.ok(!bleeds({ position: { x: 0, y: 0 }, dummy: { row: 0 } }));
+  assert.ok(bloodSheets().every((s) => s.frames.length > 10 && s.frames.every((f) => f.x < 600 && f.y < 600)));
+});
+
+test('the trader sells everything there is and has a purse of its own: what heroes pay it adds up, and it cannot buy past it', async () => {
+  const { sell, buyFrom } = PlayerActions;
+  const { WEAPON_BASES } = await load('rules/WeaponTable');
+  const { MEDALS } = await load('entities/ItemCatalog');
+  const { TRADER_GOLD } = await load('entities/DungeonFactory');
+  const bases = new Set(SHOP_ITEMS.map((i) => i.base));
+  for (const base of WEAPON_BASES.filter((b) => HAND_WEAPONS.some((w) => w.base === b))) assert.ok(bases.has(base), `${base} on offer`);
+  for (const base of ['shield', 'tower_shield', 'plate', 'robe']) assert.ok(bases.has(base), `${base} on offer`);
+  assert.ok(MEDALS.every((m) => SHOP_ITEMS.some((i) => i.id === m.id)), 'every medal');
+  const hero = playerAt(2, 2);
+  const keeper = createShopNpc(2 * TILE_WIDTH + 20, 2 * TILE_WIDTH);
+  assert.equal(keeper.shopNpc.gold, TRADER_GOLD);
+  hero.playerStats.gold = 100;
+  const price = keeper.shopNpc.items[0].value;
+  assert.ok(buyFrom(hero, keeper, 0));
+  assert.equal(keeper.shopNpc.gold, TRADER_GOLD + price, 'paid to the trader');
+  keeper.shopNpc.gold = 0;
+  hero.inventory = [{ ...SHOP_ITEMS.find((i) => i.base === 'longsword') }];
+  assert.ok(!sell(hero, keeper, 0), 'a trader with no gold buys nothing');
+  assert.ok(hero.inventory[0], 'the hero keeps it');
+  world.remove(keeper);
+});
+
+test('every hero sets out with 10 gold, and the console adds more with /gold', () => {
+  const hero = playerAt(2, 2);
+  assert.equal(hero.playerStats.gold, 10);
+  runCommand('/gold 500', { player: hero, allowed: true });
+  assert.equal(hero.playerStats.gold, 510);
 });

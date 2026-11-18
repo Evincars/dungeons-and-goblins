@@ -13,6 +13,9 @@ const PLAYER_RADIUS = 7;
 export const BASE_SPRINT = 120;
 
 /** A hero of the given class (src/data/classes.json): its sprite, hit points and abilities come from there. */
+/** Every hero sets out with this much gold in their purse. */
+export const STARTING_GOLD = 10;
+
 export function createPlayer(x: number, y: number, classId: HeroClassId = DEFAULT_CLASS): Entity {
   const cls = heroClass(classId);
   return world.add({
@@ -48,7 +51,7 @@ export function createPlayer(x: number, y: number, classId: HeroClassId = DEFAUL
     playerStats: {
       level: 1,
       exp: 0,
-      gold: 0,
+      gold: STARTING_GOLD,
       swordTier: 1,
       hitDice: 1,
       sprinting: false,

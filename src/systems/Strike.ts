@@ -10,6 +10,7 @@ import { recordBlow } from './CombatLogSystem';
 import { afterBlow, evasiveBonus, prepareBlow } from './ManeuverSystem';
 import type { SpellId } from '../rules/Spells';
 import { sound } from '../audio/SoundPlayer';
+import { bleeds, spawnBlood } from '../entities/Blood';
 
 /**
  * Every blow in the game goes through here: the attack is rolled against the target's Armor Class, and the
@@ -41,7 +42,8 @@ function withFirstStrike(attack: AttackProfile, attacker: Entity | undefined): A
 
 /**
  * Rolls `attack` against `target`, showing the result over `logOn` (the attacker, or a projectile's shooter)
- * and writing it into the combat log. A critical hit is heard: blood and the crack of bone. A weapon blow (not a
+ * and writing it into the combat log. A blow that hurts a hero or a foe draws blood (entities/Blood.ts); a critical hit
+ * is heard: blood and the crack of bone. A weapon blow (not a
  * spell) is shaped by the hero's readied maneuver and the marks on both fighters (systems/ManeuverSystem.ts).
  */
 export function strike(target: Entity, attack: AttackProfile, logOn: Entity | undefined, spell?: SpellId): AttackOutcome {
@@ -49,6 +51,7 @@ export function strike(target: Entity, attack: AttackProfile, logOn: Entity | un
   const outcome = resolveAttack(withFirstStrike(prepared, logOn), armorClassOf(target));
   if (!spell) afterBlow(logOn, target, outcome);
   if (outcome.critical && target.position) sound.playSound('critical', target.position.x, target.position.y);
+  if (outcome.damage > 0 && bleeds(target)) spawnBlood(target);
   if (!logOn) return outcome;
   logAttack(logOn, outcome);
   recordBlow(logOn, outcome, spell);

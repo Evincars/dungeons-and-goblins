@@ -39,6 +39,8 @@ export type ItemSquare = { bag: number } | { slot: EquipSlot };
 /** Things a guest asks the host to do for its character, which the host checks and carries out. */
 export type GuestCommand =
   | { kind: 'buy'; index: number }
+  /** Sell the item on this square of the bag to the trader within reach. */
+  | { kind: 'sell'; index: number }
   | { kind: 'loadout'; inventory: BagSquare[]; equipped: Partial<Record<EquipSlot, InventoryItem>> }
   /**
    * Ask the party for a rest (with, for a short one, how many hit dice the asker will spend in it), or answer what
@@ -206,7 +208,7 @@ function validPick(value: Record<string, unknown>): boolean {
 
 export function validCommand(value: unknown): value is GuestCommand {
   if (!isRecord(value)) return false;
-  if (value.kind === 'buy') return Number.isInteger(value.index) && Number(value.index) >= 0 && Number(value.index) < MAX_ITEMS;
+  if (value.kind === 'buy' || value.kind === 'sell') return Number.isInteger(value.index) && Number(value.index) >= 0 && Number(value.index) < MAX_ITEMS;
   if (value.kind === 'rest') return isRestKind(value.rest) && (value.dice === undefined || isDiceCount(value.dice));
   if (value.kind === 'vote_answer') return typeof value.agree === 'boolean' && (value.dice === undefined || isDiceCount(value.dice));
   if (value.kind === 'pause') return typeof value.paused === 'boolean';

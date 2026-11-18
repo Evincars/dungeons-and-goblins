@@ -162,7 +162,7 @@ export function featureTopic(feature: FeatureDef, switchedOff: boolean, heroLeve
   else if (feature.kind === 'info') detail.push(text('feature.tip.info'));
   if (uses > 1 && !feature.charges) detail.push(text('feature.tip.uses', { uses }));
   if (feature.kind !== 'info' && !feature.worked) detail.push(text('feature.tip.unworked'));
-  return { title: feature.name, body: feature.description, detail, wide: true };
+  return { title: feature.name, body: feature.description, detail, wide: true, icon: feature.icon ?? undefined };
 }
 
 /** A Passive Feat in the Skills tab or on the quick bar: what it does, and how it is used (and whether it is on). */

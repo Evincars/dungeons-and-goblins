@@ -28,6 +28,7 @@ import { chooseDeparture } from '../systems/ExitSystem';
 import { characterSheet } from '../rules/CharacterSheet';
 import { endMageArmour } from '../systems/LastingSpells';
 import { needsBothHands, strengthNeeded, strongEnough } from '../rules/Equipment';
+import { MAX_CARRY_KG as CARRY_KG } from '../rules/Encumbrance';
 
 /**
  * What players do from the shop and inventory panels. In a lone game or on the host it happens at once;
@@ -50,8 +51,8 @@ export type Loadout = { inventory: BagSquare[]; equipped: Partial<Record<EquipSl
 /** A square of the inventory screen: one in the bag's grid, or an equipment slot. */
 export type ItemPlace = ItemSquare;
 
-/** Kilograms a player can carry, bag and worn gear together, without strain. */
-export const MAX_CARRY_KG = 100;
+/** Kilograms a player can carry, bag and worn gear together, without strain (past 80 % of it they slow, rules/Encumbrance.ts). */
+export const MAX_CARRY_KG = CARRY_KG;
 /** A hero can strain under up to this share of that (115 kg); anything more and they are overloaded. */
 const OVERLOAD_SHARE = 1.15;
 
@@ -238,12 +239,78 @@ export function buy(player: Player, item: InventoryItem): boolean {
   return true;
 }
 
-/** Buying from the shop panel: at once here, or through the host for a guest. */
-export function requestBuy(player: Player, items: readonly InventoryItem[], index: number): void {
-  const item = items[index];
-  if (!item) return;
-  if (coop.role === 'guest') coop.sendCommand({ kind: 'buy', index });
-  else buy(player, item);
+/** A trader pays this share of an item's price for it (as in the tabletop game: half). */
+export const SELL_SHARE = 0.5;
+/** A trader keeps at most this many things heroes sold it, for them to buy back; the oldest goes for a new one. */
+export const MAX_RESALE = 32;
+
+/** What a trader pays for an item: its share of the price, at least a gold piece. */
+export function sellPrice(item: InventoryItem): number {
+  return Math.max(1, Math.floor(item.value * SELL_SHARE));
+}
+
+/** Everything a trader offers, in the order its panel lists it: its wares, then what heroes sold it. */
+export function shopWares(keeper: Entity): InventoryItem[] {
+  const shop = keeper.shopNpc;
+  return shop ? [...shop.items, ...(shop.resale ?? [])] : [];
+}
+
+/**
+ * Buys the trader's offer at `index` (of shopWares): a ware is never sold out, a thing a hero sold it goes back once
+ * bought. Returns whether the hero got it.
+ */
+export function buyFrom(player: Player, keeper: Entity, index: number): boolean {
+  const shop = keeper.shopNpc;
+  const item = shop ? shopWares(keeper)[index] : undefined;
+  if (!shop || !item || !buy(player, item)) return false;
+  if (shop.gold !== undefined) shop.gold += item.value;
+  const resaleAt = index - shop.items.length;
+  if (resaleAt >= 0) shop.resale?.splice(resaleAt, 1);
+  return true;
+}
+
+/**
+ * Sells the item on a square of the hero's bag to the trader: it pays sellPrice (if it has the gold), and keeps the item
+ * for buying back.
+ */
+export function sell(player: Player, keeper: Entity, index: number): boolean {
+  const shop = keeper.shopNpc;
+  const inventory = player.inventory;
+  const item = inventory?.[index];
+  if (!shop || !inventory || !item) return false;
+  const price = sellPrice(item);
+  if (shop.gold !== undefined && shop.gold < price) {
+    sound.playSound('fail', player.position.x, player.position.y);
+    return false;
+  }
+  inventory[index] = null;
+  player.playerStats.gold += price;
+  if (shop.gold !== undefined) shop.gold -= price;
+  const resale = shop.resale ?? (shop.resale = []);
+  resale.push(item);
+  if (resale.length > MAX_RESALE) resale.shift();
+  sound.playSound('buy', player.position.x, player.position.y);
+  return true;
+}
+
+/** Buying from the trade panel: at once here (from the trader in reach), or through the host for a guest. */
+export function requestBuy(player: Player, index: number): void {
+  if (coop.role === 'guest') {
+    coop.sendCommand({ kind: 'buy', index });
+    return;
+  }
+  const keeper = keeperNear(player);
+  if (keeper) buyFrom(player, keeper, index);
+}
+
+/** Selling a bag square's item from the trade panel: at once here, or through the host for a guest. */
+export function requestSell(player: Player, index: number): void {
+  if (coop.role === 'guest') {
+    coop.sendCommand({ kind: 'sell', index });
+    return;
+  }
+  const keeper = keeperNear(player);
+  if (keeper) sell(player, keeper, index);
 }
 
 /**
@@ -424,9 +491,10 @@ export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): voi
   if (command.kind === 'depart') return chooseDeparture(slot, command.choice);
   const player = playerInSlot(slot);
   if (!isPlayer(player) || player.health.current <= 0) return;
-  if (command.kind === 'buy') {
-    const item = keeperNear(player)?.shopNpc?.items[command.index];
-    if (item) buy(player, item);
+  if (command.kind === 'buy' || command.kind === 'sell') {
+    const keeper = keeperNear(player);
+    if (keeper && command.kind === 'buy') buyFrom(player, keeper, command.index);
+    else if (keeper) sell(player, keeper, command.index);
     return;
   }
   if (command.kind === 'drop') {

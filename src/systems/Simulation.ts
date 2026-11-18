@@ -17,6 +17,7 @@ import { updateHoles, updateFalling } from './HoleSystem';
 import { updateDoors } from './DoorSystem';
 import { updateExit } from './ExitSystem';
 import { updateShop } from './ShopSystem';
+import { animateTraders } from './TraderSystem';
 import { updateRespawns } from './RespawnSystem';
 import { updateSprites } from './SpriteSystem';
 import { updateFx } from './FxSystem';
@@ -123,6 +124,7 @@ export const PRESENTATION: readonly System[] = [
   ({ gameLayer }) => updateSprites(gameLayer),
   () => updateFx(),
   () => animateDummies(),
+  () => animateTraders(),
   () => updateCharacterFacing(),
   () => updateCharacterState(),
   () => updateCharacterAnimation(),

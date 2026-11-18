@@ -6,6 +6,8 @@ import { WEAPON_BASES } from '../rules/WeaponTable';
 import { ARMOR_BASES } from '../rules/ArmorTable';
 import type { ItemBase } from '../rules/Equipment';
 import type { Build } from '../rules/Build';
+import { heroClass, itemTrained } from '../rules/Classes';
+import { LOAD_EASY, MAX_CARRY_KG } from '../rules/Encumbrance';
 
 /** A fresh copy (freshCopy) of the first catalogue entry of each of these D&D bases (in that order), skipping any the catalogue lacks. */
 function onePerBase(from: readonly InventoryItem[], bases: readonly ItemBase[]): InventoryItem[] {
@@ -16,11 +18,23 @@ function onePerBase(from: readonly InventoryItem[], bases: readonly ItemBase[]):
 }
 
 /**
- * What everyone sets out with, to try the rules on: one weapon of every type (dagger, longsword, longbow…),
- * a shield and one suit of every armour type, so each Armor Class and damage roll can be tested.
+ * What a hero sets out with: one of each kind of weapon, shield and armour they are trained in (a wizard's dagger,
+ * quarterstaff, light crossbow… and robe; a fighter's martial arms and every armour), in that order, as long as the load
+ * stays light enough not to slow them (rules/Encumbrance.ts); the rest the trader sells.
  */
 export function giveStartingKit(player: Entity): void {
-  player.inventory = [...onePerBase(HAND_WEAPONS, WEAPON_BASES), ...onePerBase(SHIELDS, ARMOR_BASES), ...onePerBase(ARMORS, ARMOR_BASES)];
+  const cls = heroClass(player.heroClass);
+  const trained = [...onePerBase(HAND_WEAPONS, WEAPON_BASES), ...onePerBase(SHIELDS, ARMOR_BASES), ...onePerBase(ARMORS, ARMOR_BASES)]
+    .filter((item) => itemTrained(cls, item));
+  const kit: InventoryItem[] = [];
+  let kg = 0;
+  for (const item of trained) {
+    const weight = item.weight ?? 0;
+    if (kg + weight > MAX_CARRY_KG * LOAD_EASY) continue;
+    kit.push(item);
+    kg += weight;
+  }
+  player.inventory = kit;
 }
 
 /** One trip into the dungeon: how deep the party has gone. A new run starts from the title screen. */

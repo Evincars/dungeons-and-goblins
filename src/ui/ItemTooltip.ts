@@ -30,7 +30,7 @@ const BG_ALPHA = 0.94;
 /** Gear the hero is not trained in is flagged in this colour. */
 const UNTRAINED_COLOR = 0xff7060;
 /** The letters of the name a search matched (core/fuzzy.ts) stand out in this colour. */
-const MATCH_COLOR = 0x8fe3ff;
+export const MATCH_COLOR = 0x8fe3ff;
 /**
  * In a comparison, a triangle after a line says whether this item beats the other on it: green and pointing up when
  * better, red and pointing down when worse; this big, this far after the line's text.

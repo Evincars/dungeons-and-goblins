@@ -28,8 +28,8 @@ const MIST_LAYERS = [
   { scale: 3.5, alpha: 0.3, tint: 0x4a5262, driftX: -0.08, driftY: 0.03, parallax: 0.85 },
 ] as const;
 
-/** A seamless cloud texture: smooth value noise in white, its strength in the alpha. */
-function mistTexture(): Texture {
+/** A seamless cloud texture: smooth value noise in white, its strength in the alpha (the portals' mist uses it too). */
+export function mistTexture(): Texture {
   const canvas = createCanvas(NOISE_SIZE, NOISE_SIZE);
   const ctx = context2d(canvas);
   const image = ctx.createImageData(NOISE_SIZE, NOISE_SIZE);

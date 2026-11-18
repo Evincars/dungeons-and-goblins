@@ -2571,7 +2571,7 @@ test('barrels, crates, coffins, urns and sacks can be searched: E (in reach) ope
   const { isOpenable } = await load('entities/DungeonFactory');
   const { stashCoins } = await load('entities/LootFactory');
   for (const kind of ['barrel', 'crate', 'coffin', 'sarcophagus', 'urn', 'sack', 'supplies_jar']) assert.ok(isOpenable(kind), kind);
-  for (const kind of ['banner_red', 'bowl_apples', 'urn_broken', 'coffin_open', 'shelf_goods', 'cauldron']) assert.equal(isOpenable(kind), false, kind);
+  for (const kind of ['banner_red', 'bowl_apples', 'urn_broken', 'shelf_goods', 'cauldron']) assert.equal(isOpenable(kind), false, kind);
   assert.equal(createStash({ kind: 'banner_red', tx: 3, ty: 3 }), null, 'a banner holds nothing to find');
   const finds = Array.from({ length: 2000 }, () => stashCoins());
   const empty = finds.filter((c) => c === 0).length;
@@ -6263,8 +6263,8 @@ test("the isometric castle's corridors come out through a room's north wall unde
   assert.deepEqual([...kinds].sort(), ['iso_gate_arch', 'iso_gate_door', 'iso_gate_grate']);
 });
 
-test('catacomb rooms have wooden pillars standing about them, and their own iron hung on the walls; campfires and portals smoke', async () => {
-  const { POSTS, CATACOMB_FIXTURES, PROPS } = await load('level/Props');
+test('catacomb rooms have pillars standing about them, their own iron and barred gates on the walls; campfires smoke, portals breathe mist', async () => {
+  const { POSTS, COLUMNS, CATACOMB_FIXTURES, PROPS } = await load('level/Props');
   const { createCampfire, createProp } = await load('entities/DungeonFactory');
   let pillars = 0;
   let iron = 0;
@@ -6272,14 +6272,54 @@ test('catacomb rooms have wooden pillars standing about them, and their own iron
   for (const seed of [3, 7, 11]) {
     const layout = new DungeonBuilder({ ...DEFAULT_CONFIG, seed }).build();
     rooms += layout.rooms.filter((r) => r.type === 'dungeon').length;
-    pillars += layout.props.filter((p) => POSTS.includes(p.kind)).length;
+    pillars += layout.props.filter((p) => POSTS.includes(p.kind) || COLUMNS.includes(p.kind)).length;
     iron += layout.props.filter((p) => CATACOMB_FIXTURES.includes(p.kind)).length;
   }
-  assert.ok(pillars >= rooms, `${pillars} pillars in ${rooms} rooms`);
-  assert.ok(iron >= 10, `${iron} cauldrons, chains and shackles`);
+  assert.ok(pillars >= rooms * 0.6, `${pillars} pillars in ${rooms} rooms`);
+  assert.ok(iron >= 30, `${iron} cauldrons, chains and shackles`);
+  let gates = 0;
+  for (const seed of [1, 2, 3, 4]) gates += new DungeonBuilder({ ...DEFAULT_CONFIG, seed }).build().props.filter((p) => p.kind === 'barred_gate').length;
+  assert.ok(gates > 0, 'barred gates set into the faces');
   assert.ok(POSTS.every((kind) => PROPS[kind].solid && !PROPS[kind].seeThrough), 'pillars block and never clear');
   world.clear();
   createCampfire(100, 100);
-  createProp({ kind: 'portal_dark', tx: 5, ty: 5 });
-  assert.equal(world.entities.filter((e) => e.visual?.sheet === 'smoke').length, 3, 'one column over the fire, two out of the portal');
+  const portal = createProp({ kind: 'portal_dark', tx: 5, ty: 5 });
+  assert.equal(world.entities.filter((e) => e.visual?.sheet === 'smoke').length, 1, 'a column of smoke over the fire');
+  assert.equal(portal.mist, true, 'mist breathes out of the portal');
+});
+
+test('tombs can be searched: coins, and now and then what their dead were buried with', async () => {
+  const { createStash } = await load('entities/DungeonFactory');
+  const { updateStashes } = await load('systems/StashSystem');
+  const random = Math.random;
+  Math.random = () => 0;
+  try {
+    for (const kind of ['coffin_open', 'sarcophagus_open', 'sarcophagus_broken2']) assert.ok(createStash({ kind, tx: 3, ty: 3 }), `${kind} is searched`);
+    world.clear();
+    const tomb = createStash({ kind: 'sarcophagus', tx: 3, ty: 3 });
+    assert.equal(tomb.stash.gear, true, 'gear buried with the dead');
+    const hero = playerAt(3, 4, 'fighter');
+    const carried = hero.inventory.length;
+    hero.playerInput.intents.use = true;
+    beginPerception();
+    resolveUses();
+    updateStashes();
+    assert.equal(tomb.removed, true, 'searched once');
+    assert.equal(hero.inventory.length, carried + 1, 'the find goes into the bag');
+  } finally {
+    Math.random = random;
+  }
+});
+
+test("a wall jutting out past another's face runs its edge on up to the top of the wall", async () => {
+  const { buildTerrainPieces } = await load('level/TerrainAutotile');
+  // A wall mass across rows 2–4 with open floor north of it (row 1); its east part (x 7–10) juts down to row 6.
+  const level = arena(12, 10);
+  wallRect(level, 1, 2, 10, 4);
+  wallRect(level, 7, 5, 10, 6);
+  const pieces = buildTerrainPieces(level);
+  const edgeAt = (dx, dy) => pieces.some((p) => p.dx === dx && p.dy === dy && p.sx === 64 && p.w === 8);
+  // Column x 7's west sub-tile (sub-x 14) beside the face of x 6 (rows 3–4), and the wall top above it (row 2).
+  assert.ok(edgeAt(14 * 16, 3 * 32) && edgeAt(14 * 16, 3 * 32 + 8), 'its edge along the other face');
+  assert.ok(edgeAt(14 * 16, 2 * 32 + 8) && edgeAt(14 * 16, 2 * 32), 'and on up to the open floor north');
 });

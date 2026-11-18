@@ -184,8 +184,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   (`MarkerSystem.ts`; `resolveUses` decides it each tick), items on the floor included. Spells and arrows stop on the
   boxes bodies bump into (`Level.blocksPoint`), not on whole wall tiles. The heroes come into a level by the stairs
   of a portal in the safe room's north wall (`portal_stairs`, they start before it) and leave by the dark portal in the exit
-  room's (`portal_dark`; the castle tileset's great arches, a candelabra either side, smoke breathing out, `entities/Smoke.ts`;
-  campfires smoke too). Leaving a level goes through the exit room
+  room's (`portal_dark`; the castle tileset's great arches, a candelabra either side, mist breathing out of the doorway, the fog's drifting
+  cloud in two thin rising sheets, `systems/MistSystem.ts`; the campfires smoke, `entities/Smoke.ts`). Leaving a level goes through the exit room
   (`ExitSystem.ts`): using its portal (the `exitButton` entity, no picture of its own, its body the arch) asks only the heroes standing in that room (and whoever walks in before it is settled)
   whether to go deeper or end the run; deeper needs all of them, and whoever is outside then is left behind, dead. Its
   lever (`LeverSystem.ts`, `lever.exit`) drops the room's portcullis 5 s after one pull, for good (`DoorSystem.ts`, `door.exit`).
@@ -262,7 +262,12 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - Animated decor stored one frame per file (`public/catacombs` torches and candles) is padded to one height with the base
   at the bottom, so only the flame moves; the catacombs' spikes (`spike_0…4.png`) are laid two by two into a tile's frame
   by `scripts/spike-sheet.py` (`public/catacombs/spikes.png`). The catacombs' rooms have their wooden pillars (`POSTS`: solid,
-  never cleared over) standing about them, and their faces mostly their own iron (`CATACOMB_FIXTURES`). A spike trap in a
+  never cleared over) and stone columns standing about them, their faces hung mostly with their own iron
+  (`CATACOMB_FIXTURES`, every other tile at most, beside torches and over anything low at the wall's foot) and now and then
+  a barred gate (`barred_gate`, its opening filled with the dark by `scripts/catacomb-gate.py`); their faces also show
+  stretches with vents and dark cracked stretches (`TerrainAutotile.ts` face styles), and where a wall juts out past
+  another's face its edge runs on up to the wall's north edge (`seamW`/`seamE`). Coffins and sarcophagi are searched like
+  other stashes and may hold gear (`TOMB_GEAR_CHANCE`, `entities/LootFactory.ts`). A spike trap in a
   corridor (`spikeTrap`, `systems/TrapSystem.ts`) bites the first hero to step on it, told over their head and in the
   combat log, and stays up, harmless, after.
 - `src/characters/` — side-view `CharacterDef`s (`Heroes.ts`: the main characters from `public/main-characters`; clips may

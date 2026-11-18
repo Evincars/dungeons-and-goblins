@@ -148,8 +148,15 @@ const HANGING_CHANCE = 0.12;
  * In the catacombs more faces are hung (CATACOMB_HANGING_CHANCE), and this share of what hangs there is the catacombs'
  * own iron (cauldrons, shackles, chains), the rest trophies and banners.
  */
-const CATACOMB_HANGING_CHANCE = 0.2;
-const CATACOMB_FIXTURE_SHARE = 0.6;
+const CATACOMB_HANGING_CHANCE = 0.6;
+const CATACOMB_FIXTURE_SHARE = 0.75;
+/** Chance a free stretch of catacomb face three tiles wide has a barred gate set into it instead. */
+const BARRED_GATE_CHANCE = 0.12;
+/** After a hanging this many more tiles of face are left bare (in the catacombs, every other tile may be hung). */
+const HANGING_STEP = 2;
+const CATACOMB_HANGING_STEP = 1;
+/** A hanging may hang over something standing at the wall's foot no taller than this (px). */
+const HANGING_CLEAR = 30;
 /**
  * The catacombs' spike traps: how many (min, max) are set in their corridors, never within TRAP_DOOR_GAP tiles of a door
  * and at least TRAP_SPACING tiles (across plus down) from one another.
@@ -160,6 +167,8 @@ const TRAP_SPACING = 6;
 /** Pillars standing about a catacomb room: this many (min, max), and one more for every so many tiles of it. */
 const PILLAR_COUNT = [1, 2] as const;
 const PILLAR_AREA = 60;
+/** What stands about a catacomb room: its wooden posts, and its stone pedestals and columns. */
+const PILLARS: readonly PropKind[] = [...POSTS, ...COLUMNS];
 /** Chance a dungeon room keeps a storeroom corner: furniture backed against its north wall, goods in front. */
 const STORE_CHANCE = 0.18;
 /** A storeroom has up to this many pieces of furniture, and up to this many goods around each. */
@@ -959,7 +968,7 @@ export class DungeonBuilder {
   private pillars(room: RoomData, props: PropPlacement[], keep: Keep): void {
     const open = this.shuffledFreeTiles(room);
     const count = this.countIn(PILLAR_COUNT) + Math.floor((room.w * room.h) / PILLAR_AREA);
-    for (let i = 0; i < count; i++) this.scatterSolid(room, open, POSTS, props, keep);
+    for (let i = 0; i < count; i++) this.scatterSolid(room, open, PILLARS, props, keep);
   }
 
   // ── The castle ──────────────────────────────────────────────────────────────
@@ -1538,9 +1547,14 @@ export class DungeonBuilder {
 
   /** A plain stretch of full-height brick face above floor tile (tx, ty), free for wall fixtures. */
   private mountable(tx: number, ty: number): boolean {
+    return this.plainFloor(tx, ty) && this.plainFaceAbove(tx, ty);
+  }
+
+  /** A plain stretch of full-height face above tile (tx, ty), whatever stands on that tile. */
+  private plainFaceAbove(tx: number, ty: number): boolean {
     const W = this.cfg.mapWidth;
     const sloped = (x: number): boolean => this.level.slopes.has(x + ty * W);
-    return this.plainFloor(tx, ty) && !sloped(tx - 1) && !sloped(tx + 1)
+    return !sloped(tx) && !sloped(tx - 1) && !sloped(tx + 1)
       && this.isWall(tx, ty - 1) && this.isWall(tx, ty - 2)
       && this.isWall(tx - 1, ty - 1) && this.isWall(tx + 1, ty - 1)
       && !isPillarColumn(tx) && !this.level.wallDecor.has(tx + (ty - 1) * W) && !this.besideCastleDecor(tx, ty - 1)
@@ -1572,17 +1586,40 @@ export class DungeonBuilder {
 
   /** Cauldrons, chains, trophies and banners hung on faces between the torches. */
   private placeHangings(torches: TilePos[], props: PropPlacement[]): void {
-    for (let ty = FIXTURE_MIN_ROW; ty < this.cfg.mapHeight; ty++) this.hangingRow(ty, torches, props);
+    const W = this.cfg.mapWidth;
+    const tall = new Set(props.filter((p) => PROPS[p.kind].mount === 'floor' && PROPS[p.kind].rect.h > HANGING_CLEAR).map((p) => p.tx + p.ty * W));
+    for (let ty = FIXTURE_MIN_ROW; ty < this.cfg.mapHeight; ty++) this.hangingRow(ty, torches, tall, props);
   }
 
-  private hangingRow(ty: number, torches: TilePos[], props: PropPlacement[]): void {
-    const nearTorch = (tx: number) => torches.some((t) => t.y === ty && Math.abs(t.x - tx) < 2);
-    const chance = this.cfg.theme === 'catacomb' ? CATACOMB_HANGING_CHANCE : HANGING_CHANCE;
+  /**
+   * Hangings along one row of faces. In the catacombs they may hang right beside a torch, and over something low
+   * standing at the wall's foot (an urn, a sack), never over anything tall (`tall`: tiles a tall prop stands on).
+   */
+  private hangingRow(ty: number, torches: TilePos[], tall: ReadonlySet<number>, props: PropPlacement[]): void {
+    const catacomb = this.cfg.theme === 'catacomb';
+    const gap = catacomb ? 1 : 2;
+    const nearTorch = (tx: number) => torches.some((t) => t.y === ty && Math.abs(t.x - tx) < gap);
+    const chance = catacomb ? CATACOMB_HANGING_CHANCE : HANGING_CHANCE;
+    const ground = (tx: number) => this.mountable(tx, ty)
+      || (catacomb && this.level.getTile(tx, ty)?.type === TileType.Obstacle && !tall.has(tx + ty * this.cfg.mapWidth) && this.plainFaceAbove(tx, ty));
+    const free = (tx: number) => ground(tx) && !nearTorch(tx) && !this.level.isSafeZone(tx, ty);
     for (let tx = 1; tx < this.cfg.mapWidth - 1; tx++) {
-      if (!this.mountable(tx, ty) || nearTorch(tx) || this.level.isSafeZone(tx, ty) || this.rng() > chance) continue;
+      if (!free(tx)) continue;
+      if (this.barredGate(tx, ty, free, props)) {
+        tx += 3;
+        continue;
+      }
+      if (this.rng() > chance) continue;
       props.push({ kind: this.pickProp(this.hangingKinds()), tx, ty });
-      tx += 2;
+      tx += catacomb ? CATACOMB_HANGING_STEP : HANGING_STEP;
     }
+  }
+
+  /** Now and then in the catacombs, a barred gate set into the face starting at tx, if three tiles of it are free. */
+  private barredGate(tx: number, ty: number, free: (tx: number) => boolean, props: PropPlacement[]): boolean {
+    if (this.cfg.theme !== 'catacomb' || !free(tx + 1) || !free(tx + 2) || this.rng() >= BARRED_GATE_CHANCE) return false;
+    props.push({ kind: 'barred_gate', tx: tx + 1, ty });
+    return true;
   }
 
   /** What hangs on a face: the castle's banners; in the catacombs mostly their own iron, else trophies and banners. */

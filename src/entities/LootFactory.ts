@@ -121,6 +121,9 @@ const STASH_FINDS: ReadonlyArray<{ chance: number; coins: Dice }> = [
   { chance: 0.25, coins: dice(1, 6) },
 ];
 
+/** A coffin or a sarcophagus also holds a piece of gear (now and then a magical one) this often. */
+export const TOMB_GEAR_CHANCE = 0.15;
+
 /** The coins one openable prop holds (0: it is empty). */
 export function stashCoins(): number {
   let roll = Math.random();

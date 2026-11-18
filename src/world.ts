@@ -729,8 +729,13 @@ export type Entity = {
    * its door instead, once and for all.
    */
   lever?: { pulled: boolean; rest: number; exit?: true };
-  /** Something on the floor worth searching (an urn, a coffin, a bowl): the coins in it, found once. */
-  stash?: { coins: number };
+  /**
+   * Something on the floor worth searching (an urn, a coffin, a bowl): the coins in it, found once, and (`gear`, a tomb's)
+   * a piece of gear buried with its dead.
+   */
+  stash?: { coins: number; gear?: boolean };
+  /** Mist breathes out of it (a portal; drawn by systems/MistSystem.ts, every screen for itself). */
+  mist?: true;
   /**
    * A spike trap in the catacombs' floor (systems/TrapSystem.ts): the first hero to step on it springs it (`sprung`) and is
    * hurt; it stays up, harmless, from then on. `ticks`: how long since it was sprung (its spikes rise frame by frame).

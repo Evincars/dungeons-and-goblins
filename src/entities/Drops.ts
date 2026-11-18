@@ -115,6 +115,8 @@ export const DROP_TABLES = {
     always: [{ kind: 'gear', magic: true, magicPercent: 35, picks: 3 }], rolls: 1,
     entries: [{ weight: 1, drop: { kind: 'coins', min: 50, max: 120 } }],
   },
+  // What a tomb's dead were buried with (searched, entities/LootFactory.ts TOMB_GEAR_CHANCE).
+  tomb: { always: [{ kind: 'gear', magic: true }], rolls: 0, entries: [] },
   // An enemy's coins are its kill reward (entities/LootFactory.ts); now and then it also drops gear.
   mob: { always: [], rolls: 1, entries: [{ weight: MOB_GEAR_ONE_IN - 1, drop: { kind: 'none' } }, { weight: 1, drop: { kind: 'gear' } }] },
 } as const satisfies Record<string, DropTable>;

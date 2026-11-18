@@ -1,12 +1,12 @@
 import { world, Team } from '../world';
 import { TRADER_FRAME, TRADER_SCALE, TRADER_SHEETS } from './Trader';
-import { CAMPFIRE_SMOKE, PORTAL_SMOKE, createSmoke } from './Smoke';
+import { CAMPFIRE_SMOKE, createSmoke } from './Smoke';
 import type { Entity, InventoryItem } from '../world';
 import { createTile, TileType, TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
 import type { Level } from '../level/Level';
-import { PROPS, PROP_GROUND } from '../level/Props';
+import { COFFINS, PROPS, PROP_GROUND, SARCOPHAGI } from '../level/Props';
 import type { PropDef, PropKind, PropPlacement } from '../level/Props';
-import { stashCoins } from './LootFactory';
+import { TOMB_GEAR_CHANCE, stashCoins } from './LootFactory';
 import { CHEST_TIERS, rollChestTier } from './Drops';
 import { ARMORS, HAND_WEAPONS, MEDALS, SHIELDS, catalogueItem } from './ItemCatalog';
 import type { DoorData, RoomData, TilePos } from '../level/generators/DungeonBuilder';
@@ -38,8 +38,6 @@ const HANG_TOP = 54;
  * over the wall.
  */
 const FOOT_DEPTH = 5;
-/** A portal's two columns of smoke rise this far either side of its middle. */
-const PORTAL_SMOKE_SPREAD = 9;
 /** How far onto the floor the exit portal's body reaches (where the heroes step up to it). */
 const PORTAL_DEPTH = 8;
 /**
@@ -243,11 +241,6 @@ function propGlow(def: PropDef): Pick<Entity, 'glow'> {
   return { glow: { radius: def.glow, cool: def.coolGlow, flicker: flickers ? Math.random() * Math.PI * 2 : undefined } };
 }
 
-/** Smoke drifting out of a portal whose foot is at (x, y): two thin columns, a little either side of its middle. */
-function breatheSmoke(x: number, y: number): void {
-  for (const side of [-1, 1]) createSmoke(x + side * PORTAL_SMOKE_SPREAD, y, PORTAL_SMOKE);
-}
-
 /** A decorative prop: standing on its tile, or hung on the brick face above it. */
 export function createProp(p: PropPlacement): Entity {
   const def: PropDef = PROPS[p.kind];
@@ -261,8 +254,8 @@ export function createProp(p: PropPlacement): Entity {
     });
   }
   if (def.mount === 'foot') {
-    if (def.smoke) breatheSmoke(x, p.ty * TILE_HEIGHT + FOOT_DEPTH);
     return world.add({
+      ...(def.smoke ? { mist: true } : {}),
       position: { x, y: p.ty * TILE_HEIGHT + FOOT_DEPTH }, visual: { sheet }, yOffset: h / 2, localOnly: true,
       ...propAnimation(sheet, def), ...propGlow(def),
     });
@@ -293,7 +286,8 @@ export function createProp(p: PropPlacement): Entity {
  * and whatever hangs on a wall, such as the cauldrons, are not.) What each holds, if anything, is rolled by `stashCoins`.
  */
 const OPENABLE_PROPS: ReadonlySet<PropKind> = new Set<PropKind>([
-  'coffin', 'coffin_cracked', 'sarcophagus', 'sarcophagus2',
+  'coffin', 'coffin_cracked', 'coffin_open', 'sarcophagus', 'sarcophagus2', 'sarcophagus_open', 'sarcophagus_open2',
+  'sarcophagus_broken', 'sarcophagus_broken2',
   'barrel', 'barrel2', 'supplies_barrel',
   'crate', 'crate2', 'crate_large', 'crate_large2', 'supplies_crate', 'supplies_crates',
   'urn', 'urn_small', 'urn_m', 'urn_s', 'urn_xs', 'urn_green', 'urn_green_small', 'urn_green_m', 'urn_green_s', 'urn_green_xs',
@@ -304,6 +298,11 @@ const OPENABLE_PROPS: ReadonlySet<PropKind> = new Set<PropKind>([
 ]);
 /** A stash's body reaches this far up and down its prop's foot, for the crosshair and the corner brackets. */
 const STASH_DEPTH = 6;
+
+/** Coffins and sarcophagi: searched, they may give up what their dead were buried with. */
+function isTomb(kind: PropKind): boolean {
+  return COFFINS.includes(kind) || SARCOPHAGI.includes(kind);
+}
 
 /** Whether a prop of this kind stands on the floor and can be opened (searched with "use"). */
 export function isOpenable(kind: PropKind): boolean {
@@ -321,7 +320,7 @@ export function createStash(p: PropPlacement): Entity | null {
     position: { x: p.tx * TILE_WIDTH + TILE_WIDTH / 2, y: p.ty * TILE_HEIGHT + PROP_GROUND },
     yOffset: def.rect.h / 2,
     radius: { x: def.rect.w / 2, y: STASH_DEPTH },
-    stash: { coins: stashCoins() },
+    stash: { coins: stashCoins(), gear: isTomb(p.kind) && Math.random() < TOMB_GEAR_CHANCE },
   });
 }
 

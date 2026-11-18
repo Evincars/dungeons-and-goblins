@@ -17,6 +17,7 @@ import { updateHoles, updateFalling } from './HoleSystem';
 import { updateDoors } from './DoorSystem';
 import { updateExit } from './ExitSystem';
 import { updateTraps } from './TrapSystem';
+import { updateMist } from './MistSystem';
 import { updateShop } from './ShopSystem';
 import { animateTraders } from './TraderSystem';
 import { updateRespawns } from './RespawnSystem';
@@ -135,6 +136,7 @@ export const PRESENTATION: readonly System[] = [
   ({ gameLayer }) => updateBars(gameLayer),
   ({ gameLayer }) => updateRollTexts(gameLayer),
   ({ gameLayer }) => updateMarker(gameLayer),
+  ({ gameLayer, tick }) => updateMist(gameLayer, tick),
   () => updateMusic(),
   ({ level }) => updateAmbience(level),
 ];

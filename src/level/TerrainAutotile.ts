@@ -83,7 +83,15 @@ const CRACKED_Y = [304, 288, 272];     // damp-stained, crumbling bricks (k=1..3
  */
 const COBBLE_STAINS: ReadonlyArray<Src> = [[304, 336], [384, 336], [304, 400], [384, 400]];
 /** One pair of plain full-height face tiles in this many (by hash) is such a stained (or stone-set) stretch. */
-const STAINED_EVERY = 7;
+const STAINED_EVERY = 4;
+/**
+ * Other stretches two tiles wide: the face's right-hand panel with its two dark vents (cols 11–14, rows 8–10, and the
+ * same in cobblestone), and a dark wall with pale cracks glowing down its sides (cols 23–26, rows 13–15; brick only).
+ */
+const VENTS_X = 176;
+const VENTS_EVERY = 5;
+const DARK_X = 368;
+const DARK_EVERY = 7;
 const BASE_Y = 176;                    // 8px plinth under the face, drawn on the floor
 // Tomb niche face: bones in dark recesses (rows 12–15), 4 sub-tiles wide
 const NICHE_X = [80, 176];
@@ -178,6 +186,8 @@ type WallTop = { outerTL: Src; outerTR: Src; edgeTopL: Src; edgeTopR: Src; edgeL
 
 /** Tallest a south face gets, in sub-tiles: a cap over three brick rows. */
 const FACE_MAX = 4;
+/** A wall's edge is run up past another's face to its north edge only if that is at most this many sub-tiles up. */
+const SEAM_MAX = 12;
 /** Sub-tiles of a framed 2×2 pit along each side. */
 const PIT_SUBTILES = 4;
 /** Floor value-noise scale in tiles, and the noise levels above which patches and rough earth show. */
@@ -216,7 +226,7 @@ const SLANT_WIDE_EVERY = 3;
 const UNDER_SLANT_STRIP = 2;
 const SLANT_NARROW_EVERY = 3;
 
-type FaceStyle = 'left' | 'right' | 'mid' | 'pillarL' | 'pillarR' | 'window' | 'slit' | 'cracked' | 'niche' | 'decor';
+type FaceStyle = 'left' | 'right' | 'mid' | 'pillarL' | 'pillarR' | 'window' | 'slit' | 'cracked' | 'vents' | 'dark' | 'niche' | 'decor';
 type Src = readonly [number, number];
 
 function quad(out: TerrainPiece[], dx: number, dy: number, s: Src, w: number, h: number, z?: number): void {
@@ -249,6 +259,13 @@ class TerrainBuilder {
    * runs its rim up along it, as it does along a straight face's end.
    */
   private readonly endColumns = new Set<number>();
+  /**
+   * Wall-top sub-tiles whose west (seamW) or east (seamE) side runs the rim on up from the top of a face beside it to the
+   * wall's north edge: where a wall juts out past another's face, its edge goes all the way up instead of stopping in the
+   * dark at the other face's cap.
+   */
+  private readonly seamW = new Set<number>();
+  private readonly seamE = new Set<number>();
   readonly floorPieces: TerrainPiece[] = [];
   readonly wallPieces: TerrainPiece[] = [];
   readonly overlayPieces: TerrainPiece[] = [];
@@ -274,6 +291,7 @@ class TerrainBuilder {
   build(): TerrainPiece[] {
     forEachTile(0, 1, this.W - 1, this.H - 1, this.markFace);
     for (const index of this.level.slopes.keys()) this.markSlantEnds(index % this.level.width, Math.floor(index / this.level.width));
+    forEachTile(0, 1, this.W - 1, this.H - 1, this.markSeams);
     forEachTile(0, 0, this.level.width - 1, this.level.height - 1, this.addFloor);
     for (const p of this.level.pits) this.addPit(p);
     for (const g of this.level.grates) this.addGrate(g);
@@ -344,6 +362,34 @@ class TerrainBuilder {
     }
   };
 
+  /** A plain wall-top sub-tile: solid, no face, no slant. */
+  private wallTop(sx: number, sy: number): boolean {
+    return this.solid(sx, sy) && !this.isFace(sx, sy) && !this.sloped(sx, sy);
+  }
+
+  private readonly markSeams = (sx: number, sy: number): void => {
+    this.markSeam(sx, sy, -1, this.seamW);
+    this.markSeam(sx, sy, 1, this.seamE);
+  };
+
+  /**
+   * From a wall-top sub-tile beside the cap of a face (on `side`), the sub-tiles above it whose side meets the other wall's
+   * top, up to where either wall reaches open floor north: marked only if it gets there within SEAM_MAX (a rim left
+   * hanging in the dark would be no better).
+   */
+  private markSeam(sx: number, sy: number, side: -1 | 1, seams: Set<number>): void {
+    const beside = sx + side;
+    if (!this.wallTop(sx, sy) || !this.isFace(beside, sy) || this.isFace(beside, sy - 1)) return;
+    const run: number[] = [];
+    for (let y = sy - 1; y >= 0 && run.length < SEAM_MAX; y--) {
+      if (!this.wallTop(sx, y) || !this.wallTop(beside, y)) return;
+      run.push(sx + y * this.W);
+      if (this.solid(sx, y - 1) && this.solid(beside, y - 1)) continue;
+      for (const i of run) seams.add(i);
+      return;
+    }
+  }
+
   /** A pillar needs both halves of the tile to be plain full-height face. */
   private pillarFits(tx: number, bottom: number): boolean {
     const lx = tx * 2;
@@ -366,7 +412,10 @@ class TerrainBuilder {
     if (full && this.castle) return this.castleBareStyle(sx, bottom);
     if (full && hash(tx, bottom) % WINDOW_EVERY === 0) return 'window';
     // Now and then a stretch two tiles wide is damp-stained (or, in cobblestone, set with stones).
-    if (full && (hash(tx >> 1, bottom) >>> 5) % STAINED_EVERY === 0) return 'cracked';
+    const stretch = hash(tx >> 1, bottom);
+    if (full && (stretch >>> 5) % STAINED_EVERY === 0) return 'cracked';
+    if (full && (stretch >>> 9) % VENTS_EVERY === 0) return 'vents';
+    if (full && !this.cobble(sx, sy) && (stretch >>> 13) % DARK_EVERY === 0) return 'dark';
     return 'mid';
   }
 
@@ -500,7 +549,7 @@ class TerrainBuilder {
   /** The castle's face style for a sub-tile (the castle has no cracked walls or tomb niches; decor is its own). */
   private castleStyle(sx: number, sy: number): CastleFaceStyle {
     const style = this.faceStyle(sx, sy);
-    return style === 'cracked' || style === 'niche' ? 'mid' : style;
+    return style === 'cracked' || style === 'vents' || style === 'dark' || style === 'niche' ? 'mid' : style;
   }
 
   /** The decor of the wall tile a face sub-tile belongs to (decor is keyed by the face's foot tile). */
@@ -592,6 +641,8 @@ class TerrainBuilder {
       case 'niche': return this.nicheSource(sx, sy, k, cap);
       case 'window': return cap ? [FACE_MID_X[sx % 4], FACE_CAP_Y] : [WINDOW_X[(sx >> 1) % WINDOW_X.length], WINDOW_Y[k - 1]];
       case 'cracked': return cap ? [FACE_MID_X[sx % 4], FACE_CAP_Y] : [272 + (sx % 8) * 16, CRACKED_Y[k - 1]];
+      case 'vents': return [VENTS_X + (sx % 4) * SUB, brick];
+      case 'dark': return cap ? [FACE_MID_X[sx % 4], FACE_CAP_Y] : [DARK_X + (sx % 4) * SUB, WINDOW_Y[k - 1]];
       default: return [FACE_MID_X[sx % 4], brick];
     }
   }
@@ -611,8 +662,9 @@ class TerrainBuilder {
     const out = this.wallPieces;
     const t = this.top;
     const openN = !this.solid(sx, sy - 1);
-    const sideW = !this.solid(sx - 1, sy) || this.faceBeside(sx - 1, sy);
-    const sideE = !this.solid(sx + 1, sy) || this.faceBeside(sx + 1, sy);
+    const i = sx + sy * this.W;
+    const sideW = !this.solid(sx - 1, sy) || this.faceBeside(sx - 1, sy) || this.seamW.has(i);
+    const sideE = !this.solid(sx + 1, sy) || this.faceBeside(sx + 1, sy) || this.seamE.has(i);
     // A corner nub where floor touches only diagonally, unless the wall beside it is a raised south wall (its rim, drawn
     // higher, meets this side's rim on its own).
     const diagNW = !this.solid(sx - 1, sy - 1) && !this.raisedRim(sx - 1, sy);

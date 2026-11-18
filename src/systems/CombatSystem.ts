@@ -19,6 +19,7 @@ import { duelistTurnsAside, parried, riposted } from './Reactions';
 import { cheats } from '../game/Cheats';
 import { charmedAway, schoolShields, turnBlow } from './SchoolSystem';
 import { hurtUndead } from './SummonSystem';
+import { hurtDecoy, lureOf } from './DecoySystem';
 import { keepConcentration } from './LastingSpells';
 import { damageTaken } from '../rules/Resistances';
 import type { DamageType } from '../rules/DamageTypes';
@@ -32,6 +33,8 @@ const PLAYER_FREEZE_TIME = 15;
 const PLAYER_KNOCKBACK = 10;
 /** Bodies can no longer overlap, so an enemy this close to the player's body counts as touching it. */
 const CONTACT_REACH = 2;
+/** A lured foe stops this near the dummy (systems/DecoySystem.ts): its blows reach that far. */
+const DECOY_REACH = 6;
 
 const living = world.with('health');
 const playerBox = new Rectangle();
@@ -164,12 +167,13 @@ export function updateContactDamage(level: Level): void {
     if (vulnerable(level, player)) swingAt(player);
   }
   for (const undead of q.summons) swingAtUndead(undead);
+  strikeDecoys();
 }
 
 /** Every enemy touching the player swings (one touching two heroes only once), each blow landing in its own time; a charmed one does not. */
 function swingAt(player: Player): void {
   for (const mob of enemiesTouching(player)) {
-    if (swung.has(mob) || charmed(mob)) continue;
+    if (swung.has(mob) || charmed(mob) || mob.lured !== undefined) continue;
     swung.add(mob);
     if (strikeLands(mob)) mobStrike(mob, player);
   }
@@ -196,11 +200,33 @@ function enemiesTouchingUndead(undead: Summon): readonly Entity[] {
 function swingAtUndead(undead: Summon): void {
   if (undead.health.current <= 0 || undead.removed) return;
   for (const mob of enemiesTouchingUndead(undead)) {
-    if (swung.has(mob) || charmed(mob) || !mob.mobType || !mob.mobWeapon) continue;
+    if (swung.has(mob) || charmed(mob) || mob.lured !== undefined || !mob.mobType || !mob.mobWeapon) continue;
     swung.add(mob);
     if (!strikeLands(mob)) continue;
     const outcome = strike(undead, monsterAttack(mob.mobType, mob.mobWeapon), mob);
     if (outcome.hit) hurtUndead(undead, outcome.damage);
+  }
+}
+
+const luredFoes = world.with('lured', 'position', 'radius', 'health');
+
+/** Whether the foe's body reaches the dummy's. */
+function reachesDecoy(mob: (typeof luredFoes.entities)[number], decoy: Entity): boolean {
+  if (!decoy.position) return false;
+  const reach = mob.radius.x + (decoy.radius?.x ?? 0) + CONTACT_REACH + DECOY_REACH;
+  return Math.hypot(decoy.position.x - mob.position.x, decoy.position.y - mob.position.y) <= reach;
+}
+
+/** Foes lured by an illusion strike the dummy they were lured to, once they reach it, and nobody else. */
+function strikeDecoys(): void {
+  for (const mob of luredFoes) {
+    if (swung.has(mob) || mob.health.current <= 0 || charmed(mob) || !mob.mobType || !mob.mobWeapon) continue;
+    const decoy = lureOf(mob);
+    if (!decoy || !reachesDecoy(mob, decoy)) continue;
+    swung.add(mob);
+    if (!strikeLands(mob)) continue;
+    const outcome = strike(decoy, monsterAttack(mob.mobType, mob.mobWeapon), mob);
+    if (outcome.hit) hurtDecoy(decoy, outcome.damage);
   }
 }
 

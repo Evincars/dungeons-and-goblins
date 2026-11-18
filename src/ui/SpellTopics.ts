@@ -168,7 +168,9 @@ export function featureTopic(feature: FeatureDef, switchedOff: boolean, heroLeve
 /** A Passive Feat in the Skills tab or on the quick bar: what it does, and how it is used (and whether it is on). */
 export function featTopic(feat: FeatId, on: boolean): TipTopic {
   const detail = [text('feat.tip.passive')];
-  if (FEATS[feat].passive === 'toggle') detail.push(text(on ? 'feat.tip.toggle_on' : 'feat.tip.toggle_off'));
+  const kind = FEATS[feat].passive;
+  if (kind === 'toggle') detail.push(text(on ? 'feat.tip.toggle_on' : 'feat.tip.toggle_off'));
+  else if (kind === 'active') detail.push(text('feat.tip.active', { seconds: FEATS[feat].cooldown }));
   else detail.push(text('feat.tip.auto'));
   return { title: featName(feat), body: featDescription(feat), detail, wide: true };
 }

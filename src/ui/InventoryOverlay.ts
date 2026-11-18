@@ -662,7 +662,7 @@ export class InventoryOverlay {
   /** What an item's tooltip is told: the hero (training, STR), the letters a search matched, the item it is compared with. */
   private tipContext(item: InventoryItem, against?: InventoryItem): TooltipContext {
     const sheet = this.sheet;
-    return { cls: sheet?.heroClass, strength: sheet?.scores.strength, featArmor: sheet?.feats.armor, matched: this.matchedLetters(item), against };
+    return { cls: sheet?.heroClass, strength: sheet?.scores.strength, featArmor: sheet?.feats.armor, featWeapons: sheet?.feats.weapons, matched: this.matchedLetters(item), against };
   }
 
   /** The letters of an item's name the search matched (none while nothing is typed). */
@@ -689,7 +689,7 @@ export class InventoryOverlay {
   /** Whether the hero is trained in an item (a weapon, armour or a shield, feats counted; anything else needs no training). */
   private trained(item: InventoryItem): boolean {
     const sheet = this.sheet;
-    return !sheet || itemTrained(sheet.heroClass, item, sheet.feats.armor);
+    return !sheet || itemTrained(sheet.heroClass, item, sheet.feats.armor, sheet.feats.weapons);
   }
 
   /** The furthest row the bag can be scrolled to. */

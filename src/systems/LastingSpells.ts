@@ -1,21 +1,21 @@
 import { world, q, isActivePlayer, isMob, isPlayer, isTarget, PUDDLE_FRAMES } from '../world';
 import type { Entity, Player } from '../world';
 import { text } from '../core/texts';
-import { characterSheet } from '../rules/CharacterSheet';
+import { characterSheet, lowestFace, spellcastingFor } from '../rules/CharacterSheet';
 import { featureOn } from '../rules/ClassFeatures';
 import { CATALOG, castDef, isCatalogSpell } from '../rules/Spellbook';
 import { SPELLS } from '../rules/Spells';
 import type { SpellDef, SpellId } from '../rules/Spells';
 import { MONSTERS } from '../rules/Monsters';
 import { MIN_HIT_DAMAGE } from '../rules/Combat';
-import { rollDice } from '../rules/Dice';
+import { rollDice, rollDie } from '../rules/Dice';
 import type { Dice } from '../rules/Dice';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 import { AIM_HEIGHT } from '../entities/ProjectileFactory';
 import { playAura, playEffect } from '../assets/Effects';
 import type { Aura } from '../assets/Effects';
-import { foreseenSave, savedDamage, spellDamageBonus } from './SchoolSystem';
+import { foreseenSave, savedDamage, spellDamageBonus, splitEnchantment } from './SchoolSystem';
 import { heroSavingThrow } from './FeatureSystem';
 import { hitMob } from './Hits';
 import { hurtPlayer } from './CombatSystem';
@@ -64,8 +64,15 @@ export function buffsOf(hero: Player): Buffs {
   return buffs;
 }
 
-/** A buff spell takes hold on its caster (one held by concentration ends the last one they held). */
-export function castBuff(caster: Player, def: SpellDef): void {
+/**
+ * A buff spell takes hold on its caster (one held by concentration ends the last one they held). Mage Armour is switched:
+ * cast while it is on, it ends instead. Returns whether the spell took hold (false: it was switched off).
+ */
+export function castBuff(caster: Player, def: SpellDef): boolean {
+  if (def.buff === 'mage_armor' && (caster.buffs?.mageArmor ?? 0) > 0) {
+    endMageArmour(caster);
+    return false;
+  }
   const id = world.id(caster);
   if (id !== undefined) playAura(BUFF_AURA, id, caster.position.x, caster.position.y);
   playEffect(def.effect.shape, def.effect.colour, caster.position.x, caster.position.y, AIM_HEIGHT, def.effect.scale);
@@ -76,6 +83,14 @@ export function castBuff(caster: Player, def: SpellDef): void {
   else if (def.buff === 'mage_armor') buffs.mageArmor = 1;
   else if (def.buff === 'stoneskin') buffs.stoneskin = def.durationTicks;
   else if (def.buff === 'false_life') caster.tempHealth = Math.max(caster.tempHealth ?? 0, rollDice(def.damage));
+  return true;
+}
+
+/** Mage Armour ends (switched off from the quick bar, or body armour put on), and the hero says so. */
+export function endMageArmour(hero: Player): void {
+  if (!hero.buffs || hero.buffs.mageArmor <= 0) return;
+  hero.buffs.mageArmor = 0;
+  logLine(hero, text('roll.mage_armor_off'), 'miss');
 }
 
 const tick = (ticks: number): number => (ticks > 0 ? ticks - 1 : 0);
@@ -149,7 +164,7 @@ type Zone = (typeof q.zones)['entities'][number];
 
 /** A foe in a zone saves (if the spell has a save) or takes the round's damage; a success halves it. */
 function zoneStrikes(caster: Player, def: SpellDef, foe: Entity, dc: number): void {
-  const rolled = Math.max(MIN_HIT_DAMAGE, rollDice(def.damage) + spellDamageBonus(caster, def.id));
+  const rolled = Math.max(MIN_HIT_DAMAGE, rollDice(def.damage, false, rollDie, 0, lowestFace(characterSheet(caster), def.damageType)) + spellDamageBonus(caster, def.id));
   let damage = rolled;
   if (def.save) {
     const modifier = foe.mobType ? MONSTERS[foe.mobType].modifiers[def.save] : 0;
@@ -161,14 +176,16 @@ function zoneStrikes(caster: Player, def: SpellDef, foe: Entity, dc: number): vo
     logLine(foe, text('roll.damage', { amount: damage }), 'damage');
     recordSpell(caster, def.id, 'auto', damage);
   }
-  if (damage > 0) hitMob(foe, caster, damage, true);
+  if (damage <= 0) return;
+  hitMob(foe, caster, damage, true);
+  splitEnchantment(caster, foe, def.id, damage);
 }
 
 /** The round's strike of a zone: every live foe whose body is in it. */
 function pulseZone(zone: Zone, caster: Player): void {
   const def = castDef(SPELLS[zone.zone.spell], zone.zone.castLevel, caster.playerStats.level);
   const { x, y } = zone.position;
-  const dc = characterSheet(caster).spell.dc;
+  const dc = spellcastingFor(characterSheet(caster), def.id).dc;
   for (const foe of nearby(x, y, def.radius + MAX_MOB_RADIUS, Sense.mob, scratch)) {
     if (!isTarget(foe) || foe.health.current <= 0) continue;
     if (Math.hypot(foe.position.x - x, foe.position.y - y) > def.radius + Math.max(foe.radius.x, foe.radius.y)) continue;

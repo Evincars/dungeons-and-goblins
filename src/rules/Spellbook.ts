@@ -15,6 +15,7 @@ import type { Picks } from './Archetypes';
 import { SPELLS, SPELL_IDS, TICKS_PER_SECOND, isSpellId } from './Spells';
 import { text } from '../core/texts';
 import { bindLimit, hasBindLimits } from './Schools';
+import { featSpellIds } from './Feats';
 import type { SpellDef, SpellId } from './Spells';
 import spellbook from '../data/spellbook.json';
 import spellList from '../data/spell-list.json';
@@ -411,13 +412,29 @@ export function quickBinding(player: Player, slot: number): QuickBinding | null 
  */
 export function boundAtLevel(player: Player, castLevel: number, except = -1): number {
   const cls = heroClass(player.heroClass);
+  const fromFeats = featSpellIds(player.build?.improvements);
   let count = 0;
   for (let slot = 0; slot < QUICK_SLOTS; slot++) {
     const binding = slot === except ? null : quickBinding(player, slot);
     if (!binding || !isCatalogSpell(binding.spell) || binding.level !== castLevel) continue;
+    // A spell a feat taught (Magic Initiate, Spell Sniper) counts against no limit.
+    if (fromFeats.includes(binding.spell)) continue;
     if (!isSpellId(binding.spell) || spellLevelFor(cls, binding.spell) <= player.playerStats.level) count++;
   }
   return count;
+}
+
+/** Whether one of the hero's feats taught them this spell (Magic Initiate, Spell Sniper). */
+export function featTaught(player: Pick<Player, 'build'>, spell: string): boolean {
+  return featSpellIds(player.build?.improvements).includes(spell);
+}
+
+/**
+ * A spell a feat taught the hero may go on the quick bar at its own level (and nowhere else), if the game casts it. It is
+ * the hero's whatever their class or level.
+ */
+export function featSpellBindable(player: Pick<Player, 'build'>, spell: string, level: number): boolean {
+  return featTaught(player, spell) && isCatalogSpell(spell) && CATALOG[spell].castable && CATALOG[spell].level === level;
 }
 
 /**
@@ -426,13 +443,13 @@ export function boundAtLevel(player: Player, castLevel: number, except = -1): nu
  * class features, feats and every other class are not counted.
  */
 export function roomToBind(player: Player, spell: string, castLevel: number, slot: number): boolean {
-  if (!hasBindLimits(heroClass(player.heroClass)) || !isCatalogSpell(spell)) return true;
+  if (!hasBindLimits(heroClass(player.heroClass)) || !isCatalogSpell(spell) || featTaught(player, spell)) return true;
   return boundAtLevel(player, castLevel, slot) < bindLimit(player.playerStats.level, castLevel);
 }
 
 /** Whether the hero could bind this spell somewhere: room is left at its level, or a square holds one of that level it could replace. */
 export function roomSomewhere(player: Player, spell: string, castLevel: number): boolean {
-  if (!hasBindLimits(heroClass(player.heroClass)) || !isCatalogSpell(spell)) return true;
+  if (!hasBindLimits(heroClass(player.heroClass)) || !isCatalogSpell(spell) || featTaught(player, spell)) return true;
   const used = boundAtLevel(player, castLevel);
   return used < bindLimit(player.playerStats.level, castLevel) || used > 0;
 }

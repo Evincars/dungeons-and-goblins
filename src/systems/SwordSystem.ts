@@ -158,6 +158,8 @@ function swingAt(player: Player, target: Entity, swing: Swing): void {
   const sheet = characterSheet(player);
   strikeWith(player, target, sheet.attack, false);
   if (swing.offHand && swing.blow === 0 && sheet.offHand && (target.health?.current ?? 0) > 0) strikeWith(player, target, sheet.offHand, true);
+  // Polearm Master: the butt end strikes with the first blow too.
+  if (swing.blow === 0 && sheet.butt && (target.health?.current ?? 0) > 0) strikeWith(player, target, sheet.butt, true);
 }
 
 /** One attack of the blow: rolled against the target's Armor Class, and a hit lands even on a target that the other weapon just struck. */
@@ -166,12 +168,16 @@ function strikeWith(player: Player, target: Entity, attack: AttackProfile, along
   if (target.position) sound.playSound(outcome.hit ? 'sword_hit' : 'sword_miss', target.position.x, target.position.y);
   if (!outcome.hit) return;
   hitMob(target, player, outcome.damage, alongside);
-  if (outcome.critical || (target.health?.current ?? 1) <= 0) earnBonusAttack(player);
+  if (outcome.critical || (target.health?.current ?? 1) <= 0) earnBonusAttack(player, false);
 }
 
-/** Great Weapon Master: a critical hit or a kill with a melee weapon earns an attack more for the next swing (shown top left). */
-function earnBonusAttack(player: Player): void {
-  if (player.bonusAttack || !characterSheet(player).feats.bonusAttack) return;
+/**
+ * Great Weapon Master: a critical hit or a kill with a melee weapon earns an attack more for the next swing; Sharpshooter:
+ * a kill with a ranged weapon earns a shot more for the next volley (`ranged`). Shown top left until spent.
+ */
+export function earnBonusAttack(player: Player, ranged: boolean): void {
+  const feats = characterSheet(player).feats;
+  if (player.bonusAttack || !(ranged ? feats.rangedBonusAttack : feats.bonusAttack)) return;
   player.bonusAttack = true;
   logLine(player, text('roll.bonus_attack'), 'crit');
 }

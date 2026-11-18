@@ -326,6 +326,18 @@ const DUMMY_FRAME_TICKS = 6;
 /** Health only for show: the dummy is healed after every blow. */
 const DUMMY_HEALTH = 1000;
 
+/** How the training dummy is drawn (the illusionist's dummy wears the same, entities/SummonFactory.ts). */
+export function dummyLook(): Pick<Entity, 'visual' | 'animation' | 'yOffset'> {
+  return {
+    visual: { sheet: 'training_dummy', scale: DUMMY_SCALE },
+    animation: { sheet: 'training_dummy', frameX: 0, frameY: 0, frameCount: DUMMY_IDLE_FRAMES, frameTime: DUMMY_FRAME_TICKS, timer: 0, loop: true },
+    yOffset: (DUMMY_FEET_Y - DUMMY_FRAME / 2) * DUMMY_SCALE,
+  };
+}
+
+/** How high over its middle the dummy's head reaches (px), for a health bar over it. */
+export const DUMMY_HEAD = DUMMY_FEET_Y * DUMMY_SCALE;
+
 /** The training dummy in the safe room: swords, spells and arrows can be tried on it. */
 export function createTrainingDummy(x: number, y: number): Entity {
   return world.add({
@@ -336,9 +348,7 @@ export function createTrainingDummy(x: number, y: number): Entity {
     blocking: true,
     team: Team.Neutral,
     dummy: { row: 0 },
-    visual: { sheet: 'training_dummy', scale: DUMMY_SCALE },
-    animation: { sheet: 'training_dummy', frameX: 0, frameY: 0, frameCount: DUMMY_IDLE_FRAMES, frameTime: DUMMY_FRAME_TICKS, timer: 0, loop: true },
-    yOffset: (DUMMY_FEET_Y - DUMMY_FRAME / 2) * DUMMY_SCALE,
+    ...dummyLook(),
   });
 }
 

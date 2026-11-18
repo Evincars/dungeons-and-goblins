@@ -7,6 +7,8 @@ import { spawnExclamation } from '../entities/FxFactory';
 import { characterDef, headAboveFeet } from '../characters/Characters';
 import { sound } from '../audio/SoundPlayer';
 import { leaveBelongings } from '../game/Fallen';
+import { characterSheet } from '../rules/CharacterSheet';
+import { playEffect } from '../assets/Effects';
 
 /** Ticks from stepping off the edge to the bottom of the pit; matches the falling cry's length. */
 export const FALL_TICKS = 60;
@@ -20,6 +22,13 @@ const PULL_RATE = 0.25;
 
 const grounded = world.with('position', 'health');
 const fallers = world.with('position', 'falling');
+
+/** A leaper (Athlete, Mobile) clears a pit this wide at most (px), looking for the far side in steps this long. */
+const LEAP_REACH = 128;
+const LEAP_STEP = 4;
+const LEAP_EFFECT = { shape: 'sparkle_ring', colour: 'white', scale: 0.6 } as const;
+/** Where each hero last stood on firm floor: a leaper who can't clear a pit springs back there. */
+const footing = new WeakMap<Entity, { x: number; y: number }>();
 
 /**
  * Whether there is no floor under a point: inside a pit's drawn shape, or on a loose hole tile, but not in the strip of
@@ -47,6 +56,51 @@ export function overHole(level: Level, entity: Entity): boolean {
     && holeAt(level, p.x + rx, p.y - ry) && holeAt(level, p.x + rx, p.y + ry);
 }
 
+/** Remembers where a hero stands on firm floor, for a leap that falls short. */
+function keepFooting(entity: Entity & { position: { x: number; y: number } }): void {
+  if (!entity.playerInput) return;
+  const at = footing.get(entity);
+  if (at) {
+    at.x = entity.position.x;
+    at.y = entity.position.y;
+  } else {
+    footing.set(entity, { x: entity.position.x, y: entity.position.y });
+  }
+}
+
+/** Whether a body could stand at (x, y): floor under it and no wall at its feet. */
+function firm(level: Level, entity: Entity, x: number, y: number): boolean {
+  return !level.blocksPoint(x, y) && !overHole(level, { position: { x, y }, radius: entity.radius });
+}
+
+/**
+ * Athlete and Mobile: a hero who steps over a pit's edge never falls in. They leap on the way they were going to the far
+ * side, if it lies within reach; otherwise they spring back to where they last stood.
+ */
+function leap(level: Level, player: Entity & { position: { x: number; y: number } }): void {
+  const from = footing.get(player) ?? { x: player.position.x, y: player.position.y };
+  const { x, y } = player.position;
+  const dx = x - from.x;
+  const dy = y - from.y;
+  const len = Math.hypot(dx, dy);
+  const landing = len > 0 ? farSide(level, player, dx / len, dy / len) : null;
+  player.position.x = landing?.x ?? from.x;
+  player.position.y = landing?.y ?? from.y;
+  if (player.velocity) player.velocity.x = player.velocity.y = 0;
+  playEffect(LEAP_EFFECT.shape, LEAP_EFFECT.colour, player.position.x, player.position.y, 0, LEAP_EFFECT.scale);
+}
+
+/** The first firm spot past the pit along (ux, uy), within a leap's reach; null when the far side is too far. */
+function farSide(level: Level, player: Entity & { position: { x: number; y: number } }, ux: number, uy: number): { x: number; y: number } | null {
+  for (let d = LEAP_STEP; d <= LEAP_REACH; d += LEAP_STEP) {
+    const x = player.position.x + ux * d;
+    const y = player.position.y + uy * d;
+    if (level.blocksPoint(x, y)) return null;
+    if (firm(level, player, x, y)) return { x, y };
+  }
+  return null;
+}
+
 /**
  * The player slips over the edge: input stops, a "!" pops up over their head and a cry plays. In a shaped pit they
  * drop towards the middle of the part they stepped into, so they go down inside it rather than beside it.
@@ -67,8 +121,14 @@ function startFall(level: Level, player: Entity & { position: { x: number; y: nu
  */
 export function updateHoles(level: Level): void {
   for (const entity of grounded) {
-    if (entity.removed || entity.respawnTicks !== undefined || entity.godMode || !overHole(level, entity)) continue;
-    if (!entity.playerInput) {
+    if (entity.removed || entity.respawnTicks !== undefined || entity.godMode) continue;
+    if (!overHole(level, entity)) {
+      keepFooting(entity);
+      continue;
+    }
+    if (isPlayer(entity) && !entity.falling && characterSheet(entity).feats.pitLeap) {
+      leap(level, entity);
+    } else if (!entity.playerInput) {
       sound.playSound('fall', entity.position.x, entity.position.y);
       world.addComponent(entity, 'removed', true);
     } else if (!entity.falling) {

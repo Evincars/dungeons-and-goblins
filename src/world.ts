@@ -394,14 +394,34 @@ export type Entity = {
    * Song of Defence work again; the ticks of Bladesong left; and the Transmuter's Stone carried ('' for none). The Bladesong's
    * charges to start it (`songCharges`, all back with a long rest or a new depth) and the Bladesong Charges gathered while
    * it is sung, for its Climax (`damageCharges` from spells, `healingCharges` from weapon attacks). The Third Eye's
-   * darkvision and the sight of the invisible (Third Eye, an illusionist's See Invisibility), on until a long rest.
+   * darkvision and the sight of the invisible (Third Eye, an illusionist's See Invisibility), on until a long rest. The ticks
+   * until Split Enchantment works again.
    */
   arcana?: {
     ward: number; portent: number[]; portentTicks: number; harvestTicks: number; charmTicks: number; illusoryTicks: number;
     songTicks: number; defenceTicks: number; stone: TransmuterStone | '';
     songCharges: number; damageCharges: number; healingCharges: number;
-    darkvision: boolean; seeInvisible: boolean;
+    darkvision: boolean; seeInvisible: boolean; splitTicks: number;
   };
+  /**
+   * An evoker's Sculpt Spells bubble where their Evocation spell landed (systems/SchoolSystem.ts): its maker's entity id, the
+   * ticks it lasts and how wide it is (px). Every hero in it succeeds on every saving throw.
+   */
+  sculpt?: { owner: number; ticks: number; radius: number };
+  /**
+   * An illusionist's dummy (Improved Minor Illusion, systems/DecoySystem.ts): its maker's entity id, its Armor Class and the
+   * ticks it lasts. Foes lured to it strike it until it is gone.
+   */
+  decoy?: { owner: number; ac: number; ticks: number };
+  /** A foe lured by an illusion: the entity id of the dummy it goes for and strikes, and nobody else, until it is gone. */
+  lured?: number;
+  /**
+   * A foe nobody sees coming (invisible): it wins the first strike outright when it closes in, unless the hero it hunts has
+   * the Alert feat, who rolls initiative as usual (systems/InitiativeSystem.ts).
+   */
+  unseen?: boolean;
+  /** A hero's Charger rush under way (systems/FeatActions.ts): the foe's entity id and the ticks the rush may still take. */
+  charge?: { target: number; ticks: number };
   /**
    * Spells that last on a hero (systems/LastingSpells.ts), as ticks left (0: off): Blade Ward and Stoneskin (resistance to
    * weapons' damage), Shield (+5 AC); Mage Armour is 1 while it lasts (until a long rest).

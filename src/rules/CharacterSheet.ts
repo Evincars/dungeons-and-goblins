@@ -28,6 +28,8 @@ import { nextLevelXp } from '../game/Progress';
 import { MANEUVER_DC_BASE } from './Maneuvers';
 import { defences } from './Resistances';
 import type { DamageType } from './DamageTypes';
+import { hasKey, isRecord } from '../core/guards';
+import spellList from '../data/spell-list.json';
 
 /**
  * What the rules make of a character's class, gear and abilities: Armor Class, the damage and attack bonus
@@ -234,7 +236,7 @@ export function weaponAttack(
   const found = weaponRule(item ?? undefined);
   const base: WeaponBase = found?.base ?? 'unarmed';
   const rule: WeaponRule = weaponStats(base);
-  const trained = !cls || weaponProficient(cls, base);
+  const trained = !cls || weaponProficient(cls, base, feats.weapons);
   const twoHanded = !!rule.versatile && !!item && otherHandFree(equipped, item);
   const mode: D20Mode = armorTrained ? 'normal' : 'disadvantage';
   const attack = attackWith({ item, base, twoHanded, proficiency: trained ? proficiencyBonus(level) : 0, mode }, modifiers);
@@ -243,6 +245,22 @@ export function weaponAttack(
   if (has('divine_strike')) attack.extra = divineStrikeDice(level);
   attack.critFrom = criticalFrom(has);
   return withFeats(withFightingStyle(attack, equipped, styles), feats);
+}
+
+/** The weapons whose butt end strikes too for a Polearm Master, and what that blow deals. */
+const POLEARMS: readonly string[] = ['glaive', 'halberd', 'pike', 'quarterstaff', 'spear'];
+const BUTT_DAMAGE: Dice = { count: 1, sides: 4, bonus: 0 };
+
+/**
+ * Polearm Master: with a glaive, halberd, pike, quarterstaff or spear, a second blow with the butt end: 1d4 bludgeoning
+ * and nothing added, rolled to hit as the weapon's own blow. Null without the feat or such a weapon.
+ */
+export function polearmAttack(attack: WeaponAttack, feats: FeatEffects): WeaponAttack | null {
+  if (!feats.polearm || !POLEARMS.includes(attack.base)) return null;
+  return {
+    ...attack, rule: { ...attack.rule, type: 'bludgeoning', damage: BUTT_DAMAGE }, damage: { ...BUTT_DAMAGE }, extra: undefined,
+    abilityDamage: 0, styleDamage: 0, featDamage: 0,
+  };
 }
 
 /** A Champion's weapon attacks are critical hits from a 19 (Improved Critical) or an 18 (Superior Critical). */
@@ -297,7 +315,7 @@ export function offHandAttack(
   const item = equipped.secondary;
   const found = weaponRule(item);
   if (!item || !found || !handWeapon(equipped.primary, feats.dualWield) || !handWeapon(item, feats.dualWield)) return null;
-  const trained = !cls || weaponProficient(cls, found.base);
+  const trained = !cls || weaponProficient(cls, found.base, feats.weapons);
   const attack = attackWith({ item, base: found.base, twoHanded: false, proficiency: trained ? proficiencyBonus(level) : 0, mode: armorTrained ? 'normal' : 'disadvantage' }, modifiers);
   if (hasStyle(styles, 'two_weapon_fighting')) attack.styleName = 'two_weapon_fighting';
   else if (attack.abilityModifier > 0) {
@@ -383,6 +401,31 @@ export type SavingThrow = { bonus: number; proficient: boolean };
 /** A hero's spellcasting: the ability it uses, d20 + this to hit with a spell, and the DC foes must beat. */
 export type Spellcasting = { ability: StatName; attack: number; dc: number; trained: boolean };
 
+/** Elemental Adept: a damage die of the mastered type never counts for less than this (a 1 counts as a 2). */
+const ADEPT_LOWEST_FACE = 2;
+
+/** The lowest a damage die of this type counts for, for this hero: 2 for an Elemental Adept's type, 1 otherwise. */
+export function lowestFace(sheet: Pick<CharacterSheet, 'feats'>, type: DamageType): number {
+  return sheet.feats.elements.includes(type) ? ADEPT_LOWEST_FACE : 1;
+}
+
+/** Whether the hero's own class list teaches the spell (src/data/spell-list.json). */
+function classTeaches(sheet: Pick<CharacterSheet, 'heroClass'>, spell: string): boolean {
+  const entry: unknown = hasKey(spellList.spells, spell) ? spellList.spells[spell] : undefined;
+  return isRecord(entry) && Array.isArray(entry.classes) && entry.classes.includes(sheet.heroClass.dndClass);
+}
+
+/**
+ * How the hero casts this spell: with their own spellcasting ability, or, for one a feat taught them that their class's
+ * list does not (Magic Initiate), with the ability that feat names.
+ */
+export function spellcastingFor(sheet: CharacterSheet, spell: string): Spellcasting {
+  const ability = sheet.feats.spells.find((taught) => taught.spell === spell)?.ability;
+  if (!ability || ability === sheet.spell.ability || classTeaches(sheet, spell)) return sheet.spell;
+  const modifier = sheet.modifiers[ability];
+  return { ability, attack: sheet.proficiency + modifier, dc: SPELL_DC_BASE + sheet.proficiency + modifier, trained: true };
+}
+
 export type CharacterSheet = Abilities & {
   heroClass: HeroClass;
   level: number;
@@ -399,6 +442,8 @@ export type CharacterSheet = Abilities & {
    * what it would deal, for the tooltip to tell why it does not.
    */
   offHandBlocked: WeaponAttack | null;
+  /** Polearm Master's blow with the butt end, struck with the first blow of every swing (null: no such feat or weapon). */
+  butt: WeaponAttack | null;
   /** Weapon attacks in one swing: one, more with Extra Attack, doubled under Action Surge (the off-hand blow comes on top). */
   attacks: number;
   /** What the hero's feats add up to. */
@@ -512,6 +557,7 @@ export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' |
   const ac = withSpellAC(withSchoolAC(armorClass(equipped, scores.modifiers, cls, styles, feats), school), player.buffs);
   const surge = (player.actionSurge ?? 0) > 0 ? ACTION_SURGE_ATTACKS_FACTOR : 1;
   const offHand = offHandAttack(equipped, scores.modifiers, level, cls, ac.proficient, styles, feats);
+  const attack = weaponAttack(equipped, scores.modifiers, level, cls, ac.proficient, styles, off, feats);
   return {
     ...scores,
     heroClass: cls,
@@ -519,8 +565,9 @@ export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' |
     proficiency,
     baseScores: base,
     armorClass: ac,
-    attack: weaponAttack(equipped, scores.modifiers, level, cls, ac.proficient, styles, off, feats),
+    attack,
     offHand,
+    butt: polearmAttack(attack, feats),
     offHandBlocked: offHand ? null : offHandAttack(equipped, scores.modifiers, level, cls, ac.proficient, styles, { ...feats, dualWield: true }),
     attacks: attacksPerAction(cls, level, off, styles) * surge,
     feats,

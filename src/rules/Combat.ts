@@ -18,6 +18,8 @@ const NATURAL_FUMBLE = 1;
  */
 export type AttackProfile = {
   attackBonus: number; damage: Dice; mode: D20Mode; extra?: Dice; rerollBelow?: number; critFrom?: number;
+  /** The lowest a damage die counts for (Elemental Adept's 2; 1 when not given). */
+  lowestFace?: number;
   /** A Battle Master's Precision Attack: a die of this size is added to a roll that misses, when that makes it hit. */
   precisionSides?: DieSides;
   /** The damage dice are rolled twice and the higher total kept (the Savage Attacker feat). */
@@ -44,8 +46,8 @@ function precisionBonus(attack: AttackProfile, roll: AttackRoll, targetAC: numbe
 
 /** The weapon's damage roll: once, or twice keeping the higher for a Savage Attacker. */
 function damageRoll(attack: AttackProfile, critical: boolean, die: DieRoller): number {
-  const first = rollDice(attack.damage, critical, die, attack.rerollBelow);
-  return attack.savage ? Math.max(first, rollDice(attack.damage, critical, die, attack.rerollBelow)) : first;
+  const first = rollDice(attack.damage, critical, die, attack.rerollBelow, attack.lowestFace);
+  return attack.savage ? Math.max(first, rollDice(attack.damage, critical, die, attack.rerollBelow, attack.lowestFace)) : first;
 }
 
 export function resolveAttack(attack: AttackProfile, targetAC: number, die: DieRoller = rollDie): AttackOutcome {

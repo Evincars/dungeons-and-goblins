@@ -2,7 +2,8 @@ import { world, Facing, Team } from '../world';
 import type { Entity, SummonKind } from '../world';
 import { characterComponents, characterDef, groundOffset, headAboveCenter } from '../characters/Characters';
 import { ORC } from '../characters/Orc';
-import { UNDEAD_STATS } from '../rules/Schools';
+import { DECOY_STATS, UNDEAD_STATS } from '../rules/Schools';
+import { DUMMY_HEAD, dummyLook } from './DungeonFactory';
 
 /**
  * The undead of Animate Dead (systems/SummonSystem.ts). They have no art of their own yet: they wear the orc's, tinted
@@ -23,6 +24,31 @@ const UNDEAD_RADIUS = { x: 10, y: 10 } as const;
 const HEALTH_BAR_GAP = 6;
 /** The minimap shows them in the heroes' green. */
 const UNDEAD_MINIMAP = 0x60c060;
+/** An illusion is drawn in this violet over the training dummy's art, and so it shows on the minimap. */
+const DECOY_TINT = 0xc8a8ff;
+/** The illusion's body: as wide as the training dummy's. */
+const DECOY_RADIUS = { x: 10, y: 6 } as const;
+
+/**
+ * The illusory training dummy of Improved Minor Illusion (systems/DecoySystem.ts) for the hero `owner` (an entity id) at
+ * (x, y): it stands still, and the foes it lures strike it until its hit points are gone or its time is up.
+ */
+export function createDecoy(x: number, y: number, owner: number): Entity {
+  const look = dummyLook();
+  return world.add({
+    position: { x, y },
+    radius: { ...DECOY_RADIUS },
+    team: Team.Player,
+    health: { current: DECOY_STATS.health, max: DECOY_STATS.health },
+    healthBarOffset: -DUMMY_HEAD,
+    hurtTime: 0,
+    freezeTime: 0,
+    decoy: { owner, ac: DECOY_STATS.ac, ticks: DECOY_STATS.ticks },
+    ...look,
+    visual: look.visual && { ...look.visual, tint: DECOY_TINT },
+    minimapColor: DECOY_TINT,
+  });
+}
 
 /**
  * An undead of this kind for the hero `owner` (an entity id) at (x, y): `extraHealth` from Undead Thralls, `damageBonus`

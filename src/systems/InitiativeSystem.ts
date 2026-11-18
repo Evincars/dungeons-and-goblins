@@ -34,8 +34,20 @@ function heroRoll(player: Player): { total: number; fresh: boolean } {
   return { total, fresh: true };
 }
 
+/**
+ * A foe nobody sees coming (`unseen`) surprises the hero it hunts: it takes the first strike without a roll. A hero with
+ * the Alert feat can't be surprised and rolls as usual.
+ */
+function surprises(mob: Mob, player: Player): boolean {
+  if (!mob.unseen || characterSheet(player).feats.alert) return false;
+  world.addComponent(mob, 'initiative', { total: 0, firstStrike: true, ticks: 0 });
+  logLine(mob, text('roll.surprise'), 'crit');
+  return true;
+}
+
 /** The enemy and its hero roll; the winner gets the first strike (a tie goes to the quicker, then to the hero). */
 function rollInitiative(mob: Mob, player: Player): void {
+  if (surprises(mob, player)) return;
   const dex = mob.mobType ? MONSTERS[mob.mobType].modifiers.dexterity : 0;
   const total = rollD20() + dex;
   world.addComponent(mob, 'initiative', { total, firstStrike: false, ticks: 0 });

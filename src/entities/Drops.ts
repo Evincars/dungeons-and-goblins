@@ -1,4 +1,6 @@
-import type { Player } from '../world';
+import type { InventoryItem, Player } from '../world';
+import { characterSheet } from '../rules/CharacterSheet';
+import { text } from '../core/texts';
 import { createItemPickup } from './LootFactory';
 import { ARMORS, HAND_WEAPONS, SHIELDS, randomItem } from './ItemCatalog';
 import { pay } from '../game/Purse';
@@ -13,8 +15,11 @@ import { receiveItem } from '../game/PlayerActions';
  */
 export type Drop =
   | { kind: 'coins'; min: number; max: number }
-  /** One random thing from the catalogues: a weapon, a shield or a suit of armour. */
-  | { kind: 'gear' }
+  /**
+   * One random thing from the catalogues: a weapon, a shield or a suit of armour; `magic`: it may be magical (+1 to +3),
+   * more often for a finder with the Dungeon Delver feat.
+   */
+  | { kind: 'gear'; magic?: boolean }
   /** Nothing at all (most kills give up no gear). */
   | { kind: 'none' };
 
@@ -36,21 +41,57 @@ const DROP_HANDLERS: DropHandlers = {
   coins: (_x, _y, drop, finder) => { if (finder) pay(finder, drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1))); },
   // Straight to whoever found it (said over their head); a rare piece in co-op goes to the party's roll instead,
   // and what the finder can't carry lands on the floor, to be taken with E.
-  gear: (x, y, _drop, finder) => {
+  gear: (x, y, drop, finder) => {
     const item = randomItem(GEAR);
+    if (drop.magic) enchantFound(item, finder);
     if (offerLoot(item) || (finder && receiveItem(finder, item))) return;
     createItemPickup(x, y, item);
   },
   none: () => undefined,
 };
 
+/**
+ * The chance (percent) that a piece of gear from a chest is magical; a finder's Dungeon Delver adds its points
+ * (src/data/feats.json `magicFind`). How magical, by weight: mostly +1, now and then +2, rarely +3.
+ */
+const CHEST_MAGIC_PERCENT = 20;
+const MAGIC_BONUS_WEIGHTS = [{ bonus: 1, weight: 70 }, { bonus: 2, weight: 25 }, { bonus: 3, weight: 5 }] as const;
+const PERCENT = 100;
+
+/** The chance (percent) that gear this hero finds in a chest is magical. */
+export function chestMagicPercent(finder: Player | undefined): number {
+  return CHEST_MAGIC_PERCENT + (finder ? characterSheet(finder).feats.magicFind : 0);
+}
+
+/** A magic bonus by MAGIC_BONUS_WEIGHTS. */
+function magicBonusRoll(): number {
+  let roll = Math.random() * MAGIC_BONUS_WEIGHTS.reduce((sum, w) => sum + w.weight, 0);
+  for (const { bonus, weight } of MAGIC_BONUS_WEIGHTS) {
+    roll -= weight;
+    if (roll < 0) return bonus;
+  }
+  return 1;
+}
+
+/** Gear found in a chest is magical by the finder's chance: a bonus, and its name says so ("Longsword +1"). */
+function enchantFound(item: InventoryItem, finder: Player | undefined): void {
+  if (Math.random() * PERCENT >= chestMagicPercent(finder)) return;
+  enchant(item, magicBonusRoll());
+}
+
+/** The item becomes magical: +`bonus` to hit and damage (a weapon) or to AC (armour, a shield), named with it. */
+export function enchant(item: InventoryItem, bonus: number): void {
+  item.bonus = bonus;
+  item.name = text('item.magic_name', { name: item.name, bonus });
+}
+
 /** One kill in this many gives up a piece of gear. */
 const MOB_GEAR_ONE_IN = 12;
 
 /** The drop tables, by what drops them. */
 export const DROP_TABLES = {
-  // A chest always holds a weapon or armour, and some coins.
-  chest: { always: [{ kind: 'gear' }], rolls: 1, entries: [{ weight: 1, drop: { kind: 'coins', min: 10, max: 30 } }] },
+  // A chest always holds a weapon or armour (now and then a magical one), and some coins.
+  chest: { always: [{ kind: 'gear', magic: true }], rolls: 1, entries: [{ weight: 1, drop: { kind: 'coins', min: 10, max: 30 } }] },
   // An enemy's coins are its kill reward (entities/LootFactory.ts); now and then it also drops gear.
   mob: { always: [], rolls: 1, entries: [{ weight: MOB_GEAR_ONE_IN - 1, drop: { kind: 'none' } }, { weight: 1, drop: { kind: 'gear' } }] },
 } as const satisfies Record<string, DropTable>;

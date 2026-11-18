@@ -28,6 +28,8 @@ import { hitMob } from './Hits';
 const RAISE_OFFSET = 32;
 /** Undead Thralls raises one more. */
 const THRALLS_EXTRA = 1;
+/** A necromancer may keep one undead standing for every this many wizard levels. */
+const LEVELS_PER_UNDEAD = 3;
 /** An undead goes for foes this near it (30 feet)… */
 const SIGHT = 288;
 /** …and never further than this from its master (60 feet); beyond that it comes back. */
@@ -68,24 +70,41 @@ function crumble(undead: Entity): void {
   world.addComponent(undead, 'removed', true);
 }
 
-/** Every undead the hero raised crumbles (a new casting takes their place). */
-function dismiss(owner: number): void {
-  for (const undead of q.summons.entities.slice()) if (undead.summon.owner === owner) crumble(undead);
+/**
+ * The oldest undead the hero raised that still stands crumbles (a new one takes its place). Oldest by entity id, which
+ * only grows: the query's own order changes as components come and go.
+ */
+function crumbleOldest(owner: number): void {
+  let oldest: Summon | undefined;
+  let oldestId = Infinity;
+  for (const undead of q.summons) {
+    const id = world.id(undead) ?? Infinity;
+    if (undead.summon.owner !== owner || undead.removed || undead.health.current <= 0 || id >= oldestId) continue;
+    oldest = undead;
+    oldestId = id;
+  }
+  if (oldest) crumble(oldest);
+}
+
+/** A necromancer keeps one undead for every three wizard levels (2 at level 6, 4 at level 12), never none. */
+export function undeadCap(hero: Player): number {
+  return Math.max(1, Math.floor(hero.playerStats.level / LEVELS_PER_UNDEAD));
 }
 
 /**
- * Animate Dead: the undead raised before crumble, and new ones of this kind rise at the necromancer's side (two with Undead
- * Thralls, who also gives each the wizard level in hit points). Returns how many rose.
+ * Animate Dead: a new undead of this kind rises at the necromancer's side (two with Undead Thralls); with as many standing
+ * as they may keep, the oldest crumbles for each. Undead Thralls also gives each the wizard level in hit points and the
+ * necromancer's proficiency bonus on its damage. Returns how many rose.
  */
 export function raiseUndead(hero: Player, kind: SummonKind, canStand: (x: number, y: number) => boolean): number {
   const owner = world.id(hero);
   if (owner === undefined) return 0;
-  dismiss(owner);
   const thralls = featureOn(hero, 'undead_thralls');
   const count = 1 + (thralls ? THRALLS_EXTRA : 0);
   const extraHealth = thralls ? hero.playerStats.level : 0;
-  const bonus = proficiencyBonus(hero.playerStats.level);
+  const bonus = thralls ? proficiencyBonus(hero.playerStats.level) : 0;
   for (let i = 0; i < count; i++) {
+    if (undeadOf(hero) >= undeadCap(hero)) crumbleOldest(owner);
     const side = i % 2 === 0 ? -1 : 1;
     const x = hero.position.x + side * RAISE_OFFSET;
     const spot = canStand(x, hero.position.y) ? { x, y: hero.position.y } : hero.position;

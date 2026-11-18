@@ -51,6 +51,8 @@ export type TooltipContext = {
   strength?: number;
   /** Armour training the hero's feats give on top of their class's. */
   featArmor?: readonly ArmorTraining[];
+  /** Weapons the hero's feats train them in (Weapon Master). */
+  featWeapons?: readonly string[];
   /** The letters of the name a search matched. */
   matched?: readonly number[];
   /** The item this one is compared with: arrows mark where this one is better or worse. */
@@ -102,8 +104,8 @@ function armorLines(item: InventoryItem, strength: number | undefined): Line[] {
  * Untrained gear is called out: armour gives disadvantage on attacks, a weapon loses the proficiency bonus. `featArmor`:
  * the armour training the hero's feats give on top of their class's.
  */
-function trainingLine(item: InventoryItem, cls: HeroClass | undefined, featArmor: readonly ArmorTraining[]): Line | null {
-  if (!cls || itemTrained(cls, item, featArmor)) return null;
+function trainingLine(item: InventoryItem, cls: HeroClass | undefined, featArmor: readonly ArmorTraining[], featWeapons: readonly string[]): Line | null {
+  if (!cls || itemTrained(cls, item, featArmor, featWeapons)) return null;
   return { text: text(weaponRule(item) ? 'item.tooltip.untrained_weapon' : 'item.tooltip.untrained_armor'), color: UNTRAINED_COLOR };
 }
 
@@ -111,11 +113,11 @@ function trainingLine(item: InventoryItem, cls: HeroClass | undefined, featArmor
  * The lines under the header: the item's rules (and a warning when `cls` is not trained in it), each stat it
  * adds, how much it weighs and is worth, and what kind of thing it is.
  */
-function detailLines(item: InventoryItem, cls: HeroClass | undefined, strength: number | undefined, featArmor: readonly ArmorTraining[]): Line[] {
+function detailLines(item: InventoryItem, cls: HeroClass | undefined, strength: number | undefined, featArmor: readonly ArmorTraining[], featWeapons: readonly string[] = []): Line[] {
   const s = item.stats;
   const rules = [...weaponLines(item), ...armorLines(item, strength)];
   const lines = rules.slice(0, -1);
-  const untrained = trainingLine(item, cls, featArmor);
+  const untrained = trainingLine(item, cls, featArmor, featWeapons);
   if (untrained) lines.push(untrained);
   if (s) lines.push(...STAT_NAMES.flatMap((stat) => (s[stat] ? [{ text: text('item.tooltip.stat_bonus', { amount: s[stat] ?? 0, stat: statShort(stat) }), color: 0x8fd18f }] : [])));
   if (item.weight !== undefined) lines.push({ text: text('item.tooltip.weight', { kg: item.weight }), color: THEME.text, measure: 'weight' });
@@ -206,7 +208,7 @@ export class ItemTooltip {
     this.picture.position.set(PAD + PICTURE / 2, PAD + HEADER_H + PICTURE / 2);
     for (const child of this.lines.removeChildren()) child.destroy();
     this.arrows.clear();
-    const details = detailLines(item, about.cls, about.strength, about.featArmor ?? []);
+    const details = detailLines(item, about.cls, about.strength, about.featArmor ?? [], about.featWeapons);
     const verdicts = about.against ? compareItems(item, about.against) : {};
     let widest = 0;
     details.forEach((line, i) => {

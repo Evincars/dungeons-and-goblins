@@ -32,6 +32,7 @@ import { updateDust } from './DustSystem';
 import { updateEphemerals } from './EphemeralSystem';
 import { updateInventory } from './InventorySystem';
 import { updateChests } from './ChestSystem';
+import { updateDecoys } from './DecoySystem';
 import { updateWeaponSwap } from './WeaponSwapSystem';
 import { updateLevers } from './LeverSystem';
 import { updateRollLogs } from './RollLogSystem';
@@ -77,6 +78,7 @@ export const SIMULATION: readonly System[] = [
   () => updateWeaponSwap(),
   ({ level, tick }) => updateAI(level, tick),
   ({ level }) => updateSummons(level),
+  () => updateDecoys(),
   () => updateInitiative(),
   () => updateArrows(),
   () => updateSword(),

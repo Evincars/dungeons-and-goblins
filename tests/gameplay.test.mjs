@@ -1806,9 +1806,18 @@ function cast(level, caster, ticks = 90) {
 
 const rollLines = (entity) => (entity.rollLog ?? []).map((line) => line.text);
 
+/** Puts a spell straight on a quick-bar square (at its own level unless told), as a bind in a safe room would. */
+function boundOn(caster, slot, spell, level = SPELLS[spell].level) {
+  const book = caster.spellbook ?? (caster.spellbook = { recovery: Array.from({ length: 20 }, () => 0) });
+  const bound = Array.from({ length: 20 }, (_, i) => book.bound?.[i] ?? null);
+  bound[slot] = { spell, level };
+  book.bound = bound;
+  return caster;
+}
+
 test('a bolt spell is rolled to hit and strikes with its effect; the spell then recovers before it can be cast again', () => {
   const level = arena(12, 6);
-  const vesper = casterAt(2, 2, 'wizard', 0);
+  const vesper = boundOn(casterAt(2, 2, 'wizard', 0), 0, 'fire_bolt');
   const orc = mobAt(level, 'orc', 6, 2);
   const before = orc.health.current;
   cast(level, vesper, 1);
@@ -1823,7 +1832,7 @@ test('a bolt spell is rolled to hit and strikes with its effect; the spell then 
 
 test('magic missile\'s darts fly the aimed line one after another, not fanned out', () => {
   const level = arena(16, 6);
-  const caster = casterAt(2, 3, 'wizard', 2);
+  const caster = boundOn(casterAt(2, 3, 'wizard', 2), 2, 'magic_missile');
   const volley = () => [...world.with('projectile')].filter((e) => e.projectile.spell === 'magic_missile');
   cast(level, caster, 1);
   for (let t = 0; t < 120 && volley().length === 0; t++) updateSpells(level);
@@ -1839,7 +1848,7 @@ test('magic missile\'s darts fly the aimed line one after another, not fanned ou
 
 test('magic missile always hits with its three darts; cast again too soon, it says how long it still needs', () => {
   const level = arena(12, 6);
-  const vesper = casterAt(2, 2, 'wizard', 2);
+  const vesper = boundOn(casterAt(2, 2, 'wizard', 2), 2, 'magic_missile');
   const orc = mobAt(level, 'orc', 5, 2);
   useDieRoller((sides) => (sides === 20 ? 1 : sides));
   cast(level, vesper);
@@ -1874,12 +1883,13 @@ test('a burst makes every foe in it save against the spell DC: half damage on a 
   assert.equal(near.health.current, 0);
 });
 
-test('a spell is learnt at its level, and a healing spell mends the caster by the dice + casting ability + Disciple of Life', () => {
+test('a wizard starts with an empty quick bar, and a healing spell mends the caster by the dice + casting ability + Disciple of Life', async () => {
+  const { quickBinding } = await load('rules/Spellbook');
   const level = arena(10, 6);
-  const wizard = casterAt(2, 4, 'wizard', 4);
+  const wizard = casterAt(2, 4, 'wizard', 0);
+  assert.ok(Array.from({ length: 10 }, (_, slot) => quickBinding(wizard, slot)).every((b) => b === null), 'no spell bound for them (the second row holds their class features)');
   cast(level, wizard);
-  assert.equal(wizard.casting, undefined, 'Chromatic Orb is learnt at level 2');
-  assert.ok(rollLines(wizard).includes('LEVEL 2'));
+  assert.equal(wizard.casting, undefined, 'so nothing is cast');
   const cleric = casterAt(2, 2, 'cleric', 2);
   cleric.health.max = 50;
   cleric.health.current = 10;
@@ -2136,10 +2146,10 @@ test('progression: a class hands out its features, spells and choices by level, 
 
 test('progression: spells are learnt at their level, features arrive with theirs', async () => {
   const { CLASSES, hasFeature, spellLevelFor } = await load('rules/Classes');
-  assert.deepEqual([...CLASSES.wizard.spells], ['fire_bolt', 'ray_of_frost', 'magic_missile', 'burning_hands', 'chromatic_orb', 'thunderwave']);
-  assert.equal(spellLevelFor(CLASSES.wizard, 'fire_bolt'), 1);
-  assert.equal(spellLevelFor(CLASSES.wizard, 'chromatic_orb'), 2);
-  assert.equal(spellLevelFor(CLASSES.wizard, 'thunderwave'), 3);
+  assert.deepEqual([...CLASSES.wizard.spells], [], 'a wizard is given no spells: they bind what they choose');
+  assert.deepEqual([...CLASSES.warlock.spells], ['eldritch_blast', 'chill_touch']);
+  assert.equal(spellLevelFor(CLASSES.warlock, 'eldritch_blast'), 1);
+  assert.equal(spellLevelFor(CLASSES.wizard, 'thunderwave'), 1, 'nothing waits for a later level');
   assert.deepEqual([...CLASSES.fighter.spells], []);
   assert.equal(hasFeature(CLASSES.warlock, 'agonizing_blast', 1), false);
   assert.equal(hasFeature(CLASSES.warlock, 'agonizing_blast', 2), true);
@@ -3067,7 +3077,7 @@ test('actives go on the quick bar and are used with the cast key', () => {
   assert.equal(fighter.actionSurge, 6 * 60, 'Action Surge doubles the attacks for 6 seconds');
   assert.ok(fighter.spellbook.recovery[3] > 0, 'the rest of the bar keeps recovering');
   assert.equal(fighter.spellbook.recovery[1], 60 * 60, 'and it recovers for a minute itself');
-  const wizard = casterAt(2, 4, 'wizard', 0);
+  const wizard = boundOn(casterAt(2, 4, 'wizard', 0), 2, 'magic_missile');
   bindSpell(wizard, 0, 'feature:arcane_recovery', 0);
   wizard.spellbook.recovery[2] = 300;
   assert.equal(usedFeature(wizard, 'arcane_recovery', 0, level), 'ok');
@@ -5309,8 +5319,11 @@ test('a wizard keeps only as many cantrips and spells of each level on the quick
   assert.deepEqual([0, 5, 6].map((l) => Schools.bindLimit(12, l)), [5, 2, 1]);
   arena(12, 6);
   const wizard = casterAt(2, 2, 'wizard', 0);
-  assert.equal(Spellbook.boundAtLevel(wizard, 0), 2, 'the class\'s own cantrips count');
-  assert.equal(Spellbook.boundAtLevel(wizard, 1), 2, 'and its own spells');
+  assert.equal(Spellbook.boundAtLevel(wizard, 0), 0, 'nothing bound to begin with');
+  for (const [slot, spell] of [[0, 'fire_bolt'], [1, 'ray_of_frost']]) assert.equal(bindSpell(wizard, slot, spell, 0), true);
+  for (const [slot, spell] of [[2, 'magic_missile'], [3, 'burning_hands']]) assert.equal(bindSpell(wizard, slot, spell, 1), true);
+  assert.equal(Spellbook.boundAtLevel(wizard, 0), 2, 'cantrips bound count');
+  assert.equal(Spellbook.boundAtLevel(wizard, 1), 2, 'and spells');
   assert.equal(bindSpell(wizard, 5, 'ice_knife', 1), false, 'no room for a third first-level spell');
   assert.equal(bindSpell(wizard, 2, 'ice_knife', 1), true, 'but it may take the place of one');
   assert.equal(bindSpell(wizard, 6, 'chill_touch', 0), true, 'a third cantrip');
@@ -5319,7 +5332,7 @@ test('a wizard keeps only as many cantrips and spells of each level on the quick
   assert.equal(unbindSpell(wizard, 6), true);
   assert.equal(Spellbook.quickBinding(wizard, 6), null, 'an emptied square holds nothing');
   assert.equal(unbindSpell(wizard, 0), true);
-  assert.equal(Spellbook.quickBinding(wizard, 0), null, 'not even the class\'s own spell');
+  assert.equal(Spellbook.quickBinding(wizard, 0), null, 'emptied');
   assert.equal(Spellbook.boundAtLevel(wizard, 0), 1);
   assert.equal(bindSpell(wizard, 7, 'acid_splash', 0), true, 'room again');
   const cleric = casterAt(2, 4, 'cleric', 0);
@@ -5462,17 +5475,23 @@ test('a Bladesinger is trained in light blades, and Bladesong adds the proficien
   assert.equal(sheetOf(singer).armorClass.school, 0, 'a quarterstaff impedes it');
 });
 
-test('Animate Dead raises undead that fight for the necromancer; raising again lets the old ones crumble', () => {
+test('Animate Dead raises undead that fight for the necromancer, one for every three wizard levels; the oldest crumble', () => {
   const level = arena(12, 6);
   const necromancer = wizardOf('necromancy', 6);
   const goblin = mobAt(level, 'goblin', 4, 2);
+  assert.equal(SummonSystem.undeadCap(necromancer), 2, 'two at level 6');
   assert.equal(usedFeature(necromancer, 'animate_dead_zombie', 11, level), 'ok');
   const raised = [...world.with('summon')];
   assert.equal(raised.length, 2, 'Undead Thralls raises two');
-  assert.equal(raised[0].health.max, 22 + 6, 'with the wizard level in hit points');
+  assert.equal(raised[0].health.max, 22 + 6, 'Better Summons: the wizard level in hit points');
   assert.equal(raised[0].summon.damage.bonus, 1 + 3, 'and the proficiency bonus on their damage');
   assert.equal(usedFeature(necromancer, 'animate_dead_skeleton', 12, level), 'ok');
-  assert.ok(raised.every((u) => u.removed), 'the zombies crumble');
+  assert.ok(raised.every((u) => u.removed), 'both zombies crumble: two skeletons take their places');
+  necromancer.playerStats.level = 12;
+  assert.equal(SummonSystem.undeadCap(necromancer), 4, 'four at level 12');
+  assert.equal(usedFeature(necromancer, 'animate_dead_zombie', 13, level), 'ok');
+  assert.equal(SummonSystem.undeadOf(necromancer), 4, 'the skeletons stay beside two new zombies');
+  necromancer.playerStats.level = 6;
   const goblinBefore = goblin.health.current;
   for (let t = 0; t < 240 && goblin.health.current === goblinBefore; t++) {
     beginPerception();
@@ -5754,4 +5773,282 @@ test('the floor something stands on keeps the wall south of it drawn as any othe
     && p.dy >= 4 * TILE_HEIGHT && p.dy < 6 * TILE_HEIGHT && p.sx === 96 && p.sy === 80);
   assert.ok(darkOver(3), 'beside the pot');
   assert.ok(darkOver(4), 'under the pot too');
+});
+
+// ── The Wizard's newer school features, and the feats ────────────────────────
+
+const FeatSystemForSaves = await load('systems/FeatureSystem');
+const DecoySystem = await load('systems/DecoySystem');
+const { updateCombatTimers } = await load('systems/CombatSystem');
+const FeatBuild = await load('rules/Build');
+const FeatPicks = await load('rules/FeatPicks');
+const { CLASSES: FeatClasses } = await load('rules/Classes');
+const { FEATS: FeatTable } = await load('rules/Feats');
+const { applyLoadout } = await load('game/PlayerActions');
+const Drops = await load('entities/Drops');
+const { spellcastingFor } = await load('rules/CharacterSheet');
+
+/** The hero has taken these feats (Improvements), as the level panel would have them. */
+function withFeats(hero, ...improvements) {
+  hero.build = { ...hero.build, improvements };
+  return hero;
+}
+
+test('Mage Armour is switched: cast again it ends; it recovers in 6 seconds, and putting on body armour ends it', () => {
+  const level = arena(12, 6);
+  const wizard = casterAt(2, 2, 'wizard', 2);
+  wizard.equipped = {};
+  const bare = sheetOf(wizard).armorClass.total;
+  assert.equal(SPELLS.mage_armor.recoveryTicks, 6 * 60, 'it recovers in 6 seconds');
+  assert.equal(bindSpell(wizard, 2, 'mage_armor', 1), true);
+  cast(level, wizard);
+  assert.equal(sheetOf(wizard).armorClass.total, bare + 3, 'on');
+  for (let t = 0; t < SPELLS.mage_armor.recoveryTicks; t++) updateSpells(level);
+  cast(level, wizard);
+  assert.equal(sheetOf(wizard).armorClass.total, bare, 'cast again, it is switched off');
+  assert.ok(rollLines(wizard).includes('MAGE ARMOUR: OFF'));
+  for (let t = 0; t < SPELLS.mage_armor.recoveryTicks; t++) updateSpells(level);
+  cast(level, wizard);
+  assert.equal(sheetOf(wizard).armorClass.total, bare + 3, 'and on again');
+  applyLoadout(wizard, { inventory: [], equipped: { armor: { ...ARMORS.find((a) => a.base === 'leather') } } });
+  assert.equal(wizard.buffs.mageArmor, 0, 'body armour put on ends it');
+});
+
+test('Split Enchantment: an Enchantment spell that hurts a foe hurts the one nearest it too, once a round', () => {
+  const level = arena(14, 6);
+  const enchanter = wizardOf('enchantment', 10);
+  const struck = mobAt(level, 'orc', 3, 2);
+  const next = mobAt(level, 'orc', 4, 2);
+  struck.health.max = struck.health.current = next.health.max = next.health.current = 100;
+  beginPerception();
+  SchoolSystem.updateSchools();
+  SchoolSystem.splitEnchantment(enchanter, struck, 'dissonant_whispers', 7);
+  assert.equal(next.health.current, 93, 'the same damage');
+  SchoolSystem.splitEnchantment(enchanter, struck, 'dissonant_whispers', 7);
+  assert.equal(next.health.current, 93, 'not again this round');
+  for (let t = 0; t < 6 * 60; t++) SchoolSystem.updateSchools();
+  SchoolSystem.splitEnchantment(enchanter, struck, 'fireball', 7);
+  assert.equal(next.health.current, 93, 'an Evocation spell does not split');
+  SchoolSystem.splitEnchantment(enchanter, struck, 'dissonant_whispers', 7);
+  assert.equal(next.health.current, 86, 'a round later it works again');
+});
+
+test('Sculpt Spells: where an Evocation spell lands a bubble lets every hero in it succeed on every save, for a round', () => {
+  arena(14, 6);
+  const evoker = wizardOf('evocation', 2);
+  const ally = playerAt(10, 2, 'fighter');
+  useDieRoller(() => 1);
+  assert.equal(FeatSystemForSaves.heroSavingThrow(evoker, 'dexterity', 25), false, 'no bubble: a 1 fails');
+  SchoolSystem.sculptAt(evoker, 'chill_touch', evoker.position.x, evoker.position.y, 40);
+  assert.equal(FeatSystemForSaves.heroSavingThrow(evoker, 'dexterity', 25), false, 'a Necromancy spell leaves none');
+  SchoolSystem.sculptAt(evoker, 'fireball', evoker.position.x + 10, evoker.position.y, 40);
+  assert.equal(FeatSystemForSaves.heroSavingThrow(evoker, 'dexterity', 25), true, 'in the bubble every save succeeds');
+  assert.equal(FeatSystemForSaves.heroSavingThrow(ally, 'dexterity', 25), false, 'far from it, not');
+  for (let t = 0; t < 6 * 60; t++) SchoolSystem.updateSchools();
+  assert.equal(FeatSystemForSaves.heroSavingThrow(evoker, 'dexterity', 25), false, 'it lasts a round');
+});
+
+test('Improved Minor Illusion: a dummy (AC 10, 20 HP) that the foes who fail their save go for and strike until it is gone', () => {
+  const level = arena(16, 8);
+  const illusionist = wizardOf('illusion', 2, 2, 4);
+  const goblin = mobAt(level, 'goblin', 8, 4);
+  beginPerception();
+  useDieRoller((sides) => (sides === 20 ? 1 : sides));
+  const aim = { x: goblin.position.x + 40, y: goblin.position.y };
+  assert.equal(usedFeature(illusionist, 'improved_minor_illusion', 11, level, aim), 'ok');
+  assert.equal(Features.featureOfClass('wizard', 'improved_minor_illusion').cooldown, 30, 'it recovers in 30 seconds');
+  const decoy = [...world.with('decoy')][0];
+  assert.ok(decoy, 'a dummy stands');
+  assert.deepEqual([decoy.decoy.ac, decoy.health.max], [10, 20]);
+  assert.equal(goblin.lured, world.id(decoy), 'the goblin failed its save and is lured');
+  useDieRoller(SURE_HIT);
+  const heroHealth = illusionist.health.current;
+  for (let t = 0; t < 900 && !decoy.removed; t++) {
+    beginPerception();
+    updateAI(level, t);
+    updateMovement(level);
+    updateCombatTimers();
+    updateContactDamage(level);
+    DecoySystem.updateDecoys();
+  }
+  assert.ok(decoy.removed, 'the goblin broke the dummy');
+  assert.equal(illusionist.health.current, heroHealth, 'and struck nobody else meanwhile');
+  DecoySystem.updateDecoys();
+  assert.equal(goblin.lured, undefined, 'then it is itself again');
+});
+
+test('feats the game does not play are not offered at all (but stay in the data); Great Weapon Master switches only its power attack', async () => {
+  const { OFFERED_FEATS } = await load('rules/Feats');
+  const wizard = createPlayer(0, 0, 'wizard').build;
+  for (const id of ['actor', 'crossbow_expert', 'lucky', 'martial_adept', 'performer', 'ritual_caster', 'sentinel', 'skilled', 'war_caster']) {
+    assert.equal(FeatBuild.featOpen(FeatClasses.wizard, 4, wizard, id), false, id);
+    assert.ok(!OFFERED_FEATS.includes(id), `${id} is not listed in the level panel`);
+    assert.ok(FeatTable[id], `${id} is still known to the game`);
+  }
+  assert.ok(OFFERED_FEATS.includes('weapon_master') && OFFERED_FEATS.includes('alert'));
+  for (const id of ['charger', 'dungeon_delver', 'elemental_adept', 'mage_slayer', 'magic_initiate_cleric', 'polearm_master', 'shield_master', 'spell_sniper', 'weapon_master']) {
+    assert.equal(FeatTable[id].worked, true, id);
+  }
+  const hero = withFeats(playerAt(2, 2, 'fighter'), { feat: 'great_weapon_master' });
+  assert.equal(sheetOf(hero).feats.bonusAttack, true, 'the extra attack after a kill is always on');
+  assert.equal(sheetOf(hero).feats.powerAttacks.length, 0, 'the power attack only when switched on');
+});
+
+test('Magic Initiate and Spell Sniper teach the spells picked with them, bound at their own level and counted against no limit', () => {
+  const hero = createPlayer(centre(2), centre(2), 'wizard');
+  hero.inSafeRoom = true;
+  hero.playerStats.level = 4;
+  const build = hero.build;
+  const cleric = FeatPicks.pickOptions(FeatClasses.wizard, 'magic_initiate_cleric');
+  assert.deepEqual(FeatPicks.picksWanted('magic_initiate_cleric', cleric), { cantrip: 1, spell: 1, weapon: 0, element: 0 }, 'the one cleric cantrip the game casts yet');
+  assert.ok(cleric.some((o) => o.id === 'guiding_bolt' && o.open));
+  assert.ok(cleric.some((o) => o.id === 'bless' && !o.open), 'a spell not in the game yet is greyed out');
+  assert.equal(FeatBuild.takeImprovement(FeatClasses.wizard, build, 4, { feat: 'magic_initiate_cleric' }), false, 'its picks are needed');
+  assert.equal(FeatBuild.takeImprovement(FeatClasses.wizard, build, 4, { feat: 'magic_initiate_cleric', picks: ['fire_bolt', 'guiding_bolt'] }), false, 'from the cleric list only');
+  assert.equal(FeatBuild.takeImprovement(FeatClasses.wizard, build, 4, { feat: 'magic_initiate_cleric', picks: ['sacred_flame', 'guiding_bolt'] }), true);
+  const cantrips = ['fire_bolt', 'ray_of_frost', 'acid_splash', 'chill_touch', 'poison_spray', 'shocking_grasp'];
+  const limit = Schools.bindLimit(4, 0);
+  cantrips.slice(0, limit).forEach((spell, slot) => assert.equal(bindSpell(hero, slot, spell, 0), true));
+  assert.equal(bindSpell(hero, limit, cantrips[limit], 0), false, 'the wizard\'s cantrips are all bound');
+  assert.equal(bindSpell(hero, limit, 'sacred_flame', 0), true, 'a feat\'s cantrip is not counted');
+  assert.equal(bindSpell(hero, limit + 1, 'guiding_bolt', 2), false, 'only at its own level');
+  assert.equal(bindSpell(hero, limit + 1, 'guiding_bolt', 1), true);
+  assert.equal(Spellbook.boundAtLevel(hero, 0), limit);
+  const sheet = sheetOf(hero);
+  assert.equal(spellcastingFor(sheet, 'sacred_flame').ability, 'wisdom', 'cast with the cleric\'s Wisdom');
+  assert.equal(spellcastingFor(sheet, 'fire_bolt').ability, 'intelligence');
+  const sniper = FeatPicks.pickOptions(FeatClasses.wizard, 'spell_sniper');
+  assert.ok(sniper.every((o) => o.group === 'cantrip' && o.spell.effect?.kind === 'damage'), 'only cantrips that deal damage');
+  assert.ok(sniper.some((o) => o.id === 'eldritch_blast'), 'from any class');
+});
+
+test('Weapon Master: four weapons picked, those the hero is trained in already greyed out', async () => {
+  const wizard = createPlayer(0, 0, 'wizard');
+  const options = FeatPicks.pickOptions(FeatClasses.wizard, 'weapon_master');
+  assert.ok(options.some((o) => o.id === 'dagger' && !o.open), 'a wizard knows the dagger');
+  assert.ok(options.some((o) => o.id === 'longsword' && o.open));
+  const picks = ['longsword', 'rapier', 'longbow', 'warhammer'];
+  assert.equal(FeatBuild.takeImprovement(FeatClasses.wizard, wizard.build, 4, { feat: 'weapon_master', ability: 'dexterity', picks: ['dagger', 'rapier', 'longbow', 'warhammer'] }), false);
+  assert.equal(FeatBuild.takeImprovement(FeatClasses.wizard, wizard.build, 4, { feat: 'weapon_master', ability: 'dexterity', picks: picks.slice(0, 3) }), false, 'four of them');
+  assert.equal(FeatBuild.takeImprovement(FeatClasses.wizard, wizard.build, 4, { feat: 'weapon_master', ability: 'dexterity', picks }), true);
+  wizard.equipped = { primary: { ...WEAPONS.find((w) => w.base === 'longsword') } };
+  assert.ok(sheetOf(wizard).attack.proficient, 'trained in the longsword now');
+  const { alsoTrained } = await load('ui/ProficiencyPanel');
+  const listed = alsoTrained(sheetOf(wizard));
+  assert.ok(picks.every((base) => listed.includes(base)), 'the character tab lists them under the weapon proficiencies');
+  assert.ok(listed.includes('dagger'), 'beside the class\'s own');
+  const fighter = createPlayer(0, 0, 'fighter');
+  assert.ok(FeatPicks.pickOptions(FeatClasses.fighter, 'weapon_master').every((o) => !o.open), 'a fighter knows every weapon already');
+});
+
+test('Elemental Adept: the damage dice of the picked type never count a 1', () => {
+  const level = arena(14, 6);
+  const wizard = withFeats(casterAt(2, 2, 'wizard', 0), { feat: 'elemental_adept', picks: ['cold'] });
+  assert.deepEqual(sheetOf(wizard).feats.elements, ['cold']);
+  const orc = mobAt(level, 'orc', 6, 2);
+  orc.health.max = orc.health.current = 100;
+  boundOn(wizard, 0, 'ray_of_frost');
+  useDieRoller((sides) => (sides === 20 ? 19 : 1));
+  cast(level, wizard, SPELLS.ray_of_frost.recoveryTicks);
+  assert.equal(orc.health.current, 100 - 2, 'a 1 on the d8 counts as a 2');
+  assert.equal(FeatBuild.takeImprovement(FeatClasses.wizard, createPlayer(0, 0, 'wizard').build, 4, { feat: 'elemental_adept', picks: ['necrotic'] }), false, 'acid, cold, fire, lightning or thunder');
+});
+
+test('Polearm Master strikes again with the butt end: 1d4 bludgeoning, rolled as the weapon\'s own blow', () => {
+  const hero = withFeats(playerAt(2, 2, 'fighter'), { feat: 'polearm_master' });
+  hero.equipped = { primary: { ...WEAPONS.find((w) => w.base === 'glaive') } };
+  const sheet = sheetOf(hero);
+  assert.ok(sheet.butt, 'a glaive has a butt end');
+  assert.deepEqual([sheet.butt.damage.count, sheet.butt.damage.sides, sheet.butt.damage.bonus], [1, 4, 0]);
+  assert.equal(sheet.butt.rule.type, 'bludgeoning');
+  assert.equal(sheet.butt.attackBonus, sheet.attack.attackBonus, 'the same to hit');
+  hero.equipped = { primary: { ...WEAPONS.find((w) => w.base === 'longsword') } };
+  assert.equal(sheetOf(hero).butt, null, 'not with a longsword');
+});
+
+test('Sharpshooter: a kill with a ranged weapon earns a shot more for the next volley', async () => {
+  const SwordSystem = await load('systems/SwordSystem');
+  const archer = withFeats(playerAt(2, 2, 'fighter'), { feat: 'sharpshooter' });
+  SwordSystem.earnBonusAttack(archer, true);
+  assert.equal(archer.bonusAttack, true);
+  const brute = withFeats(playerAt(4, 2, 'fighter'), { feat: 'great_weapon_master' });
+  SwordSystem.earnBonusAttack(brute, true);
+  assert.equal(brute.bonusAttack, undefined, 'Great Weapon Master does not earn it with a bow');
+});
+
+test('Alert: a foe nobody sees coming strikes first without a roll, unless the hero is Alert', () => {
+  const level = arena(12, 6);
+  const hero = playerAt(2, 2, 'fighter');
+  const goblin = mobAt(level, 'goblin', 3, 2);
+  world.addComponent(goblin, 'unseen', true);
+  engage(goblin, hero, 0);
+  updateInitiative();
+  assert.equal(goblin.initiative?.firstStrike, true, 'a surprise');
+  assert.equal(hero.initiative, undefined, 'the hero never rolled');
+  const alert = withFeats(playerAt(6, 4, 'fighter'), { feat: 'alert' });
+  const shade = mobAt(level, 'goblin', 7, 4);
+  world.addComponent(shade, 'unseen', true);
+  engage(shade, alert, 0);
+  updateInitiative();
+  assert.ok(alert.initiative, 'the Alert hero rolls as usual');
+});
+
+test('Athlete and Mobile never fall into a pit: the hero leaps to its far side, or springs back when it is too wide', () => {
+  const level = arena(16, 10);
+  level.setTile(6, 2, createTile(TileType.Hole));
+  level.setTile(6, 3, createTile(TileType.Hole));
+  const leaper = withFeats(playerAt(5, 3, 'fighter'), { feat: 'athlete', ability: 'dexterity' });
+  updateHoles(level);
+  leaper.position.x = centre(6);
+  updateHoles(level);
+  assert.equal(leaper.falling, undefined, 'no fall');
+  assert.ok(leaper.position.x > centre(6), 'on, over to the far side');
+  updateHoles(level);
+  assert.equal(leaper.falling, undefined, 'standing on its far edge');
+  for (let x = 6; x <= 12; x++) for (const y of [6, 7]) level.setTile(x, y, createTile(TileType.Hole));
+  const mobile = withFeats(playerAt(5, 7, 'fighter'), { feat: 'mobile' });
+  updateHoles(level);
+  mobile.position.x = centre(6);
+  updateHoles(level);
+  assert.equal(mobile.falling, undefined);
+  assert.equal(mobile.position.x, centre(5), 'too wide to clear: back where they came from');
+});
+
+test('Charger rushes at the foe nearest the aim and strikes it at once; then it recovers', () => {
+  const level = arena(16, 6);
+  const hero = withFeats(casterAt(2, 2, 'fighter', 0), { feat: 'charger' });
+  hero.equipped = { primary: { ...WEAPONS.find((w) => w.base === 'longsword') } };
+  const orc = mobAt(level, 'orc', 7, 2);
+  hero.aimWorld.x = orc.position.x;
+  beginPerception();
+  assert.equal(bindSpell(hero, 0, 'feat:charger', 0), true, 'bound like a toggle feat');
+  const from = hero.position.x;
+  cast(level, hero, 1);
+  assert.ok(hero.position.x > from + 3 * TILE_WIDTH, 'it rushed at the orc');
+  assert.ok(hero.swordSwing, 'and swings at once');
+  assert.equal(hero.spellbook.recovery[0], 12 * 60, 'it recovers in 12 seconds');
+});
+
+test('Dungeon Delver makes the gear in a chest magical more often; Shield Master and Mage Slayer help with saves', () => {
+  const level = arena(12, 6);
+  const plain = playerAt(2, 2, 'fighter');
+  const delver = withFeats(playerAt(4, 2, 'fighter'), { feat: 'dungeon_delver' });
+  assert.equal(Drops.chestMagicPercent(plain), 20);
+  assert.equal(Drops.chestMagicPercent(delver), 50, '30 points more');
+  const item = { ...WEAPONS.find((w) => w.base === 'longsword') };
+  Drops.enchant(item, 2);
+  assert.equal(item.bonus, 2);
+  assert.equal(item.name, 'Longsword +2');
+  const guard = withFeats(playerAt(6, 2, 'fighter'), { feat: 'shield_master' });
+  guard.equipped = { secondary: { ...SHIELDS[0] } };
+  const dc = 19 + sheetOf(guard).saves.dexterity.bonus + 2;
+  useDieRoller(() => 19);
+  assert.equal(FeatSystemForSaves.heroSavingThrow(guard, 'dexterity', dc), true, '+2 with a shield');
+  guard.equipped = {};
+  assert.equal(FeatSystemForSaves.heroSavingThrow(guard, 'dexterity', dc), false, 'not without one');
+  const slayer = withFeats(playerAt(8, 2, 'fighter'), { feat: 'mage_slayer' });
+  const caster = mobAt(level, 'goblin', 8, 2);
+  let rolls = 0;
+  useDieRoller(() => (++rolls === 1 ? 1 : 20));
+  assert.equal(FeatSystemForSaves.heroSavingThrow(slayer, 'wisdom', 15, undefined, caster), true, 'advantage against a caster at arm\'s length');
 });

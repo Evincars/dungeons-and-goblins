@@ -19,9 +19,7 @@
       "armor": [], "weapons": [], "weaponBases": ["dagger", "dart", "sling", "quarterstaff", "light_crossbow"],
       "savingThrows": ["intelligence", "wisdom"], "spellcasting": "intelligence",
       "progression": {
-        "1": [{ "spell": "fire_bolt" }, { "spell": "ray_of_frost" }, { "spell": "magic_missile" }, { "spell": "burning_hands" }],
-        "2": [{ "choice": "archetype" }, { "spell": "chromatic_orb" }],
-        "3": [{ "spell": "thunderwave" }],
+        "2": [{ "choice": "archetype" }],
         "4": [{ "asi": true }], "8": [{ "asi": true }], "12": [{ "asi": true }], "16": [{ "asi": true }], "19": [{ "asi": true }]
       }
     },

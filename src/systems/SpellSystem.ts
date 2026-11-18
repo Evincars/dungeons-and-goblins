@@ -1,20 +1,22 @@
 import { world, q, isActivePlayer, isPlayer, isTarget, QUICK_SLOTS } from '../world';
 import type { Entity, Player, SpellEffect } from '../world';
 import type { Level } from '../level/Level';
-import { bonusSwing, hitMob } from './SwordSystem';
+import { bonusSwing, earnBonusAttack, hitMob } from './SwordSystem';
 import { bonusShot, holdsBow } from './ArrowSystem';
 import { spellSaveMode } from './ManeuverSystem';
 import { strike } from './Strike';
 import { logHeal, logLine, logSaveDamage, logSpellDamage } from './RollLogSystem';
 import { recordSpell } from './CombatLogSystem';
-import { characterSheet } from '../rules/CharacterSheet';
+import { characterSheet, lowestFace, spellcastingFor } from '../rules/CharacterSheet';
 import type { CharacterSheet } from '../rules/CharacterSheet';
 import { heroClass, spellLevelFor } from '../rules/Classes';
 import { bindingFeatureId, featureCooldown, featureOn, featureOfClass, hasClassFeature } from '../rules/ClassFeatures';
 import { switchFeat, usedFeature } from './FeatureSystem';
-import { foreseeHit, foreseenSave, grimHarvest, savedDamage, spellCast, spellDamageBonus } from './SchoolSystem';
+import { foreseeHit, foreseenSave, grimHarvest, savedDamage, sculptAt, spellCast, spellDamageBonus, splitEnchantment } from './SchoolSystem';
 import { castBuff, castWater, castZone, electrify } from './LastingSpells';
-import { bindingFeatId } from '../rules/Feats';
+import { FEATS, bindingFeatId } from '../rules/Feats';
+import { passiveFeats } from '../rules/Build';
+import { useFeat } from './FeatActions';
 import type { FeatId } from '../rules/Feats';
 import { SPELLS, TICKS_PER_SECOND, isSpellId } from '../rules/Spells';
 import { castDef, quickBinding } from '../rules/Spellbook';
@@ -23,7 +25,7 @@ import type { SpellDef } from '../rules/Spells';
 import { MONSTERS } from '../rules/Monsters';
 import { MIN_HIT_DAMAGE } from '../rules/Combat';
 import type { AttackProfile } from '../rules/Combat';
-import { diceRange, plus, rollCheck, rollDice } from '../rules/Dice';
+import { diceRange, plus, rollCheck, rollDice, rollDie } from '../rules/Dice';
 import type { Dice } from '../rules/Dice';
 import { spawnFx } from '../entities/FxFactory';
 import { AIM_HEIGHT, createSpellBolt } from '../entities/ProjectileFactory';
@@ -69,6 +71,8 @@ function burst(bolt: Bolt, struck: boolean): void {
   if (spell) sound.playSound(SPELL_IMPACTS[SPELLS[spell].damageType], p.x, p.y);
   if (art) spawnFx(p.x, p.y, art.sheet, art.count, art.count * art.frameTime, { first: art.first, scale: art.scale, yOffset: AIM_HEIGHT });
   if (impact) playEffect(impact.shape, impact.colour, p.x, p.y, AIM_HEIGHT, impact.scale);
+  // An evoker's spell leaves its Sculpt Spells bubble where it landed.
+  if (spell && bolt.projectile.owner !== undefined) sculptAt(world.entity(bolt.projectile.owner), spell, p.x, p.y, SPELLS[spell].radius);
   world.addComponent(bolt, 'removed', true);
 }
 
@@ -131,6 +135,31 @@ function startFeature(caster: Player, id: string, level: Level): void {
   caster.castCooldown = SPELL_STATS.cooldown;
 }
 
+/** What is said when a feat used from the quick bar can't be. */
+const FEAT_REFUSALS = { unworked: 'roll.feature_unworked', no_foe: 'roll.no_foe', not_melee: 'roll.not_melee' } as const;
+
+/** The cast key on a Passive Feat used from the quick bar (Charger): used now if the hero has it and its square has recovered. */
+function startFeat(caster: Player, feat: FeatId, level: Level): void {
+  const slot = caster.playerInput.spellSlot;
+  if (!passiveFeats(heroClass(caster.heroClass), caster.playerStats.level, caster.build).includes(feat)) {
+    refuse(caster, text('roll.no_spell'));
+    return;
+  }
+  const book = caster.spellbook ?? (caster.spellbook = { recovery: Array.from({ length: QUICK_SLOTS }, () => 0) });
+  const left = book.recovery[slot] ?? 0;
+  if (left > 0) {
+    refuse(caster, text('roll.spell_recovering', { seconds: (left / TICKS_PER_SECOND).toFixed(1) }));
+    return;
+  }
+  const result = useFeat(caster, feat, level, aimPoint(caster));
+  if (result !== 'ok') {
+    refuse(caster, text(FEAT_REFUSALS[result]));
+    return;
+  }
+  book.recovery[slot] = Math.round(FEATS[feat].cooldown * TICKS_PER_SECOND);
+  caster.castCooldown = SPELL_STATS.cooldown;
+}
+
 /** The cast key on a toggle Passive Feat: it switches on or off (a short pause before the next press counts). */
 function switchFeatFromBar(caster: Player, feat: FeatId): void {
   if (!switchFeat(caster, feat)) {
@@ -147,7 +176,8 @@ function startCast(caster: Player, level: Level): void {
   if (!binding && !heroClass(caster.heroClass).spells.length) return;
   const featId = binding ? bindingFeatId(binding.spell) : null;
   if (featId) {
-    switchFeatFromBar(caster, featId);
+    if (FEATS[featId].passive === 'active') startFeat(caster, featId, level);
+    else switchFeatFromBar(caster, featId);
     return;
   }
   const featureId = binding ? bindingFeatureId(binding.spell) : null;
@@ -185,14 +215,20 @@ const impactOf = (def: SpellDef): SpellEffect => ({ shape: def.effect.shape, col
 /** Eldritch Blast with Agonizing Blast adds the casting ability to its damage; every other bolt rolls its dice. */
 function boltDamage(caster: Player, def: SpellDef, sheet: CharacterSheet): Dice {
   const agonizing = def.id === 'eldritch_blast' && featureOn(caster, 'agonizing_blast');
-  return agonizing ? plus(def.damage, sheet.modifiers[sheet.spell.ability]) : def.damage;
+  return agonizing ? plus(def.damage, sheet.modifiers[spellcastingFor(sheet, def.id).ability]) : def.damage;
+}
+
+/** A spell's attack with Elemental Adept's floor on its dice, when its type is mastered. */
+function adeptDice(sheet: CharacterSheet, def: SpellDef): { lowestFace?: number } {
+  const lowest = lowestFace(sheet, def.damageType);
+  return lowest > 1 ? { lowestFace: lowest } : {};
 }
 
 /** A bolt: rolled to hit (d20 + spell attack against AC) when it strikes. Empowered Evocation adds to its damage. */
 function castBolt(caster: Player, def: SpellDef, dirX: number, dirY: number): void {
   const sheet = characterSheet(caster);
   const damage = plus(boltDamage(caster, def, sheet), spellDamageBonus(caster, def.id));
-  const attack = { attackBonus: sheet.spell.attack, damage, mode: sheet.attack.mode };
+  const attack = { attackBonus: spellcastingFor(sheet, def.id).attack, damage, mode: sheet.attack.mode, ...adeptDice(sheet, def) };
   createSpellBolt(caster.position.x, caster.position.y, dirX, dirY, attack, world.id(caster), caster.character?.def,
     { spell: def.id, impact: impactOf(def), castLevel: def.level });
 }
@@ -200,7 +236,7 @@ function castBolt(caster: Player, def: SpellDef, dirX: number, dirY: number): vo
 /** Magic missile: its darts fly the aimed line one after another, and each always hits. */
 function castMissiles(caster: Player, def: SpellDef, dirX: number, dirY: number): void {
   const sheet = characterSheet(caster);
-  const attack = { attackBonus: sheet.spell.attack, damage: plus(def.damage, spellDamageBonus(caster, def.id)), mode: sheet.attack.mode };
+  const attack = { attackBonus: spellcastingFor(sheet, def.id).attack, damage: plus(def.damage, spellDamageBonus(caster, def.id)), mode: sheet.attack.mode, ...adeptDice(sheet, def) };
   for (let i = 0; i < def.count; i++) {
     createSpellBolt(caster.position.x, caster.position.y, dirX, dirY, attack, world.id(caster), caster.character?.def,
       { spell: def.id, autoHit: true, impact: impactOf(def), wait: i * DART_GAP_TICKS, castLevel: def.level });
@@ -226,7 +262,7 @@ function burstHits(caster: Player, def: SpellDef, foe: Entity, dc: number): void
   // A burst always has a save (Dexterity unless its spell names another).
   const modifier = foe.mobType ? MONSTERS[foe.mobType].modifiers[def.save ?? 'dexterity'] : 0;
   const save = foreseenSave(foe, caster, modifier, dc);
-  const rolled = Math.max(MIN_HIT_DAMAGE, rollDice(def.damage) + spellDamageBonus(caster, def.id));
+  const rolled = Math.max(MIN_HIT_DAMAGE, rollDice(def.damage, false, rollDie, 0, lowestFace(characterSheet(caster), def.damageType)) + spellDamageBonus(caster, def.id));
   const damage = save.success ? savedDamage(caster, def.level, rolled) : rolled;
   logSaveDamage(foe, save.total, save.success, damage);
   recordSpell(caster, def.id, save.success ? 'saved' : 'auto', damage, save.total);
@@ -234,6 +270,7 @@ function burstHits(caster: Player, def: SpellDef, foe: Entity, dc: number): void
   const alive = (foe.health?.current ?? 0) > 0;
   hitMob(foe, caster, damage, true);
   grimHarvest(caster, foe, def.id, def.level, alive);
+  splitEnchantment(caster, foe, def.id, damage);
 }
 
 /** A burst: the effect where it goes off, and a save for every foe within its radius. */
@@ -242,7 +279,7 @@ function castBurst(caster: Player, def: SpellDef, targetX: number, targetY: numb
   playEffect(def.effect.shape, def.effect.colour, centre.x, centre.y, 0, def.effect.scale);
   // A burst round the caster is all in its casting sound; one thrown further off goes off where it lands.
   if (def.range > 0) sound.playSound(SPELL_IMPACTS[def.damageType], centre.x, centre.y);
-  const dc = characterSheet(caster).spell.dc;
+  const dc = spellcastingFor(characterSheet(caster), def.id).dc;
   for (const foe of nearby(centre.x, centre.y, def.radius + MAX_MOB_RADIUS, Sense.mob, victims)) {
     if (!isTarget(foe) || foe.health.current <= 0) continue;
     if (Math.hypot(foe.position.x - centre.x, foe.position.y - centre.y) > def.radius + Math.max(foe.radius.x, foe.radius.y)) continue;
@@ -250,6 +287,7 @@ function castBurst(caster: Player, def: SpellDef, targetX: number, targetY: numb
   }
   // Thunder charges the water it reaches with lightning.
   if (def.damageType === 'thunder') electrify(centre.x, centre.y, def.radius);
+  sculptAt(caster, def.id, centre.x, centre.y, def.radius);
 }
 
 /** The extra points a Disciple of Life adds to a healing spell: 2 + the spell's level. */
@@ -261,7 +299,7 @@ function castHeal(caster: Player, def: SpellDef): void {
   const disciple = featureOn(caster, 'disciple_of_life') ? DISCIPLE_OF_LIFE_BASE + def.level : 0;
   // Supreme Healing: every die of a healing spell counts at its highest.
   const rolled = featureOn(caster, 'supreme_healing') ? diceRange(def.damage).max : rollDice(def.damage);
-  const amount = Math.max(1, rolled + sheet.modifiers[sheet.spell.ability] + disciple);
+  const amount = Math.max(1, rolled + sheet.modifiers[spellcastingFor(sheet, def.id).ability] + disciple);
   if (def.radius <= 0) {
     mendWith(caster, caster, def, amount);
     return;
@@ -296,10 +334,11 @@ function release(caster: Player, cast: NonNullable<Entity['casting']>): void {
   const def = castDef(base, cast.level ?? base.level, caster.playerStats.level);
   const targetX = cast.targetX ?? caster.position.x;
   const targetY = cast.targetY ?? caster.position.y;
+  // Mage Armour cast while it is on is switched off: nothing went off, so nothing follows from it (a ward, War Magic).
+  if (def.kind === 'buff' && !castBuff(caster, def)) return;
   if (def.kind === 'bolt') castBolt(caster, def, cast.dirX, cast.dirY);
   else if (def.kind === 'missiles') castMissiles(caster, def, cast.dirX, cast.dirY);
   else if (def.kind === 'burst') castBurst(caster, def, targetX, targetY);
-  else if (def.kind === 'buff') castBuff(caster, def);
   else if (def.kind === 'zone') castZone(caster, def, cast.level ?? base.level, targetX, targetY);
   else if (def.kind === 'water') castWater(caster, def, targetX, targetY);
   else castHeal(caster, def);
@@ -353,11 +392,12 @@ function strikeWith(bolt: Bolt, victim: Entity): boolean {
   const shooter = p.owner === undefined ? undefined : world.entity(p.owner);
   const alive = (victim.health?.current ?? 0) > 0;
   if (p.autoHit) {
-    const damage = Math.max(MIN_HIT_DAMAGE, rollDice(p.attack.damage));
+    const damage = Math.max(MIN_HIT_DAMAGE, rollDice(p.attack.damage, false, rollDie, 0, p.attack.lowestFace));
     if (shooter) logSpellDamage(shooter, damage);
     if (shooter && p.spell) recordSpell(shooter, p.spell, 'auto', damage);
     hitMob(victim, bolt, damage, true);
     harvestWith(shooter, victim, p, alive);
+    if (p.spell) splitEnchantment(shooter, victim, p.spell, damage);
     return true;
   }
   const attack = beyondNormalRange(p) ? withDisadvantage(p.attack) : p.attack;
@@ -366,7 +406,10 @@ function strikeWith(bolt: Bolt, victim: Entity): boolean {
   const outcome = p.spell ? foreseeHit(shooter, victim, attack, rolled) : rolled;
   if (outcome.hit) hitMob(victim, bolt, outcome.damage);
   if (outcome.hit) harvestWith(shooter, victim, p, alive);
+  // Sharpshooter: an arrow that kills earns a shot more for the next volley.
+  if (outcome.hit && p.arrow && alive && (victim.health?.current ?? 1) <= 0 && isPlayer(shooter)) earnBonusAttack(shooter, true);
   if (outcome.hit) drainWith(shooter, p, outcome.damage);
+  if (outcome.hit && p.spell) splitEnchantment(shooter, victim, p.spell, outcome.damage);
   return outcome.hit;
 }
 

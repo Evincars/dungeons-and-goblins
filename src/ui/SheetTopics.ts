@@ -76,6 +76,7 @@ export function damageTopic(sheet: CharacterSheet): TipTopic {
   // Short, two lines: what each hand deals and how it hits; holding Alt shows the whole breakdown and the rules.
   const short: TipDetail[] = [];
   if (sheet.offHand) short.push(text('sheet.dmg.short_hand', { hand: text('sheet.dmg.off_hand'), line: shortAttack(sheet.offHand) }));
+  if (sheet.butt) short.push(text('sheet.dmg.short_hand', { hand: text('sheet.dmg.butt'), line: shortAttack(sheet.butt) }));
   if (sheet.attacks > 1) short.push(text('sheet.dmg.attacks', { count: sheet.attacks }));
   const main = shortAttack(attack);
   return { title: text('sheet.dmg.name'), body: sheet.offHand ? text('sheet.dmg.short_hand', { hand: text('sheet.dmg.main_hand'), line: main }) : main, detail: short, more: full };

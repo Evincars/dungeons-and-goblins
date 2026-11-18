@@ -23,6 +23,7 @@ import { sound } from '../audio/SoundPlayer';
 export function armorClassOf(target: Entity): number {
   if (target.mobType) return MONSTERS[target.mobType].ac;
   if (target.summon) return target.summon.ac;
+  if (target.decoy) return target.decoy.ac;
   if (isPlayer(target)) return characterSheet(target).armorClass.total + evasiveBonus(target);
   return UNARMORED_AC;
 }

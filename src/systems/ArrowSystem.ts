@@ -51,6 +51,13 @@ function loose(player: Player, followedBy: number): void {
   bladeAttack(player);
 }
 
+/** Sharpshooter's earned shot: spent on the next volley of the attack key, one arrow more. */
+function earnedShot(player: Player): number {
+  if (!player.bonusAttack) return 0;
+  player.bonusAttack = false;
+  return 1;
+}
+
 /** A volley starts: the first arrow flies, the rest follow within the second, and the next volley is a second off. */
 export function shoot(player: Player, followedBy = 0): void {
   player.arrowCooldown = ARROW_STATS.cooldown;
@@ -98,6 +105,6 @@ export function updateArrows(): void {
     const intents = player.playerInput.intents;
     if (!intents.attack || !holdsBow(player)) continue;
     intents.attack = false;
-    if (canShoot(player)) shoot(player, volleySize(player) - 1);
+    if (canShoot(player)) shoot(player, volleySize(player) - 1 + earnedShot(player));
   }
 }

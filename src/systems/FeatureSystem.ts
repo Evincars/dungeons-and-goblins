@@ -1,8 +1,9 @@
 import { q, isActivePlayer, world } from '../world';
-import type { Player, StatName } from '../world';
+import type { Entity, Player, StatName } from '../world';
 import type { Level } from '../level/Level';
 import { rollDice, dice, rollD20, rollDie } from '../rules/Dice';
-import type { DieRoller } from '../rules/Dice';
+import type { D20Mode, DieRoller } from '../rules/Dice';
+import { isShield } from '../rules/Equipment';
 import { characterSheet } from '../rules/CharacterSheet';
 import { featureOn, featureOfClass } from '../rules/ClassFeatures';
 import { readyManeuver } from './ManeuverSystem';
@@ -23,7 +24,7 @@ import { text } from '../core/texts';
 import { hasKey } from '../core/guards';
 import { isCatalogSpell, quickBinding } from '../rules/Spellbook';
 import { ARCANE_RECOVERY_TOP_LEVEL } from '../rules/Schools';
-import { useSchoolFeature } from './SchoolSystem';
+import { shelteredBySculpt, useSchoolFeature } from './SchoolSystem';
 import { raiseUndead } from './SummonSystem';
 
 /**
@@ -54,6 +55,8 @@ const ARCANE_CHARGE_EFFECT = { shape: 'sparkle_ring', colour: 'azure', scale: 1 
 const SURVIVOR_TICKS = 360;
 /** Survivor adds this much to the hero's Constitution modifier, in tabletop hit points. */
 const SURVIVOR_BASE = 5;
+/** Mage Slayer: a caster this near (px, past both bodies) is within melee reach. */
+const MAGE_SLAYER_REACH = 8;
 
 /** What using a feature came to: done, or why it was not. */
 export type FeatureResult = 'ok' | 'unworked' | 'no_dice' | 'no_ally' | 'hp_full' | 'no_foe' | 'no_room' | 'no_charges' | 'not_singing';
@@ -220,13 +223,30 @@ export function athleteSpeedFactor(hero: Pick<Player, 'athleteBoost'>): number {
  * the new roll stands, then it needs 30 seconds (or a rest) before it does so again. Nothing in the dungeon asks a hero
  * for a saving throw yet; whatever comes to will roll it here.
  */
-export function heroSavingThrow(hero: Player, stat: StatName, dc: number, die: DieRoller = rollDie): boolean {
-  const bonus = characterSheet(hero).saves[stat].bonus;
-  if (rollD20('normal', die) + bonus >= dc) return true;
+export function heroSavingThrow(hero: Player, stat: StatName, dc: number, die: DieRoller = rollDie, spellBy?: Entity): boolean {
+  // An evoker's Sculpt Spells bubble: whoever stands in it succeeds.
+  if (shelteredBySculpt(hero)) return true;
+  const sheet = characterSheet(hero);
+  const bonus = sheet.saves[stat].bonus + shieldSave(hero, sheet.feats.shieldSaves, stat);
+  const mode = mageSlayerMode(hero, sheet.feats.mageSlayer, spellBy);
+  if (rollD20(mode, die) + bonus >= dc) return true;
   if ((hero.indomitableCooldown ?? 0) > 0 || !featureOn(hero, 'indomitable')) return false;
   hero.indomitableCooldown = INDOMITABLE_COOLDOWN_TICKS;
   recordEvent(hero, 'feature', { item: nameOfFeature(hero, 'indomitable') });
-  return rollD20('normal', die) + bonus >= dc;
+  return rollD20(mode, die) + bonus >= dc;
+}
+
+/** Shield Master: what a shield carried adds to Dexterity saving throws. */
+function shieldSave(hero: Player, bonus: number, stat: StatName): number {
+  return bonus > 0 && stat === 'dexterity' && isShield(hero.equipped?.secondary) ? bonus : 0;
+}
+
+/** Mage Slayer: advantage on a save against the spell of a foe within melee reach (`spellBy`: who cast it). */
+function mageSlayerMode(hero: Player, mageSlayer: boolean, spellBy: Entity | undefined): D20Mode {
+  const at = spellBy?.position;
+  if (!mageSlayer || !at) return 'normal';
+  const reach = (hero.radius?.x ?? 0) + (spellBy.radius?.x ?? 0) + MAGE_SLAYER_REACH;
+  return Math.hypot(at.x - hero.position.x, at.y - hero.position.y) <= reach ? 'advantage' : 'normal';
 }
 
 /**

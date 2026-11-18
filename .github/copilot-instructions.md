@@ -111,7 +111,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   they mean in game terms.
 - Tuning tables live together: sword and spell in `src/entities/WeaponStats.ts`; mobs in
   `src/entities/MobFactory.ts` (`MOB_CONFIGS`); gold from kills and from searching openable props (`KILL_GOLD`,
-  `STASH_FINDS`) in `src/entities/LootFactory.ts`, and which props open in `src/entities/DungeonFactory.ts`; dungeon generation in
+  `STASH_FINDS`) in `src/entities/LootFactory.ts`, a chest's gear and how often it is magical (+1 to +3; Dungeon Delver's
+  `magicFind` adds to the chance) in `src/entities/Drops.ts`, and which props open in `src/entities/DungeonFactory.ts`; dungeon generation in
   `src/level/generators/DungeonConfig.ts` (corridors and corners on the slant there too, and what each theme builds bigger,
   `THEME_CONFIG`; the isometric castle's room dressing in `src/level/generators/IsoDresser.ts`, the mines' in
   `src/level/generators/MineDresser.ts`; the mines' props in `src/level/MineProps.ts`, their terrain pieces in `src/level/MineTiles.ts`,
@@ -130,7 +131,12 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `src/data/classes.json`; feats (the Baldur's Gate 3 list: requirement, the ability each raises, `worked`, effects) in
   `src/data/feats.json`, read by `src/rules/Feats.ts` and summed per hero as `FeatEffects` (`featEffects` in `rules/Build.ts`;
   Passive Feats have their own section in the Skills tab: a toggle one is bound to the quick bar as `feat:<id>` and its key
-  switches it, `player.featsOn`); enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`;
+  switches it, `player.featsOn`; an `active` one (Charger) is used with its key and recovers, `systems/FeatActions.ts`; what a
+  feat asks the player to pick — Magic Initiate's cantrips and spell, Spell Sniper's cantrip, Weapon Master's weapons, an
+  Elemental Adept's damage type — is offered in the level panel (`ui/FeatPicks.ts`), checked by `rules/FeatPicks.ts` and kept
+  as the Improvement's `picks`; a feat's spells sit in the Skills tab's Feat spells row, are bound at their own level, count
+  against no bind limit and are cast with the feat's ability, `spellcastingFor`; the Skills tab runs: class features, the
+  school, Passive Feats and feat spells, then cantrips and each spell level; only `worked` feats are offered, `OFFERED_FEATS`); enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`;
   castable spells (dice, recovery, save, area, effect; a buff, zone or puddle's duration and concentration) in
   `src/data/spells.json`; every spell of Baldur's Gate 3 the game knows (name, level, school, the classes that learn it,
   the Eldritch Knight's, its BG3 text and icon) in `src/data/spell-list.json`, made by `scripts/bg3-spells.mjs` from the BG3
@@ -290,13 +296,17 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   cantrips and spells of each level bound as its level allows (`rules/Schools.ts`, `roomToBind`; counted at the Skills tab's top
   right); Arcane Recovery readies the spells of 5th level and below, 60 s less 6 s a charge (`cuts` in `features.json`; `logOnly`
   entries are told only in the level panel). Its school, chosen at level 2 like an archetype (`WIZARD_SCHOOLS`), has a Skills tab
-  section of its own (Transmutation is not offered for now, the Savants are left out); the schools play out in
+  section of its own (Transmutation is not offered for now, the Savants are left out); a wizard starts with an empty quick bar;
+  the schools play out in
   `systems/SchoolSystem.ts` (`arcana`: Arcane Ward, fed by Abjuration spells, Portent, charms through the `status.charmed` hold,
-  Illusory Self, Create Water's puddle, the Third Eye's darkvision (the fog lifts twice as far) and the sight of the invisible,
+  Illusory Self, Split Enchantment, Sculpt Spells' bubble (`sculpt`: heroes in it succeed on every save), Create Water's
+  puddle, the Third Eye's darkvision (the fog lifts twice as far) and the sight of the invisible,
   Bladesong (a feature used by `charges`, shown on its square) with its Bladesong Charges and Climax, Song of Defence, the
   Transmuter's Stone, Grim Harvest, Empowered Evocation, Potent Cantrip; Focused Conjuration and Inured to Undeath work through
-  concentration and resistance; a turn is 6 s and a rest's charge a cooldown) and Animate Dead's undead in `systems/SummonSystem.ts`
-  (`entities/SummonFactory.ts`, `q.summons`: they follow their master and fight; foes touching one strike it). A feature with no
+  concentration and resistance; a turn is 6 s and a rest's charge a cooldown), Improved Minor Illusion's dummy in
+  `systems/DecoySystem.ts` (`decoy`; the foes it `lured` go for it and strike nothing else until it is gone) and Animate Dead's
+  undead in `systems/SummonSystem.ts` (`entities/SummonFactory.ts`, `q.summons`: one for every three wizard levels, the oldest
+  crumbling for a new one; they follow their master and fight; foes touching one strike it). A feature with no
   counterpart in the game yet is an info entry, `worked: false`.
   Experience follows the SRD
   (`game/Progress.ts`, monster `xp`; heroes stop at `LEVEL_CAP`, 12 for now, while the tables keep all 20 levels); hit points (SRD, unscaled: hit die + CON at level 1) and hit dice are in `rules/HitPoints.ts`.

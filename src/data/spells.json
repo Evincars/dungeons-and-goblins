@@ -181,7 +181,7 @@
     "effect": ["ring_pulse", "azure"], "effectScale": 1
   },
   "mage_armor": {
-    "kind": "buff", "level": 1, "buff": "mage_armor", "seconds": 0, "recovery": 10,
+    "kind": "buff", "level": 1, "buff": "mage_armor", "seconds": 0, "recovery": 6,
     "effect": ["rune_square", "azure"], "effectScale": 1
   },
   "false_life": {

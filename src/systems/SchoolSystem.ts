@@ -24,6 +24,7 @@ import { armorClassOf, strike } from './Strike';
 import { hitMob } from './Hits';
 import { logHeal, logLine, logSaveDamage } from './RollLogSystem';
 import { createPuddle } from './LastingSpells';
+import { lure, placeDecoy } from './DecoySystem';
 import { recordEvent } from './CombatLogSystem';
 
 /**
@@ -49,12 +50,17 @@ const PROJECTED_WARD_REACH = 288;
 const HYPNOTIC_REACH = 96;
 /** A charm from Hypnotic Gaze lasts 2 rounds. */
 const HYPNOTIC_TICKS = 2 * TURN_TICKS;
-/** Split Enchantment charms this many foes at once; otherwise one. */
-const SPLIT_TARGETS = 2;
-/** Minor Illusion is made up to 60 feet away, holds the foes within 20 feet of it, for a round. */
+/** Sculpt Spells' bubble lasts a round (6 s), and is never narrower than this (px), even round a bolt's point. */
+const SCULPT_TICKS = 360;
+const SCULPT_MIN_RADIUS = 48;
+/** The bubble's shimmer is played afresh this often (ticks), as wide as it is. */
+const SCULPT_PULSE_TICKS = 60;
+const SCULPT_EFFECT = { shape: 'ring_pulse', colour: 'amber' } as const;
+/** The art of SCULPT_EFFECT is this wide (px) at scale 1: a bubble of another radius scales it. */
+const SCULPT_ART_RADIUS = 40;
+/** Improved Minor Illusion's dummy is made up to 60 feet away, and lures the foes within 20 feet of it. */
 const ILLUSION_RANGE = 576;
 const ILLUSION_RADIUS = 192;
-const ILLUSION_TICKS = TURN_TICKS;
 /** Illusory Self works again after 30 seconds (a short rest's worth). */
 const ILLUSORY_SELF_TICKS = 1800;
 /** Benign Transposition teleports up to 30 feet; aiming this near an ally swaps places with them. */
@@ -115,7 +121,7 @@ function freshArcana(hero: Player): Arcana {
     ward: hasClassFeature(hero, 'arcane_ward') ? hero.playerStats.level : 0,
     portent: Array.from({ length: portentDice(hero) }, () => rollDie(D20)),
     portentTicks: 0, harvestTicks: 0, charmTicks: 0, illusoryTicks: 0, songTicks: 0, defenceTicks: 0, stone: '',
-    songCharges: songChargesMax(hero), damageCharges: 0, healingCharges: 0, darkvision: false, seeInvisible: false,
+    songCharges: songChargesMax(hero), damageCharges: 0, healingCharges: 0, darkvision: false, seeInvisible: false, splitTicks: 0,
   };
 }
 
@@ -161,9 +167,11 @@ export function updateSchools(): void {
     arcana.charmTicks = tick(arcana.charmTicks);
     arcana.illusoryTicks = tick(arcana.illusoryTicks);
     arcana.defenceTicks = tick(arcana.defenceTicks);
+    arcana.splitTicks = tick(arcana.splitTicks);
     runDownSong(arcana);
     regrowPortent(hero, arcana);
   }
+  runDownSculpts();
 }
 
 /**
@@ -174,7 +182,7 @@ export function updateSchools(): void {
 export function restSchool(hero: Player, long: boolean): void {
   if (!hero.arcana) return;
   const arcana = hero.arcana;
-  arcana.harvestTicks = arcana.charmTicks = arcana.illusoryTicks = arcana.defenceTicks = 0;
+  arcana.harvestTicks = arcana.charmTicks = arcana.illusoryTicks = arcana.defenceTicks = arcana.splitTicks = 0;
   if (long) {
     arcana.songCharges = songChargesMax(hero);
     arcana.ward = freshArcana(hero).ward;
@@ -403,6 +411,93 @@ export function spellDamageBonus(caster: Player, spell: string): number {
   return characterSheet(caster).modifiers.intelligence;
 }
 
+/** How far a spell reaches from its caster (its range, or its radius for one that goes off round them), in px. */
+function spellReach(spell: string): number {
+  return isSpellId(spell) ? Math.max(SPELLS[spell].range, SPELLS[spell].radius) : 0;
+}
+
+/** The live foe nearest `foe` (not it) that stands within `reach` of the caster. */
+function nextFoe(foe: Entity, caster: Player, reach: number): Entity | undefined {
+  const p = foe.position;
+  if (!p) return undefined;
+  let found: Entity | undefined;
+  let best = Infinity;
+  const { x, y } = caster.position;
+  for (const other of nearby(x, y, reach + MAX_MOB_RADIUS, Sense.mob, scratch)) {
+    if (other === foe || !isMob(other) || other.health.current <= 0) continue;
+    if (Math.hypot(other.position.x - x, other.position.y - y) > reach + other.radius.x) continue;
+    const d = Math.hypot(other.position.x - p.x, other.position.y - p.y);
+    if (d >= best) continue;
+    best = d;
+    found = other;
+  }
+  return found;
+}
+
+/**
+ * Split Enchantment: the enchanter's Enchantment spell hurt a foe, so the foe nearest it within the spell's range takes the
+ * same damage, once a round (6 s).
+ */
+export function splitEnchantment(caster: Entity | undefined, foe: Entity, spell: string, damage: number): void {
+  if (!isPlayer(caster) || damage <= 0 || schoolOfSpell(spell) !== 'Enchantment') return;
+  const arcana = caster.arcana;
+  if (!arcana || arcana.splitTicks > 0 || !featureOn(caster, 'split_enchantment')) return;
+  const other = nextFoe(foe, caster, spellReach(spell));
+  if (!other) return;
+  arcana.splitTicks = TURN_TICKS;
+  if (other.position) playEffect(CHARM_EFFECT.shape, CHARM_EFFECT.colour, other.position.x, other.position.y, AIM_HEIGHT, CHARM_EFFECT.scale);
+  logLine(other, text('roll.damage', { amount: damage }), 'damage');
+  hitMob(other, caster, damage, true);
+}
+
+const sculpts = world.with('sculpt', 'position');
+
+/**
+ * Sculpt Spells: where an evoker's Evocation spell lands (a burst's middle, the point a bolt struck) a bubble shelters the
+ * heroes for a round; a caster keeps one bubble, moved to where their latest such spell landed.
+ */
+export function sculptAt(caster: Entity | undefined, spell: string, x: number, y: number, radius: number): void {
+  if (!isPlayer(caster) || schoolOfSpell(spell) !== 'Evocation' || !featureOn(caster, 'sculpt_spells')) return;
+  const owner = world.id(caster) ?? -1;
+  const wide = Math.max(SCULPT_MIN_RADIUS, radius);
+  let bubble: (typeof sculpts.entities)[number] | undefined;
+  for (const s of sculpts) if (s.sculpt.owner === owner) bubble = s;
+  if (!bubble) {
+    world.add({ position: { x, y }, sculpt: { owner, ticks: SCULPT_TICKS, radius: wide } });
+  } else {
+    bubble.position.x = x;
+    bubble.position.y = y;
+    bubble.sculpt.ticks = SCULPT_TICKS;
+    bubble.sculpt.radius = wide;
+  }
+  shimmer(x, y, wide);
+}
+
+function shimmer(x: number, y: number, radius: number): void {
+  playEffect(SCULPT_EFFECT.shape, SCULPT_EFFECT.colour, x, y, 0, radius / SCULPT_ART_RADIUS);
+}
+
+/** The bubbles shimmer now and then, and fade when their round is over. */
+function runDownSculpts(): void {
+  for (const bubble of sculpts.entities.slice()) {
+    const s = bubble.sculpt;
+    s.ticks = tick(s.ticks);
+    if (s.ticks <= 0) {
+      world.remove(bubble);
+      continue;
+    }
+    if (s.ticks % SCULPT_PULSE_TICKS === 0) shimmer(bubble.position.x, bubble.position.y, s.radius);
+  }
+}
+
+/** Whether the hero stands in a Sculpt Spells bubble: then they succeed on every saving throw. */
+export function shelteredBySculpt(hero: Player): boolean {
+  for (const bubble of sculpts) {
+    if (Math.hypot(hero.position.x - bubble.position.x, hero.position.y - bubble.position.y) <= bubble.sculpt.radius) return true;
+  }
+  return false;
+}
+
 /** What a foe that saved against the hero's spell takes of its damage: half, but nothing from a cantrip without Potent Cantrip. */
 export function savedDamage(caster: Player, spellLevel: number, rolled: number): number {
   if (spellLevel === 0 && !featureOn(caster, 'potent_cantrip')) return 0;
@@ -479,9 +574,9 @@ function tryCharm(hero: Player, foe: Entity, ticks: number): void {
   if (foe.position) playEffect(CHARM_EFFECT.shape, CHARM_EFFECT.colour, foe.position.x, foe.position.y, AIM_HEIGHT, CHARM_EFFECT.scale);
 }
 
-/** Hypnotic Gaze: the nearest foe (two with Split Enchantment) saves or stands charmed for 2 rounds. */
+/** Hypnotic Gaze: the nearest foe saves or stands charmed for 2 rounds. */
 function hypnoticGaze(hero: Player): SchoolResult {
-  const targets = foesNear(hero, HYPNOTIC_REACH, featureOn(hero, 'split_enchantment') ? SPLIT_TARGETS : 1);
+  const targets = foesNear(hero, HYPNOTIC_REACH, 1);
   if (!targets.length) return 'no_foe';
   for (const foe of targets) tryCharm(hero, foe, HYPNOTIC_TICKS);
   return 'ok';
@@ -496,14 +591,18 @@ function within(hero: Player, aim: { x: number; y: number }, reach: number): { x
   return { x: hero.position.x + (dx / dist) * reach, y: hero.position.y + (dy / dist) * reach };
 }
 
-/** Improved Minor Illusion: an illusion where the wizard aims holds the gaze of every foe near it that fails its save. */
+/**
+ * Improved Minor Illusion: an illusory training dummy rises where the wizard aims (the last one fades), and every foe near
+ * it that fails its Wisdom save goes for it and strikes it until it is gone (systems/DecoySystem.ts).
+ */
 function minorIllusion(hero: Player, aim: { x: number; y: number }): SchoolResult {
   const at = within(hero, aim, ILLUSION_RANGE);
   playEffect(ILLUSION_EFFECT.shape, ILLUSION_EFFECT.colour, at.x, at.y, AIM_HEIGHT, ILLUSION_EFFECT.scale);
+  const decoy = placeDecoy(hero, at.x, at.y);
   for (const foe of nearby(at.x, at.y, ILLUSION_RADIUS + MAX_MOB_RADIUS, Sense.mob, scratch).slice()) {
     if (!isMob(foe) || !foe.mobType || foe.health.current <= 0) continue;
     if (Math.hypot(foe.position.x - at.x, foe.position.y - at.y) > ILLUSION_RADIUS + foe.radius.x) continue;
-    tryCharm(hero, foe, ILLUSION_TICKS);
+    if (!wisdomSave(foe, hero)) lure(foe, decoy);
   }
   return 'ok';
 }

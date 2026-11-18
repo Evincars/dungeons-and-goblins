@@ -7,6 +7,8 @@ import { heroName, trainingName, weaponName } from '../rules/Names';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
 import { wrapLines } from './InfoTooltip';
+import { isWeaponBase } from '../rules/WeaponTable';
+import type { WeaponBase } from '../rules/WeaponTable';
 
 /** Each line this tall: the font's 8 pixels and room round them, so the rows read apart. */
 const LINE_H = 12;
@@ -83,7 +85,7 @@ export class ProficiencyPanel {
   /** Ticks what the hero's class is trained in, and warns about untrained armour (disadvantage) or weapon (no bonus). */
   set(sheet: CharacterSheet): void {
     this.header.text = text('proficiency.title', { class: heroName(sheet.heroClass.id) });
-    const extra = sheet.heroClass.weaponBases;
+    const extra = alsoTrained(sheet);
     const also = extra.length ? wrapLines(text('proficiency.weapons_also', { list: extra.map(weaponName).join(', ') }), this.width) : [];
     this.extraWeapons.text = also.join('\n');
     this.warning.y = (5 + also.length) * LINE_H;
@@ -98,4 +100,9 @@ export class ProficiencyPanel {
     this.warning.text = warnings.join('\n');
     this.height = this.warning.y + warnings.length * LINE_H;
   }
+}
+
+/** The single weapons the hero is trained in beyond the kinds ticked: the class's own, then a feat's (Weapon Master's picks). */
+export function alsoTrained(sheet: Pick<CharacterSheet, 'heroClass' | 'feats'>): WeaponBase[] {
+  return [...new Set([...sheet.heroClass.weaponBases, ...sheet.feats.weapons.filter(isWeaponBase)])];
 }

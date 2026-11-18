@@ -108,7 +108,10 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   status: { prone: 'number', frightened: 'number', goaded: 'number', distracted: 'number', eldritch: 'number', charmed: 'number', by: 'number' },
   arcana: { ward: 'number', portent: 'object', portentTicks: 'number', harvestTicks: 'number', charmTicks: 'number', illusoryTicks: 'number',
     songTicks: 'number', defenceTicks: 'number', stone: 'string', songCharges: 'number', damageCharges: 'number',
-    healingCharges: 'number', darkvision: 'boolean', seeInvisible: 'boolean' },
+    healingCharges: 'number', darkvision: 'boolean', seeInvisible: 'boolean', splitTicks: 'number' },
+  sculpt: { owner: 'number', ticks: 'number', radius: 'number' },
+  decoy: { owner: 'number', ac: 'number', ticks: 'number' },
+  charge: { target: 'number', ticks: 'number' },
   buffs: { bladeWard: 'number', shield: 'number', mageArmor: 'number', stoneskin: 'number' },
   concentration: { spell: 'string', zone: 'number' },
   zone: { spell: 'string', owner: 'number', castLevel: 'number', ticks: 'number', pulse: 'number', follow: 'boolean' },
@@ -151,7 +154,7 @@ const VALUES: Readonly<Record<string, FieldType>> = {
   dustTimer: 'number', respawnTicks: 'number', minimapColor: 'number', safeZone: 'boolean', inSafeRoom: 'boolean', playerSlot: 'string',
   playerName: 'string', heroClass: 'string', mobWeapon: 'string', protectCooldown: 'number', survivorCooldown: 'number',
   superiorityLeft: 'number', tempHealth: 'number', volley: 'number', actionSurge: 'number', athleteBoost: 'number', indomitableCooldown: 'number',
-  bonusAttack: 'boolean', duelistCooldown: 'number', flat: 'boolean',
+  bonusAttack: 'boolean', duelistCooldown: 'number', flat: 'boolean', lured: 'number', unseen: 'boolean',
 };
 
 function hasType(v: unknown, type: FieldType): boolean {

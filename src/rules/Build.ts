@@ -3,7 +3,8 @@ import type { StatName } from '../world';
 import { isFiniteNumber, isRecord } from '../core/guards';
 import type { ArmorTraining, HeroClass } from './Classes';
 import { FEATS, FEAT_IDS, combineFeats, featAbility, isFeatId } from './Feats';
-import type { FeatEffects, FeatId, FeatRequirement } from './Feats';
+import type { FeatEffects, FeatId, FeatRequirement, TakenFeat } from './Feats';
+import { featHasPicks, picksFit } from './FeatPicks';
 import { DEFAULT_FIGHTING_STYLE, isFightingStyle } from './FightingStyles';
 import type { FightingStyleId } from './FightingStyles';
 import { isArchetype, playableArchetypes } from './Archetypes';
@@ -24,7 +25,7 @@ import { ABILITY_CAP, gainsAt } from './Progression';
  * One Ability Score Improvement (two points, +2 in one ability or +1 in two) or a feat in its place (with the ability it
  * raises by 1, for a feat that lets the player pick one).
  */
-export type Improvement = { stats: Partial<Record<StatName, number>> } | { feat: FeatId; ability?: StatName };
+export type Improvement = { stats: Partial<Record<StatName, number>> } | { feat: FeatId; ability?: StatName; picks?: string[] };
 
 export type Build = {
   /** The bought scores, 8 to 15 (a human's +1 comes on top, see `baseScores`). */
@@ -83,11 +84,11 @@ export function hasFeat(cls: HeroClass, level: number, build: Build | undefined,
   return !!build?.improvements.some((improvement) => 'feat' in improvement && improvement.feat === feat);
 }
 
-/** Every feat the hero has, from their class and from their Improvements, with the ability each raised. */
-function featsTaken(cls: HeroClass, level: number, build: Build | undefined): { feat: FeatId; ability: StatName | null }[] {
-  const taken = gainsAt(cls.progression, level).feats.map((feat) => ({ feat, ability: featAbility(feat, undefined) }));
+/** Every feat the hero has, from their class and from their Improvements, with the ability each raised and what was picked with it. */
+function featsTaken(cls: HeroClass, level: number, build: Build | undefined): TakenFeat[] {
+  const taken: TakenFeat[] = gainsAt(cls.progression, level).feats.map((feat) => ({ feat, ability: featAbility(feat, undefined) }));
   for (const improvement of build?.improvements ?? []) {
-    if ('feat' in improvement) taken.push({ feat: improvement.feat, ability: featAbility(improvement.feat, improvement.ability) });
+    if ('feat' in improvement) taken.push({ feat: improvement.feat, ability: featAbility(improvement.feat, improvement.ability), picks: improvement.picks });
   }
   return taken;
 }
@@ -313,9 +314,15 @@ export function lockBuild(cls: HeroClass, build: Build, level: number): void {
   if (fightingStyleOffered(cls, level) && !build.fightingStyle) build.fightingStyle = DEFAULT_FIGHTING_STYLE;
 }
 
-/** A feat the hero may take, with an ability it offers (when it raises one) that is still below the cap. */
-function featFits(cls: HeroClass, level: number, build: Build, feat: FeatId, ability: StatName | undefined): boolean {
-  if (!isFeatId(feat) || !featOpen(cls, level, build, feat)) return false;
+/** What was picked with the feat is what it asks for (nothing, for a feat without picks). */
+function featPicksFit(cls: HeroClass, level: number, build: Build, feat: FeatId, picks: readonly string[] | undefined): boolean {
+  if (!featHasPicks(feat)) return !picks?.length;
+  return picksFit(cls, feat, picks ?? [], featEffects(cls, level, build).weapons);
+}
+
+/** A feat the hero may take, with an ability it offers (when it raises one) that is still below the cap, and fair picks. */
+function featFits(cls: HeroClass, level: number, build: Build, feat: FeatId, ability: StatName | undefined, picks?: readonly string[]): boolean {
+  if (!isFeatId(feat) || !featOpen(cls, level, build, feat) || !featPicksFit(cls, level, build, feat, picks)) return false;
   if (!FEATS[feat].abilities.length) return ability === undefined;
   const raised = featAbility(feat, ability);
   return raised !== null && baseScores(cls, level, build)[raised] < ABILITY_CAP;
@@ -323,7 +330,7 @@ function featFits(cls: HeroClass, level: number, build: Build, feat: FeatId, abi
 
 /** The improvement is two points that keep every score within the cap, or a feat the hero may take. */
 function improvementFits(cls: HeroClass, level: number, build: Build, improvement: Improvement): boolean {
-  if ('feat' in improvement) return featFits(cls, level, build, improvement.feat, improvement.ability);
+  if ('feat' in improvement) return featFits(cls, level, build, improvement.feat, improvement.ability, improvement.picks);
   const scores = baseScores(cls, level, build);
   const entries = Object.entries(improvement.stats);
   const points = entries.reduce((sum, [, amount]) => sum + amount, 0);
@@ -342,7 +349,7 @@ export function takeImprovement(cls: HeroClass, build: Build, level: number, imp
 
 export function validImprovement(value: unknown): value is Improvement {
   if (!isRecord(value)) return false;
-  if ('feat' in value) return isFeatId(value.feat) && (value.ability === undefined || isStatName(value.ability));
+  if ('feat' in value) return isFeatId(value.feat) && (value.ability === undefined || isStatName(value.ability)) && validPicks(value.picks);
   const stats = value.stats;
   if (!isRecord(stats)) return false;
   const entries = Object.entries(stats);
@@ -350,6 +357,15 @@ export function validImprovement(value: unknown): value is Improvement {
     && entries.every(([stat, amount]) => isStatName(stat) && isFiniteNumber(amount) && Number.isInteger(amount) && amount > 0 && amount <= IMPROVEMENT_POINTS)
     && entries.reduce((sum, [, amount]) => sum + Number(amount), 0) === IMPROVEMENT_POINTS;
 }
+
+/** What was picked with a feat, as it arrives: a short list of short ids, or nothing. */
+function validPicks(value: unknown): boolean {
+  return value === undefined || (Array.isArray(value) && value.length <= MAX_FEAT_PICKS && value.every((id) => typeof id === 'string' && id.length <= MAX_PICK_ID));
+}
+
+/** More picks than any feat asks for, and an id longer than any spell's or weapon's. */
+const MAX_FEAT_PICKS = 8;
+const MAX_PICK_ID = 48;
 
 /** The six scores are whole numbers a point buy allows. */
 export function validScores(value: unknown): value is Record<StatName, number> {

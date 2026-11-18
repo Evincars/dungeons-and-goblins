@@ -160,18 +160,21 @@ export function armorProficient(cls: HeroClass, category: ArmorRule['category'])
   return category === 'clothes' || cls.armor.includes(category);
 }
 
-/** Trained in this weapon, by its kind or by name (adds the proficiency bonus to hit); everyone can punch. */
-export function weaponProficient(cls: HeroClass, base: WeaponBase): boolean {
-  return base === 'unarmed' || cls.weapons.includes(weaponStats(base).category) || cls.weaponBases.includes(base);
+/**
+ * Trained in this weapon, by its kind or by name (adds the proficiency bonus to hit), or by a feat (Weapon Master's picks,
+ * `featWeapons`); everyone can punch.
+ */
+export function weaponProficient(cls: HeroClass, base: WeaponBase, featWeapons: readonly string[] = []): boolean {
+  return base === 'unarmed' || cls.weapons.includes(weaponStats(base).category) || cls.weaponBases.includes(base) || featWeapons.includes(base);
 }
 
 /**
  * Whether the hero is trained in an item: a weapon by its kind or name, armour or a shield by its kind (the class's
  * training, or a feat's, `featArmor`); anything else needs no training.
  */
-export function itemTrained(cls: HeroClass, item: InventoryItem, featArmor: readonly ArmorTraining[] = []): boolean {
+export function itemTrained(cls: HeroClass, item: InventoryItem, featArmor: readonly ArmorTraining[] = [], featWeapons: readonly string[] = []): boolean {
   const weapon = weaponRule(item);
-  if (weapon) return weaponProficient(cls, weapon.base);
+  if (weapon) return weaponProficient(cls, weapon.base, featWeapons);
   const category = armorRule(item)?.rule.category;
   if (!category) return true;
   return armorProficient(cls, category) || (category !== 'clothes' && featArmor.includes(category));

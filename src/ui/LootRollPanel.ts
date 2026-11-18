@@ -111,7 +111,7 @@ export class LootRollPanel {
       row.roll = roll.id;
       row.item = roll.item;
       row.icon.texture = Texture.EMPTY;
-      row.name.text = text('loot.item', { name: roll.item.name, bonus: roll.item.bonus ?? 0 });
+      row.name.text = text('loot.item', { name: roll.item.name });
       row.name.fill = (roll.item.bonus ?? 0) >= VERY_RARE_BONUS ? VERY_RARE_COLOR : RARE_COLOR;
     }
     // The picture loads the first time it is shown: it is asked for again until it is there.

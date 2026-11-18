@@ -111,6 +111,11 @@ export function schoolBonuses(singing: boolean, stone: TransmuterStone | '' | un
  * The undead Animate Dead raises: Armor Class, hit points, to hit, and damage (the necromancer's proficiency bonus is added
  * on top). Undead Thralls adds the wizard level to the hit points.
  */
+/**
+ * Improved Minor Illusion's dummy: its Armor Class, its hit points, and how long it stands if nobody breaks it (60 s).
+ */
+export const DECOY_STATS = { ac: 10, health: 20, ticks: 3600 } as const;
+
 export const UNDEAD_STATS = {
   zombie: { ac: 8, health: 22, attackBonus: 3, damage: { count: 1, sides: 6, bonus: 1 } },
   skeleton: { ac: 13, health: 13, attackBonus: 4, damage: { count: 1, sides: 6, bonus: 2 } },

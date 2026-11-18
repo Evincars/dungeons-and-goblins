@@ -3,7 +3,7 @@ import type { Player } from '../world';
 import { text } from '../core/texts';
 import { heroClass } from '../rules/Classes';
 import type { DndClass } from '../rules/Classes';
-import { boundAtLevel, castLevels, isCaster, learnLevel, listedSpells, roomSomewhere, spellIconKey, spellListOf } from '../rules/Spellbook';
+import { CATALOG, boundAtLevel, castLevels, isCaster, isCatalogSpell, learnLevel, listedSpells, roomSomewhere, spellIconKey, spellListOf } from '../rules/Spellbook';
 import type { CatalogSpell, SpellList } from '../rules/Spellbook';
 import type { Build } from '../rules/Build';
 import { CLASS_FEATURE_LIST, featureBinding, featuresAt } from '../rules/ClassFeatures';
@@ -21,17 +21,20 @@ import type { TipTopic } from './InfoTooltip';
 import { PixelLabel } from './PixelText';
 import { castLevelTopic, featTopic, featureTopic, spellTopic } from './SpellTopics';
 import { archetypeName, featName } from '../rules/Names';
-import { FEATS, featBinding } from '../rules/Feats';
+import { FEATS, featBinding, featSpellIds } from '../rules/Feats';
 import type { FeatId } from '../rules/Feats';
 import { passiveFeats } from '../rules/Build';
 import { featureCharges } from '../systems/SchoolSystem';
 import { THEME } from './Theme';
 
 type Rect = { x: number; y: number; w: number; h: number };
-/** A box in the list (before scrolling): a spell, a class feature or a Passive Feat; `locked` (greyed out) until the hero's level reaches it. */
-type Box = { spell: CatalogSpell | null; feature: FeatureDef | null; feat: FeatId | null; locked: boolean; rect: Rectangle };
+/**
+ * A box in the list (before scrolling): a spell, a class feature or a Passive Feat; `locked` (greyed out) until the hero's
+ * level reaches it. `taught`: a spell a feat taught, bound at its own level.
+ */
+type Box = { spell: CatalogSpell | null; feature: FeatureDef | null; feat: FeatId | null; locked: boolean; taught: boolean; rect: Rectangle };
 /** What a section lists: a spell, a feature or a feat, greyed out while locked. */
-type Item = { spell?: CatalogSpell; feature?: FeatureDef; feat?: FeatId; locked?: boolean };
+type Item = { spell?: CatalogSpell; feature?: FeatureDef; feat?: FeatId; locked?: boolean; taught?: boolean };
 /** A wizard's bind counter at the top right: the spell level it counts (0: cantrips) and its line. */
 type Counter = { level: number; label: PixelLabel };
 /** The count of charges left on a feature used by charges (Bladesong), in its box's top right corner. */
@@ -92,7 +95,8 @@ const REFUSAL_UPDATES = 180;
  *
  * Spells the game does not cast yet are listed greyed out too, saying so under the pointer. A wizard sees every wizard
  * spell, those above their level greyed out, and their school's features in a section of their
- * own above the 1st-level spells (also greyed out until their level comes; its actives are bound without counting). At
+ * own right after the class features (also greyed out until their level comes; its actives are bound without counting).
+ * The order is: class features, the school, the Passive Feats and the spells feats taught, then cantrips and each level. At
  * the top right, counters tell how many cantrips and spells of each level are bound and how many may be
  * (src/rules/Schools.ts); with a level full, the hint says so instead of starting to bind.
  */
@@ -178,7 +182,7 @@ export class SpellsPanel {
     items.forEach((item, i) => {
       const rect = new Rectangle(this.area.x + PAD + (i % cols) * (BOX + GAP), first + Math.floor(i / cols) * (BOX + GAP), BOX, BOX);
       const locked = item.locked ?? false;
-      this.boxes.push({ spell: item.spell ?? null, feature: item.feature ?? null, feat: item.feat ?? null, locked, rect });
+      this.boxes.push({ spell: item.spell ?? null, feature: item.feature ?? null, feat: item.feat ?? null, locked, taught: item.taught ?? false, rect });
       if (item.spell) this.addIcon(item.spell, rect, locked);
       if (item.feat) this.addInitials(item.feat, rect);
       if (item.feature?.charges) this.addChargeTag(item.feature, rect);
@@ -207,18 +211,21 @@ export class SpellsPanel {
     const list = spellListOf(cls, build);
     this.clearContent();
     let y = this.addTop(this.area.y + PAD, level);
-    // The school's features have a section of their own, above the 1st-level spells.
     const general = featuresAt(cls, level, build ?? null).filter((f) => !f.logOnly && !isWizardSchool(f.needs));
     y = this.addSection(text('skills.features'), general.map((feature) => ({ feature })), y);
+    // Then the school, then what feats give (Passive Feats, and the spells they taught), then the cantrips and spells.
+    const school = schoolOf(build);
+    if (school) y = this.addSchool(cls, school, level, y);
     const feats = this.player ? passiveFeats(heroClass(this.player.heroClass), level, build) : [];
     if (feats.length) y = this.addSection(text('skills.passive_feats'), feats.map((feat) => ({ feat })), y);
+    // The cantrips and spells feats taught (Magic Initiate, Spell Sniper): bound at their own level, counted against no limit.
+    const taught = featSpellIds(build?.improvements).flatMap((id) => (isCatalogSpell(id) ? [CATALOG[id]] : []));
+    if (taught.length) y = this.addSection(text('skills.feat_spells'), taught.map((spell) => ({ spell, taught: true, locked: !spell.castable })), y);
     if (!isCaster(list)) {
       this.addHeading(text('skills.none'), y, THEME.muted);
       y += HEADING_H;
     }
-    const school = schoolOf(build);
     listedSpells(list, level, build?.spells).forEach((spells, spellLevel) => {
-      if (spellLevel === 1 && school) y = this.addSchool(cls, school, level, y);
       if (!spells.length) return;
       const label = spellLevel === 0 ? text('skills.cantrips') : text('skills.level', { level: spellLevel });
       // Greyed out: above the hero's level, or not cast in the game yet.
@@ -413,15 +420,19 @@ export class SpellsPanel {
     if (box.feat) return this.pressFeat(box.feat);
     // Outside a safe room a spell can't be prepared: the hint at the top already says so.
     if (!box.spell || !this.preparing) return true;
+    if (box.taught) {
+      this.bind(box.spell, box.spell.level);
+      return true;
+    }
     const levels = castLevels(this.list, this.heroLevel, box.spell);
     if (levels.length === 1) this.bind(box.spell, levels[0]);
     else this.openChoice(box, levels);
     return true;
   }
 
-  /** A toggle Passive Feat waits for a quick-bar square (its key switches it); one that works by itself has nothing to bind. */
+  /** A toggle or used Passive Feat waits for a quick-bar square (its key switches or uses it); one that works by itself has nothing to bind. */
   private pressFeat(feat: FeatId): boolean {
-    if (FEATS[feat].passive === 'toggle') beginBinding({ spell: featBinding(feat), level: 0 });
+    if (FEATS[feat].passive !== 'auto') beginBinding({ spell: featBinding(feat), level: 0 });
     return true;
   }
 

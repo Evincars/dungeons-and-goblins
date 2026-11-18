@@ -17,7 +17,7 @@ import { queueAnswer } from './Party';
 import { setSeatPaused } from './Pause';
 import { chooseLoot } from './LootRoll';
 import { applyCustomization, isCustomizeCommand } from './Customize';
-import { EMPTY_SQUARE, canBind, roomToBind, spellListOf } from '../rules/Spellbook';
+import { EMPTY_SQUARE, canBind, featSpellBindable, roomToBind, spellListOf } from '../rules/Spellbook';
 import type { QuickBinding } from '../rules/Spellbook';
 import { bindingFeatureId, canToggle, hasClassFeature } from '../rules/ClassFeatures';
 import { FEATS, bindingFeatId } from '../rules/Feats';
@@ -26,6 +26,7 @@ import { passiveFeats } from '../rules/Build';
 import { heroClass } from '../rules/Classes';
 import { chooseDeparture } from '../systems/ExitSystem';
 import { characterSheet } from '../rules/CharacterSheet';
+import { endMageArmour } from '../systems/LastingSpells';
 import { needsBothHands, strengthNeeded, strongEnough } from '../rules/Equipment';
 
 /**
@@ -258,6 +259,8 @@ export function applyLoadout(player: Player, loadout: Loadout): void {
   ps.swordTier = BASE_SWORD_TIER + stats.strength;
   ps.maxSprint = BASE_SPRINT + stats.constitution * SPRINT_PER_CONSTITUTION;
   ps.lootBonus = stats.charisma * LOOT_PER_CHARISMA;
+  // Mage Armour works only without body armour: putting some on ends it.
+  if ((player.buffs?.mageArmor ?? 0) > 0 && characterSheet(player).armorClass.armor) endMageArmour(player);
 }
 
 /**
@@ -344,10 +347,11 @@ export function mayPrepare(player: Player, spell: string): boolean {
   return bindingFeatureId(spell) !== null || bindingFeatId(spell) !== null || preparesSpells(player);
 }
 
-/** A toggle Passive Feat the hero has (Great Weapon Master, Sharpshooter) may be bound; it is used at level 0. */
+/** A Passive Feat the hero has that is switched or used from the quick bar (Great Weapon Master, Charger) may be bound; at level 0. */
 function featBindable(player: Player, feat: FeatId, level: number): boolean {
   const cls = heroClass(player.heroClass);
-  return level === 0 && FEATS[feat].passive === 'toggle' && passiveFeats(cls, player.playerStats.level, player.build).includes(feat);
+  const kind = FEATS[feat].passive;
+  return level === 0 && (kind === 'toggle' || kind === 'active') && passiveFeats(cls, player.playerStats.level, player.build).includes(feat);
 }
 
 /** Puts a spell, cast at a level, on a quick-bar square if the hero has learnt it, may cast it there and is in a safe room. */
@@ -355,7 +359,8 @@ export function bindSpell(player: Player, slot: number, spell: string, level: nu
   const list = spellListOf(heroClass(player.heroClass).dndClass, player.build);
   if (!Number.isInteger(slot) || slot < 0 || slot >= QUICK_SLOTS || !mayPrepare(player, spell)) return false;
   const feat = bindingFeatId(spell);
-  const allowed = feat ? featBindable(player, feat, level) : canBind(list, player.playerStats.level, spell, level, player.build?.spells);
+  const allowed = feat ? featBindable(player, feat, level)
+    : canBind(list, player.playerStats.level, spell, level, player.build?.spells) || featSpellBindable(player, spell, level);
   if (!allowed) return false;
   const feature = bindingFeatureId(spell);
   if (feature !== null && !hasClassFeature(player, feature)) return false;

@@ -7,6 +7,7 @@ import { surround } from '../ai/decision/surround';
 import { agentOf } from '../ai/decision/states';
 import { limping } from '../ai/execution/locomotion';
 import { cheats } from '../game/Cheats';
+import { followLure } from './DecoySystem';
 
 /** Frozen by the console (/freeze): every enemy stops where it stands and thinks of nothing. */
 function holdStill(): void {
@@ -38,6 +39,8 @@ export function updateAI(level: Level, tick: number): void {
   for (const squad of squads.values()) surround(squad, tick);
   for (const mob of q.walkingMobs) {
     if (!canAct(mob)) continue;
+    // A foe lured by an illusion goes for the dummy and thinks of nothing else.
+    if (followLure(mob)) continue;
     agentOf(mob).think(level, tick);
   }
 }

@@ -24,6 +24,8 @@ export const PROP_IMAGES = {
   iso_main: '/castle-izometric/mainlevbuild1.png',
   iso_ground: '/castle-izometric/mainlevbuild2.png',
   iso_stains: '/castle-izometric/mainlevbuild3.png',
+  // Its gateways (scripts/iso-gateways.py): an arch, the arch with its doors open, the arch barred.
+  iso_gates: '/castle-izometric/gateways.png',
   iso_candle_1: '/castle-izometric/anim/candle-01.png',
   iso_candle_2: '/castle-izometric/anim/candle-02.png',
   iso_candle_3: '/castle-izometric/anim/candle-03.png',
@@ -136,6 +138,8 @@ export type PropDef = {
   weight?: number;
   /** Lies flat on the floor (a rug): drawn under everything that stands or walks on it. */
   flat?: boolean;
+  /** Smoke drifts faintly out of it (the portals of the safe and exit rooms, entities/Smoke.ts). */
+  smoke?: true;
   /** Animation frames, played in a loop `frameTime` ticks each. */
   frames?: readonly PropFrame[];
   frameTime?: number;
@@ -270,6 +274,10 @@ export const PROPS = {
   column_slender:    { image: 'mainlev', rect: { x: 640, y: 112, w: 16, h: 80 }, mount: 'floor', solid: true, seeThrough: true, base: { w: 14, d: 10 } },
   column_slender_low: { image: 'mainlev', rect: { x: 672, y: 144, w: 16, h: 48 }, mount: 'floor', solid: true, seeThrough: true, base: { w: 14, d: 10 } },
   chain_short:       { image: 'decorative', rect: { x: 132, y: 16, w: 7, h: 22 }, mount: 'wall', weight: 1.5 },
+  // The portals (the castle tileset's great arches, set into the north wall of the safe and exit rooms): the stairs the
+  // heroes came down by, and the dark way on, smoke breathing out of both.
+  portal_stairs:     { image: 'castle_main', rect: { x: 416, y: 208, w: 80, h: 96 }, mount: 'foot', smoke: true, weight: 0 },
+  portal_dark:       { image: 'castle_main', rect: { x: 512, y: 208, w: 80, h: 96 }, mount: 'foot', smoke: true, weight: 0 },
   hook_bracket:      { image: 'decorative', rect: { x: 32, y: 20, w: 16, h: 12 }, mount: 'wall', weight: 1 },
 
   // ── The isometric castle (/castle-izometric) ──
@@ -318,6 +326,11 @@ export const PROPS = {
   iso_column_broken:  { ...ISO_COLUMN, rect: { x: 848, y: 912, w: 32, h: 64 }, base: SQUARE_BASE },
   iso_column_broken2: { ...ISO_COLUMN, rect: { x: 976, y: 912, w: 32, h: 64 }, base: SQUARE_BASE },
   iso_column_cross:   { ...ISO_COLUMN, rect: { x: 912, y: 912, w: 32, h: 102 }, base: SQUARE_BASE },
+  // Gateways where a straight corridor leaves a room through its north wall (IsoDresser.ts `layGateways`): the arch's
+  // pillars stand on the faces either side, the way between them two tiles wide.
+  iso_gate_arch:  { image: 'iso_gates', rect: { x: 0, y: 0, w: 160, h: 84 }, mount: 'foot', weight: 0 },
+  iso_gate_door:  { image: 'iso_gates', rect: { x: 160, y: 0, w: 160, h: 84 }, mount: 'foot', weight: 0 },
+  iso_gate_grate: { image: 'iso_gates', rect: { x: 320, y: 0, w: 160, h: 84 }, mount: 'foot', weight: 0 },
   iso_plate:       { ...ISO_MOSS, rect: { x: 288, y: 208, w: 32, h: 32 } },
   iso_plate2:      { ...ISO_MOSS, rect: { x: 336, y: 208, w: 32, h: 32 } },
   iso_stain_brown:   { ...ISO_STAIN, rect: { x: 13, y: 16, w: 136, h: 127 } },
@@ -731,6 +744,8 @@ export const CRATES: PropKind[] = ['crate', 'crate2', 'crate_large', 'crate_larg
 /** Urns of every size and glaze, whole and broken, and a broken crate or two among them. */
 export const URNS: PropKind[] = [...propsStarting('urn'), 'crate_broken', 'crate_broken2', 'crate_large_broken', 'crate_large_broken2'];
 export const POSTS: PropKind[] = ['post', 'post2', 'post_cauldron', 'post_chain', 'post_broken'];
+/** The catacombs' own iron on its walls: cauldrons hung on chains, shackles, chains and hooks. */
+export const CATACOMB_FIXTURES: PropKind[] = ['cauldron', 'cauldron_water', 'shackles', 'chain', 'chain_short', 'hook_bracket'];
 /** Burnt-out candles, left on crypt floors. */
 export const COLD_CANDLES: PropKind[] = ['candles_cold', 'candles_cold2', 'candle_cold', 'candle_stub'];
 /** Whether a prop belongs to the castle (its images are the castle's own, never seen in the catacombs). */

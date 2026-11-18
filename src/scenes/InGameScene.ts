@@ -80,7 +80,7 @@ const PREVIOUS_BUTTON = 2;
 type Mode = 'solo' | 'host' | 'guest';
 type RunTotals = { kills: number; xp: number; gold: number };
 /**
- * What the exit button puts on this screen: nothing, its question (this hero is in the exit room and hasn't chosen),
+ * What the exit portal puts on this screen: nothing, its question (this hero is in the exit room and hasn't chosen),
  * a wait for the others there, or — on every screen — the party's decision to end the run.
  */
 type Prompt = 'none' | 'ask' | 'wait' | 'ended';
@@ -531,7 +531,7 @@ export class InGameScene implements Scene {
   }
 
   /**
-   * The exit button (systems/ExitSystem.ts): once pressed, the next level is made ready in the background; once the
+   * The exit portal (systems/ExitSystem.ts): once used, the next level is made ready in the background; once the
    * party has chosen, alone or hosting this screen goes deeper (the guests follow the host), and alone ending the run
    * goes back to the title. Meanwhile the question, a wait or the run's end shows as this screen's hero calls for.
    */

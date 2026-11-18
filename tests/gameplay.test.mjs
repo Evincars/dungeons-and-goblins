@@ -616,7 +616,7 @@ test('rooms get a centrepiece in the middle (or nearby) with open floor around i
   assert.ok(centred > rooms * 0.3, `${centred} of ${rooms} rooms have something in the middle`);
 });
 
-test('the safe and exit rooms have campfires (two beside the exit) and banners on their walls', () => {
+test('the safe and exit rooms have campfires (two beside the exit), banners, and a portal each in their north walls', () => {
   const { campfires, rooms, props, exitButtonPos, level } = new DungeonBuilder({ ...DEFAULT_CONFIG, seed: 7 }).build();
   const exit = rooms.find((r) => r.type === 'exit');
   const safe = rooms.find((r) => r.type === 'safe');
@@ -624,8 +624,24 @@ test('the safe and exit rooms have campfires (two beside the exit) and banners o
   assert.equal(campfires.filter(inRoom(exit)).length, 2);
   assert.equal(campfires.filter(inRoom(safe)).length, 1, 'a fire in the safe room too');
   for (const c of campfires) assert.equal(level.getTileAt(c.x, c.y).type, TileType.Obstacle, 'a campfire blocks its tile');
-  assert.equal(level.getTileAt(exitButtonPos.x, exitButtonPos.y).type, TileType.Floor, 'the exit stays clear');
-  assert.ok(props.some((p) => p.ty === exit.y && HANGINGS.includes(p.kind)), 'banners');
+  assert.equal(level.getTileAt(exitButtonPos.x, exitButtonPos.y).type, TileType.Floor, 'the floor before the exit portal stays clear');
+  const hung = [7, 11, 23, 31].some((seed) => {
+    const built = new DungeonBuilder({ ...DEFAULT_CONFIG, seed }).build();
+    const gathering = built.rooms.filter((r) => r.type !== 'dungeon');
+    return built.props.some((p) => gathering.some((r) => p.ty === r.y && p.tx >= r.x && p.tx < r.x + r.w) && HANGINGS.includes(p.kind));
+  });
+  assert.ok(hung, 'banners where the north walls have room for them beside the portal');
+  const portal = (kind, room) => props.find((p) => p.kind === kind && p.ty === room.y && p.tx > room.x && p.tx < room.x + room.w - 1);
+  const stairs = portal('portal_stairs', safe);
+  const way = portal('portal_dark', exit);
+  assert.ok(stairs && way, 'the stairs the heroes came down by, and the dark way on');
+  assert.equal(exitButtonPos.x, way.tx * 32 + 16, 'the exit is the portal');
+  assert.equal(exitButtonPos.y, exit.y * 32, 'at the foot of its wall');
+  for (const p of [stairs, way]) {
+    const lit = props.filter((q) => q.kind === 'castle_candelabra' && q.ty === p.ty && Math.abs(q.tx - p.tx) === 2);
+    assert.equal(lit.length, 2, 'a candelabra either side');
+    assert.ok(!props.some((q) => q.ty === p.ty && HANGINGS.includes(q.kind) && Math.abs(q.tx - p.tx) <= 3), 'nothing hung over the portal');
+  }
 });
 
 test('a shaped pit swallows what stands over its drawn ground: its lobes, not the corners of a quatrefoil', async () => {
@@ -3296,7 +3312,8 @@ test('the isometric castle is built of its own pieces: slanted corners and corri
     assert.ok(level.slopes.size > 0, 'corners cut off on the slant');
     assert.ok(level.floorZones.length > 0, 'floors laid in tones');
     assert.deepEqual(layout.torchPositions, [], 'no torches: crystal braziers light it');
-    assert.deepEqual(layout.props.filter((p) => !isIsoProp(p.kind)).map((p) => p.kind), [], 'its own props only');
+    const portals = ['portal_stairs', 'portal_dark', 'castle_candelabra'];
+    assert.deepEqual(layout.props.filter((p) => !isIsoProp(p.kind) && !portals.includes(p.kind)).map((p) => p.kind), [], 'its own props only (and the portals)');
     assert.ok(layout.props.some((p) => p.kind.startsWith('iso_brazier')), 'braziers');
     const foes = [...world.with('mobType')].map((m) => m.mobType);
     assert.ok(foes.length > 0 && foes.every((t) => t === 'shade' || t === 'grick'), 'haunted by its own foes');
@@ -3686,7 +3703,7 @@ test('in the mines, whoever walks out over a drop or a hole falls; the castle\'s
   const drop = dropPoint(hole, mid.x + 3, mid.y, { x: 0, y: 0 });
   assert.ok(mines.pitAt(drop.x, drop.y) === hole, 'a faller drops inside its dark');
   assert.ok(validPitDetail('hole', MINE_HOLES.length - 1) && !validPitDetail('hole', MINE_HOLES.length), 'a hole is one of the set\'s');
-  const layout = { level: mines, rooms: [], playerSpawn: { x: 40, y: 40 }, torchPositions: [], props: [], campfires: [],
+  const layout = { level: mines, rooms: [], playerSpawn: { x: 40, y: 40 }, torchPositions: [], props: [], campfires: [], spikes: [],
     exitButtonPos: { x: 0, y: 0 }, shopPos: { x: 0, y: 0 }, dummyPos: { x: 0, y: 0 }, safeDoor: { tiles: [], boundaryX: 0 },
     leverPos: { x: 0, y: 0 }, exitDoor: { tiles: [], boundaryX: 0 }, exitLeverPos: { x: 0, y: 0 } };
   const back = decodeLevelMap(JSON.parse(JSON.stringify(encodeLevelMap(layout))));
@@ -3992,7 +4009,7 @@ test('the exit button asks only the heroes in the exit room; they go deeper toge
   assert.ok(ana.health.current > 0 && bo.health.current > 0);
 });
 
-test('anyone in the exit room choosing to end the run ends it; if everyone walks out first, the button can be pressed again', () => {
+test('anyone in the exit room choosing to end the run ends it; if everyone walks out first, the portal can be used again', () => {
   const { layout, button, ana, bo, press } = atTheExit();
   const anaAt = { ...ana.position };
   press();
@@ -4000,10 +4017,9 @@ test('anyone in the exit room choosing to end the run ends it; if everyone walks
   Object.assign(bo.position, layout.playerSpawn);
   updateExit();
   assert.equal(button.exitButton.activated, false, 'nobody left to ask');
-  assert.equal(button.visual.col, 0, 'the button is back up');
   Object.assign(ana.position, anaAt);
   press();
-  assert.equal(button.exitButton.activated, true, 'pressed again');
+  assert.equal(button.exitButton.activated, true, 'used again');
   chooseDeparture('host', 'end');
   updateExit();
   assert.equal(button.exitButton.outcome, 'end', 'only Ana was in the room');
@@ -6159,4 +6175,111 @@ test('every hero sets out with 10 gold, and the console adds more with /gold', (
   assert.equal(hero.playerStats.gold, 10);
   runCommand('/gold 500', { player: hero, allowed: true });
   assert.equal(hero.playerStats.gold, 510);
+});
+
+// ── Spike traps, chests of the isometric castle, gateways, portals, catacomb decor ──
+
+test("the catacombs' spike traps lie in their corridors, never shutting a way; one bites the first hero on it once, by depth", async () => {
+  const { updateTraps, spikeDie } = await load('systems/TrapSystem');
+  const { createSpikeTrap } = await load('entities/DungeonFactory');
+  let traps = 0;
+  for (const seed of [3, 7, 11]) {
+    const { spikes, rooms, level } = new DungeonBuilder({ ...DEFAULT_CONFIG, seed }).build();
+    traps += spikes.length;
+    for (const s of spikes) {
+      const tx = Math.floor(s.x / TILE_WIDTH);
+      const ty = Math.floor(s.y / TILE_HEIGHT);
+      assert.equal(level.getTile(tx, ty).type, TileType.Floor, 'a trap is floor anyone can walk over');
+      assert.ok(!rooms.some((r) => tx >= r.x && ty >= r.y && tx < r.x + r.w && ty < r.y + r.h), 'in a corridor, not a room');
+    }
+  }
+  assert.ok(traps >= 6, `${traps} traps in three dungeons`);
+  assert.deepEqual([1, 2, 3, 4, 5, 7, 9, 15].map(spikeDie), [4, 4, 6, 6, 8, 10, 12, 12], 'd4 to the 2nd level, then bigger dice');
+
+  startRun();
+  world.clear();
+  const trap = createSpikeTrap(centre(5), centre(3));
+  const hero = playerAt(3, 3, 'fighter');
+  world.addComponent(hero, 'playerName', 'Evincars');
+  const full = hero.health.current;
+  updateTraps();
+  assert.equal(trap.spikeTrap.sprung, false, 'nobody on it');
+  hero.position.x = centre(5);
+  updateTraps();
+  assert.equal(trap.spikeTrap.sprung, true);
+  assert.equal(hero.health.current, full - 4, 'the loaded d4 shows its top face');
+  const logged = currentLog().entries.filter((e) => e.event === 'trap');
+  assert.deepEqual(logged.map((e) => [e.item, e.damage]), [['1d4', 4]], 'told in the combat log');
+  hero.hurtTime = 0;
+  for (let t = 0; t < 30; t++) updateTraps();
+  assert.equal(hero.health.current, full - 4, 'sprung, it hurts nobody again');
+  assert.equal(trap.visual.col, 4, 'its spikes stay up');
+});
+
+test("the isometric castle's chests are its own, mostly plain, some rarer with dearer things; they open on their own frame", async () => {
+  const { CHEST_TIERS, DROP_TABLES } = await load('entities/Drops');
+  const { isoChest } = await load('entities/DungeonFactory');
+  const weights = CHEST_TIERS.map((t) => t.weight);
+  assert.ok(weights[0] > weights[1] && weights[1] > weights[2], 'the plain ones are the most common');
+  const coins = CHEST_TIERS.map((t) => DROP_TABLES[t.drops].entries[0].drop.max);
+  assert.ok(coins[0] < coins[1] && coins[1] < coins[2], 'the rarer, the richer');
+  const picks = CHEST_TIERS.map((t) => DROP_TABLES[t.drops].always[0].picks ?? 1);
+  assert.deepEqual(picks, [1, 2, 3], 'and the dearer their gear');
+  const seen = new Set();
+  for (let i = 0; i < 400; i++) {
+    const look = isoChest();
+    assert.equal(look.visual.sheet, 'iso_chests');
+    assert.equal(CHEST_TIERS[look.visual.row].drops, look.chest.drops, 'its row is its tier');
+    assert.notEqual(look.chest.open, look.chest.closed, 'it opens on a frame of its own');
+    seen.add(look.visual.row);
+  }
+  assert.equal(seen.size, 3, 'every tier turns up');
+  world.clear();
+  buildDungeon(11, true, 'castle2');
+  const chests = [...world.with('chest')];
+  assert.ok(chests.length > 0 && chests.every((c) => c.visual.sheet === 'iso_chests'), 'its chests are its own');
+});
+
+test("the isometric castle's corridors come out through a room's north wall under gateways: arches, open doors, or a grate that bars the way", async () => {
+  const { dungeonConfig } = await load('level/generators/DungeonConfig');
+  const kinds = new Set();
+  for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+    const { props, level } = new DungeonBuilder(dungeonConfig('castle2', seed)).build();
+    for (const gate of props.filter((p) => p.kind.startsWith('iso_gate'))) {
+      kinds.add(gate.kind);
+      const way = [level.getTile(gate.tx, gate.ty - 1), level.getTile(gate.tx + 1, gate.ty - 1)];
+      const faces = [level.getTile(gate.tx - 1, gate.ty - 1), level.getTile(gate.tx + 2, gate.ty - 1)];
+      assert.ok(faces.every((t) => t.type === TileType.Wall), 'its pillars stand on the faces either side of the way');
+      if (gate.kind !== 'iso_gate_grate') {
+        assert.ok(way.every((t) => t.type === TileType.Floor), 'an arch is walked under');
+        continue;
+      }
+      assert.ok(way.every((t) => t.type === TileType.Obstacle), 'a grate bars the way');
+      const box = level.blockBoxes.get(gate.tx + (gate.ty - 1) * level.width);
+      assert.ok(box && box.y1 === TILE_HEIGHT && box.y0 > TILE_HEIGHT / 2, 'only its foot stops bodies');
+      assert.ok(level.checkLineOfSight(centre(gate.tx), centre(gate.ty), centre(gate.tx), centre(gate.ty - 3)), 'it is seen through');
+    }
+  }
+  assert.deepEqual([...kinds].sort(), ['iso_gate_arch', 'iso_gate_door', 'iso_gate_grate']);
+});
+
+test('catacomb rooms have wooden pillars standing about them, and their own iron hung on the walls; campfires and portals smoke', async () => {
+  const { POSTS, CATACOMB_FIXTURES, PROPS } = await load('level/Props');
+  const { createCampfire, createProp } = await load('entities/DungeonFactory');
+  let pillars = 0;
+  let iron = 0;
+  let rooms = 0;
+  for (const seed of [3, 7, 11]) {
+    const layout = new DungeonBuilder({ ...DEFAULT_CONFIG, seed }).build();
+    rooms += layout.rooms.filter((r) => r.type === 'dungeon').length;
+    pillars += layout.props.filter((p) => POSTS.includes(p.kind)).length;
+    iron += layout.props.filter((p) => CATACOMB_FIXTURES.includes(p.kind)).length;
+  }
+  assert.ok(pillars >= rooms, `${pillars} pillars in ${rooms} rooms`);
+  assert.ok(iron >= 10, `${iron} cauldrons, chains and shackles`);
+  assert.ok(POSTS.every((kind) => PROPS[kind].solid && !PROPS[kind].seeThrough), 'pillars block and never clear');
+  world.clear();
+  createCampfire(100, 100);
+  createProp({ kind: 'portal_dark', tx: 5, ty: 5 });
+  assert.equal(world.entities.filter((e) => e.visual?.sheet === 'smoke').length, 3, 'one column over the fire, two out of the portal');
 });

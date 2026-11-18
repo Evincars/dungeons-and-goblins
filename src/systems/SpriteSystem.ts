@@ -37,6 +37,7 @@ function createSprites(gameLayer: Container): void {
     if (v.size) sprite.setSize(v.size.w, v.size.h);
     if (v.rotation) sprite.rotation = v.rotation;
     if (v.tint !== undefined) sprite.tint = v.tint;
+    if (v.alpha !== undefined) sprite.alpha = v.alpha;
     gameLayer.addChild(sprite);
     world.addComponent(entity, 'sprite', sprite);
   }
@@ -55,7 +56,8 @@ function crackNests(): void {
 /** Chests switch frame when opened. */
 function showOpenedChests(): void {
   for (const chest of chestSprites) {
-    const col = chest.chest.opened ? 1 : 0;
+    const { opened, closed = 0, open = closed + 1 } = chest.chest;
+    const col = opened ? open : closed;
     if (chest.visual.col === col) continue;
     chest.visual.col = col;
     setVisualFrame(chest.sprite, chest.visual.sheet, col, chest.visual.row ?? 0);

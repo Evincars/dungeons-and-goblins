@@ -1,5 +1,6 @@
 import { SpriteSheet, frameRun } from './SpriteSheet';
 import { bloodSheets } from '../entities/Blood';
+import { smokeSheet } from '../entities/Smoke';
 import { TRADER_CLIPS, TRADER_FILES, TRADER_FRAME, TRADER_SHEETS } from '../entities/Trader';
 import { registerLazy } from './LazyArt';
 import { registerEffects } from './Effects';
@@ -195,6 +196,8 @@ const UI_SHEETS = [
   new SpriteSheet('mine_decor', '/caves2/other_decoratives.png'),
 
   // Torch frames (16×16 each) — composited into a single 'torch' strip by the loader
+  // The catacombs' spike trap: holes, then spikes rising (systems/TrapSystem.ts; made by scripts/spike-sheet.py).
+  new SpriteSheet('spikes', '/catacombs/spikes.png', { grid: { frameWidth: 32, frameHeight: 32 } }),
   new SpriteSheet('torch_1', '/catacombs/torch_1.png'),
   new SpriteSheet('torch_2', '/catacombs/torch_2.png'),
   new SpriteSheet('torch_3', '/catacombs/torch_3.png'),
@@ -213,6 +216,8 @@ const UI_SHEETS = [
   new SpriteSheet('button',       '/ui/button.png', { grid: { frameWidth: 128, frameHeight: 24 } }),
   // Blood splashing from those hit (entities/Blood.ts): each splash's 6×6 grid read as one strip.
   ...bloodSheets().map(({ key, src, frames }) => new SpriteSheet(`${key}_sheet`, src, { regions: { [key]: { frames } } })),
+  // Smoke over the campfires and out of the portals (entities/Smoke.ts).
+  ...[smokeSheet()].map(({ key, src, frames }) => new SpriteSheet(`${key}_sheet`, src, { regions: { [key]: { frames } } })),
   // The trader of the safe rooms (entities/DungeonFactory.ts, systems/TraderSystem.ts): strips of 128 px frames.
   ...TRADER_CLIPS.map((clip) => new SpriteSheet(TRADER_SHEETS[clip], `/trader/${TRADER_FILES[clip]}.png`, { grid: { frameWidth: TRADER_FRAME, frameHeight: TRADER_FRAME } })),
   // The game's pointers (ui/Pointer.ts), drawn smaller than they are painted: hand, hand pressing, cross, red cross.
@@ -246,6 +251,8 @@ const UI_SHEETS = [
 
   // Chests: closed and open, side by side (the open lid reaches up to the top of the frame).
   new SpriteSheet('chest',       `${OBJECTS}/chest_small.png`, { grid: { frameWidth: 32, frameHeight: 53 } }),
+  // The isometric castle's chests: a row per tier, four facings closed and open (entities/DungeonFactory.ts isoChest).
+  new SpriteSheet('iso_chests', '/castle-izometric/chest_keys_treasure.png', { grid: { frameWidth: 32, frameHeight: 48 } }),
   new SpriteSheet('chest_large', `${OBJECTS}/chest_large.png`, { grid: { frameWidth: 64, frameHeight: 53 } }),
 ];
 

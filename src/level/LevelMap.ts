@@ -23,7 +23,7 @@ import { gunzipJson, gzipText } from '../core/compression';
  */
 
 export const MAP_FORMAT = 'dungeons-and-goblins/map';
-export const MAP_VERSION = 10;
+export const MAP_VERSION = 11;
 /** A tile's byte: its type in the high bits, its image variant (0–15) in the low four. */
 const VARIANT_BITS = 4;
 const VARIANT_MASK = (1 << VARIANT_BITS) - 1;
@@ -73,6 +73,8 @@ export type LevelMap = {
   /** [kind, tile x, tile y], with a fourth for a prop moved across its tile ([…, dx]). */
   props: Array<[PropKind, number, number] | [PropKind, number, number, number]>;
   campfires: Pair[];
+  /** The catacombs' spike traps: the middles of their tiles. */
+  spikes: Pair[];
   exitButton: Pair;
   shop: Pair;
   dummy: Pair;
@@ -134,6 +136,7 @@ export function encodeLevelMap(layout: DungeonLayout): LevelMap {
     rooms: layout.rooms.map((r) => [r.id, r.type, r.hall ? 1 : 0, r.x, r.y, r.w, r.h, r.centerX, r.centerY]),
     props: layout.props.map((p) => (p.dx === undefined ? [p.kind, p.tx, p.ty] : [p.kind, p.tx, p.ty, p.dx])),
     campfires: layout.campfires.map(pair),
+    spikes: layout.spikes.map(pair),
     exitButton: pair(layout.exitButtonPos),
     shop: pair(layout.shopPos),
     dummy: pair(layout.dummyPos),
@@ -194,7 +197,8 @@ function checkShape(value: unknown): asserts value is LevelMap {
   ensure(isList(value.wallDecor, (d) => Array.isArray(d) && d.length === 2 && Number.isInteger(d[0]) && isWallDecor(d[1])), 'Bad wall decor');
   ensure(isList(value.blocks, isFootprint), 'Bad prop footprint');
   ensure(isList(value.slopes, isSlopeRow) && isList(value.zones, isZoneRow) && isList(value.stairs, isStairsRow), 'Bad slopes, floor zones or stairs');
-  ensure(isList(value.rooms, isRoomRow) && isList(value.props, isPropRow) && isList(value.campfires, isPair), 'Bad map decor');
+  ensure(isList(value.rooms, isRoomRow) && isList(value.props, isPropRow) && isList(value.campfires, isPair)
+    && isList(value.spikes, isPair), 'Bad map decor');
   ensure([value.exitButton, value.shop, value.dummy, value.lever, value.exitLever].every(isPair), 'Bad map positions');
   ensure(isDoor(value.door) && isDoor(value.exitDoor), 'Bad map door');
 }
@@ -232,6 +236,7 @@ export function decodeLevelMap(value: unknown): DungeonLayout {
     torchPositions: value.torches.map(point),
     props: value.props.map(([kind, tx, ty, dx]) => (dx === undefined ? { kind, tx, ty } : { kind, tx, ty, dx })),
     campfires: value.campfires.map(point),
+    spikes: value.spikes.map(point),
     exitButtonPos: point(value.exitButton),
     shopPos: point(value.shop),
     dummyPos: point(value.dummy),

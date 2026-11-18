@@ -1,11 +1,13 @@
 import { world, Team } from '../world';
 import { TRADER_FRAME, TRADER_SCALE, TRADER_SHEETS } from './Trader';
+import { CAMPFIRE_SMOKE, PORTAL_SMOKE, createSmoke } from './Smoke';
 import type { Entity, InventoryItem } from '../world';
 import { createTile, TileType, TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
 import type { Level } from '../level/Level';
 import { PROPS, PROP_GROUND } from '../level/Props';
 import type { PropDef, PropKind, PropPlacement } from '../level/Props';
 import { stashCoins } from './LootFactory';
+import { CHEST_TIERS, rollChestTier } from './Drops';
 import { ARMORS, HAND_WEAPONS, MEDALS, SHIELDS, catalogueItem } from './ItemCatalog';
 import type { DoorData, RoomData, TilePos } from '../level/generators/DungeonBuilder';
 
@@ -36,6 +38,10 @@ const HANG_TOP = 54;
  * over the wall.
  */
 const FOOT_DEPTH = 5;
+/** A portal's two columns of smoke rise this far either side of its middle. */
+const PORTAL_SMOKE_SPREAD = 9;
+/** How far onto the floor the exit portal's body reaches (where the heroes step up to it). */
+const PORTAL_DEPTH = 8;
 /**
  * A prop hung on the front of a column is drawn just in front of it, its top this far above the column's foot (under
  * the column's capital).
@@ -198,8 +204,9 @@ export function createSconce(x: number, y: number): Entity {
   });
 }
 
-/** A campfire on its (blocked) tile in the exit room. */
+/** A campfire on its (blocked) tile in the exit room, smoke curling up from its flames. */
 export function createCampfire(x: number, y: number): Entity {
+  createSmoke(x, y, CAMPFIRE_SMOKE);
   return world.add({
     position: { x, y },
     visual: { sheet: 'campfire', scale: CAMPFIRE_SCALE },
@@ -236,6 +243,11 @@ function propGlow(def: PropDef): Pick<Entity, 'glow'> {
   return { glow: { radius: def.glow, cool: def.coolGlow, flicker: flickers ? Math.random() * Math.PI * 2 : undefined } };
 }
 
+/** Smoke drifting out of a portal whose foot is at (x, y): two thin columns, a little either side of its middle. */
+function breatheSmoke(x: number, y: number): void {
+  for (const side of [-1, 1]) createSmoke(x + side * PORTAL_SMOKE_SPREAD, y, PORTAL_SMOKE);
+}
+
 /** A decorative prop: standing on its tile, or hung on the brick face above it. */
 export function createProp(p: PropPlacement): Entity {
   const def: PropDef = PROPS[p.kind];
@@ -249,6 +261,7 @@ export function createProp(p: PropPlacement): Entity {
     });
   }
   if (def.mount === 'foot') {
+    if (def.smoke) breatheSmoke(x, p.ty * TILE_HEIGHT + FOOT_DEPTH);
     return world.add({
       position: { x, y: p.ty * TILE_HEIGHT + FOOT_DEPTH }, visual: { sheet }, yOffset: h / 2, localOnly: true,
       ...propAnimation(sheet, def), ...propGlow(def),
@@ -312,17 +325,42 @@ export function createStash(p: PropPlacement): Entity | null {
   });
 }
 
-export function createChest(x: number, y: number): Entity {
+/**
+ * The isometric castle's chests (public/castle-izometric/chest_keys_treasure.png, cells of 32×48): a row per tier
+ * (Drops.ts CHEST_TIERS), and in each the chest facing four ways, each closed and open (the columns of each).
+ */
+const ISO_CHEST_FACINGS = [{ closed: 0, open: 1 }, { closed: 2, open: 3 }, { closed: 5, open: 4 }, { closed: 7, open: 6 }] as const;
+const ISO_CHEST_SCALE = 0.8;
+/** Its art stands on the foot of its cell, drawn about its middle: raised by half the cell, less a little to stand on its body. */
+const ISO_CHEST_LIFT = 17;
+
+/** What a chest holds and how it looks: the catacombs' and the castles' plain dark one. */
+type ChestLook = Pick<Required<Entity>, 'chest' | 'visual' | 'yOffset'>;
+function plainChest(): ChestLook {
+  return { chest: { opened: false, disappearTicks: -1, drops: 'chest' }, visual: { sheet: 'chest_dark', col: 0, row: 0, scale: CHEST_SCALE }, yOffset: CHEST_LIFT };
+}
+
+/** A chest of the isometric castle: a tier rolled by its rarity (its row of the sheet), facing any of its four ways. */
+export function isoChest(): ChestLook {
+  const tier = rollChestTier();
+  const facing = ISO_CHEST_FACINGS[Math.floor(Math.random() * ISO_CHEST_FACINGS.length)];
+  return {
+    chest: { opened: false, disappearTicks: -1, drops: CHEST_TIERS[tier].drops, ...facing },
+    visual: { sheet: 'iso_chests', col: facing.closed, row: tier, scale: ISO_CHEST_SCALE },
+    yOffset: ISO_CHEST_LIFT,
+  };
+}
+
+/** A chest on the floor at (x, y), opened with "use" (systems/ChestSystem.ts). */
+export function createChest(x: number, y: number, look: ChestLook = plainChest()): Entity {
   return world.add({
     position: { x, y },
-    chest: { opened: false, disappearTicks: -1, drops: 'chest' },
+    ...look,
     health: { current: CHEST_HEALTH, max: CHEST_HEALTH },
     hurtTime: 0, freezeTime: 0,
     radius: { x: 7, y: 4 },
     blocking: true,
     physicsSlide: true,
-    visual: { sheet: 'chest_dark', col: 0, row: 0, scale: CHEST_SCALE },
-    yOffset: CHEST_LIFT,
     healthBarOffset: 14,
     minimapColor: 0xffd040,
   });
@@ -363,15 +401,29 @@ export function createTrainingDummy(x: number, y: number): Entity {
   });
 }
 
-/** The button in the exit room: pressing it asks the heroes there whether to go deeper (systems/ExitSystem.ts). */
+/**
+ * The way on: the dark portal in the exit room's north wall (its arch is decor, the `portal_dark` prop), whose foot is at
+ * (x, y). Using it asks the heroes in the room whether to go deeper (systems/ExitSystem.ts). It has no picture of its
+ * own: its body spans the arch, so the corner brackets frame the arch and the crosshair finds it anywhere on it.
+ */
 export function createExitButton(x: number, y: number): Entity {
+  const arch = PROPS.portal_dark.rect;
+  return world.add({
+    position: { x, y: y + FOOT_DEPTH },
+    exitButton: { activated: false, choices: {}, outcome: null },
+    radius: { x: arch.w / 2, y: PORTAL_DEPTH },
+    yOffset: arch.h / 2,
+    minimapColor: 0x00ff44,
+  });
+}
+
+/** A spike trap in a corridor's floor, at the middle of its tile (systems/TrapSystem.ts): holes until it is sprung. */
+export function createSpikeTrap(x: number, y: number): Entity {
   return world.add({
     position: { x, y },
-    exitButton: { activated: false, choices: {}, outcome: null },
-    radius: { x: 14, y: 12 },
-    visual: { sheet: 'exit_button', col: 0, row: 0 },
-    yOffset: 16,
-    minimapColor: 0x00ff44,
+    spikeTrap: { sprung: false, ticks: 0 },
+    visual: { sheet: 'spikes', col: 0, row: 0 },
+    flat: true,
   });
 }
 

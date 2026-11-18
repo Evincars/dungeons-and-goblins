@@ -119,7 +119,7 @@ export function isLogResult(value: unknown): value is LogResult {
  */
 export const LOG_EVENTS = [
   'short_rest', 'long_rest', 'regain', 'slain', 'died', 'level_up', 'feat', 'improve', 'build', 'style', 'archetype',
-  'learns', 'feature', 'parry', 'riposte',
+  'learns', 'feature', 'parry', 'riposte', 'trap',
 ] as const;
 export type LogEvent = (typeof LOG_EVENTS)[number];
 
@@ -183,7 +183,7 @@ export type PartyNoticeShown = { notice: RestNotice; name: string; kind: VoteKin
 /** A Need or Pass on a rare find; a player who hasn't chosen yet has no entry. */
 export type LootChoice = 'need' | 'pass';
 
-/** What a hero in the exit room answers once the exit button is pressed: on to the next level, or end the run here. */
+/** What a hero in the exit room answers once someone uses the exit portal: on to the next level, or end the run here. */
 export const DEPART_CHOICES = ['next', 'end'] as const;
 export type DepartChoice = (typeof DEPART_CHOICES)[number];
 
@@ -335,7 +335,7 @@ export type Entity = {
    * lying on the floor).
    */
   /** `size`: drawn exactly this big (px), whatever size its art is (a portcullis fills its doorway). */
-  visual?: { sheet: string; col?: number; row?: number; scale?: number; rotation?: number; fit?: number; tint?: number; size?: { w: number; h: number } };
+  visual?: { sheet: string; col?: number; row?: number; scale?: number; rotation?: number; fit?: number; tint?: number; alpha?: number; size?: { w: number; h: number } };
   frame?: number;
   sprite?: Sprite;
   container?: Container;
@@ -632,7 +632,11 @@ export type Entity = {
 
   // --- chest ---
   /** `drops`: the DROP_TABLES entry (entities/Drops.ts) it throws out when opened. */
-  chest?: { opened: boolean; disappearTicks: number; drops: DropTableId };
+  /**
+   * A chest: opened yet, and what it holds (its drop table). `open`: the frame of its picture opened, when not the one
+   * after its closed frame (the isometric castle's chests face four ways, each closed and open).
+   */
+  chest?: { opened: boolean; disappearTicks: number; drops: DropTableId; closed?: number; open?: number };
 
   // --- training dummy (safe room): takes every kind of hit, never falls ---
   /** `row`: the strip it is playing (0 idle, 1 a hit, 2 a heavy hit). */
@@ -687,9 +691,9 @@ export type Entity = {
   /** A hero standing in a safe room (the first one or the exit's), worked out each tick: only there are spells prepared. */
   inSafeRoom?: boolean;
 
-  // --- exit button (players interact to end level) ---
+  // --- the exit portal (players use it to leave the level) ---
   /**
-   * The exit room's button (systems/ExitSystem.ts): `activated` once pressed, while the heroes in the exit room choose;
+   * The exit room's portal (systems/ExitSystem.ts): `activated` once used, while the heroes in the exit room choose;
    * what each has chosen so far; and what they decided once everyone there has (null until then).
    */
   exitButton?: { activated: boolean; choices: Partial<Record<PlayerSlot, DepartChoice>>; outcome: DepartChoice | null };
@@ -727,6 +731,11 @@ export type Entity = {
   lever?: { pulled: boolean; rest: number; exit?: true };
   /** Something on the floor worth searching (an urn, a coffin, a bowl): the coins in it, found once. */
   stash?: { coins: number };
+  /**
+   * A spike trap in the catacombs' floor (systems/TrapSystem.ts): the first hero to step on it springs it (`sprung`) and is
+   * hurt; it stays up, harmless, from then on. `ticks`: how long since it was sprung (its spikes rise frame by frame).
+   */
+  spikeTrap?: { sprung: boolean; ticks: number };
   /**
    * A rare find the party rolls for: the item, the ticks left to choose, each player's Need or Pass, and the
    * id the host gave it (guests answer by it).

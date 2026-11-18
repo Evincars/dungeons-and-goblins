@@ -78,38 +78,6 @@ export function genSpawnerSheet(): HTMLCanvasElement {
   return c;
 }
 
-// ── EXIT BUTTON (lever/pull) ──────────────────────────────────────────────────
-
-export function genExitButtonSheet(): HTMLCanvasElement {
-  const [c, ctx] = mkCanvas(64, 32);
-  // Two states: inactive (col 0) and active/pulled (col 1)
-  for (let state = 0; state < 2; state++) {
-    const ox = state * 32;
-    const BASE = state === 1 ? 0x3a8040 : 0x3a3030;
-    const GLOW = state === 1 ? 0x40ff80 : 0x808060;
-    rect(ctx, ox + 4,  12, 24, 20, 0x2a2020);
-    rect(ctx, ox + 5,  13, 22, 18, BASE);
-    rect(ctx, ox + 6,  14, 20, 16, 0x3a3535);
-    // Rune circle
-    ctx.strokeStyle = hex(GLOW);
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(ox + 16, 21, 7, 0, Math.PI * 2); ctx.stroke();
-    // Central symbol
-    ctx.fillStyle = hex(GLOW);
-    ctx.fillRect(ox + 14, 21, 4, 1);
-    ctx.fillRect(ox + 16, 19, 1, 4);
-    // Pedestal top
-    rect(ctx, ox + 2, 10, 28, 4, 0x5a5048);
-    rect(ctx, ox + 3, 11, 26, 2, 0x7a6858);
-    // Glow ring if active
-    if (state === 1) {
-      ctx.fillStyle = 'rgba(64,255,128,0.25)';
-      ctx.beginPath(); ctx.arc(ox + 16, 21, 10, 0, Math.PI * 2); ctx.fill();
-    }
-  }
-  return c;
-}
-
 // ── SAFE-ROOM GATE AND LEVER ─────────────────────────────────────────────────
 
 /**

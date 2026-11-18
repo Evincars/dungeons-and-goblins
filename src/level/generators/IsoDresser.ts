@@ -5,7 +5,7 @@ import { forEachTile, someTile } from '../Grid';
 import type { SlopeCorner } from '../Slopes';
 import { cutSlantCorner, slantFits, slantTile } from './Slants';
 import type { SlantCorner, SlantSite } from './Slants';
-import { FRONT_DECOR_SMALL, ISO_DECOR, SLANT_DECOR } from '../IsoTiles';
+import { FRONT_DECOR_SMALL, ISO_DECOR, SLANT_DECOR, isIsoDecor } from '../IsoTiles';
 import type { IsoDecor } from '../IsoTiles';
 import {
   ISO_BOOKS, ISO_BRAZIERS, ISO_BROKEN_COLUMNS, ISO_CANDLES, ISO_LECTERNS, ISO_MOSS_BITS, ISO_PLATES, ISO_POTS, ISO_ROUND_COLUMNS,
@@ -109,6 +109,19 @@ const FLAT_TRIES = 12;
  */
 const STAIRS_RUN_MIN = 5;
 const STAIRS_PER_LEVEL = 4;
+/**
+ * Gateways where a straight corridor leaves a room through its north wall: most such mouths get one; of those, some are
+ * barred (a grate one sees through but must go round, kept only where there is another way) and some have their doors
+ * standing open, the rest are open arches. The grate stops bodies in a strip GRATE_DEPTH deep at the foot of the way.
+ */
+const GATEWAY_CHANCE = 0.85;
+const GRATE_SHARE = 0.3;
+const DOOR_SHARE = 0.35;
+const GRATE_DEPTH = 6;
+/** The gateway's art reaches this many tiles either side of the way (its pillars and open doors over the faces). */
+const GATEWAY_REACH = 2;
+/** The widest decor set into a straight face, in tiles. */
+const MAX_DECOR_SPAN = Math.max(...Object.values(ISO_DECOR).map((decor) => decor.span));
 
 type Corner = SlantCorner;
 
@@ -422,6 +435,61 @@ export class IsoDresser {
     const open = (tx: number): boolean => this.site.isFloor(tx, y) && !this.level.slopes.has(tx + y * W) && !this.level.isSafeZone(tx, y);
     const wall = (tx: number): boolean => this.site.isWall(tx, y) && !this.level.slopes.has(tx + y * W);
     return open(x) && open(x + 1) && wall(x - 1) && wall(x + STAIRS_PASSAGE);
+  }
+
+  /**
+   * Gateways at the mouths of the straight north–south corridors two tiles wide where they come out through a room's
+   * north wall (the faces either side of the way have floor before them, nothing set into them close by): an arch, the
+   * arch with its doors open, or the arch barred.
+   */
+  layGateways(props: PropPlacement[], keep: Keep): void {
+    const { level } = this;
+    forEachTile(1, 1, level.width - 2, level.height - 2, (x, y) => {
+      if (!this.passage(x, y) || this.passage(x, y + 1) || !this.opensOnFaces(x, y)) return;
+      if (this.site.rng() >= GATEWAY_CHANCE) return;
+      this.clearFaceDecor(x - GATEWAY_REACH, x + STAIRS_PASSAGE - 1 + GATEWAY_REACH, y);
+      props.push({ kind: this.gatewayKind(x, y, keep), tx: x, ty: y + 1, dx: TILE_WIDTH / 2 });
+    });
+  }
+
+  /**
+   * Whether the corridor's last row (x, y) leaves through a face either side: the way opens on floor, and the walls
+   * beside it have the room before them (floor, or something standing on it), no slant.
+   */
+  private opensOnFaces(x: number, y: number): boolean {
+    const W = this.level.width;
+    const below = y + 1;
+    const plain = (tx: number): boolean => !this.level.slopes.has(tx + below * W);
+    const way = (tx: number): boolean => this.site.isFloor(tx, below) && plain(tx);
+    const face = (tx: number): boolean => !this.site.isWall(tx, below) && this.level.getTile(tx, below)?.type !== TileType.Hole && plain(tx);
+    return way(x) && way(x + 1) && face(x - 1) && face(x + STAIRS_PASSAGE) && !this.level.isSafeZone(x, below);
+  }
+
+  /** The gateway's art covers the faces from x0 to x1 in wall row y: whatever decor was set into them there goes. */
+  private clearFaceDecor(x0: number, x1: number, y: number): void {
+    const W = this.level.width;
+    for (let tx = x0 - MAX_DECOR_SPAN + 1; tx <= x1; tx++) {
+      const decor = this.level.wallDecor.get(tx + y * W);
+      if (decor && isIsoDecor(decor) && tx + ISO_DECOR[decor].span - 1 >= x0) this.level.wallDecor.delete(tx + y * W);
+    }
+  }
+
+  /** Which gateway: barred (if the way can be shut without cutting anything off), its doors open, or an open arch. */
+  private gatewayKind(x: number, y: number, keep: Keep): PropKind {
+    const roll = this.site.rng();
+    if (roll < GRATE_SHARE) return this.bar(x, y, keep) ? 'iso_gate_grate' : 'iso_gate_arch';
+    return roll < GRATE_SHARE + DOOR_SHARE ? 'iso_gate_door' : 'iso_gate_arch';
+  }
+
+  /** Shuts the way at its mouth with a grate, a strip at the foot of its last row, if everything stays reachable. */
+  private bar(x: number, y: number, keep: Keep): boolean {
+    const cells: Array<[number, number]> = [[x, y], [x + 1, y]];
+    if (!keep(() => this.site.setTiles(cells, TileType.Obstacle))) return false;
+    for (const [tx, ty] of cells) {
+      this.level.blockBoxes.set(tx + ty * this.level.width, { x0: 0, x1: TILE_WIDTH, y0: TILE_HEIGHT - GRATE_DEPTH, y1: TILE_HEIGHT });
+      this.site.claim(tx, ty);
+    }
+    return true;
   }
 
   /** Whether a straight corridor stretch starts at (x, y) (none just above it). */

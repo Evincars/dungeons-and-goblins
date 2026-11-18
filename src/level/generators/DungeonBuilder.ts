@@ -25,7 +25,7 @@ import { isPillarColumn } from '../TerrainAutotile';
 import {
   CAVE_CENTREPIECES, CAVE_CRYSTALS, GEM_CRYSTALS, CAVE_PLANTS, CAVE_SPIRES, CAVE_STONES, COFFINS, COLD_CANDLES, CRATES, CRYPT_CENTREPIECES,
   CASTLE_BANNERS, CASTLE_BONES, CASTLE_COLD_CANDLES, CASTLE_FLAGS, CASTLE_POOL_COLUMNS, CASTLE_POTS, CASTLE_RUBBLE, CASTLE_RUGS,
-  CASTLE_STORES, COLUMNS, HALL_CENTREPIECES, HANGINGS, PEDESTALS, POSTS, PROPS, SARCOPHAGI, STORE_CENTREPIECES, STORE_FURNITURE, STORE_GOODS, URNS,
+  CASTLE_STORES, CATACOMB_FIXTURES, COLUMNS, HALL_CENTREPIECES, HANGINGS, PEDESTALS, POSTS, PROPS, SARCOPHAGI, STORE_CENTREPIECES, STORE_FURNITURE, STORE_GOODS, URNS,
   propBlockRect, propWeight,
 } from '../Props';
 import type { BlockRect, PropDef, PropKind, PropPlacement } from '../Props';
@@ -144,6 +144,22 @@ const CANDLE_CHANCE = 0.7;
 /** Chance a torch spot is left dark, and that a free face gets a wall hanging. */
 const TORCH_SKIP_CHANCE = 0.25;
 const HANGING_CHANCE = 0.12;
+/**
+ * In the catacombs more faces are hung (CATACOMB_HANGING_CHANCE), and this share of what hangs there is the catacombs'
+ * own iron (cauldrons, shackles, chains), the rest trophies and banners.
+ */
+const CATACOMB_HANGING_CHANCE = 0.2;
+const CATACOMB_FIXTURE_SHARE = 0.6;
+/**
+ * The catacombs' spike traps: how many (min, max) are set in their corridors, never within TRAP_DOOR_GAP tiles of a door
+ * and at least TRAP_SPACING tiles (across plus down) from one another.
+ */
+const SPIKE_TRAPS = [5, 9] as const;
+const TRAP_DOOR_GAP = 2;
+const TRAP_SPACING = 6;
+/** Pillars standing about a catacomb room: this many (min, max), and one more for every so many tiles of it. */
+const PILLAR_COUNT = [1, 2] as const;
+const PILLAR_AREA = 60;
 /** Chance a dungeon room keeps a storeroom corner: furniture backed against its north wall, goods in front. */
 const STORE_CHANCE = 0.18;
 /** A storeroom has up to this many pieces of furniture, and up to this many goods around each. */
@@ -171,6 +187,17 @@ const CAVE_STONE_COUNT = [6, 12] as const;
 const CAVE_PLANT_COUNT = [5, 10] as const;
 /** The plant colours a cave hall can grow (one per hall, so it reads as one cave). */
 const PLANT_COLOURS = ['yellow', 'red', 'lilac', 'teal'] as const;
+/**
+ * The portals in the north walls of the safe room (the stairs the heroes came down by, this many tiles in from its west
+ * wall) and the exit room (the way on, in its middle): each spans its middle column and PORTAL_HALF either side, with a
+ * candelabra PORTAL_CANDELABRA tiles out on each side, and the floor PORTAL_STEP rows deep before it kept clear (the
+ * heroes start on its last row).
+ */
+const SAFE_PORTAL_INSET = 3;
+const PORTAL_HALF = 1;
+const PORTAL_CANDELABRA = 2;
+const PORTAL_STEP = 1;
+const PORTAL_LIGHT: PropKind = 'castle_candelabra';
 /** Exit room: campfires this many tiles either side of the exit, banners every other tile of its north wall. */
 const CAMPFIRE_SPREAD = 3;
 const EXIT_BANNERS: readonly PropKind[] = ['banner_red', 'banner_blue', 'pennant_red', 'pennant_blue'];
@@ -240,6 +267,8 @@ export type DungeonLayout = {
   props: PropPlacement[];
   /** World positions of the campfires in the exit room (each on a blocked tile). */
   campfires: Array<{ x: number; y: number }>;
+  /** The catacombs' spike traps: the middles of their tiles (systems/TrapSystem.ts). */
+  spikes: Array<{ x: number; y: number }>;
   exitButtonPos: { x: number; y: number };
   shopPos: { x: number; y: number };
   /** Where the training dummy stands in the safe room. */
@@ -278,6 +307,8 @@ export class DungeonBuilder {
   private roomIdSeq = 0;
   /** Tiles already taken by a prop or pit ring, so features don't overlap. */
   private readonly usedTiles = new Set<number>();
+  /** The floor tiles under the portals' faces and their candelabras (tx + ty·W): nothing else hangs on those faces. */
+  private readonly portalFaces = new Set<number>();
   /** Dresses the isometric castle's rooms, and the mines', through the builder's own ways of setting things down. */
   private readonly iso = new IsoDresser(this.isoSite());
   private readonly mines = new MineDresser(this.isoSite());
@@ -353,7 +384,9 @@ export class DungeonBuilder {
 
     this.removeSlivers();
 
-    const playerTile = { x: safe.x + 2, y: safe.y + Math.floor(safe.h / 2) };
+    // The heroes come in by the portal in the safe room's north wall: they start just in front of it.
+    const safePortalX = safe.x + SAFE_PORTAL_INSET;
+    const playerTile = { x: safePortalX, y: safe.y + PORTAL_STEP };
     const exitTile = { x: exit.x + Math.floor(exit.w / 2), y: exit.y + Math.floor(exit.h / 2) };
     const anchors = () => [exitTile, ...dungeonRooms.map((r) => this.anyFloor(r))
       .filter((p): p is TilePos => p !== null)];
@@ -362,7 +395,10 @@ export class DungeonBuilder {
     // ── Room features, each kept only if everything stays reachable ───────────
     const props: PropPlacement[] = [];
     this.usedTiles.clear();
+    this.portalFaces.clear();
     const keepIfReachable = (apply: () => TileChange[]) => this.tryFeature(playerTile, anchors, apply);
+    this.portal('portal_stairs', safePortalX, safe, props, keepIfReachable);
+    this.portal('portal_dark', exitTile.x, exit, props, keepIfReachable);
     for (const room of dungeonRooms) {
       if (cfg.theme === 'castle2') {
         this.iso.dressRoom(room, props, keepIfReachable);
@@ -387,9 +423,13 @@ export class DungeonBuilder {
       else this.furnish(room, structured, props, keepIfReachable);
     }
     if (cfg.theme === 'castle') this.castleFaces(dungeonRooms, props, keepIfReachable);
-    if (cfg.theme === 'castle2') this.iso.layCorridorStairs();
+    if (cfg.theme === 'castle2') {
+      this.iso.layCorridorStairs();
+      this.iso.layGateways(props, keepIfReachable);
+    }
 
     if (cfg.theme === 'catacomb') this.wallMaterials(dungeonRooms);
+    const spikes = cfg.theme === 'catacomb' ? this.spikeTraps([safe, ...dungeonRooms, exit], [...doorTiles, ...exitDoorTiles], keepIfReachable) : [];
 
     // ── Safe zones ────────────────────────────────────────────────────────────
     for (const room of [safe, exit]) {
@@ -424,7 +464,9 @@ export class DungeonBuilder {
       torchPositions: torchTiles.map((t) => ({ x: t.x * TILE_WIDTH + TILE_WIDTH / 2, y: t.y * TILE_HEIGHT - TORCH_FLAME_LIFT })),
       props,
       campfires: campfires.map((t) => tileCenter(t.x, t.y)),
-      exitButtonPos: tileCenter(exitTile.x, exitTile.y),
+      spikes: spikes.map((t) => tileCenter(t.x, t.y)),
+      // The way on is the exit room's portal: its foot, at the foot of the north wall.
+      exitButtonPos: { x: exitTile.x * TILE_WIDTH + TILE_WIDTH / 2, y: exit.y * TILE_HEIGHT },
       shopPos: tileCenter(shopTile.x, shopTile.y),
       dummyPos: tileCenter(dummyTile.x, dummyTile.y),
       safeDoor: { tiles: doorTiles, boundaryX: (doorX + 1) * TILE_WIDTH + TILE_WIDTH / 2 },
@@ -907,6 +949,17 @@ export class DungeonBuilder {
     const roomGem = this.rng() < GEM_CRYSTAL_CHANCE;
     if (roomGem && GEM_CRYSTALS_PLACED) this.scatterSolid(room, this.shuffledFreeTiles(room), GEM_CRYSTALS, props, keep);
     this.urnsAlongWalls(room, roll >= 0.4 && roll < 0.7 ? 4 : 2, props, keep);
+    this.pillars(room, props, keep);
+  }
+
+  /**
+   * The catacombs' old wooden pillars (posts, one hung with a cauldron, one with a chain, one broken) standing about the
+   * room wherever there is floor round them: more in a bigger room. They block, and never clear over whoever is behind.
+   */
+  private pillars(room: RoomData, props: PropPlacement[], keep: Keep): void {
+    const open = this.shuffledFreeTiles(room);
+    const count = this.countIn(PILLAR_COUNT) + Math.floor((room.w * room.h) / PILLAR_AREA);
+    for (let i = 0; i < count; i++) this.scatterSolid(room, open, POSTS, props, keep);
   }
 
   // ── The castle ──────────────────────────────────────────────────────────────
@@ -1204,7 +1257,7 @@ export class DungeonBuilder {
       for (const x of [fire.x - 1, fire.x + 1]) this.placeCandle(x, fire.y + 1, props);
     }
     const kit = this.cfg.theme === 'castle2' ? ISO_GATHERING_KIT : GATHERING_KIT;
-    if (this.cfg.theme === 'mines') this.mines.lightGathering(room, props);
+    if (this.cfg.theme === 'mines') this.mines.lightGathering(room, props, (tx) => this.byPortal(tx, room.y));
     else if (this.cfg.theme !== 'castle2') this.hangBanners(room, torches, props);
     const corners: Array<[number, number]> = [
       [room.x, room.y], [room.x + room.w - 1, room.y], [room.x, room.y + room.h - 1], [room.x + room.w - 1, room.y + room.h - 1],
@@ -1216,6 +1269,53 @@ export class DungeonBuilder {
     this.urnsAlongWalls(room, GATHERING_URNS, props, keep, kit.urns);
     this.scatterLoose(this.shuffledFreeTiles(room).filter((t) => this.againstWall(t.x, t.y)), kit.goods, GATHERING_GOODS, props);
     return lit;
+  }
+
+  /**
+   * A portal set into a gathering room's north wall over column `tx` (the castle's great arch, three tiles of face): the
+   * floor before it kept clear, a candelabra standing either side, and nothing else hung on that stretch of wall.
+   */
+  private portal(kind: PropKind, tx: number, room: RoomData, props: PropPlacement[], keep: Keep): void {
+    const W = this.cfg.mapWidth;
+    const reach = PORTAL_HALF + PORTAL_CANDELABRA;
+    for (let x = tx - reach; x <= tx + reach; x++) this.portalFaces.add(x + room.y * W);
+    forEachTile(tx - PORTAL_HALF, room.y, tx + PORTAL_HALF, room.y + PORTAL_STEP, (x, y) => this.claim(x, y));
+    props.push({ kind, tx, ty: room.y });
+    for (const side of [-1, 1]) this.placeSolid([[tx + side * PORTAL_CANDELABRA, room.y]], [PORTAL_LIGHT], props, keep);
+  }
+
+  /**
+   * Spike traps in the catacombs' corridors, where the heroes must step round them: on corridor floor away from the
+   * doors, each kept only if, with it and every trap before it walled off, everything can still be reached (so there is
+   * always a way past). They are floor again once chosen: anyone may walk over one, at a price.
+   */
+  private spikeTraps(rooms: readonly RoomData[], doors: readonly TilePos[], keep: Keep): TilePos[] {
+    const inRoom = (x: number, y: number) => rooms.some((r) => x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h);
+    const byDoor = (x: number, y: number) => doors.some((d) => Math.abs(d.x - x) <= TRAP_DOOR_GAP && Math.abs(d.y - y) <= TRAP_DOOR_GAP);
+    const spots: TilePos[] = [];
+    forEachTile(1, 1, this.cfg.mapWidth - 2, this.cfg.mapHeight - 2, (x, y) => {
+      if (this.free(x, y) && !inRoom(x, y) && !byDoor(x, y)) spots.push({ x, y });
+    });
+    const traps: TilePos[] = [];
+    const wanted = this.countIn(SPIKE_TRAPS);
+    for (let i = spots.length - 1; i >= 0 && traps.length < wanted; i--) {
+      const spot = spots.splice(Math.floor(this.rng() * (i + 1)), 1)[0];
+      if (!this.spaced(spot, traps) || !keep(() => this.setTiles([[spot.x, spot.y]], TileType.Obstacle))) continue;
+      traps.push(spot);
+      this.claim(spot.x, spot.y);
+    }
+    this.setTiles(traps.map((t): [number, number] => [t.x, t.y]), TileType.Floor);
+    return traps;
+  }
+
+  /** Whether a spot lies far enough from every trap already set (they are strewn, not clustered). */
+  private spaced(spot: TilePos, traps: readonly TilePos[]): boolean {
+    return traps.every((t) => Math.abs(t.x - spot.x) + Math.abs(t.y - spot.y) >= TRAP_SPACING);
+  }
+
+  /** Whether a face column of a gathering room's north wall is the portal's or its candelabras'. */
+  private byPortal(tx: number, ty: number): boolean {
+    return this.portalFaces.has(tx + ty * this.cfg.mapWidth);
   }
 
   /** A campfire on its tile, which it blocks (at its stones), if the way through stays open. */
@@ -1443,7 +1543,8 @@ export class DungeonBuilder {
     return this.plainFloor(tx, ty) && !sloped(tx - 1) && !sloped(tx + 1)
       && this.isWall(tx, ty - 1) && this.isWall(tx, ty - 2)
       && this.isWall(tx - 1, ty - 1) && this.isWall(tx + 1, ty - 1)
-      && !isPillarColumn(tx) && !this.level.wallDecor.has(tx + (ty - 1) * W) && !this.besideCastleDecor(tx, ty - 1);
+      && !isPillarColumn(tx) && !this.level.wallDecor.has(tx + (ty - 1) * W) && !this.besideCastleDecor(tx, ty - 1)
+      && !this.byPortal(tx, ty);
   }
 
   /** Whether a castle wall tile is beside a decorated stretch, where a pilaster frames it (nothing hangs there). */
@@ -1476,10 +1577,18 @@ export class DungeonBuilder {
 
   private hangingRow(ty: number, torches: TilePos[], props: PropPlacement[]): void {
     const nearTorch = (tx: number) => torches.some((t) => t.y === ty && Math.abs(t.x - tx) < 2);
+    const chance = this.cfg.theme === 'catacomb' ? CATACOMB_HANGING_CHANCE : HANGING_CHANCE;
     for (let tx = 1; tx < this.cfg.mapWidth - 1; tx++) {
-      if (!this.mountable(tx, ty) || nearTorch(tx) || this.level.isSafeZone(tx, ty) || this.rng() > HANGING_CHANCE) continue;
-      props.push({ kind: this.pickProp(this.cfg.theme === 'castle' ? CASTLE_BANNERS : HANGINGS), tx, ty });
+      if (!this.mountable(tx, ty) || nearTorch(tx) || this.level.isSafeZone(tx, ty) || this.rng() > chance) continue;
+      props.push({ kind: this.pickProp(this.hangingKinds()), tx, ty });
       tx += 2;
     }
+  }
+
+  /** What hangs on a face: the castle's banners; in the catacombs mostly their own iron, else trophies and banners. */
+  private hangingKinds(): readonly PropKind[] {
+    if (this.cfg.theme === 'castle') return CASTLE_BANNERS;
+    if (this.cfg.theme === 'catacomb' && this.rng() < CATACOMB_FIXTURE_SHARE) return CATACOMB_FIXTURES;
+    return HANGINGS;
   }
 }

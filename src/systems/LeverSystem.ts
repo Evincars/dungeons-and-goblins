@@ -36,7 +36,7 @@ function openGate(lever: Lever, level: Level): void {
 
 /**
  * The exit room's lever: one pull — nobody is asked — and its portcullis drops 5 seconds later, shutting the room
- * for good; whoever is outside then stays out. The exit button works whether it was pulled or not.
+ * for good; whoever is outside then stays out. The exit portal works whether it was pulled or not.
  */
 function shutExit(lever: Lever): void {
   if (!playerUsing(lever)) return;

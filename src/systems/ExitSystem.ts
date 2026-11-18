@@ -1,7 +1,6 @@
 import { world, q, localPlayer } from '../world';
 import type { DepartChoice, Entity, Player, PlayerSlot } from '../world';
 import { TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
-import { setVisualFrame } from '../render/AnimatedVisual';
 import { sound } from '../audio/SoundPlayer';
 import { coop } from '../network/CoopSession';
 import { text } from '../core/texts';
@@ -11,16 +10,15 @@ import { playerUsing } from './TargetSystem';
 import { logLine } from './RollLogSystem';
 
 /**
- * Leaving the level. A hero pressing the exit room's button asks every hero standing in the exit room — and anyone
+ * Leaving the level by the dark portal in the exit room's north wall (its "button", entities/DungeonFactory.ts). A hero
+ * using it asks every hero standing in the exit room — and anyone
  * who walks in before it is settled — whether to go on to the next level or end the run there; nobody outside the
  * room is asked. Once every hero in the room has chosen, the party goes deeper if they all chose to, and the run ends
  * if anyone chose to end it. Heroes outside the room when the party goes deeper are left behind, dead, and come back
- * on the next level with nothing (game/Fallen.ts). Should everyone walk out before it is settled, the button can be
+ * on the next level with nothing (game/Fallen.ts). Should everyone walk out before it is settled, the portal can be
  * pressed again.
  */
 
-/** Frame of the exit button once pressed. */
-const PRESSED_FRAME = 1;
 /** Choices waiting for the next tick, at most this many (a flood from one guest is cut off). */
 const MAX_QUEUED = 16;
 
@@ -37,7 +35,7 @@ function exitRoom(): NonNullable<Entity['room']> | undefined {
   return undefined;
 }
 
-/** Whether a hero stands in the exit room, on their feet: the heroes the exit button asks. */
+/** Whether a hero stands in the exit room, on their feet: the heroes the exit portal asks. */
 export function inExitRoom(player: Player): boolean {
   const room = exitRoom();
   if (!room || !isStanding(player)) return false;
@@ -47,7 +45,7 @@ export function inExitRoom(player: Player): boolean {
   return tx >= x && ty >= y && tx < x + w && ty < y + h;
 }
 
-/** The exit button's state as this screen sees it (its own, or the copy a guest was sent); undefined between levels. */
+/** The exit portal's state as this screen sees it (its own, or the copy a guest was sent); undefined between levels. */
 export function departure(): ExitState | undefined {
   for (const button of buttons) return button.exitButton;
   return undefined;
@@ -68,17 +66,9 @@ export function requestDeparture(choice: DepartChoice): void {
   if (me) chooseDeparture(seatOf(me), choice);
 }
 
-/** Shows the button pressed (kept in the visual too, so co-op guests, who mirror components, see it) or back up. */
-function showPressed(button: Button, pressed: boolean): void {
-  const col = pressed ? PRESSED_FRAME : 0;
-  if (button.visual) button.visual.col = col;
-  if (button.visual && button.sprite) setVisualFrame(button.sprite, button.visual.sheet, col, 0);
-}
-
 function press(button: Button): void {
   button.exitButton.activated = true;
   button.exitButton.choices = {};
-  showPressed(button, true);
   sound.playSound('level_exit', button.position.x, button.position.y);
 }
 
@@ -86,7 +76,6 @@ function press(button: Button): void {
 function release(button: Button): void {
   button.exitButton.activated = false;
   button.exitButton.choices = {};
-  showPressed(button, false);
 }
 
 function playerAt(slot: PlayerSlot): Player | undefined {
@@ -130,7 +119,7 @@ function settle(button: Button): void {
   if (exit.outcome === 'next') leaveBehind();
 }
 
-/** Host, each tick: a press of the exit button, the choices that came in, and the decision once everyone asked has made it. */
+/** Host, each tick: a use of the exit portal, the choices that came in, and the decision once everyone asked has made it. */
 export function updateExit(): void {
   for (const button of buttons) {
     const exit = button.exitButton;

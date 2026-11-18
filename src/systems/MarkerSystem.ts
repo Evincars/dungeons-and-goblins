@@ -2,6 +2,7 @@ import { Graphics } from 'pixi.js';
 import type { Container } from 'pixi.js';
 import type { Entity } from '../world';
 import { focusedEntity } from './TargetSystem';
+import { TRADER_FIGURE, TRADER_FRAME, TRADER_SCALE } from '../entities/Trader';
 
 /**
  * The corner brackets (from Catacomb Snatch Redux) framing what this screen's player would use — a chest, the
@@ -38,10 +39,30 @@ function draw(g: Graphics, halfW: number, halfH: number): void {
   drawn.halfH = halfH;
 }
 
-/** Half the size of what is drawn of an entity: its sprite, or (a stash, which has none of its own) its body. */
-function halfSize(e: Entity): { w: number; h: number } {
-  if (e.sprite && !e.sprite.destroyed) return { w: e.sprite.width / 2, h: e.sprite.height / 2 };
-  return { w: e.radius?.x ?? ARM, h: e.yOffset ?? e.radius?.y ?? ARM };
+/**
+ * Where the brackets go on an entity: half the size of what is drawn of it and how far its middle lies off the sprite's
+ * (the trader's figure fills only part of its frame; a stash, which has no sprite of its own, by its body).
+ */
+const box = { w: 0, h: 0, dx: 0, dy: 0 };
+const TRADER_BOX = {
+  w: ((TRADER_FIGURE.x1 - TRADER_FIGURE.x0) * TRADER_SCALE) / 2,
+  h: ((TRADER_FIGURE.y1 - TRADER_FIGURE.y0) * TRADER_SCALE) / 2,
+  dx: ((TRADER_FIGURE.x0 + TRADER_FIGURE.x1) / 2 - TRADER_FRAME / 2) * TRADER_SCALE,
+  dy: ((TRADER_FIGURE.y0 + TRADER_FIGURE.y1) / 2 - TRADER_FRAME / 2) * TRADER_SCALE,
+};
+
+function boxOf(e: Entity): typeof box {
+  if (e.shopNpc) return Object.assign(box, TRADER_BOX);
+  box.dx = 0;
+  box.dy = 0;
+  if (e.sprite && !e.sprite.destroyed) {
+    box.w = e.sprite.width / 2;
+    box.h = e.sprite.height / 2;
+    return box;
+  }
+  box.w = e.radius?.x ?? ARM;
+  box.h = e.yOffset ?? e.radius?.y ?? ARM;
+  return box;
 }
 
 /** The brackets' graphic, made again for each level's layer. */
@@ -61,9 +82,9 @@ export function updateMarker(gameLayer: Container): void {
   if (!target?.position) return;
   clock = (clock + 1) % CYCLE_TICKS;
   const swing = Math.round(SWING * Math.sin((clock / CYCLE_TICKS) * Math.PI * 2));
-  const size = halfSize(target);
+  const size = boxOf(target);
   const halfW = Math.round(size.w) + MARGIN + swing;
   const halfH = Math.round(size.h) + MARGIN + swing;
   if (drawn.halfW !== halfW || drawn.halfH !== halfH) draw(g, halfW, halfH);
-  g.position.set(Math.round(target.position.x), Math.round(target.position.y - (target.yOffset ?? 0)));
+  g.position.set(Math.round(target.position.x + size.dx), Math.round(target.position.y - (target.yOffset ?? 0) + size.dy));
 }

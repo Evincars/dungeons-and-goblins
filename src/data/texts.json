@@ -201,6 +201,7 @@
   "roll.gold": "+{amount} gold",
   "roll.crushed": "CRUSHED",
   "roll.left_behind": "LEFT BEHIND",
+  "roll.trap": "Spike trap! -{damage} ({dice})",
   "roll.need": "Need {total}",
   "roll.won": "WON!",
   "roll.gift": "A GIFT!",
@@ -278,6 +279,7 @@
   "combat_log.event.feature": "{name} uses {item}",
   "combat_log.event.parry": "{name} parries, {damage} dmg less",
   "combat_log.event.riposte": "{name} ripostes",
+  "combat_log.event.trap": "{name} springs a spike trap: {damage} dmg ({item})",
   "combat_log.toggle_aria": "Show or hide the combat log",
 
   "mob.goblin": "Goblin",

@@ -16,6 +16,7 @@ import { updateDeath } from './DeathSystem';
 import { updateHoles, updateFalling } from './HoleSystem';
 import { updateDoors } from './DoorSystem';
 import { updateExit } from './ExitSystem';
+import { updateTraps } from './TrapSystem';
 import { updateShop } from './ShopSystem';
 import { animateTraders } from './TraderSystem';
 import { updateRespawns } from './RespawnSystem';
@@ -99,6 +100,7 @@ export const SIMULATION: readonly System[] = [
   ({ level }) => updateDeath(level),
   ({ level }) => updateHoles(level),
   ({ level }) => updateFalling(level),
+  () => updateTraps(),
   () => updateChests(),
   () => updateStashes(),
   () => updateLootRolls(),

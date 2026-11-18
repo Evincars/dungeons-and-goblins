@@ -12,7 +12,7 @@ export const Sense = {
   nest: 4,
   loot: 8,
   item: 16,
-  /** Things a player can use: the shop keeper, unopened chests, the exit button. */
+  /** Things a player can use: the shop keeper, unopened chests, the exit portal. */
   usable: 32,
   /** Torches and campfires (they crackle). */
   torch: 64,

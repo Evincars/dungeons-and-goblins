@@ -134,6 +134,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   gate: { lift: 'number' },
   lever: { pulled: 'boolean', rest: 'number' },
   stash: { coins: 'number' },
+  spikeTrap: { sprung: 'boolean', ticks: 'number' },
   lootRoll: { id: 'number', item: 'object', ticks: 'number', choices: 'object' },
   inventory: {},
   featuresOff: {},
@@ -215,7 +216,7 @@ function validParty(party: NonNullable<EntityState['party']>): boolean {
   return voteOk && noticeOk;
 }
 
-/** The exit button's question: only known seats choosing, and a known decision (or none yet). */
+/** The exit portal's question: only known seats choosing, and a known decision (or none yet). */
 function validDeparture(exit: NonNullable<EntityState['exitButton']>): boolean {
   const choices = Object.entries(exit.choices);
   return choices.length <= PLAYER_SLOTS.length && choices.every(([slot, choice]) => isPlayerSlot(slot) && isDepartChoice(choice))
@@ -275,7 +276,7 @@ function checkDetails(data: EntityState): void {
   ensure(!data.projectile?.spell || isSpellId(data.projectile.spell), 'Invalid spell');
   ensure(!data.party || validParty(data.party), 'Invalid party state');
   ensure(!data.lootRoll || validLootRoll(data.lootRoll), 'Invalid loot roll');
-  ensure(!data.exitButton || validDeparture(data.exitButton), 'Invalid exit button');
+  ensure(!data.exitButton || validDeparture(data.exitButton), 'Invalid exit portal');
   ensure((data.door?.exit ?? true) === true && (data.lever?.exit ?? true) === true, 'Invalid door');
   const slot = data.playerInput?.spellSlot;
   ensure(slot === undefined || (Number.isInteger(slot) && slot >= 0 && slot < QUICK_SLOTS), 'Invalid quick-bar square');

@@ -17,9 +17,10 @@ export type Drop =
   | { kind: 'coins'; min: number; max: number }
   /**
    * One random thing from the catalogues: a weapon, a shield or a suit of armour; `magic`: it may be magical (+1 to +3),
-   * more often for a finder with the Dungeon Delver feat.
+   * more often for a finder with the Dungeon Delver feat, and by `magicPercent` more still; `picks`: the dearest of this
+   * many drawn (a rarer chest holds dearer things).
    */
-  | { kind: 'gear'; magic?: boolean }
+  | { kind: 'gear'; magic?: boolean; magicPercent?: number; picks?: number }
   /** Nothing at all (most kills give up no gear). */
   | { kind: 'none' };
 
@@ -42,8 +43,8 @@ const DROP_HANDLERS: DropHandlers = {
   // Straight to whoever found it (said over their head); a rare piece in co-op goes to the party's roll instead,
   // and what the finder can't carry lands on the floor, to be taken with E.
   gear: (x, y, drop, finder) => {
-    const item = randomItem(GEAR);
-    if (drop.magic) enchantFound(item, finder);
+    const item = dearestOf(drop.picks ?? 1);
+    if (drop.magic) enchantFound(item, finder, drop.magicPercent ?? 0);
     if (offerLoot(item) || (finder && receiveItem(finder, item))) return;
     createItemPickup(x, y, item);
   },
@@ -73,9 +74,22 @@ function magicBonusRoll(): number {
   return 1;
 }
 
-/** Gear found in a chest is magical by the finder's chance: a bonus, and its name says so ("Longsword +1"). */
-function enchantFound(item: InventoryItem, finder: Player | undefined): void {
-  if (Math.random() * PERCENT >= chestMagicPercent(finder)) return;
+/** The dearest of `picks` pieces of gear drawn at random. */
+function dearestOf(picks: number): InventoryItem {
+  let best = randomItem(GEAR);
+  for (let i = 1; i < picks; i++) {
+    const other = randomItem(GEAR);
+    if (other.value > best.value) best = other;
+  }
+  return best;
+}
+
+/**
+ * Gear found in a chest is magical by the finder's chance (and `extra` percent more, a rarer chest's): a bonus, and its
+ * name says so ("Longsword +1").
+ */
+function enchantFound(item: InventoryItem, finder: Player | undefined, extra: number): void {
+  if (Math.random() * PERCENT >= chestMagicPercent(finder) + extra) return;
   enchant(item, magicBonusRoll());
 }
 
@@ -92,11 +106,40 @@ const MOB_GEAR_ONE_IN = 12;
 export const DROP_TABLES = {
   // A chest always holds a weapon or armour (now and then a magical one), and some coins.
   chest: { always: [{ kind: 'gear', magic: true }], rolls: 1, entries: [{ weight: 1, drop: { kind: 'coins', min: 10, max: 30 } }] },
+  // The isometric castle's rarer chests (CHEST_TIERS): dearer gear, more often magical, and more coins.
+  chest_fine: {
+    always: [{ kind: 'gear', magic: true, magicPercent: 15, picks: 2 }], rolls: 1,
+    entries: [{ weight: 1, drop: { kind: 'coins', min: 25, max: 60 } }],
+  },
+  chest_rare: {
+    always: [{ kind: 'gear', magic: true, magicPercent: 35, picks: 3 }], rolls: 1,
+    entries: [{ weight: 1, drop: { kind: 'coins', min: 50, max: 120 } }],
+  },
   // An enemy's coins are its kill reward (entities/LootFactory.ts); now and then it also drops gear.
   mob: { always: [], rolls: 1, entries: [{ weight: MOB_GEAR_ONE_IN - 1, drop: { kind: 'none' } }, { weight: 1, drop: { kind: 'gear' } }] },
 } as const satisfies Record<string, DropTable>;
 
 export type DropTableId = keyof typeof DROP_TABLES;
+
+/**
+ * The isometric castle's chests (public/castle-izometric/chest_keys_treasure.png), one row of its sheet each: most are
+ * the plain green-bound ones, some the red-bound, few the gold-bound, each holding more than the last.
+ */
+export const CHEST_TIERS = [
+  { drops: 'chest', weight: 75 },
+  { drops: 'chest_fine', weight: 20 },
+  { drops: 'chest_rare', weight: 5 },
+] as const satisfies ReadonlyArray<{ drops: DropTableId; weight: number }>;
+
+/** A chest tier by CHEST_TIERS' weights (its index: the row of its picture). */
+export function rollChestTier(): number {
+  let roll = Math.random() * CHEST_TIERS.reduce((sum, tier) => sum + tier.weight, 0);
+  for (let i = 0; i < CHEST_TIERS.length; i++) {
+    roll -= CHEST_TIERS[i].weight;
+    if (roll < 0) return i;
+  }
+  return 0;
+}
 
 export function isDropTableId(value: unknown): value is DropTableId {
   return typeof value === 'string' && Object.keys(DROP_TABLES).includes(value);

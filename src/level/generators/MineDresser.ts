@@ -191,10 +191,13 @@ export class MineDresser {
     this.clutter(room, props, keep);
   }
 
-  /** Lanterns hung on the north face of the safe or exit room (which is otherwise furnished as in the catacombs). */
-  lightGathering(room: RoomData, props: PropPlacement[]): void {
+  /**
+   * Lanterns hung on the north face of the safe or exit room (which is otherwise furnished as in the catacombs), clear of
+   * its portal (`taken`: a face column the portal and its candelabras keep).
+   */
+  lightGathering(room: RoomData, props: PropPlacement[], taken: (tx: number) => boolean): void {
     for (const x of [room.x + Math.floor(room.w / 3), room.x + Math.floor((room.w * 2) / 3)]) {
-      if (this.straightFace(x, room.y)) props.push({ kind: this.site.pickProp(MINE_LANTERNS), tx: x, ty: room.y });
+      if (this.straightFace(x, room.y) && !taken(x)) props.push({ kind: this.site.pickProp(MINE_LANTERNS), tx: x, ty: room.y });
     }
   }
 

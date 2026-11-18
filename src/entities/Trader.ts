@@ -19,6 +19,11 @@ export const TRADER_FRAMES = { idle: 6, idle2: 11, idle3: 7, dialogue: 16, appro
 export const TRADER_FRAME = 128;
 /** Drawn at this scale, the trader stands a little taller than the heroes. */
 export const TRADER_SCALE = 0.55;
+/**
+ * What of a frame the trader's figure fills (measured from the strips, coat open), in frame pixels: the corner brackets
+ * frame it rather than the whole mostly empty frame.
+ */
+export const TRADER_FIGURE = { x0: 38, y0: 57, x1: 84, y1: TRADER_FRAME } as const;
 /** Each frame shows this many ticks (10 a second). */
 export const TRADER_FRAME_TICKS = 6;
 /** Of the idles, the plain one comes this often; the other two share the rest. */

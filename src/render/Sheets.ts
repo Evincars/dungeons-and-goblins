@@ -22,7 +22,6 @@ const SHEETS: Record<string, SheetInfo> = {
   spell_bolt:         { frameWidth: 16,  frameHeight: 16  },
   spawner:            { frameWidth: 32,  frameHeight: 40  },
   puddle:             { frameWidth: 64,  frameHeight: 32  },
-  exit_button:        { frameWidth: 32,  frameHeight: 32  },
   portcullis:         { frameWidth: 32,  frameHeight: 72  },
   lever:              { frameWidth: 32,  frameHeight: 32  },
   fx_sword_swing:     { frameWidth: 48,  frameHeight: 48  },

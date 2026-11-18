@@ -4,7 +4,8 @@ Makes public/ui/pointer.png, the game's pointers, from public/dng-pointer.png (2
 nearly transparent ground): the hand over the HUD and menus, the hand pressing (sparks at its fingertip) over
 something clickable, the battle cross in the world, and the red cross over an enemy. Each is cut from the same
 square of its quarter, cleaned of the faint noise around it and scaled down to one frame of FRAME px, side by side
-in that order. It prints each frame's hot spot (the fingertip, the cross's middle) for src/ui/Pointer.ts
+in that order. The game is dark, so each is lifted (a gamma on its colours) and ringed with a faint pale outline, to
+stand out over dark stone as well as over the panels. It prints each frame's hot spot (the fingertip, the cross's middle) for src/ui/Pointer.ts
 (POINTER_FRAMES): keep the two in step.
 
     python3 scripts/pointer-sheet.py
@@ -25,6 +26,11 @@ FRAME = 64
 SOLID = 128
 # The order of the frames, and the quarter (column, row) each is cut from.
 FRAMES = [('hand', 0, 0), ('hand_press', 1, 0), ('cross', 0, 1), ('cross_enemy', 1, 1)]
+# The colours are lifted by this gamma (under 1 brightens the darks most: the hand's black sleeve, the cross's blades).
+GAMMA = 0.55
+# The outline: this colour, this opaque, one frame pixel round the art.
+OUTLINE = (235, 225, 200)
+OUTLINE_ALPHA = 150
 
 
 def cleaned(cell: Image.Image) -> Image.Image:
@@ -33,6 +39,21 @@ def cleaned(cell: Image.Image) -> Image.Image:
     out = cell.copy()
     out.putalpha(alpha)
     return out
+
+
+def lifted(frame: Image.Image) -> Image.Image:
+    """The frame brightened, and ringed with a faint pale outline where its art meets the clear ground."""
+    r, g, b, a = frame.split()
+    lift = [round(255 * (v / 255) ** GAMMA) for v in range(256)]
+    bright = Image.merge('RGBA', (r.point(lift), g.point(lift), b.point(lift), a))
+    solid = a.point(lambda v: 255 if v >= SOLID else 0)
+    ring = Image.new('L', frame.size, 0)
+    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        ring.paste(255, (dx, dy), solid.transform(frame.size, Image.AFFINE, (1, 0, -dx, 0, 1, -dy)))
+    halo = Image.new('RGBA', frame.size, OUTLINE + (0,))
+    halo.putalpha(ring.point(lambda v: OUTLINE_ALPHA if v else 0))
+    halo.alpha_composite(bright)
+    return halo
 
 
 def fingertip(cell: Image.Image) -> tuple[float, float]:
@@ -73,7 +94,7 @@ def main() -> None:
         spot = fingertip(cell) if name.startswith('hand') else crossing(cell)
         # Scaled with premultiplied alpha, so the cleared ground leaves no dark fringe.
         small = cell.convert('RGBa').resize((FRAME, FRAME), Image.LANCZOS).convert('RGBA')
-        sheet.paste(small, (i * FRAME, 0))
+        sheet.paste(lifted(small), (i * FRAME, 0))
         print(f'{name}: hot spot {spot[0] * scale:.1f}, {spot[1] * scale:.1f}')
     OUT.parent.mkdir(parents=True, exist_ok=True)
     sheet.save(OUT)

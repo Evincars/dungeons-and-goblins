@@ -112,7 +112,10 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - Tuning tables live together: sword and spell in `src/entities/WeaponStats.ts`; mobs in
   `src/entities/MobFactory.ts` (`MOB_CONFIGS`); gold from kills and from searching openable props (`KILL_GOLD`,
   `STASH_FINDS`) in `src/entities/LootFactory.ts`, a chest's gear and how often it is magical (+1 to +3; Dungeon Delver's
-  `magicFind` adds to the chance) in `src/entities/Drops.ts`, and which props open in `src/entities/DungeonFactory.ts`; dungeon generation in
+  `magicFind` adds to the chance) in `src/entities/Drops.ts` (with the isometric castle's chest tiers, `CHEST_TIERS`: one row of
+  `public/castle-izometric/chest_keys_treasure.png` each, the rarer holding dearer gear, more often magical, and more coins),
+  the catacombs' spike traps (how many, where) in `src/level/generators/DungeonBuilder.ts` and their dice by depth
+  (`SPIKE_DICE`) in `src/systems/TrapSystem.ts`, and which props open in `src/entities/DungeonFactory.ts`; dungeon generation in
   `src/level/generators/DungeonConfig.ts` (corridors and corners on the slant there too, and what each theme builds bigger,
   `THEME_CONFIG`; the isometric castle's room dressing in `src/level/generators/IsoDresser.ts`, the mines' in
   `src/level/generators/MineDresser.ts`; the mines' props in `src/level/MineProps.ts`, their terrain pieces in `src/level/MineTiles.ts`,
@@ -181,8 +184,11 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - `src/systems/` — gameplay and presentation systems; `Simulation.ts` orders them. Using things goes through
   `playerUsing` (`TargetSystem.ts`): each press of "use" goes to one thing, the one the corner brackets frame
   (`MarkerSystem.ts`; `resolveUses` decides it each tick), items on the floor included. Spells and arrows stop on the
-  boxes bodies bump into (`Level.blocksPoint`), not on whole wall tiles. Leaving a level goes through the exit room
-  (`ExitSystem.ts`): its button asks only the heroes standing in that room (and whoever walks in before it is settled)
+  boxes bodies bump into (`Level.blocksPoint`), not on whole wall tiles. The heroes come into a level by the stairs
+  of a portal in the safe room's north wall (`portal_stairs`, they start before it) and leave by the dark portal in the exit
+  room's (`portal_dark`; the castle tileset's great arches, a candelabra either side, smoke breathing out, `entities/Smoke.ts`;
+  campfires smoke too). Leaving a level goes through the exit room
+  (`ExitSystem.ts`): using its portal (the `exitButton` entity, no picture of its own, its body the arch) asks only the heroes standing in that room (and whoever walks in before it is settled)
   whether to go deeper or end the run; deeper needs all of them, and whoever is outside then is left behind, dead. Its
   lever (`LeverSystem.ts`, `lever.exit`) drops the room's portcullis 5 s after one pull, for good (`DoorSystem.ts`, `door.exit`).
 - `src/ai/` — enemy AI: `perception/` (rbush index, sight, player trails) → `decision/` (Yuka
@@ -222,8 +228,11 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   but never at its corner, and out in the dark on their own, never behind a face), its rooms dressed by
   `generators/IsoDresser.ts` (long slanted corners, chasms and pits of `Hole` tiles that belong to no pit — nobody steps in,
   sight and shots cross — floor tones `level.floorZones`, decor set into the faces as `wallDecor`, kept off a face's ends,
-  crystal braziers and candles for light, its own foes `shade` and `grick`, `characters/IsoFoes.ts`; more corridors run down
-  the slant than in the other themes). Its stairs (`level.stairs`: the U-shaped block of `mainlevbuild1.png` is stairs, never
+  crystal braziers and candles for light, its own foes `shade` and `grick`, `characters/IsoFoes.ts`, its own chests; more
+  corridors run down the slant than in the other themes; where a straight corridor two tiles wide comes out through a room's
+  north wall a gateway stands over it, `layGateways`: an arch, the arch with its doors open, or the arch barred by a grate
+  (its tiles `Obstacle` with a strip at their foot, seen and shot through, kept only where there is another way round) —
+  the `iso_gate_*` props, made of the sheet's straight pieces by `scripts/iso-gateways.py` into `gateways.png`). Its stairs (`level.stairs`: the U-shaped block of `mainlevbuild1.png` is stairs, never
   face decor) lie only across straight north–south corridors two tiles wide (its middle, the steps; for now never in an
   east–west one). The fourth theme, the forgotten mines (`mines`, `/dungeon mines`), is built from the cave set of `public/caves2`
   alone, on a bigger map of smaller caverns joined by many corridors down the slant (`THEME_CONFIG`): no cavern is a rectangle
@@ -253,7 +262,11 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   included, breathes in reach and brightness on three out-of-step waves; crystals shine steadily), and `LevelMap.ts` (a generated
   level as validated JSON, gzipped to send or save).
 - Animated decor stored one frame per file (`public/catacombs` torches and candles) is padded to one height with the base
-  at the bottom, so only the flame moves.
+  at the bottom, so only the flame moves; the catacombs' spikes (`spike_0…4.png`) are laid two by two into a tile's frame
+  by `scripts/spike-sheet.py` (`public/catacombs/spikes.png`). The catacombs' rooms have their wooden pillars (`POSTS`: solid,
+  never cleared over) standing about them, and their faces mostly their own iron (`CATACOMB_FIXTURES`). A spike trap in a
+  corridor (`spikeTrap`, `systems/TrapSystem.ts`) bites the first hero to step on it, told over their head and in the
+  combat log, and stays up, harmless, after.
 - `src/characters/` — side-view `CharacterDef`s (`Heroes.ts`: the main characters from `public/main-characters`; clips may
   be grids read row by row, or a frame range of a sheet; casters carry a `bolt`) and their animation-state triggers.
 - `src/rules/` — the tabletop rules: dice (`Dice.ts`: d4–d20 rolls, attacks, checks; tests load the dice with
@@ -357,7 +370,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   behind it), its character sheet (`AbilityGrid`, `SheetField`, `SheetInfoPanel`, `ProficiencyPanel`, tooltips in
   `SheetTopics`; the column scrolls when it is too tall), the lists' scrollbars (`ScrollBar`), panels, pause menu. The game
   draws its own pointer over every scene (`ui/Pointer.ts`, from `public/ui/pointer.png`, made from `public/dng-pointer.png` by
-  `scripts/pointer-sheet.py`; keep the hot spots in step): the hand over menus, the HUD and panels (pressing over anything
+  `scripts/pointer-sheet.py`, lifted and outlined to stand out on the dark; keep the hot spots in step): the hand over menus, the HUD and panels (pressing over anything
   clickable), the battle cross in the world, red over an enemy; the level tells it which (`setPointerAim`). On-screen controls
   call `claimPointer` (systems/InputSystem.ts) while under the pointer, so their clicks are not attacks.
 - `src/network/` — co-op: `protocol.ts` (messages and their validators), `CoopSession.ts` (PeerJS room),

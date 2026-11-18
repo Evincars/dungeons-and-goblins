@@ -362,6 +362,14 @@ class TerrainBuilder {
     }
   };
 
+  /**
+   * Whether the sub-tile beside a face is another wall's face standing further north (its foot higher up): this face
+   * juts out past it, so it ends there with its edge, all the way up, as where it ends beside open floor.
+   */
+  private shallowerFace(sx: number, sy: number, bottom: number): boolean {
+    return this.isFace(sx, sy) && sy + this.faceK[sx + sy * this.W] - 1 < bottom;
+  }
+
   /** A plain wall-top sub-tile: solid, no face, no slant. */
   private wallTop(sx: number, sy: number): boolean {
     return this.solid(sx, sy) && !this.isFace(sx, sy) && !this.sloped(sx, sy);
@@ -401,8 +409,8 @@ class TerrainBuilder {
     const i = sx + sy * this.W;
     const h = this.faceH[i];
     const bottom = sy + this.faceK[i] - 1;
-    if (!this.solid(sx - 1, sy)) return 'left';
-    if (!this.solid(sx + 1, sy)) return 'right';
+    if (!this.solid(sx - 1, sy) || this.shallowerFace(sx - 1, sy, bottom)) return 'left';
+    if (!this.solid(sx + 1, sy) || this.shallowerFace(sx + 1, sy, bottom)) return 'right';
     if (!this.castle && this.tileAt(sx, sy)?.type === TileType.BreakableWall) return 'cracked';
     const tx = sx >> 1;
     const full = h === FACE_MAX;

@@ -144,12 +144,8 @@ const CANDLE_CHANCE = 0.7;
 /** Chance a torch spot is left dark, and that a free face gets a wall hanging. */
 const TORCH_SKIP_CHANCE = 0.25;
 const HANGING_CHANCE = 0.12;
-/**
- * In the catacombs more faces are hung (CATACOMB_HANGING_CHANCE), and this share of what hangs there is the catacombs'
- * own iron (cauldrons, shackles, chains), the rest trophies and banners.
- */
+/** In the catacombs more faces are hung, with their own iron (cauldrons, shackles, chains). */
 const CATACOMB_HANGING_CHANCE = 0.6;
-const CATACOMB_FIXTURE_SHARE = 0.75;
 /** Chance a free stretch of catacomb face three tiles wide has a barred gate set into it instead. */
 const BARRED_GATE_CHANCE = 0.12;
 /** After a hanging this many more tiles of face are left bare (in the catacombs, every other tile may be hung). */
@@ -1622,10 +1618,10 @@ export class DungeonBuilder {
     return true;
   }
 
-  /** What hangs on a face: the castle's banners; in the catacombs mostly their own iron, else trophies and banners. */
+  /** What hangs on a face: the castle's banners; in the catacombs only their own iron (no trophies, no armour). */
   private hangingKinds(): readonly PropKind[] {
     if (this.cfg.theme === 'castle') return CASTLE_BANNERS;
-    if (this.cfg.theme === 'catacomb' && this.rng() < CATACOMB_FIXTURE_SHARE) return CATACOMB_FIXTURES;
+    if (this.cfg.theme === 'catacomb') return CATACOMB_FIXTURES;
     return HANGINGS;
   }
 }

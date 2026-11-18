@@ -24,6 +24,8 @@ const CAMPFIRE_FRAME_TICKS = 6;
 const CAMPFIRE_SCALE = 1.5;
 /** The fire's art stands on the lower part of its 24px cell. */
 const CAMPFIRE_LIFT = 10;
+/** The hearth under it lies centred this far below its middle, under its ring of stones. */
+const HEARTH_DROP = 3;
 /** Torch mounts sit this far above the foot of their wall. */
 const TORCH_LIFT = 30;
 const TORCH_LIGHT_RADIUS = 120;
@@ -38,6 +40,8 @@ const HANG_TOP = 54;
  * over the wall.
  */
 const FOOT_DEPTH = 5;
+/** A prop's backing is drawn this far behind it. */
+const BEHIND = 0.5;
 /** How far onto the floor the exit portal's body reaches (where the heroes step up to it). */
 const PORTAL_DEPTH = 8;
 /**
@@ -54,12 +58,6 @@ const SCONCE_FRAME_TICKS = 8;
 /** The castle's wall candle gives a softer, smaller light than a torch. */
 const SCONCE_LIGHT_RADIUS = 96;
 const CHEST_HEALTH = 20;
-/**
- * Chests are drawn at a fixed three-quarter size; the art (chest_small.png) is a 32×53 frame with the chest
- * on its bottom edge, so this lift (at that size) rests it on its tile.
- */
-const CHEST_SCALE = 0.75;
-const CHEST_LIFT = 12;
 
 /** One of each D&D base of a catalogue list (its first picture), in the order the list has them. */
 function onePerBase(from: readonly InventoryItem[]): InventoryItem[] {
@@ -202,8 +200,9 @@ export function createSconce(x: number, y: number): Entity {
   });
 }
 
-/** A campfire on its (blocked) tile in the exit room, smoke curling up from its flames. */
+/** A campfire on its (blocked) tile in the exit room, on a hearth of flagstones, smoke curling up from its flames. */
 export function createCampfire(x: number, y: number): Entity {
+  world.add({ position: { x, y: y + HEARTH_DROP }, visual: { sheet: 'campfire_floor' }, flat: true, localOnly: true });
   createSmoke(x, y, CAMPFIRE_SMOKE);
   return world.add({
     position: { x, y },
@@ -254,6 +253,13 @@ export function createProp(p: PropPlacement): Entity {
     });
   }
   if (def.mount === 'foot') {
+    if (def.backing) {
+      const back = def.backing;
+      world.add({
+        position: { x, y: p.ty * TILE_HEIGHT + FOOT_DEPTH - BEHIND }, visual: { sheet: `${sheet}_backing` },
+        yOffset: back.lift + back.rect.h / 2 - BEHIND, localOnly: true,
+      });
+    }
     return world.add({
       ...(def.smoke ? { mist: true } : {}),
       position: { x, y: p.ty * TILE_HEIGHT + FOOT_DEPTH }, visual: { sheet }, yOffset: h / 2, localOnly: true,
@@ -325,7 +331,7 @@ export function createStash(p: PropPlacement): Entity | null {
 }
 
 /**
- * The isometric castle's chests (public/castle-izometric/chest_keys_treasure.png, cells of 32×48): a row per tier
+ * The chests (public/castle-izometric/chest_keys_treasure.png, cells of 32×48, in every theme): a row per tier
  * (Drops.ts CHEST_TIERS), and in each the chest facing four ways, each closed and open (the columns of each).
  */
 const ISO_CHEST_FACINGS = [{ closed: 0, open: 1 }, { closed: 2, open: 3 }, { closed: 5, open: 4 }, { closed: 7, open: 6 }] as const;
@@ -333,13 +339,10 @@ const ISO_CHEST_SCALE = 0.8;
 /** Its art stands on the foot of its cell, drawn about its middle: raised by half the cell, less a little to stand on its body. */
 const ISO_CHEST_LIFT = 17;
 
-/** What a chest holds and how it looks: the catacombs' and the castles' plain dark one. */
+/** What a chest holds and how it looks. */
 type ChestLook = Pick<Required<Entity>, 'chest' | 'visual' | 'yOffset'>;
-function plainChest(): ChestLook {
-  return { chest: { opened: false, disappearTicks: -1, drops: 'chest' }, visual: { sheet: 'chest_dark', col: 0, row: 0, scale: CHEST_SCALE }, yOffset: CHEST_LIFT };
-}
 
-/** A chest of the isometric castle: a tier rolled by its rarity (its row of the sheet), facing any of its four ways. */
+/** A chest (in every theme): a tier rolled by its rarity (its row of the sheet), facing any of its four ways. */
 export function isoChest(): ChestLook {
   const tier = rollChestTier();
   const facing = ISO_CHEST_FACINGS[Math.floor(Math.random() * ISO_CHEST_FACINGS.length)];
@@ -351,7 +354,7 @@ export function isoChest(): ChestLook {
 }
 
 /** A chest on the floor at (x, y), opened with "use" (systems/ChestSystem.ts). */
-export function createChest(x: number, y: number, look: ChestLook = plainChest()): Entity {
+export function createChest(x: number, y: number, look: ChestLook = isoChest()): Entity {
   return world.add({
     position: { x, y },
     ...look,

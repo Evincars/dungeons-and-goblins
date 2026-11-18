@@ -6238,6 +6238,9 @@ test("the isometric castle's chests are its own, mostly plain, some rarer with d
   buildDungeon(11, true, 'castle2');
   const chests = [...world.with('chest')];
   assert.ok(chests.length > 0 && chests.every((c) => c.visual.sheet === 'iso_chests'), 'its chests are its own');
+  world.clear();
+  buildDungeon(11, true, 'catacomb');
+  assert.ok([...world.with('chest')].every((c) => c.visual.sheet === 'iso_chests'), 'and the catacombs have them too');
 });
 
 test("the isometric castle's corridors come out through a room's north wall under gateways: arches, open doors, or a grate that bars the way", async () => {
@@ -6322,4 +6325,12 @@ test("a wall jutting out past another's face runs its edge on up to the top of t
   // Column x 7's west sub-tile (sub-x 14) beside the face of x 6 (rows 3–4), and the wall top above it (row 2).
   assert.ok(edgeAt(14 * 16, 3 * 32) && edgeAt(14 * 16, 3 * 32 + 8), 'its edge along the other face');
   assert.ok(edgeAt(14 * 16, 2 * 32 + 8) && edgeAt(14 * 16, 2 * 32), 'and on up to the open floor north');
+
+  // Now the east part juts down only one row (to row 5): its face (rows 4–5) stands beside the other's (rows 3–4).
+  const step = arena(12, 10);
+  wallRect(step, 1, 2, 10, 4);
+  wallRect(step, 7, 5, 10, 5);
+  const faces = buildTerrainPieces(step);
+  const endAt = (dy) => faces.some((p) => p.dx === 14 * 16 && p.dy === dy && p.sx === 64 && p.w === 16);
+  assert.ok([8, 9, 10, 11].every((sy) => endAt(sy * 16)), 'its face ends in its edge all the way up, not only below the other face');
 });

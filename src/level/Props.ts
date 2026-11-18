@@ -6,8 +6,6 @@
 
 export const PROP_IMAGES = {
   decorative: '/catacombs/decorative.png',
-  // The barred gate set into the catacombs' faces (scripts/catacomb-gate.py).
-  catacomb_gate: '/catacombs/barred-gate.png',
   // The catacomb tileset itself, for its free-standing columns.
   mainlev: '/catacombs/mainlevbuild-isometric.png',
   // The castle: its decor (banners, bones, pots, rubble, rugs) and its tileset (for the columns), and its two lights,
@@ -140,6 +138,11 @@ export type PropDef = {
   weight?: number;
   /** Lies flat on the floor (a rug): drawn under everything that stands or walks on it. */
   flat?: boolean;
+  /**
+   * Something drawn just behind it (from the same image): `rect`, its foot `lift` px above the prop's (the dark behind a
+   * gate's bars, where the art leaves its opening clear).
+   */
+  backing?: { rect: Rect; lift: number };
   /** Mist breathes faintly out of it (the portals of the safe and exit rooms, systems/MistSystem.ts). */
   smoke?: true;
   /** Animation frames, played in a loop `frameTime` ticks each. */
@@ -276,8 +279,12 @@ export const PROPS = {
   column_slender:    { image: 'mainlev', rect: { x: 640, y: 112, w: 16, h: 80 }, mount: 'floor', solid: true, seeThrough: true, base: { w: 14, d: 10 } },
   column_slender_low: { image: 'mainlev', rect: { x: 672, y: 144, w: 16, h: 48 }, mount: 'floor', solid: true, seeThrough: true, base: { w: 14, d: 10 } },
   chain_short:       { image: 'decorative', rect: { x: 132, y: 16, w: 7, h: 22 }, mount: 'wall', weight: 1.5 },
-  // A barred gate into the dark, set into a catacomb face three tiles wide.
-  barred_gate:       { image: 'catacomb_gate', rect: { x: 0, y: 0, w: 96, h: 80 }, mount: 'foot', weight: 0 },
+  // A barred gate into the dark (the tileset's framed bars, cols 31–36, rows 2–6), set into a catacomb face three tiles
+  // wide; the dark between its bars is the wall top's black from the same sheet.
+  barred_gate: {
+    image: 'mainlev', rect: { x: 496, y: 32, w: 96, h: 80 }, mount: 'foot', weight: 0,
+    backing: { rect: { x: 80, y: 56, w: 94, h: 56 }, lift: 20 },
+  },
   // The portals (the castle tileset's great arches, set into the north wall of the safe and exit rooms): the stairs the
   // heroes came down by, and the dark way on, smoke breathing out of both.
   portal_stairs:     { image: 'castle_main', rect: { x: 416, y: 208, w: 80, h: 96 }, mount: 'foot', smoke: true, weight: 0 },

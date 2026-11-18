@@ -84,6 +84,43 @@ function buildCampfireStrip(): void {
   setTexture('campfire', strip);
 }
 
+/**
+ * The hearth under a campfire: a ring of the tileset's warm cobbles (the cobblestone face's stones, cols 5–8, rows
+ * 22–24), unlike the floor round it, darkening a little to a sooty rim.
+ */
+const HEARTH = { w: 56, h: 34 };
+const HEARTH_STONES = { x: 80, y: 352, w: 64, h: 48 };
+const HEARTH_SOOT = 0.35;
+const HEARTH_RIM = 'rgba(24,18,14,0.9)';
+
+function buildCampfireFloor(): void {
+  const { w, h } = HEARTH;
+  const canvas = createCanvas(w, h);
+  const ctx = context2d(canvas);
+  ctx.imageSmoothingEnabled = false;
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(w / 2, h / 2, w / 2 - 1, h / 2 - 1, 0, 0, Math.PI * 2);
+  ctx.clip();
+  const stones = HEARTH_STONES;
+  ctx.drawImage(imageFor('tileset'), stones.x, stones.y, stones.w, stones.h, (w - stones.w) / 2, (h - stones.h) / 2, stones.w, stones.h);
+  ctx.translate(w / 2, h / 2);
+  ctx.scale(1, h / w);
+  const soot = ctx.createRadialGradient(0, 0, w * 0.15, 0, 0, w / 2);
+  soot.addColorStop(0, 'rgba(0,0,0,0)');
+  soot.addColorStop(1, `rgba(0,0,0,${HEARTH_SOOT})`);
+  ctx.fillStyle = soot;
+  ctx.fillRect(-w / 2, -w / 2, w, w);
+  ctx.restore();
+  ctx.strokeStyle = HEARTH_RIM;
+  ctx.beginPath();
+  ctx.ellipse(w / 2, h / 2, w / 2 - 1, h / 2 - 1, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  const texture = Texture.from(canvas);
+  texture.source.scaleMode = 'nearest';
+  setTexture('campfire_floor', texture);
+}
+
 type Rgb = { r: number; g: number; b: number };
 
 /**
@@ -113,9 +150,6 @@ function recolor(sourceKey: string, key: string, tint: Rgb, frame: { w: number; 
 /** The menu buttons: Redux's copper button art turned to cold steel, to match the dark interface. */
 const STEEL: Rgb = { r: 0.62, g: 0.68, b: 0.78 };
 const BUTTON_FRAME = { w: 128, h: 24 };
-/** Chests in old, dark wood, so they sit in the gloom of the dungeon instead of glowing orange. */
-const DARK_WOOD: Rgb = { r: 0.72, g: 0.56, b: 0.44 };
-const CHEST_FRAME = { w: 32, h: 53 };
 
 /** Loads and builds every picture, reporting how many of the image files are in (for the loading screen). */
 export async function loadAllAssets(onProgress?: (done: number, total: number) => void): Promise<void> {
@@ -124,8 +158,8 @@ export async function loadAllAssets(onProgress?: (done: number, total: number) =
   registerLazyArt();
   buildTorchStrip();
   buildCampfireStrip();
+  buildCampfireFloor();
   recolor('button', 'button_steel', STEEL, BUTTON_FRAME);
-  recolor('chest', 'chest_dark', DARK_WOOD, CHEST_FRAME);
   for (const [key, draw] of Object.entries(PROCEDURAL)) setTexture(key, Texture.from(draw()));
   setTexture('panel_hud', Texture.from(genPanelBg(HUD_PANEL.w, HUD_PANEL.h)));
   setTexture('panel_inv', Texture.from(genPanelBg(INVENTORY_PANEL.w, INVENTORY_PANEL.h)));

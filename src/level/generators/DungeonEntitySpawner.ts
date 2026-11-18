@@ -6,7 +6,7 @@ import type { MobType } from '../../world';
 import { TILE_WIDTH, TILE_HEIGHT, TileType } from '../TileType';
 import { createMob } from '../../entities/MobFactory';
 import {
-  createCampfire, createChest, createSpikeTrap, isoChest, createExitButton, createExitDoor, createProp, createRoom, createLever, createSafeDoor, createShopNpc, createStash,
+  createCampfire, createChest, createSpikeTrap, createExitButton, createExitDoor, createProp, createRoom, createLever, createSafeDoor, createShopNpc, createStash,
   createSconce, createTorch, createTrainingDummy,
 } from '../../entities/DungeonFactory';
 import type { Level } from '../Level';
@@ -75,8 +75,8 @@ function populateRoom(level: Level, room: RoomData, cfg: DungeonConfig): void {
 
   if (Math.random() < CHEST_CHANCE && floors.length) {
     const spot = pick();
-    // The isometric castle's chests are its own, some rarer than others (entities/Drops.ts CHEST_TIERS).
-    createChest(spot.x, spot.y, level.theme === 'castle2' ? isoChest() : undefined);
+    // Some chests are rarer than others (entities/Drops.ts CHEST_TIERS).
+    createChest(spot.x, spot.y);
   }
 }
 

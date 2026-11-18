@@ -173,6 +173,7 @@ function propSheets(): SpriteSheet[] {
   for (const [kind, def] of Object.entries<PropDef>(PROPS)) {
     const parts = regions.get(def.image);
     if (parts) parts[`prop_${kind}`] = propRegion(def);
+    if (parts && def.backing) parts[`prop_${kind}_backing`] = def.backing.rect;
   }
   return Object.entries(PROP_IMAGES).map(([image, src]) => new SpriteSheet(propSheetKey(image), src, { regions: regions.get(image) }));
 }
@@ -250,7 +251,6 @@ const UI_SHEETS = [
   new SpriteSheet('training_dummy', '/training_dummy.png', { grid: { frameWidth: 32, frameHeight: 32 } }),
 
   // Chests: closed and open, side by side (the open lid reaches up to the top of the frame).
-  new SpriteSheet('chest',       `${OBJECTS}/chest_small.png`, { grid: { frameWidth: 32, frameHeight: 53 } }),
   // The isometric castle's chests: a row per tier, four facings closed and open (entities/DungeonFactory.ts isoChest).
   new SpriteSheet('iso_chests', '/castle-izometric/chest_keys_treasure.png', { grid: { frameWidth: 32, frameHeight: 48 } }),
   new SpriteSheet('chest_large', `${OBJECTS}/chest_large.png`, { grid: { frameWidth: 64, frameHeight: 53 } }),

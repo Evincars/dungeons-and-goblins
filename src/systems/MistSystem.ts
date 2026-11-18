@@ -13,7 +13,7 @@ import { context2d, createCanvas } from '../render/canvas';
 /** The patch of mist: this wide and tall, its foot this far below the portal's foot (spilling onto the floor). */
 const MIST_W = 76;
 const MIST_H = 92;
-const MIST_SPILL = 8;
+const MIST_SPILL = 4;
 /** How see-through it is at most, and how it swells and thins (by this much, over a breath this many ticks long). */
 const MIST_ALPHA = 0.9;
 const BREATH = 0.15;
@@ -23,9 +23,12 @@ const MIST_LAYERS = [
   { scale: 1.1, alpha: 0.85, tint: 0xc4cad4, rise: 0.32, drift: 0.05 },
   { scale: 1.9, alpha: 0.6, tint: 0x9098a6, rise: 0.18, drift: -0.04 },
 ] as const;
-/** The shape of the patch: an ellipse this far up its height and this wide, fading out from there. */
-const SHAPE_CENTRE_Y = 0.82;
-const SHAPE_RADIUS = 0.72;
+/**
+ * The shape of the patch: an ellipse centred this far down its height, this big (of the height), fading out from its
+ * middle to nothing before any edge of the patch, the foot too: the mist rises out of the steps from nowhere.
+ */
+const SHAPE_CENTRE_Y = 0.56;
+const SHAPE_RADIUS = 0.46;
 const SHAPE_SQUASH = 0.75;
 /** Just in front of the arch. */
 const IN_FRONT = 0.5;

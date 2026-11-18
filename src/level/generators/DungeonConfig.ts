@@ -67,7 +67,8 @@ export const DEFAULT_CONFIG: DungeonConfig = {
  * (their faces stand four tiles tall, MineTerrain.ts).
  */
 const THEME_CONFIG: Readonly<Record<LevelTheme, Partial<DungeonConfig>>> = {
-  catacomb: {},
+  // The catacombs are bigger, to make room for the caverns that now and then run through their middle.
+  catacomb: { mapWidth: 112, mapHeight: 52, maxRoomSize: 16 },
   castle: {},
   castle2: {},
   mines: { mapWidth: 112, mapHeight: 64, minRoomSize: 8, maxRoomSize: 15, hallMaxSize: 22, hallMinSize: 12, northMargin: 4 },

@@ -23,7 +23,7 @@ import { gunzipJson, gzipText } from '../core/compression';
  */
 
 export const MAP_FORMAT = 'dungeons-and-goblins/map';
-export const MAP_VERSION = 11;
+export const MAP_VERSION = 12;
 /** A tile's byte: its type in the high bits, its image variant (0–15) in the low four. */
 const VARIANT_BITS = 4;
 const VARIANT_MASK = (1 << VARIANT_BITS) - 1;
@@ -51,6 +51,9 @@ export type LevelMap = {
   /** Safe-room tiles and cave-hall tiles, as [first index, count] runs. */
   safe: Pair[];
   cave: Pair[];
+  /** A catacomb level's caverns and the bridges over their chasm, as [first index, count] runs. */
+  caveZone: Pair[];
+  bridges: Pair[];
   wallDecor: Array<[number, WallDecor]>;
   /** Props blocking less than their whole tile: [tile index, x0, y0, x1, y1]. */
   blocks: Array<[number, number, number, number, number]>;
@@ -121,6 +124,8 @@ export function encodeLevelMap(layout: DungeonLayout): LevelMap {
     tiles: bytesToBase64(bytes),
     safe: toRuns(level.safeZoneTiles),
     cave: toRuns(level.caveFloor),
+    caveZone: toRuns(level.caveZone),
+    bridges: toRuns(level.bridges),
     wallDecor: [...level.wallDecor],
     blocks: [...level.blockBoxes].map(([i, b]) => [i, b.x0, b.y0, b.x1, b.y1]),
     pits: level.pits.map((p) => [p.x, p.y, PIT_SHAPES.indexOf(p.shape), p.lobes]),
@@ -190,7 +195,8 @@ function checkShape(value: unknown): asserts value is LevelMap {
   const { width, height } = value;
   ensure(Number.isInteger(width) && Number.isInteger(height) && Number(width) > 0 && Number(height) > 0
     && Number(width) <= MAX_SIDE && Number(height) <= MAX_SIDE, 'Bad map size');
-  ensure(typeof value.tiles === 'string' && isList(value.safe, isPair) && isList(value.cave, isPair) && isList(value.pits, isPitRow)
+  ensure(typeof value.tiles === 'string' && isList(value.safe, isPair) && isList(value.cave, isPair)
+    && isList(value.caveZone, isPair) && isList(value.bridges, isPair) && isList(value.pits, isPitRow)
     && isList(value.cobble, isPair) && isList(value.grates, isPair) && isList(value.pools, isPoolRow)
     && Number.isInteger(value.theme) && Number(value.theme) >= 0 && Number(value.theme) < LEVEL_THEMES.length
     && isList(value.respawns, isPair) && isList(value.torches, isPair) && isPair(value.playerSpawn), 'Malformed map');
@@ -215,6 +221,8 @@ export function decodeLevelMap(value: unknown): DungeonLayout {
   layTiles(level, base64ToBytes(value.tiles));
   eachInRuns(value.safe, tiles, (i) => level.markSafeZone(i % value.width, Math.floor(i / value.width)));
   eachInRuns(value.cave, tiles, (i) => level.caveFloor.add(i));
+  eachInRuns(value.caveZone, tiles, (i) => level.caveZone.add(i));
+  eachInRuns(value.bridges, tiles, (i) => level.bridges.add(i));
   for (const [i, decor] of value.wallDecor) level.wallDecor.set(i, decor);
   for (const [i, x0, y0, x1, y1] of value.blocks) level.blockBoxes.set(i, { x0, y0, x1, y1 });
   eachInRuns(value.cobble, tiles, (i) => level.cobbleWalls.add(i));

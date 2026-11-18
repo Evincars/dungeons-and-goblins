@@ -18,6 +18,7 @@ import { CASTLE_SLANTS, CATACOMB_SLANTS, northCorner } from './SlantTiles';
 import type { SlantArt, SlantSet } from './SlantTiles';
 import type { Slope } from './Slopes';
 import { SOUTH_WALL_RAISE } from './Theme';
+import { CAVE_SHEET, addCavePieces } from './CaveTerrain';
 
 /**
  * One textured quad: draw tileset rect (sx,sy,w,h) at world (dx,dy). Pieces with
@@ -39,7 +40,7 @@ export type TerrainPiece = {
  * The kinds of ground a floor tile can be, softest first: where two meet, the softer spills over the edge of the other
  * (cave earth over cobbles, rough earth and mossy patches over stone, corridor stone over the safe room's slabs).
  */
-export const GROUND_KINDS = ['cave', 'rough', 'patch', 'stone', 'safe'] as const;
+export const GROUND_KINDS = ['heath', 'cave', 'rough', 'patch', 'stone', 'safe'] as const;
 export type GroundKind = (typeof GROUND_KINDS)[number];
 
 /** A floor tile's ground: its kind, and the 32×32 rect of the tileset (or the cave sheet) it is drawn from. */
@@ -49,7 +50,7 @@ export type Ground = { kind: GroundKind; sx: number; sy: number; sheet?: string 
 export const CASTLE_TILESET = 'castle_tileset';
 
 /** The cave tileset (/caves/MainLev2.0.png), whose charcoal ground tiles floor the cave halls. */
-export const CAVE_GROUND = 'cave_ground';
+export const CAVE_GROUND = CAVE_SHEET;
 
 // Terrain is autotiled on 16px sub-tiles (the tileset's native grid); walls are
 // outlined with 8px quarter pieces. A wall mass renders as black void with a
@@ -139,7 +140,8 @@ const FLOOR_MAIN: Array<[number, number]> = [
 ];
 // Low-frequency patches: mossy cobble, and rarer crumbled earth.
 const FLOOR_PATCH: Array<[number, number]> = [[928, 272], [976, 272], [928, 320], [976, 320]];
-const FLOOR_ROUGH: Array<[number, number]> = [[304, 336], [336, 336], [304, 400], [336, 400]];
+// Rough patches: the floor set's warm grey flagstones (cols 46–50, rows 17–24), not the cobblestone walls' stones.
+const FLOOR_ROUGH: Array<[number, number]> = [[736, 272], [784, 272], [736, 320], [784, 320], [736, 368], [784, 368]];
 const FLOOR_SAFE: Array<[number, number]> = [[832, 208]];
 const FLOOR_GRATES: Array<[number, number]> = [[496, 288], [496, 336]];
 
@@ -149,6 +151,15 @@ const CAVE_PEBBLES: Array<[number, number]> = [
   [0, 1344], [32, 1344], [64, 1344], [96, 1344], [0, 1376], [32, 1376], [64, 1376], [96, 1376],
 ];
 const CAVE_GRASS: Array<[number, number]> = [[128, 1376], [160, 1376], [192, 1376], [224, 1376], [256, 1376]];
+/**
+ * The caverns' patches of purplish heath (the inside of the cave set's purple chasm block, cols 36–39, rows 2–4): softer
+ * than the bare ground, its edge runs ragged over it (GroundBlend.ts).
+ */
+const CAVE_HEATH: Array<[number, number]> = [1152, 1184, 1216, 1248].flatMap((x) => [64, 96, 128].map((y): [number, number] => [x, y]));
+const HEATH_SCALE = 7;
+const HEATH_LEVEL = 0.66;
+/** The heath's noise is read this far off the ground's, so the two do not line up. */
+const HEATH_SHIFT = 97;
 
 // Pit interior for holes that aren't part of a framed 2×2 pit
 const PIT_WALL: Array<[number, number]> = [[384, 208], [384, 224]];
@@ -297,8 +308,11 @@ class TerrainBuilder {
     for (const g of this.level.grates) this.addGrate(g);
     for (const pool of this.level.pools) this.overlayPieces.push(poolPiece(pool));
     forEachTile(0, 0, this.W - 1, this.H - 1, this.addSubTile);
-    for (const index of this.level.slopes.keys()) this.addSlant(index % this.level.width, Math.floor(index / this.level.width));
+    for (const index of this.level.slopes.keys()) {
+      if (!this.level.caveZone.has(index)) this.addSlant(index % this.level.width, Math.floor(index / this.level.width));
+    }
     forEachTile(0, 0, this.W - 3, this.H - 1, this.addArch);
+    if (this.level.caveZone.size > 0) addCavePieces(this.level, this.floorPieces, this.wallPieces);
     if (this.castle) forEachTile(1, 1, this.level.width - 3, this.level.height - 2, this.addStairs);
     return [...this.floorPieces, ...this.wallPieces, ...this.overlayPieces];
   }
@@ -539,10 +553,15 @@ class TerrainBuilder {
 
   // ── Walls, loose holes and plinths (per 16px sub-tile) ─────────────────────
 
+  /** Whether a sub-tile lies in the caverns (drawn by CaveTerrain.ts, not here). */
+  private inCaves(sx: number, sy: number): boolean {
+    return this.level.caveZone.has((sx >> 1) + (sy >> 1) * this.level.width);
+  }
+
   private readonly addSubTile = (sx: number, sy: number): void => {
     const dx = sx * SUB;
     const dy = sy * SUB;
-    if (this.sloped(sx, sy)) return;
+    if (this.sloped(sx, sy) || this.inCaves(sx, sy)) return;
     if (!this.solid(sx, sy)) {
       this.addOpenSubTile(sx, sy, dx, dy);
       return;
@@ -843,7 +862,7 @@ class TerrainBuilder {
   // ── Arches over openings: corridors through a south face, or out of a room's bottom wall ──
 
   private readonly addArch = (sx: number, sy: number): void => {
-    if (!this.solid(sx, sy) || this.solid(sx + 1, sy)) return;
+    if (!this.solid(sx, sy) || this.solid(sx + 1, sy) || this.inCaves(sx, sy)) return;
     let n = 0;
     while (sx + 1 + n < this.W && !this.solid(sx + 1 + n, sy)) n++;
     const ex = sx + 1 + n;
@@ -910,13 +929,16 @@ function slantPiece(art: SlantArt, dx: number, footLeft: number, z?: number): Te
   return piece;
 }
 
-/** In a cave hall, patches of the floor are cave ground: bare, pebbly or grassy. */
+/** In a cave hall, patches of the floor are cave ground: bare, pebbly or grassy; in the caverns all of it is. */
 function caveGround(level: Level, tx: number, ty: number): Ground | null {
-  if (!level.caveFloor.has(tx + ty * level.width)) return null;
+  const i = tx + ty * level.width;
+  if (!level.caveFloor.has(i)) return null;
   const n = noise(tx, ty, CAVE_NOISE_SCALE);
-  if (n < CAVE_LEVEL) return null;
+  const zone = level.caveZone.has(i);
+  if (n < CAVE_LEVEL && !zone) return null;
   const v = hash(tx, ty);
   const pick = (from: ReadonlyArray<Src>): Ground => ({ kind: 'cave', sx: from[v % from.length][0], sy: from[v % from.length][1], sheet: CAVE_GROUND });
+  if (zone && noise(tx + HEATH_SHIFT, ty + HEATH_SHIFT, HEATH_SCALE) > HEATH_LEVEL) return { ...pick(CAVE_HEATH), kind: 'heath' };
   if (n > CAVE_GRASS_LEVEL) return pick(CAVE_GRASS);
   if (v % CAVE_PEBBLE_EVERY === 0) return pick(CAVE_PEBBLES);
   return pick(CAVE_PLAIN);
@@ -942,6 +964,8 @@ export function groundAt(level: Level, tx: number, ty: number): Ground | null {
   // A slanted wall's tiles are floored too: its art covers the wall's side of the slant.
   const sloped = level.slopes.has(tx + ty * level.width);
   if (!t || (t.type !== TileType.Floor && t.type !== TileType.Obstacle && !pitFloor && !sloped)) return null;
+  // A bridge's planks lie over the dark of the chasm (CaveTerrain.ts), not over ground.
+  if (level.bridges.has(tx + ty * level.width)) return null;
   if (level.theme === 'castle') {
     const floor = castleFloor(level, tx, ty, noise(tx, ty, FLOOR_NOISE_SCALE));
     return { ...floor, sheet: CASTLE_TILESET };

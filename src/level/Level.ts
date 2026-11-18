@@ -85,6 +85,13 @@ export class Level {
   /** Tiles (index x + y·width) of cave halls, whose floor is laid with patches of cave ground. */
   readonly caveFloor = new Set<number>();
   /**
+   * Tiles (index x + y·width) of a catacomb level's caverns (generators/CaveZone.ts): walls, floor and chasm drawn from
+   * the cave set (level/CaveTerrain.ts) instead of the catacombs' bricks.
+   */
+  readonly caveZone = new Set<number>();
+  /** Floor tiles laid as a wooden bridge over a cavern's chasm (drawn as planks over the dark). */
+  readonly bridges = new Set<number>();
+  /**
    * Obstacle tiles that block less than the whole tile (a prop blocks only a strip at its foot), by tile index,
    * in pixels from the tile's top-left. Obstacles without an entry block the whole tile.
    */

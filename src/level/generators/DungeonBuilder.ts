@@ -25,7 +25,7 @@ import { isPillarColumn } from '../TerrainAutotile';
 import {
   CAVE_CENTREPIECES, CAVE_CRYSTALS, GEM_CRYSTALS, CAVE_PLANTS, CAVE_SPIRES, CAVE_STONES, COFFINS, COLD_CANDLES, CRATES, CRYPT_CENTREPIECES,
   CASTLE_BANNERS, CASTLE_BONES, CASTLE_COLD_CANDLES, CASTLE_FLAGS, CASTLE_POOL_COLUMNS, CASTLE_POTS, CASTLE_RUBBLE, CASTLE_RUGS,
-  CASTLE_STORES, CATACOMB_FIXTURES, COLUMNS, HALL_CENTREPIECES, HANGINGS, PEDESTALS, POSTS, PROPS, SARCOPHAGI, STORE_CENTREPIECES, STORE_FURNITURE, STORE_GOODS, URNS,
+  CASTLE_STORES, CATACOMB_FIXTURES, COLUMNS, HALL_CENTREPIECES, HANGINGS, POSTS, PROPS, SARCOPHAGI, STORE_CENTREPIECES, STORE_FURNITURE, STORE_GOODS, URNS,
   propBlockRect, propWeight,
 } from '../Props';
 import type { BlockRect, PropDef, PropKind, PropPlacement } from '../Props';
@@ -37,6 +37,8 @@ import type { CastleFaceDecor } from '../CastleTiles';
 import type { Pit } from '../PitShapes';
 import { IsoDresser } from './IsoDresser';
 import { MineDresser } from './MineDresser';
+import { CaveZone } from './CaveZone';
+import type { CaveSite } from './CaveZone';
 import type { IsoSite } from './IsoDresser';
 import { ISO_BOOKS, ISO_BRAZIERS, ISO_LECTERNS, ISO_POTS } from '../Props';
 
@@ -148,6 +150,8 @@ const HANGING_CHANCE = 0.12;
 const CATACOMB_HANGING_CHANCE = 0.6;
 /** Chance a free stretch of catacomb face three tiles wide has a barred gate set into it instead. */
 const BARRED_GATE_CHANCE = 0.12;
+/** Chance a catacomb level runs through caverns in its middle (generators/CaveZone.ts). */
+const CAVE_ZONE_CHANCE = 0.5;
 /** After a hanging this many more tiles of face are left bare (in the catacombs, every other tile may be hung). */
 const HANGING_STEP = 2;
 const CATACOMB_HANGING_STEP = 1;
@@ -163,15 +167,13 @@ const TRAP_SPACING = 6;
 /** Pillars standing about a catacomb room: this many (min, max), and one more for every so many tiles of it. */
 const PILLAR_COUNT = [1, 2] as const;
 const PILLAR_AREA = 60;
-/** What stands about a catacomb room: its wooden posts, and its stone pedestals and columns. */
+/** What stands about a catacomb room: its wooden posts, and its stone columns. */
 const PILLARS: readonly PropKind[] = [...POSTS, ...COLUMNS];
 /** Chance a dungeon room keeps a storeroom corner: furniture backed against its north wall, goods in front. */
 const STORE_CHANCE = 0.18;
 /** A storeroom has up to this many pieces of furniture, and up to this many goods around each. */
 const STORE_FURNITURE_MAX = 2;
 const STORE_GOODS_MAX = 3;
-/** Chance a plain hall is flanked by a pair of pedestals instead of posts. */
-const PEDESTAL_CHANCE = 0.4;
 /** Chance a room (or cave hall, three times as likely) holds one of the big glowing crystals: a rare find. */
 const GEM_CRYSTAL_CHANCE = 0.04;
 /**
@@ -180,7 +182,7 @@ const GEM_CRYSTAL_CHANCE = 0.04;
  */
 const GEM_CRYSTALS_PLACED = false;
 const HALL_CRYSTAL_FACTOR = 3;
-/** Chance a room gets something standing in its middle (a tomb, a crate stack, a pedestal). */
+/** Chance a room gets something standing in its middle (a tomb, a crate stack, a post or column). */
 const CENTREPIECE_CHANCE = 0.7;
 /** Tiles of open floor a centrepiece keeps around it, and how far from the middle it may move to find them. */
 const CENTRE_CLEARANCE = 1;
@@ -250,6 +252,8 @@ export type RoomData = {
   type: RoomType;
   /** A big dungeon room furnished as a cave: cave ground, rock spires, crystals and plants. */
   hall?: boolean;
+  /** A room of a catacomb level's caverns (generators/CaveZone.ts): drawn and furnished as a cave. */
+  cave?: boolean;
   /** Tile-space bounds (exclusive right/bottom). */
   x: number; y: number; w: number; h: number;
   /** Center in WORLD space (pixels). */
@@ -317,6 +321,7 @@ export class DungeonBuilder {
   /** Dresses the isometric castle's rooms, and the mines', through the builder's own ways of setting things down. */
   private readonly iso = new IsoDresser(this.isoSite());
   private readonly mines = new MineDresser(this.isoSite());
+  private readonly caves = new CaveZone(this.caveSite());
   /** Room pairs to be joined down the slant once every other corridor is in (so none cuts across a slant). */
   private readonly slantedPairs: Array<[RoomData, RoomData]> = [];
 
@@ -396,11 +401,15 @@ export class DungeonBuilder {
     const anchors = () => [exitTile, ...dungeonRooms.map((r) => this.anyFloor(r))
       .filter((p): p is TilePos => p !== null)];
     if (!this.reachable(playerTile, anchors())) return null;
+    // Now and then the middle of a catacomb level runs through caverns, a chasm down through them.
+    if (cfg.theme === 'catacomb' && this.rng() < CAVE_ZONE_CHANCE) this.caves.lay(dungeonRooms, [safe, ...dungeonRooms, exit], playerTile, anchors);
 
     // ── Room features, each kept only if everything stays reachable ───────────
     const props: PropPlacement[] = [];
     this.usedTiles.clear();
     this.portalFaces.clear();
+    // Nothing is set down on a bridge.
+    for (const i of this.level.bridges) this.usedTiles.add(i);
     const keepIfReachable = (apply: () => TileChange[]) => this.tryFeature(playerTile, anchors, apply);
     this.portal('portal_stairs', safePortalX, safe, props, keepIfReachable);
     this.portal('portal_dark', exitTile.x, exit, props, keepIfReachable);
@@ -414,6 +423,10 @@ export class DungeonBuilder {
         continue;
       }
       let structured = false;
+      if (room.cave) {
+        this.furnishCave(room, props, keepIfReachable);
+        continue;
+      }
       this.shapeRoom(room, keepIfReachable);
       if (room.hall) {
         this.furnishCave(room, props, keepIfReachable);
@@ -478,6 +491,18 @@ export class DungeonBuilder {
       leverPos: tileCenter(leverTile.x, leverTile.y),
       exitDoor: { tiles: exitDoorTiles, boundaryX: exit.x * TILE_WIDTH },
       exitLeverPos: tileCenter(exitLeverTile.x, exitLeverTile.y),
+    };
+  }
+
+  /** The builder's ways the caverns are laid by. */
+  private caveSite(): CaveSite {
+    const levelOf = (): Level => this.level;
+    return {
+      get level() { return levelOf(); },
+      rng: () => this.rng(),
+      isFloor: (tx, ty) => this.isFloor(tx, ty),
+      setTiles: (cells, type) => this.setTiles(cells, type),
+      reachedFrom: (from) => reachableTiles(tileGraphOf(this.level), from.x + from.y * this.level.width, this.floorStep),
     };
   }
 
@@ -1199,7 +1224,8 @@ export class DungeonBuilder {
 
   /** A cave hall: great spires in the middle, smaller ones about, crystals, stones and plants of one colour. */
   private furnishCave(room: RoomData, props: PropPlacement[], keep: Keep): void {
-    if (room.w >= 6 && room.h >= 6 && this.rng() < this.cfg.pitChance) this.pits(room, keep);
+    // A cavern has its chasm; the catacombs' framed pits are left to the catacombs.
+    if (!room.cave && room.w >= 6 && room.h >= 6 && this.rng() < this.cfg.pitChance) this.pits(room, keep);
     this.centrepiece(room, CAVE_CENTREPIECES, props, keep);
     const open = this.shuffledFreeTiles(room);
     for (let i = this.countIn(CAVE_SPIRE_COUNT); i > 0; i--) this.scatterSolid(room, open, CAVE_SPIRES, props, keep);
@@ -1299,7 +1325,7 @@ export class DungeonBuilder {
     const byDoor = (x: number, y: number) => doors.some((d) => Math.abs(d.x - x) <= TRAP_DOOR_GAP && Math.abs(d.y - y) <= TRAP_DOOR_GAP);
     const spots: TilePos[] = [];
     forEachTile(1, 1, this.cfg.mapWidth - 2, this.cfg.mapHeight - 2, (x, y) => {
-      if (this.free(x, y) && !inRoom(x, y) && !byDoor(x, y)) spots.push({ x, y });
+      if (this.free(x, y) && !inRoom(x, y) && !byDoor(x, y) && !this.inCaves(x, y)) spots.push({ x, y });
     });
     const traps: TilePos[] = [];
     const wanted = this.countIn(SPIKE_TRAPS);
@@ -1341,8 +1367,7 @@ export class DungeonBuilder {
     }
   }
 
-  /** Posts, or a matching pair of pedestals, standing either side of the middle of a plain hall. */
-  /** A plain hall: columns along its long walls, or a pair of pedestals or posts; drain grates set in its floor. */
+  /** A plain hall: columns along its long walls, or a pair of posts; drain grates set in its floor. */
   private plainHall(room: RoomData, structured: boolean, props: PropPlacement[], keep: Keep): void {
     const colonnade = !structured && room.w >= COLONNADE_MIN_W && room.h >= COLONNADE_MIN_H && this.rng() < COLONNADE_CHANCE;
     if (colonnade) this.colonnade(room, props, keep);
@@ -1401,9 +1426,8 @@ export class DungeonBuilder {
 
   private flankingPair(room: RoomData, props: PropPlacement[], keep: Keep): void {
     const y = room.y + Math.floor(room.h / 2);
-    const pedestal = this.rng() < PEDESTAL_CHANCE ? this.pickProp(PEDESTALS) : null;
-    this.placeSolid([[room.x + 2, y]], [pedestal ?? this.pick(POSTS)], props, keep);
-    this.placeSolid([[room.x + room.w - 3, y]], [pedestal ?? this.pick(POSTS)], props, keep);
+    this.placeSolid([[room.x + 2, y]], [this.pick(POSTS)], props, keep);
+    this.placeSolid([[room.x + room.w - 3, y]], [this.pick(POSTS)], props, keep);
   }
 
   /** A rare storeroom corner: shelves, racks or supply heaps backed against the north wall, goods strewn in front. */
@@ -1546,11 +1570,16 @@ export class DungeonBuilder {
     return this.plainFloor(tx, ty) && this.plainFaceAbove(tx, ty);
   }
 
+  /** Whether a tile lies in the caverns (no torches, hangings or traps of the catacombs there). */
+  private inCaves(tx: number, ty: number): boolean {
+    return this.level.caveZone.has(tx + ty * this.cfg.mapWidth);
+  }
+
   /** A plain stretch of full-height face above tile (tx, ty), whatever stands on that tile. */
   private plainFaceAbove(tx: number, ty: number): boolean {
     const W = this.cfg.mapWidth;
     const sloped = (x: number): boolean => this.level.slopes.has(x + ty * W);
-    return !sloped(tx) && !sloped(tx - 1) && !sloped(tx + 1)
+    return !sloped(tx) && !sloped(tx - 1) && !sloped(tx + 1) && !this.inCaves(tx, ty)
       && this.isWall(tx, ty - 1) && this.isWall(tx, ty - 2)
       && this.isWall(tx - 1, ty - 1) && this.isWall(tx + 1, ty - 1)
       && !isPillarColumn(tx) && !this.level.wallDecor.has(tx + (ty - 1) * W) && !this.besideCastleDecor(tx, ty - 1)

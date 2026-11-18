@@ -54,7 +54,7 @@ function randomEnemy(mix: EnemyMix): MobType {
 function floorTilesIn(level: Level, room: RoomData): FloorSpot[] {
   const out: FloorSpot[] = [];
   forEachTile(room.x, room.y, room.x + room.w - 1, room.y + room.h - 1, (tx, ty) => {
-    if (level.getTile(tx, ty)?.type !== TileType.Floor) return;
+    if (level.getTile(tx, ty)?.type !== TileType.Floor || level.bridges.has(tx + ty * level.width)) return;
     out.push({ tx, ty, x: tx * TILE_WIDTH + TILE_WIDTH / 2, y: ty * TILE_HEIGHT + TILE_HEIGHT / 2 });
   });
   return out;

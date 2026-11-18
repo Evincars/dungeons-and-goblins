@@ -791,14 +791,12 @@ export const CASTLE_FLAGS: PropKind[] = propsStarting('castle_flag');
 export const STORE_FURNITURE: PropKind[] = propsStarting('shelf', 'supplies_', 'rack', 'stand', 'barrel');
 /** Goods scattered in front of the furniture. */
 export const STORE_GOODS: PropKind[] = propsStarting('bowl_', 'sack');
-/** Large pedestals, set out in pairs in plain halls. */
-export const PEDESTALS: PropKind[] = propsStarting('pedestal_').filter((kind) => PROPS[kind].rect.w > 32);
 /** Something to stand in the middle of a room, by theme. */
 export const CRYPT_CENTREPIECES: PropKind[] = [...SARCOPHAGI, 'coffin_open'];
 export const STORE_CENTREPIECES: PropKind[] = ['crate_large', 'crate_large2', 'crate', 'crate2'];
 /** Free-standing columns: in rows along a hall's long walls, or alone in its middle. */
 export const COLUMNS: PropKind[] = ['column', 'column_low', 'column_slender', 'column_slender_low'];
-export const HALL_CENTREPIECES: PropKind[] = [...PEDESTALS, ...POSTS, 'column', 'column_low'];
+export const HALL_CENTREPIECES: PropKind[] = [...POSTS, 'column', 'column_low'];
 /** Cave halls: rock spires (the great clusters for the middle), crystals, stones and plants. */
 export const CAVE_CENTREPIECES: PropKind[] = ['cave_spires', 'cave_spires_b', 'cave_spire_twin', 'cave_spire_twin_b'];
 export const CAVE_SPIRES: PropKind[] = ['cave_spire', 'cave_spire_s', 'cave_spire_xs', 'cave_spire_b', 'cave_spire_s_b', 'cave_spire_xs_b'];

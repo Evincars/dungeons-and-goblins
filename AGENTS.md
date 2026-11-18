@@ -259,6 +259,16 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   drifting mist), lighting (`LightRenderer.ts`: a dim ambient multiplied over the scene; every flame, the torch each hero carries
   included, breathes in reach and brightness on three out-of-step waves; crystals shine steadily), and `LevelMap.ts` (a generated
   level as validated JSON, gzipped to send or save).
+- Now and then (`CAVE_ZONE_CHANCE`, `DungeonBuilder.ts`) a catacomb level (its maps are bigger, 112×52, `THEME_CONFIG`) runs
+  through caverns in its middle (`generators/CaveZone.ts`: the rooms in the middle band of the map become caves, `room.cave`,
+  furnished as cave halls, `level.caveZone`): a ragged chasm runs down through them from the top of the map to the bottom
+  (`Hole` tiles of no pit: nobody steps in, sight and shots cross), wide through the biggest cavern, crossed by wooden
+  bridges (`level.bridges`, floor nothing is set on) only where they are needed to reach everything; floor it cuts off is
+  lost to it. The caverns are drawn from the cave set `public/caves/MainLev2.0.png` (`level/CaveTerrain.ts`): rock walls of
+  heaped stones (their rims and cliffs read quarter by quarter from the dark rock block), cave ground with patches of
+  purplish heath, the chasm block's cliff and dark, its ragged brinks (`cave_brinks`, the block's ring with its ground
+  cleared at load) laid over the ground beside it, and the bridge's planks and legs; the catacombs' torches, hangings and
+  spike traps stay out of them.
 - Animated decor stored one frame per file (`public/catacombs` torches and candles) is padded to one height with the base
   at the bottom, so only the flame moves; the catacombs' spikes (`spike_0…4.png`) are laid two by two into a tile's frame
   by `scripts/spike-sheet.py` (`public/catacombs/spikes.png`). The catacombs' rooms have their wooden pillars (`POSTS`: solid,

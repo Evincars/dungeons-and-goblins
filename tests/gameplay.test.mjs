@@ -6334,3 +6334,46 @@ test("a wall jutting out past another's face runs its edge on up to the top of t
   const endAt = (dy) => faces.some((p) => p.dx === 14 * 16 && p.dy === dy && p.sx === 64 && p.w === 16);
   assert.ok([8, 9, 10, 11].every((sy) => endAt(sy * 16)), 'its face ends in its edge all the way up, not only below the other face');
 });
+
+test('now and then a catacomb level runs through caverns: rock and cave ground, a chasm down through them, bridges over it', async () => {
+  const { dungeonConfig } = await load('level/generators/DungeonConfig');
+  const { buildTerrainPieces } = await load('level/TerrainAutotile');
+  const { CAVE_SHEET, CAVE_BRINKS } = await load('level/CaveTerrain');
+  const { encodeLevelMap, decodeLevelMap } = await load('level/LevelMap');
+  let caves = 0;
+  for (const seed of [1, 4, 7, 10, 12, 15]) {
+    const layout = new DungeonBuilder(dungeonConfig('catacomb', seed)).build();
+    const { level } = layout;
+    if (level.caveZone.size === 0) continue;
+    caves++;
+    const W = level.width;
+    const at = (i) => level.getTile(i % W, Math.floor(i / W));
+    const chasm = [...level.caveZone].filter((i) => at(i).type === TileType.Hole);
+    assert.ok(chasm.length > 0 && level.bridges.size > 0, 'a chasm, and a bridge over it');
+    for (const i of level.bridges) {
+      assert.equal(at(i).type, TileType.Floor, 'a bridge is walked on');
+      assert.ok(level.caveZone.has(i), 'in the caverns');
+      assert.ok(!layout.props.some((p) => p.tx + p.ty * W === i), 'nothing stands on it');
+    }
+    assert.ok(chasm.every((i) => !level.slopes.has(i) && !level.isSafeZone(i % W, Math.floor(i / W))));
+    assert.ok(layout.rooms.some((r) => r.cave), 'some rooms are caverns');
+    const reached = reachableTiles(tileGraphOf(level), Math.floor(layout.playerSpawn.x / 32) + Math.floor(layout.playerSpawn.y / 32) * W,
+      (_f, to) => (level.getTile(to % W, Math.floor(to / W)).type === TileType.Floor ? 1 : Infinity));
+    for (const r of layout.rooms) {
+      const floor = [];
+      forEachTileIn(r, (x, y) => { if (level.getTile(x, y).type === TileType.Floor) floor.push(x + y * W); });
+      assert.ok(floor.every((i) => reached[i] === 1), `every floor of room ${r.id} can be reached: the bridges join it`);
+    }
+    const pieces = buildTerrainPieces(level);
+    assert.ok(pieces.some((p) => p.sheet === CAVE_SHEET && !p.floor), 'rock and chasm from the cave set');
+    assert.ok(pieces.some((p) => p.sheet === CAVE_BRINKS), 'ragged brinks round the chasm');
+    const back = decodeLevelMap(JSON.parse(JSON.stringify(encodeLevelMap(layout))));
+    assert.deepEqual([...back.level.caveZone].sort(), [...level.caveZone].sort(), 'co-op guests get the caverns');
+    assert.deepEqual([...back.level.bridges].sort(), [...level.bridges].sort(), 'and the bridges');
+  }
+  assert.ok(caves >= 2, `${caves} of six levels run through caverns`);
+});
+
+function forEachTileIn(r, fn) {
+  for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) fn(x, y);
+}

@@ -5,6 +5,7 @@ import { getTexture, hasTexture, setTexture } from './Textures';
 import { loadSheets } from './SpriteSheet';
 import { registerSheet } from '../render/Sheets';
 import { allSheets, registerLazyArt } from './SheetCatalog';
+import { BRINK_BLOCK, BRINK_DARKEST_GROUND, CAVE_BRINKS, CAVE_SHEET } from '../level/CaveTerrain';
 import {
   genSpellBoltSheet, genPuddleSheet,
   genSpawnerSheet, genLeverSheet, genPortcullis,
@@ -121,6 +122,23 @@ function buildCampfireFloor(): void {
   setTexture('campfire_floor', texture);
 }
 
+/** The caverns' ragged brinks: the cave set's chasm block with its ground cleared, only the dark spikes left. */
+function buildCaveBrinks(): void {
+  const { x, y, w, h } = BRINK_BLOCK;
+  const canvas = createCanvas(w, h);
+  const ctx = context2d(canvas, { willReadFrequently: true });
+  ctx.drawImage(imageFor(CAVE_SHEET), x, y, w, h, 0, 0, w, h);
+  const pixels = ctx.getImageData(0, 0, w, h);
+  const d = pixels.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if (Math.max(d[i], d[i + 1], d[i + 2]) > BRINK_DARKEST_GROUND) d[i + 3] = 0;
+  }
+  ctx.putImageData(pixels, 0, 0);
+  const texture = Texture.from(canvas);
+  texture.source.scaleMode = 'nearest';
+  setTexture(CAVE_BRINKS, texture);
+}
+
 type Rgb = { r: number; g: number; b: number };
 
 /**
@@ -159,6 +177,7 @@ export async function loadAllAssets(onProgress?: (done: number, total: number) =
   buildTorchStrip();
   buildCampfireStrip();
   buildCampfireFloor();
+  buildCaveBrinks();
   recolor('button', 'button_steel', STEEL, BUTTON_FRAME);
   for (const [key, draw] of Object.entries(PROCEDURAL)) setTexture(key, Texture.from(draw()));
   setTexture('panel_hud', Texture.from(genPanelBg(HUD_PANEL.w, HUD_PANEL.h)));

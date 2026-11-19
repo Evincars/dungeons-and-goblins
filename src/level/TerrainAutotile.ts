@@ -423,8 +423,9 @@ class TerrainBuilder {
     const i = sx + sy * this.W;
     const h = this.faceH[i];
     const bottom = sy + this.faceK[i] - 1;
-    if (!this.solid(sx - 1, sy) || this.shallowerFace(sx - 1, sy, bottom)) return 'left';
-    if (!this.solid(sx + 1, sy) || this.shallowerFace(sx + 1, sy, bottom)) return 'right';
+    // A face ends with its edge where the caverns' rock takes over, as beside open floor.
+    if (!this.solid(sx - 1, sy) || this.shallowerFace(sx - 1, sy, bottom) || this.inCaves(sx - 1, sy)) return 'left';
+    if (!this.solid(sx + 1, sy) || this.shallowerFace(sx + 1, sy, bottom) || this.inCaves(sx + 1, sy)) return 'right';
     if (!this.castle && this.tileAt(sx, sy)?.type === TileType.BreakableWall) return 'cracked';
     const tx = sx >> 1;
     const full = h === FACE_MAX;
@@ -690,8 +691,8 @@ class TerrainBuilder {
     const t = this.top;
     const openN = !this.solid(sx, sy - 1);
     const i = sx + sy * this.W;
-    const sideW = !this.solid(sx - 1, sy) || this.faceBeside(sx - 1, sy) || this.seamW.has(i);
-    const sideE = !this.solid(sx + 1, sy) || this.faceBeside(sx + 1, sy) || this.seamE.has(i);
+    const sideW = !this.solid(sx - 1, sy) || this.faceBeside(sx - 1, sy) || this.seamW.has(i) || this.inCaves(sx - 1, sy);
+    const sideE = !this.solid(sx + 1, sy) || this.faceBeside(sx + 1, sy) || this.seamE.has(i) || this.inCaves(sx + 1, sy);
     // A corner nub where floor touches only diagonally, unless the wall beside it is a raised south wall (its rim, drawn
     // higher, meets this side's rim on its own).
     const diagNW = !this.solid(sx - 1, sy - 1) && !this.raisedRim(sx - 1, sy);
@@ -763,8 +764,11 @@ class TerrainBuilder {
     if (!northCorner(corner)) {
       const rim = this.slants.rim[corner];
       const z = slantRimDepth(slope, tx, ty);
+      const top = footLeft - this.raise - rim.footLeft + rim.solidH;
       this.overlayPieces.push(slantPiece(rim, dx, footLeft - this.raise, z));
-      voidColumn(this.overlayPieces, this.slants.void, dx, footLeft - this.raise - rim.footLeft + rim.solidH, z, z);
+      voidColumn(this.overlayPieces, this.slants.void, dx, top, z, z);
+      // The edge runs from the rim's own line (where the slant crosses the tile's side) down.
+      this.slantSideEdges(tx, ty, Math.min(footLeft, slantFootY(slope, tx, ty, true)) - this.raise, z);
       return;
     }
     // Drawn among the entities, in front of the dark of whatever lies north of it, a tile's column at a time (an arched
@@ -781,6 +785,22 @@ class TerrainBuilder {
     const z = faceDepth(ty);
     if (this.slantEnds(slope, tx, ty, -1)) this.addFaceEnd('left', dx, footLeft, z, tx, ty);
     if (this.slantEnds(slope, tx, ty, 1)) this.addFaceEnd('right', dx + TILE_WIDTH - SUB, slantFootY(slope, tx, ty, true), z, tx, ty);
+  }
+
+  /**
+   * Where a south slant ends beside open floor (west or east of its tile), the dark under its rim is edged on that side as
+   * a wall's top is, from the rim down: else it would read as a hole in the floor.
+   */
+  private slantSideEdges(tx: number, ty: number, top: number, bottom: number): void {
+    const t = this.top;
+    for (const side of [-1, 1] as const) {
+      const beside = this.level.getTile(tx + side, ty);
+      const open = !!beside && (beside.passable || beside.type === TileType.Obstacle) && !this.level.slopes.has(tx + side + ty * this.level.width);
+      if (!open) continue;
+      const x = side < 0 ? tx * TILE_WIDTH : (tx + 1) * TILE_WIDTH - Q;
+      const src = side < 0 ? t.edgeLeft[0] : t.edgeRight[0];
+      for (let y = top; y < bottom; y += Q) quad(this.overlayPieces, x, y, src, Q, Math.min(Q, bottom - y), bottom);
+    }
   }
 
   /** Notes the sub-tiles a north slope tile's end columns (if its slant ends there) will stand in. */

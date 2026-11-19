@@ -1,6 +1,7 @@
 import { world, Team } from '../world';
 import { TRADER_FRAME, TRADER_SCALE, TRADER_SHEETS } from './Trader';
 import { CAMPFIRE_SMOKE, createSmoke } from './Smoke';
+import { createWindowFire } from './WindowFire';
 import type { Entity, InventoryItem } from '../world';
 import { createTile, TileType, TILE_WIDTH, TILE_HEIGHT } from '../level/TileType';
 import type { Level } from '../level/Level';
@@ -259,6 +260,10 @@ export function createProp(p: PropPlacement): Entity {
         position: { x, y: p.ty * TILE_HEIGHT + FOOT_DEPTH - BEHIND }, visual: { sheet: `${sheet}_backing` },
         yOffset: back.lift + back.rect.h / 2 - BEHIND, localOnly: true,
       });
+    }
+    if (def.fire) {
+      const fire = def.fire;
+      fire.at.forEach((dx, i) => createWindowFire(x + dx, p.ty * TILE_HEIGHT + FOOT_DEPTH - BEHIND / 2, fire.rise - BEHIND / 2, i === 0));
     }
     return world.add({
       ...(def.smoke ? { mist: true } : {}),

@@ -1,6 +1,7 @@
 import { SpriteSheet, frameRun } from './SpriteSheet';
 import { bloodSheets } from '../entities/Blood';
 import { smokeSheet } from '../entities/Smoke';
+import { blueFireSheet } from '../entities/WindowFire';
 import { TRADER_CLIPS, TRADER_FILES, TRADER_FRAME, TRADER_SHEETS } from '../entities/Trader';
 import { registerLazy } from './LazyArt';
 import { registerEffects } from './Effects';
@@ -218,7 +219,7 @@ const UI_SHEETS = [
   // Blood splashing from those hit (entities/Blood.ts): each splash's 6×6 grid read as one strip.
   ...bloodSheets().map(({ key, src, frames }) => new SpriteSheet(`${key}_sheet`, src, { regions: { [key]: { frames } } })),
   // Smoke over the campfires and out of the portals (entities/Smoke.ts).
-  ...[smokeSheet()].map(({ key, src, frames }) => new SpriteSheet(`${key}_sheet`, src, { regions: { [key]: { frames } } })),
+  ...[smokeSheet(), blueFireSheet()].map(({ key, src, frames }) => new SpriteSheet(`${key}_sheet`, src, { regions: { [key]: { frames } } })),
   // The trader of the safe rooms (entities/DungeonFactory.ts, systems/TraderSystem.ts): strips of 128 px frames.
   ...TRADER_CLIPS.map((clip) => new SpriteSheet(TRADER_SHEETS[clip], `/trader/${TRADER_FILES[clip]}.png`, { grid: { frameWidth: TRADER_FRAME, frameHeight: TRADER_FRAME } })),
   // The game's pointers (ui/Pointer.ts), drawn smaller than they are painted: hand, hand pressing, cross, red cross.

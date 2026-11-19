@@ -1403,8 +1403,10 @@ export class DungeonBuilder {
     this.grates(room);
   }
 
+  /** A grate, where its tiles are free and no wall stands round them (its frame spills past them, onto a face's foot). */
   private placeGrate(x: number, y: number): void {
     if (someTile(x, y, x + 1, y + 1, (tx, ty) => !this.free(tx, ty))) return;
+    if (someTile(x - 1, y - 1, x + 2, y + 2, (tx, ty) => this.isWall(tx, ty) || this.level.slopes.has(tx + ty * this.cfg.mapWidth))) return;
     this.level.grates.push({ x, y });
     forEachTile(x, y, x + 1, y + 1, (tx, ty) => this.claim(tx, ty));
   }

@@ -6377,3 +6377,33 @@ test('now and then a catacomb level runs through caverns: rock and cave ground, 
 function forEachTileIn(r, fn) {
   for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) fn(x, y);
 }
+
+test("off a bridge's edge there is nothing to sink into; drain grates keep clear of walls; fire burns behind a barred gate's bars", async () => {
+  const level = arena(8, 8);
+  for (let x = 1; x < 7; x++) level.setTile(x, 4, createTile(TileType.Hole));
+  level.setTile(3, 3, createTile(TileType.Floor));
+  level.bridges.add(3 + 3 * level.width);
+  const boxes = level.getClipBBs(3 * 32 + 16, 4 * 32 - 4, 6, 4);
+  const below = boxes.find((b) => b.x === 3 * 32 && b.y >= 4 * 32 - 1 && b.y <= 4 * 32 + 1);
+  assert.ok(below, 'the chasm below the bridge stops feet at its very edge');
+  level.bridges.clear();
+  const sunk = level.getClipBBs(3 * 32 + 16, 4 * 32 - 4, 6, 4).find((b) => b.x === 3 * 32 && b.y > 4 * 32 + 1);
+  assert.ok(sunk, 'off plain floor, feet reach over the brink as over a wall');
+
+  for (const seed of [3, 7, 11, 23]) {
+    const { level: built } = new DungeonBuilder({ ...DEFAULT_CONFIG, seed }).build();
+    for (const g of built.grates) {
+      for (let y = g.y - 1; y <= g.y + 2; y++) {
+        for (let x = g.x - 1; x <= g.x + 2; x++) assert.notEqual(built.getTile(x, y).type, TileType.Wall, `grate at ${g.x},${g.y} keeps off the walls`);
+      }
+    }
+  }
+
+  const { createProp } = await load('entities/DungeonFactory');
+  world.clear();
+  const gate = createProp({ kind: 'barred_gate', tx: 4, ty: 4 });
+  const fires = world.entities.filter((e) => e.visual?.sheet === 'blue_fire');
+  assert.equal(fires.length, 2, 'two blue flames');
+  assert.ok(fires.every((f) => f.position.y < gate.position.y), 'drawn behind the bars');
+  assert.ok(fires.some((f) => f.glow?.cool), 'giving off a cold light');
+});

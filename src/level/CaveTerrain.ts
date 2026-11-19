@@ -1,6 +1,7 @@
 import type { Level } from './Level';
 import { TileType, TILE_HEIGHT, TILE_WIDTH } from './TileType';
 import type { TerrainPiece } from './TerrainAutotile';
+import { slantFootY } from './IsoTerrain';
 
 /**
  * The caverns of a catacomb level (level.caveZone, generators/CaveZone.ts), drawn from the cave set
@@ -47,9 +48,24 @@ const HOLE_MID = 2;
 /** The bridge (cols 45–49, rows 32–37): its deck of planks, and a leg under it. */
 const DECK = { x: 1442, y: 1024, w: 156, h: 38 };
 const DECK_RISE = 3;
+/** The deck's ends rest this far over the ground beyond each brink. */
+const DECK_REST = 16;
 const LEG = { x: 1482, y: 1062, w: 10, h: 56 };
 const LEG_INSET = 11;
 const LEG_EVERY = 2;
+/** One wall tile in this many spills its rim's stones this far (min, max px) over the ground beside it. */
+const BULGE_EVERY = 2;
+const BULGE_MIN = 4;
+const BULGE_MAX = 10;
+/** Along a south slant the rim's stones sit this far over the slant's line, and hide whoever stands this far below it. */
+const SLANT_RIM_RISE = 12;
+const SLANT_RIM_SINK = 8;
+
+function hash(x: number, y: number): number {
+  let h = Math.imul(x, 374761393) ^ Math.imul(y, 668265263);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return (h ^ (h >>> 16)) >>> 0;
+}
 
 type Quarter = 0 | 1;
 const QUARTERS: ReadonlyArray<readonly [Quarter, Quarter]> = [[0, 0], [1, 0], [0, 1], [1, 1]];
@@ -91,6 +107,7 @@ class CaveLayer {
     for (const i of zone) this.ground(...at(i));
     for (const i of zone) this.top(...at(i));
     for (const i of zone) this.face(...at(i));
+    for (const i of zone) this.slant(...at(i));
     for (const i of zone) this.deck(...at(i));
   }
 
@@ -138,9 +155,18 @@ class CaveLayer {
    * black inside. The quarters a face covers (open ground south) are left to it. Over the floor north of it (someone may
    * stand behind it) it is drawn over them.
    */
+  private sloped(tx: number, ty: number): boolean {
+    return this.level.slopes.has(tx + ty * this.level.width);
+  }
+
+  /** Open ground beside a wall (its rim shows): not wall, and not a slanted wall's tile (which draws its own). */
+  private open(tx: number, ty: number): boolean {
+    return !this.wall(tx, ty) && !this.sloped(tx, ty);
+  }
+
   private top(tx: number, ty: number): void {
-    if (!this.wall(tx, ty)) return;
-    const open = (x: number, y: number) => !this.wall(x, y);
+    if (!this.wall(tx, ty) || this.sloped(tx, ty)) return;
+    const open = (x: number, y: number) => this.open(x, y);
     const w = open(tx - 1, ty);
     const e = open(tx + 1, ty);
     const n = open(tx, ty - 1);
@@ -150,17 +176,66 @@ class CaveLayer {
     const z = behind ? (ty + 1) * TILE_HEIGHT : undefined;
     for (const [cx, cy] of QUARTERS) {
       if (cy === 1 && s) continue;
-      const col = edgeOr(cx === 0 ? w : e, cx === 0 ? e : w, cx, 0, EDGE_COL, 1 + (tx % MID_TILES));
-      const nub = cy === 0 && !n && open(tx + (cx === 0 ? -1 : 1), ty - 1);
-      const row = n || nub ? 0 : 1 + (ty % MID_TILES);
+      const side = cx === 0 ? -1 : 1;
+      // Ground touching only at a corner: the rim's stones round it (a nub of the top rim above, of the side rim below).
+      const corner = !open(tx + side, ty) && open(tx + side, ty + (cy === 0 ? -1 : 1)) && (cy === 0 ? !n : !s);
+      const col = corner && cy === 1 ? (cx === 0 ? 0 : EDGE_COL) : edgeOr(cx === 0 ? w : e, cx === 0 ? e : w, cx, 0, EDGE_COL, 1 + (tx % MID_TILES));
+      const row = n || (corner && cy === 0) ? 0 : 1 + (ty % MID_TILES);
       this.walls.push(piece(tx * T + cx * Q, ty * T + cy * Q, ROCK.x + col * T + cx * Q, ROCK.y + row * T + cy * Q, Q, Q, z));
+    }
+    this.bulge(tx, ty, { w, e, n, s }, z);
+  }
+
+  /**
+   * The rim's stones spill a few pixels past the wall's edge over the ground beside it, more in some places than others,
+   * so its edges wander as rock does instead of running ruler-straight.
+   */
+  private bulge(tx: number, ty: number, open: { w: boolean; e: boolean; n: boolean; s: boolean }, z: number | undefined): void {
+    const v = hash(tx, ty);
+    if (v % BULGE_EVERY !== 0) return;
+    const out = BULGE_MIN + ((v >>> 4) % (BULGE_MAX - BULGE_MIN + 1));
+    const rows: Quarter[] = open.s ? [0] : [0, 1];
+    for (const cy of rows) {
+      if (open.w) this.walls.push(piece(tx * T - out, ty * T + cy * Q, ROCK.x, ROCK.y + (open.n ? 0 : 1 + (ty % MID_TILES)) * T + cy * Q, Q, Q, z));
+      if (open.e) this.walls.push(piece(tx * T + Q + out, ty * T + cy * Q, ROCK.x + EDGE_COL * T + Q, ROCK.y + (open.n ? 0 : 1 + (ty % MID_TILES)) * T + cy * Q, Q, Q, z));
+    }
+    if (!open.n) return;
+    const cx: Quarter = (v >>> 8) & 1 ? 1 : 0;
+    this.walls.push(piece(tx * T + cx * Q, ty * T - out, ROCK.x + (1 + (tx % MID_TILES)) * T + cx * Q, ROCK.y, Q, Q, z));
+  }
+
+  /**
+   * A slanted wall's tile (a corridor down the slant, a cut corner): its rock follows the slant 16 px at a time, as the
+   * slant pushes bodies back, rather than stepping a whole tile: a cliff of stones along a north slant's foot, the rim of
+   * stones along a south one with the dark below it.
+   */
+  private slant(tx: number, ty: number): void {
+    const slope = this.level.slopes.get(tx + ty * this.level.width);
+    if (!slope) return;
+    const left = slantFootY(slope, tx, ty, false);
+    const right = slantFootY(slope, tx, ty, true);
+    const mid = 1 + (tx % MID_TILES);
+    const north = slope.corner === 'nw' || slope.corner === 'ne';
+    const z = Math.max(left, right) + SLANT_RIM_SINK;
+    for (const cx of [0, 1] as const) {
+      const foot = Math.round(left + ((right - left) * (cx * Q + Q / 2)) / T);
+      const x = tx * T + cx * Q;
+      if (north) {
+        this.walls.push(piece(x, foot + (FACE_H - FACE_FLOOR) - FACE_H, ROCK.x + mid * T + cx * Q, FACE_Y, Q, FACE_H));
+        continue;
+      }
+      const rimTop = foot - SLANT_RIM_RISE;
+      this.walls.push(piece(x, rimTop, ROCK.x + mid * T + cx * Q, ROCK.y, Q, T, z));
+      for (let y = rimTop + T; y < (ty + 1) * T; y += Q) {
+        this.walls.push(piece(x, y, ROCK.x + 2 * T, ROCK.y + 2 * T, Q, Math.min(Q, (ty + 1) * T - y), z));
+      }
     }
   }
 
   /** A wall with open ground south shows its cliff of stones, ending at its sides where the face does not run on. */
   private face(tx: number, ty: number): void {
-    if (!this.wall(tx, ty) || this.wall(tx, ty + 1)) return;
-    const runsOn = (x: number) => this.wall(x, ty) && !this.wall(x, ty + 1);
+    if (!this.wall(tx, ty) || this.sloped(tx, ty) || !this.open(tx, ty + 1)) return;
+    const runsOn = (x: number) => this.wall(x, ty) && this.open(x, ty + 1);
     const col = !runsOn(tx - 1) ? 0 : !runsOn(tx + 1) ? EDGE_COL : 1 + (tx % MID_TILES);
     const shown = this.wall(tx, ty - 1) ? FACE_H : FACE_THIN;
     const foot = (ty + 1) * T + (FACE_H - FACE_FLOOR);
@@ -172,10 +247,21 @@ class CaveLayer {
     const W = this.level.width;
     if (!this.level.bridges.has(tx + ty * W)) return;
     const bridge = (x: number, y: number) => this.level.bridges.has(x + y * W);
-    const stretch = DECK.x + Q / 2 + (tx % MID_TILES) * T;
-    const sx = !bridge(tx - 1, ty) ? DECK.x : !bridge(tx + 1, ty) ? DECK.x + DECK.w - T : stretch;
-    this.walls.push(piece(tx * T, ty * T - DECK_RISE, sx, DECK.y, T, DECK.h));
-    if (bridge(tx, ty + 1) || tx % LEG_EVERY !== 0) return;
+    const dy = ty * T - DECK_RISE;
+    const plank = (dx: number, sx: number, w: number) => this.walls.push(piece(dx, dy, sx, DECK.y, w, DECK.h));
+    // Its ends run on half a tile over the ground beyond the brink, so the planks rest on it.
+    if (!bridge(tx - 1, ty)) {
+      plank(tx * T - DECK_REST, DECK.x, DECK_REST);
+      plank(tx * T, DECK.x + DECK_REST, T);
+    } else if (!bridge(tx + 1, ty)) {
+      plank(tx * T, DECK.x + DECK.w - DECK_REST - T, T);
+      plank((tx + 1) * T, DECK.x + DECK.w - DECK_REST, DECK_REST);
+    } else {
+      plank(tx * T, DECK.x + DECK_REST + (tx % MID_TILES) * T, T);
+    }
+    // Legs go down only into the dark: under the bridge's south row, where all they reach is chasm.
+    const dark = (y: number) => this.type(tx, y) === TileType.Hole && !bridge(tx, y);
+    if (bridge(tx, ty + 1) || tx % LEG_EVERY !== 0 || !dark(ty + 1) || !dark(ty + 2)) return;
     this.walls.push(piece(tx * T + LEG_INSET, ty * T + DECK.h - DECK_RISE, LEG.x, LEG.y, LEG.w, LEG.h));
   }
 }

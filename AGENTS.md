@@ -265,9 +265,12 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   (`Hole` tiles of no pit: nobody steps in, sight and shots cross), wide through the biggest cavern, crossed by wooden
   bridges (`level.bridges`, floor nothing is set on) only where they are needed to reach everything; floor it cuts off is
   lost to it. The caverns are drawn from the cave set `public/caves/MainLev2.0.png` (`level/CaveTerrain.ts`): rock walls of
-  heaped stones (their rims and cliffs read quarter by quarter from the dark rock block), cave ground with patches of
+  heaped stones (their rims and cliffs read quarter by quarter from the dark rock block, the rims' stones spilling a
+  few pixels over the ground here and there so the edges wander; a corridor down the slant has its cliff or rim of stones
+  follow the slant 16 px at a time; where the caverns meet the catacombs the bricks end in their edge), cave ground with patches of
   purplish heath, the chasm block's cliff and dark, its ragged brinks (`cave_brinks`, the block's ring with its ground
-  cleared at load) laid over the ground beside it, and the bridge's planks and legs; the catacombs' torches, hangings and
+  cleared at load) laid over the ground beside it, and the bridge's planks (their ends resting on the ground beyond the brinks; off a bridge's edge feet do not sink
+  past it, `Level.addTileClip`) and legs (only where all below is dark); the catacombs' torches, hangings and
   spike traps stay out of them.
 - Animated decor stored one frame per file (`public/catacombs` torches and candles) is padded to one height with the base
   at the bottom, so only the flame moves; the catacombs' spikes (`spike_0…4.png`) are laid two by two into a tile's frame
@@ -275,7 +278,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   never cleared over) and stone columns standing about them, their faces hung only with their own iron
   (`CATACOMB_FIXTURES`, no trophies or armour; every other tile at most, beside torches and over anything low at the
   wall's foot) and now and then a barred gate (`barred_gate`, from the tileset, with the wall top's black behind its bars,
-  `PropDef.backing`); their faces also show stretches with vents and dark cracked stretches (`TerrainAutotile.ts` face
+  `PropDef.backing`, and blue fire burning beyond them, `PropDef.fire`, `entities/WindowFire.ts`, its foot hidden by the
+  sill); drain grates keep a tile clear of any wall; their faces also show stretches with vents and dark cracked stretches (`TerrainAutotile.ts` face
   styles), and where a wall juts out past another's face it ends in its edge strip all the way up its face
   (`shallowerFace`) and on up to the wall's north edge (`seamW`/`seamE`). Campfires stand on a ring of cobbles
   (`campfire_floor`, built at load in `assets/AssetLoader.ts`). Coffins and sarcophagi are searched like

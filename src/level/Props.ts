@@ -143,6 +143,11 @@ export type PropDef = {
    * gate's bars, where the art leaves its opening clear).
    */
   backing?: { rect: Rect; lift: number };
+  /**
+   * Fire burning behind it, seen through it (a barred gate's window, entities/WindowFire.ts): a flame at each of `at` (px
+   * from the prop's middle), its foot `rise` px above the prop's (low enough for the sill to hide it).
+   */
+  fire?: { at: readonly number[]; rise: number };
   /** Mist breathes faintly out of it (the portals of the safe and exit rooms, systems/MistSystem.ts). */
   smoke?: true;
   /** Animation frames, played in a loop `frameTime` ticks each. */
@@ -284,6 +289,7 @@ export const PROPS = {
   barred_gate: {
     image: 'mainlev', rect: { x: 496, y: 32, w: 96, h: 80 }, mount: 'foot', weight: 0,
     backing: { rect: { x: 80, y: 56, w: 94, h: 56 }, lift: 20 },
+    fire: { at: [-8, 9], rise: 12 },
   },
   // The portals (the castle tileset's great arches, set into the north wall of the safe and exit rooms): the stairs the
   // heroes came down by, and the dark way on, smoke breathing out of both.

@@ -423,7 +423,9 @@ export class Level {
     if (this.slopeRow(tx, ty) >= 0) return;
     if (this.isChasm(tx, ty)) {
       if (OPEN_CHASMS[this.theme]) return;
-      const rim = this.getTile(tx, ty - 1)?.type === TileType.Floor ? WALL_SINK : 0;
+      // Off the south edge of a bridge there is nothing to sink into: its planks end where the gap begins.
+      const north = tx + (ty - 1) * this.width;
+      const rim = this.getTile(tx, ty - 1)?.type === TileType.Floor && !this.bridges.has(north) ? WALL_SINK : 0;
       this.clipBoxes.push(this.clipPool.between(tx * TILE_WIDTH, ty * TILE_HEIGHT + rim, (tx + 1) * TILE_WIDTH, (ty + 1) * TILE_HEIGHT));
       return;
     }

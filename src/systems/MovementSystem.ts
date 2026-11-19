@@ -25,6 +25,8 @@ const EPSILON = 0.01;
 const DEFAULT_FRICTION = 0.4;
 /** Knockback fades by this factor per tick. */
 const KNOCKBACK_FADE = 0.8;
+/** A knockback this fast (px per tick, across plus down) can drive an enemy over a hole's edge. */
+const KNOCKED_OVER_SPEED = 1;
 /** Speeds below this count as standing still. */
 const REST_SPEED = 0.01;
 /** Sprinting speeds a player up by half. */
@@ -98,20 +100,29 @@ function settle(v: Point, factor: number): void {
   if (Math.abs(v.y) < REST_SPEED) v.y = 0;
 }
 
-/** Ground no enemy may stand on: holes, and the safe rooms players rest in. */
-function offLimits(level: Level, x: number, y: number): boolean {
-  return level.overPit(x, y) || level.isWorldPosSafe(x, y);
+/**
+ * Ground no enemy may stand on: the safe rooms players rest in, and holes, unless a blow is knocking it back (then it may
+ * be driven over the edge, and fall).
+ */
+function offLimits(level: Level, x: number, y: number, knocked: boolean): boolean {
+  return (!knocked && level.overPit(x, y)) || level.isWorldPosSafe(x, y);
+}
+
+/** Whether a body is being knocked back hard enough to be driven over a brink. */
+function knockedBack(entity: Body): boolean {
+  const bump = entity.bump;
+  return !!bump && Math.abs(bump.x) + Math.abs(bump.y) >= KNOCKED_OVER_SPEED;
 }
 
 /**
- * Mobs can't step into holes or safe rooms (walking or knocked back): undo the axis that took them in. One
- * already inside (spawned or pushed there before) may still walk out.
+ * Mobs can't walk into holes or safe rooms: undo the axis that took them in. One already inside (spawned or pushed there
+ * before) may still walk out; one a blow knocks back may be driven into a hole (HoleSystem.ts drops it).
  */
-function keepOutOfForbidden(level: Level, entity: Body, fromX: number, fromY: number): void {
+function keepOutOfForbidden(level: Level, entity: Body, fromX: number, fromY: number, knocked: boolean): void {
   const pos = entity.position;
-  if (!entity.ai || !offLimits(level, pos.x, pos.y) || offLimits(level, fromX, fromY)) return;
-  if (!offLimits(level, pos.x, fromY)) pos.y = fromY;
-  else if (!offLimits(level, fromX, pos.y)) pos.x = fromX;
+  if (!entity.ai || !offLimits(level, pos.x, pos.y, knocked) || offLimits(level, fromX, fromY, knocked)) return;
+  if (!offLimits(level, pos.x, fromY, knocked)) pos.y = fromY;
+  else if (!offLimits(level, fromX, pos.y, knocked)) pos.x = fromX;
   else { pos.x = fromX; pos.y = fromY; }
   entity.velocity.x = entity.velocity.y = 0;
   if (entity.bump) entity.bump.x = entity.bump.y = 0;
@@ -154,9 +165,10 @@ function moveBody(level: Level, entity: Body): void {
   const ya = (frozen ? 0 : velocity.y) + (bump?.y ?? 0);
   const fromX = position.x;
   const fromY = position.y;
+  const knocked = knockedBack(entity);
   move(position, radius, xa, ya, obstaclesFor(level, entity), entity.physicsSlide !== undefined);
   level.pushOutOfSlopes(position, radius.x, radius.y);
-  keepOutOfForbidden(level, entity, fromX, fromY);
+  keepOutOfForbidden(level, entity, fromX, fromY, knocked);
   settle(velocity, entity.friction ?? DEFAULT_FRICTION);
   if (bump) settle(bump, KNOCKBACK_FADE);
 }

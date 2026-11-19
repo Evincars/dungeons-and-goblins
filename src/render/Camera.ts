@@ -35,11 +35,33 @@ export function displayScale(): number {
   return Math.min(window.innerWidth / GAME_WIDTH, window.innerHeight / GAME_HEIGHT);
 }
 
-export const camera = { x: 0, y: 0 };
+/**
+ * Where the view is in the world (its top left), and how far it is zoomed in on the world (the mouse wheel in a level):
+ * 1 shows the picture as made, up to ZOOM_MAX twice as close, in ZOOM_STEP steps, never so close that single pixels
+ * become blocks. The HUD is never zoomed.
+ */
+export const camera = { x: 0, y: 0, zoom: 1 };
+export const ZOOM_MIN = 1;
+export const ZOOM_MAX = 2;
+export const ZOOM_STEP = 0.25;
+
+/** Zooms in (`steps` > 0) or out by whole steps, within the limits. */
+export function zoomBy(steps: number): void {
+  camera.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, camera.zoom + steps * ZOOM_STEP));
+}
+
+/** How much of the world the view shows across and down at the current zoom. */
+export function viewWidth(): number {
+  return GAME_WIDTH / camera.zoom;
+}
+
+export function viewHeight(): number {
+  return VIEW_HEIGHT / camera.zoom;
+}
 
 /** The world point under a screen point; written into `out` when given, so per-tick callers allocate nothing. */
 export function screenToWorld(sx: number, sy: number, out = { x: 0, y: 0 }): { x: number; y: number } {
-  out.x = sx + camera.x;
-  out.y = sy + camera.y;
+  out.x = sx / camera.zoom + camera.x;
+  out.y = sy / camera.zoom + camera.y;
   return out;
 }

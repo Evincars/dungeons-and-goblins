@@ -264,15 +264,18 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - Now and then (`CAVE_ZONE_CHANCE`, `DungeonBuilder.ts`) a catacomb level (its maps are bigger, 112×52, `THEME_CONFIG`) runs
   through caverns in its middle (`generators/CaveZone.ts`: the rooms in the middle band of the map become caves, `room.cave`,
   furnished as cave halls, `level.caveZone`): a ragged chasm runs down through them from the top of the map to the bottom
-  (`Hole` tiles of no pit: nobody steps in, sight and shots cross), wide through the biggest cavern, crossed by wooden
+  (`Hole` tiles of no pit, a drop, `OPEN_CHASMS`: whoever steps out over its dark falls, a little reserve at a brink but
+  none off a bridge's edge; tiles of ground it leaves jutting into it fall in too), wide through the biggest cavern, crossed by wooden
   bridges (`level.bridges`, floor nothing is set on) only where they are needed to reach everything; floor it cuts off is
   lost to it. The caverns are drawn from the cave set `public/caves/MainLev2.0.png` (`level/CaveTerrain.ts`): rock walls of
-  heaped stones (their rims and cliffs read quarter by quarter from the dark rock block, the rims' stones spilling a
-  few pixels over the ground here and there so the edges wander; a corridor down the slant has its cliff or rim of stones
-  follow the slant 16 px at a time; where the caverns meet the catacombs the bricks end in their edge), cave ground with patches of
+  heaped stones (their rims and cliffs read quarter by quarter from the dark rock block, the side rims' stones spilling a
+  few pixels over the ground so the edges wander, `level/CaveShape.ts`, which bodies bump into too, as into the stones at
+  a cliff's foot; a corridor down the slant has its cliff or rim of stones follow the slant 16 px at a time, with the rim
+  or cliff's end where it meets open ground; where the caverns meet the catacombs the bricks end in their edge), cave ground with patches of
   purplish heath, the chasm block's cliff and dark, its ragged brinks (`cave_brinks`, the block's ring with its ground
-  cleared at load) laid over the ground beside it, and the bridge's planks (their ends resting on the ground beyond the brinks; off a bridge's edge feet do not sink
-  past it, `Level.addTileClip`) and legs (only where all below is dark); the catacombs' torches, hangings and
+  cleared at load) laid over the ground beside it (never at a mere corner), the chasm itself one even dark, and the bridge's planks (their
+  ends resting on the ground beyond the brinks, under the rock where they run into a wall) and legs (only where all below is
+  dark); the rock spires block a broad base (`spireBase`, `Props.ts`); the catacombs' torches, hangings and
   spike traps stay out of them.
 - Animated decor stored one frame per file (`public/catacombs` torches and candles) is padded to one height with the base
   at the bottom, so only the flame moves; the catacombs' spikes (`spike_0…4.png`) are laid two by two into a tile's frame
@@ -369,7 +372,11 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   Blood splashes from a hero or a foe a blow
   hurts (`entities/Blood.ts`, `public/blood`, small). `src/render/` — sheets, camera, terrain layers.
 - The picture is 16:9 (`render/Camera.ts`), wider (up to 21:9) only on an ultrawide monitor, by the monitor's shape, not the
-  window's; the window shows it as large as fits, with bars.
+  window's; the window shows it as large as fits, with bars. In a level the mouse wheel zooms the world (not the HUD) in and
+  out between the picture as made and twice as close (`camera.zoom`, `zoomBy`; `screenToWorld` follows it); the game layer
+  and the light overlay are scaled, the camera follows the hero over the smaller stretch of world in view.
+- An enemy knocked back hard by a blow may be driven over a pit's or chasm's edge, and falls (`MovementSystem.ts`
+  `KNOCKED_OVER_SPEED`); walking, enemies keep out of holes. A spike trap springs under feet two pixels inside its tile.
 - `src/core/` — cross-cutting: `errors/`, `log/`, `geometry.ts`, `guards.ts`, `debugHooks.ts`, `compression.ts` (gzip with a size limit).
 - `src/game/` — game loop, `SceneManager`, persisted settings, player actions (item gifts too), the party's votes
   (`Party.ts`: one synced `party` entity; rests and the lever ask through it, and act once everyone agrees), death

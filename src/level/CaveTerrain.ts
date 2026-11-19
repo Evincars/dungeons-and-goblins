@@ -2,6 +2,7 @@ import type { Level } from './Level';
 import { TileType, TILE_HEIGHT, TILE_WIDTH } from './TileType';
 import type { TerrainPiece } from './TerrainAutotile';
 import { slantFootY } from './IsoTerrain';
+import { caveBulge } from './CaveShape';
 
 /**
  * The caverns of a catacomb level (level.caveZone, generators/CaveZone.ts), drawn from the cave set
@@ -21,7 +22,7 @@ export const CAVE_SHEET = 'cave_ground';
 export const CAVE_BRINKS = 'cave_brinks';
 /** The block the brinks are cut from, and how bright a pixel of it may be and still be brink (not ground). */
 export const BRINK_BLOCK = { x: 1440, y: 256, w: 192, h: 192 };
-export const BRINK_DARKEST_GROUND = 35;
+export const BRINK_DARKEST_GROUND = 26;
 
 const T = TILE_WIDTH;
 const Q = T / 2;
@@ -43,7 +44,6 @@ const MID_TILES = 4;
  * hole's top row the cliff under its north brink, black below.
  */
 const HOLE = { x: BRINK_BLOCK.x, y: BRINK_BLOCK.y };
-const HOLE_EDGE = 4;
 const HOLE_MID = 2;
 /** The bridge (cols 45–49, rows 32–37): its deck of planks, and a leg under it. */
 const DECK = { x: 1442, y: 1024, w: 156, h: 38 };
@@ -53,10 +53,8 @@ const DECK_REST = 16;
 const LEG = { x: 1482, y: 1062, w: 10, h: 56 };
 const LEG_INSET = 11;
 const LEG_EVERY = 2;
-/** One wall tile in this many spills its rim's stones this far (min, max px) over the ground beside it. */
+/** One wall tile in this many spills its north rim's stones over the ground north of it (its sides all do, CaveShape.ts). */
 const BULGE_EVERY = 2;
-const BULGE_MIN = 4;
-const BULGE_MAX = 10;
 /** Along a south slant the rim's stones sit this far over the slant's line, and hide whoever stands this far below it. */
 const SLANT_RIM_RISE = 12;
 const SLANT_RIM_SINK = 8;
@@ -105,10 +103,11 @@ class CaveLayer {
     const zone = [...this.level.caveZone];
     const at = (i: number): [number, number] => [i % W, Math.floor(i / W)];
     for (const i of zone) this.ground(...at(i));
+    // The bridges lie over the chasm but under the rock: where a deck runs into a wall, the wall's stones are in front.
+    for (const i of zone) this.deck(...at(i));
     for (const i of zone) this.top(...at(i));
     for (const i of zone) this.face(...at(i));
     for (const i of zone) this.slant(...at(i));
-    for (const i of zone) this.deck(...at(i));
   }
 
   /** What lies on a tile: a wall's top, the chasm, or the ragged brinks over ground beside the chasm. */
@@ -118,29 +117,24 @@ class CaveLayer {
     else this.brinks(tx, ty);
   }
 
-  /** A chasm tile, quarter by quarter: the cliff under a north brink, the dark below, the hole's edges at its sides. */
+  /**
+   * A chasm tile: the even dark of the hole's middle (its edges are the brinks laid over the ground round it; the block's
+   * own edge tiles, a shade lighter, would show the tiles as squares).
+   */
   private hole(tx: number, ty: number): void {
-    const open = (x: number, y: number) => !this.chasm(x, y);
-    const w = open(tx - 1, ty);
-    const e = open(tx + 1, ty);
-    const n = open(tx, ty - 1);
-    const s = open(tx, ty + 1);
-    for (const [cx, cy] of QUARTERS) {
-      const col = edgeOr(cx === 0 ? w : e, cx === 0 ? e : w, cx, 1, HOLE_EDGE, HOLE_MID + (tx % 2));
-      const row = edgeOr(cy === 0 ? n : s, cy === 0 ? s : n, cy, 1, HOLE_EDGE, HOLE_MID + (ty % 2));
-      this.walls.push(piece(tx * T + cx * Q, ty * T + cy * Q, HOLE.x + col * T + cx * Q, HOLE.y + row * T + cy * Q, Q, Q));
-    }
+    this.walls.push(piece(tx * T, ty * T, HOLE.x + HOLE_MID * T, HOLE.y + HOLE_MID * T, T, T));
   }
 
-  /** Ground beside the chasm: the ring's ragged brink over each quarter that faces it (side, end or corner). */
+  /** Ground beside the chasm: the ring's ragged brink over each quarter that faces it (along a side, or round a corner). */
   private brinks(tx: number, ty: number): void {
     for (const [cx, cy] of QUARTERS) {
       const sx = cx === 0 ? -1 : 1;
       const sy = cy === 0 ? -1 : 1;
       const h = this.chasm(tx + sx, ty);
       const v = this.chasm(tx, ty + sy);
-      const d = this.chasm(tx + sx, ty + sy);
-      if (!h && !v && !d) continue;
+      // Touching the chasm only at a corner, the ground keeps its own edge: the block's corner piece is mostly dark there
+      // and would show as a square.
+      if (!h && !v) continue;
       const col = h || !v ? (cx === 0 ? EDGE_COL : 0) : HOLE_MID + (tx % 2);
       const row = v || !h ? (cy === 0 ? EDGE_COL : 0) : HOLE_MID + (ty % 2);
       const quarter = piece(tx * T + cx * Q, ty * T + cy * Q, col * T + cx * Q, row * T + cy * Q, Q, Q);
@@ -191,17 +185,16 @@ class CaveLayer {
    * so its edges wander as rock does instead of running ruler-straight.
    */
   private bulge(tx: number, ty: number, open: { w: boolean; e: boolean; n: boolean; s: boolean }, z: number | undefined): void {
-    const v = hash(tx, ty);
-    if (v % BULGE_EVERY !== 0) return;
-    const out = BULGE_MIN + ((v >>> 4) % (BULGE_MAX - BULGE_MIN + 1));
     const rows: Quarter[] = open.s ? [0] : [0, 1];
+    const rimRow = (open.n ? 0 : 1 + (ty % MID_TILES)) * T;
     for (const cy of rows) {
-      if (open.w) this.walls.push(piece(tx * T - out, ty * T + cy * Q, ROCK.x, ROCK.y + (open.n ? 0 : 1 + (ty % MID_TILES)) * T + cy * Q, Q, Q, z));
-      if (open.e) this.walls.push(piece(tx * T + Q + out, ty * T + cy * Q, ROCK.x + EDGE_COL * T + Q, ROCK.y + (open.n ? 0 : 1 + (ty % MID_TILES)) * T + cy * Q, Q, Q, z));
+      if (open.w) this.walls.push(piece(tx * T - caveBulge(tx, ty, -1, cy), ty * T + cy * Q, ROCK.x, ROCK.y + rimRow + cy * Q, Q, Q, z));
+      if (open.e) this.walls.push(piece(tx * T + Q + caveBulge(tx, ty, 1, cy), ty * T + cy * Q, ROCK.x + EDGE_COL * T + Q, ROCK.y + rimRow + cy * Q, Q, Q, z));
     }
-    if (!open.n) return;
+    const v = hash(tx, ty);
+    if (!open.n || v % BULGE_EVERY !== 0) return;
     const cx: Quarter = (v >>> 8) & 1 ? 1 : 0;
-    this.walls.push(piece(tx * T + cx * Q, ty * T - out, ROCK.x + (1 + (tx % MID_TILES)) * T + cx * Q, ROCK.y, Q, Q, z));
+    this.walls.push(piece(tx * T + cx * Q, ty * T - caveBulge(tx, ty, 1, 0), ROCK.x + (1 + (tx % MID_TILES)) * T + cx * Q, ROCK.y, Q, Q, z));
   }
 
   /**
@@ -214,22 +207,40 @@ class CaveLayer {
     if (!slope) return;
     const left = slantFootY(slope, tx, ty, false);
     const right = slantFootY(slope, tx, ty, true);
-    const mid = 1 + (tx % MID_TILES);
     const north = slope.corner === 'nw' || slope.corner === 'ne';
-    const z = Math.max(left, right) + SLANT_RIM_SINK;
     for (const cx of [0, 1] as const) {
       const foot = Math.round(left + ((right - left) * (cx * Q + Q / 2)) / T);
-      const x = tx * T + cx * Q;
-      if (north) {
-        this.walls.push(piece(x, foot + (FACE_H - FACE_FLOOR) - FACE_H, ROCK.x + mid * T + cx * Q, FACE_Y, Q, FACE_H));
-        continue;
-      }
-      const rimTop = foot - SLANT_RIM_RISE;
-      this.walls.push(piece(x, rimTop, ROCK.x + mid * T + cx * Q, ROCK.y, Q, T, z));
-      for (let y = rimTop + T; y < (ty + 1) * T; y += Q) {
-        this.walls.push(piece(x, y, ROCK.x + 2 * T, ROCK.y + 2 * T, Q, Math.min(Q, (ty + 1) * T - y), z));
-      }
+      // Where the slant ends beside open ground, its column on that side is the rim's (or the cliff's) end.
+      const col = this.slantColumn(tx, ty, cx);
+      if (north) this.walls.push(piece(tx * T + cx * Q, foot + (FACE_H - FACE_FLOOR) - FACE_H, ROCK.x + col * T + cx * Q, FACE_Y, Q, FACE_H));
+      else this.southSlantColumn(tx, ty, cx, col, foot, Math.max(left, right) + SLANT_RIM_SINK);
     }
+  }
+
+  /** The template column a slant tile's half draws from: a side rim's where open ground lies beside it, else the middle. */
+  private slantColumn(tx: number, ty: number, cx: Quarter): number {
+    if (cx === 0 && this.open(tx - 1, ty)) return 0;
+    if (cx === 1 && this.open(tx + 1, ty)) return EDGE_COL;
+    return 1 + (tx % MID_TILES);
+  }
+
+  /**
+   * One half of a south slant's tile: the rim of stones along the slant, the wall's dark below it (its side rim where open
+   * ground lies beside), and its cliff at the tile's foot where open ground lies below it.
+   */
+  private southSlantColumn(tx: number, ty: number, cx: Quarter, col: number, foot: number, z: number): void {
+    const x = tx * T + cx * Q;
+    const rimTop = foot - SLANT_RIM_RISE;
+    const bottom = (ty + 1) * T;
+    this.walls.push(piece(x, rimTop, ROCK.x + col * T + cx * Q, ROCK.y, Q, T, z));
+    const side = col === 0 || col === EDGE_COL;
+    for (let y = rimTop + T; y < bottom; y += Q) {
+      const sy = side ? ROCK.y + (1 + (ty % MID_TILES)) * T + ((y - rimTop) % T) : ROCK.y + 2 * T;
+      this.walls.push(piece(x, y, ROCK.x + col * T + (side ? cx * Q : 2 * T - col * T), sy, Q, Math.min(Q, bottom - y), z));
+    }
+    if (!this.open(tx, ty + 1)) return;
+    const shown = Math.min(FACE_H, bottom + (FACE_H - FACE_FLOOR) - rimTop - Q);
+    this.walls.push(piece(x, bottom + (FACE_H - FACE_FLOOR) - shown, ROCK.x + col * T + cx * Q, FACE_Y + FACE_H - shown, Q, shown));
   }
 
   /** A wall with open ground south shows its cliff of stones, ending at its sides where the face does not run on. */

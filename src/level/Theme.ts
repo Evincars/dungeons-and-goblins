@@ -32,7 +32,7 @@ export const SOUTH_WALL_RAISE = { catacomb: 8, castle: 8, castle2: 8, mines: 8 }
  * abysses and great pits, with only a fence here and there along them), or gaps nobody can step into (the isometric
  * castle's).
  */
-export const OPEN_CHASMS = { catacomb: false, castle: false, castle2: false, mines: true } as const satisfies Record<LevelTheme, boolean>;
+export const OPEN_CHASMS = { catacomb: true, castle: false, castle2: false, mines: true } as const satisfies Record<LevelTheme, boolean>;
 
 /**
  * The colour of the dark beyond a level's walls and off its map: the same as the void the theme's tileset draws in its

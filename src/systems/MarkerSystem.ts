@@ -51,8 +51,12 @@ const TRADER_BOX = {
   dy: ((TRADER_FIGURE.y0 + TRADER_FIGURE.y1) / 2 - TRADER_FRAME / 2) * TRADER_SCALE,
 };
 
+/** A chest's box: the chest itself, not its tall frame (most of it empty above a closed lid). */
+const CHEST_BOX = { w: 11, h: 10, dx: 0, dy: 8 };
+
 function boxOf(e: Entity): typeof box {
   if (e.shopNpc) return Object.assign(box, TRADER_BOX);
+  if (e.chest) return Object.assign(box, CHEST_BOX);
   box.dx = 0;
   box.dy = 0;
   if (e.sprite && !e.sprite.destroyed) {

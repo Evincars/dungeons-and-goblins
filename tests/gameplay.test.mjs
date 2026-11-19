@@ -3828,13 +3828,19 @@ test('a hero sinking over a chasm\'s north rim stands on it; one stepping onto a
   assert.ok(hero.falling, 'out over the dark, they fall');
 });
 
-test('only a tall prop\'s base stops bodies: from the north one walks on behind its rock or column', async () => {
+test('only a tall prop\'s base stops bodies: from the north one walks on behind its column; a rock spire\'s base is broad', async () => {
   const { PROPS, propBlockRect, PROP_GROUND } = await load('level/Props');
   for (const kind of ['cave_spires', 'cave_spire', 'iso_column', 'castle_column']) {
     const def = PROPS[kind];
     assert.ok(def.seeThrough, `${kind} clears over whoever is behind it`);
     const block = propBlockRect(def);
-    assert.ok(block.y0 >= PROP_GROUND - 16 && block.y1 === PROP_GROUND, `${kind} blocks only its base`);
+    assert.equal(block.y1, PROP_GROUND, `${kind} blocks from its foot`);
+    if (!kind.startsWith('cave_')) {
+      assert.ok(block.y0 >= PROP_GROUND - 16, `${kind} blocks only its base`);
+      continue;
+    }
+    const depth = block.y1 - block.y0;
+    assert.ok(depth >= def.rect.h * 0.3 && depth < def.rect.h * 0.6, `${kind}: a heap of stones stops one well short of its peak, not at its front`);
   }
   assert.ok(!PROPS.crystal_blue_00.seeThrough && !PROPS.shelf_narrow.seeThrough, 'decor never clears');
 });
@@ -6378,17 +6384,18 @@ function forEachTileIn(r, fn) {
   for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) fn(x, y);
 }
 
-test("off a bridge's edge there is nothing to sink into; drain grates keep clear of walls; fire burns behind a barred gate's bars", async () => {
+test("off a bridge's edge there is nothing to stand on; drain grates keep clear of walls; fire burns behind a barred gate's bars", async () => {
+  const { overHole } = await load('systems/HoleSystem');
   const level = arena(8, 8);
   for (let x = 1; x < 7; x++) level.setTile(x, 4, createTile(TileType.Hole));
   level.setTile(3, 3, createTile(TileType.Floor));
   level.bridges.add(3 + 3 * level.width);
-  const boxes = level.getClipBBs(3 * 32 + 16, 4 * 32 - 4, 6, 4);
-  const below = boxes.find((b) => b.x === 3 * 32 && b.y >= 4 * 32 - 1 && b.y <= 4 * 32 + 1);
-  assert.ok(below, 'the chasm below the bridge stops feet at its very edge');
+  const justOff = { position: { x: 3 * 32 + 16, y: 4 * 32 + 8 }, radius: { x: 7, y: 7 } };
+  assert.equal(level.getClipBBs(justOff.position.x, justOff.position.y, 7, 7).some((b) => b.y >= 4 * 32 - 1 && b.y < 5 * 32 && b.x === 3 * 32), false,
+    'the caverns\' chasm is a drop, not a wall');
+  assert.equal(overHole(level, justOff), true, 'stepping off the planks, one falls at once');
   level.bridges.clear();
-  const sunk = level.getClipBBs(3 * 32 + 16, 4 * 32 - 4, 6, 4).find((b) => b.x === 3 * 32 && b.y > 4 * 32 + 1);
-  assert.ok(sunk, 'off plain floor, feet reach over the brink as over a wall');
+  assert.equal(overHole(level, justOff), false, 'off plain ground, feet reach over the brink a little');
 
   for (const seed of [3, 7, 11, 23]) {
     const { level: built } = new DungeonBuilder({ ...DEFAULT_CONFIG, seed }).build();
@@ -6406,4 +6413,35 @@ test("off a bridge's edge there is nothing to sink into; drain grates keep clear
   assert.equal(fires.length, 2, 'two blue flames');
   assert.ok(fires.every((f) => f.position.y < gate.position.y), 'drawn behind the bars');
   assert.ok(fires.some((f) => f.glow?.cool), 'giving off a cold light');
+});
+
+test('a blow can knock an enemy over the edge of a pit, where it falls; the mouse wheel zooms the view, not the HUD', async () => {
+  const { updateMovement } = await load('systems/MovementSystem');
+  const { updateHoles } = await load('systems/HoleSystem');
+  const { camera, zoomBy, screenToWorld, ZOOM_MAX } = await load('render/Camera');
+  world.clear();
+  const level = arena(12, 8);
+  for (const [x, y] of [[6, 3], [7, 3], [6, 4], [7, 4]]) level.setTile(x, y, createTile(TileType.Hole));
+  level.addPit({ x: 6, y: 3, shape: 'square' });
+  const mob = mobAt(level, 'goblin', 5, 4);
+  mob.position.x = 6 * 32 - 2;
+  for (let t = 0; t < 10; t++) updateMovement(level);
+  assert.ok(mob.position.x < 6 * 32, 'walking, it keeps out of the pit');
+  mob.bump = { x: 4, y: 0 };
+  for (let t = 0; t < 12; t++) {
+    updateMovement(level);
+    updateHoles(level);
+  }
+  assert.equal(mob.removed, true, 'knocked back over the edge, it is lost');
+
+  camera.x = 100;
+  camera.y = 50;
+  camera.zoom = 1;
+  zoomBy(1);
+  assert.equal(camera.zoom, 1.25);
+  for (let i = 0; i < 20; i++) zoomBy(1);
+  assert.equal(camera.zoom, ZOOM_MAX, 'never closer than twice');
+  assert.deepEqual(screenToWorld(40, 20), { x: 120, y: 60 }, 'the mouse points into the zoomed world');
+  for (let i = 0; i < 20; i++) zoomBy(-1);
+  assert.equal(camera.zoom, 1, 'and back out to the picture as made, no further');
 });

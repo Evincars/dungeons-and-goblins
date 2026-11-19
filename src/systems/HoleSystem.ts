@@ -38,7 +38,10 @@ function holeAt(level: Level, x: number, y: number): boolean {
   if (!level.overPit(x, y)) return false;
   const tx = Math.floor(x / TILE_WIDTH);
   const ty = Math.floor(y / TILE_HEIGHT);
-  const onRim = level.isChasm(tx, ty) && level.getTile(tx, ty - 1)?.type === TileType.Floor && y - ty * TILE_HEIGHT < WALL_SINK;
+  // Off the south edge of a bridge there is no rim: its planks end where the dark begins.
+  const north = tx + (ty - 1) * level.width;
+  const rimmed = level.getTile(tx, ty - 1)?.type === TileType.Floor && !level.bridges.has(north);
+  const onRim = level.isChasm(tx, ty) && rimmed && y - ty * TILE_HEIGHT < WALL_SINK;
   return !onRim;
 }
 

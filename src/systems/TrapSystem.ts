@@ -23,8 +23,8 @@ import { recordEvent } from './CombatLogSystem';
 export const SPIKE_FRAMES = 5;
 /** Each frame of the spikes rising shows this many ticks. */
 const SPIKE_FRAME_TICKS = 2;
-/** A hero springs a trap with their feet this far inside its tile (stepping on its edge does not). */
-const TRAP_INSET = 5;
+/** A hero springs a trap with their feet this far inside its tile (stepping on its very edge does not). */
+const TRAP_INSET = 2;
 /**
  * The trap's die by depth: up to the second level a d4, then a d6, a d8 and a d10 two levels each, a d12 from then on
  * (the first depth each die starts at).

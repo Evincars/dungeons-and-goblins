@@ -197,8 +197,11 @@ type WallTop = { outerTL: Src; outerTR: Src; edgeTopL: Src; edgeTopR: Src; edgeL
 
 /** Tallest a south face gets, in sub-tiles: a cap over three brick rows. */
 const FACE_MAX = 4;
-/** A wall's edge is run up past another's face to its north edge only if that is at most this many sub-tiles up. */
-const SEAM_MAX = 12;
+/**
+ * A wall's edge is run up past another's face to its north edge only if that is at most this many sub-tiles up: further,
+ * a rim through the dark would outline a room that is not there.
+ */
+const SEAM_MAX = 4;
 /** Sub-tiles of a framed 2×2 pit along each side. */
 const PIT_SUBTILES = 4;
 /** Floor value-noise scale in tiles, and the noise levels above which patches and rough earth show. */
@@ -377,11 +380,15 @@ class TerrainBuilder {
   };
 
   /**
-   * Whether the sub-tile beside a face is another wall's face standing further north (its foot higher up): this face
-   * juts out past it, so it ends there with its edge, all the way up, as where it ends beside open floor.
+   * Whether a face ends on this side with its edge strip, all the way up: where open floor lies beside its foot (it ends
+   * there, or juts out past a wall whose face stands further north), or where the caverns' rock takes over. A face that
+   * runs into the side of a wall jutting out past it does not: that wall's edge ends it.
    */
-  private shallowerFace(sx: number, sy: number, bottom: number): boolean {
-    return this.isFace(sx, sy) && sy + this.faceK[sx + sy * this.W] - 1 < bottom;
+  private endsBeside(sx: number, sy: number, side: -1 | 1, bottom: number): boolean {
+    const nx = sx + side;
+    const runsOn = this.isFace(nx, sy) && sy + this.faceK[nx + sy * this.W] - 1 === bottom;
+    if (runsOn) return false;
+    return !this.solid(nx, sy) || !this.solid(nx, bottom) || this.inCaves(nx, sy);
   }
 
   /** A plain wall-top sub-tile: solid, no face, no slant. */
@@ -423,9 +430,8 @@ class TerrainBuilder {
     const i = sx + sy * this.W;
     const h = this.faceH[i];
     const bottom = sy + this.faceK[i] - 1;
-    // A face ends with its edge where the caverns' rock takes over, as beside open floor.
-    if (!this.solid(sx - 1, sy) || this.shallowerFace(sx - 1, sy, bottom) || this.inCaves(sx - 1, sy)) return 'left';
-    if (!this.solid(sx + 1, sy) || this.shallowerFace(sx + 1, sy, bottom) || this.inCaves(sx + 1, sy)) return 'right';
+    if (this.endsBeside(sx, sy, -1, bottom)) return 'left';
+    if (this.endsBeside(sx, sy, 1, bottom)) return 'right';
     if (!this.castle && this.tileAt(sx, sy)?.type === TileType.BreakableWall) return 'cracked';
     const tx = sx >> 1;
     const full = h === FACE_MAX;
@@ -794,13 +800,19 @@ class TerrainBuilder {
   private slantSideEdges(tx: number, ty: number, top: number, bottom: number): void {
     const t = this.top;
     for (const side of [-1, 1] as const) {
-      const beside = this.level.getTile(tx + side, ty);
-      const open = !!beside && (beside.passable || beside.type === TileType.Obstacle) && !this.level.slopes.has(tx + side + ty * this.level.width);
-      if (!open) continue;
+      // Only where the floor beside runs on south past the slant's tile (the slant ends there); in a corridor down the
+      // slant the floor beside it is the next step's, above the slant, and wants no edge.
+      if (!this.openFloor(tx + side, ty) || !this.openFloor(tx + side, ty + 1)) continue;
       const x = side < 0 ? tx * TILE_WIDTH : (tx + 1) * TILE_WIDTH - Q;
       const src = side < 0 ? t.edgeLeft[0] : t.edgeRight[0];
       for (let y = top; y < bottom; y += Q) quad(this.overlayPieces, x, y, src, Q, Math.min(Q, bottom - y), bottom);
     }
+  }
+
+  /** Floor (or something standing on it) that is no slanted wall's tile. */
+  private openFloor(tx: number, ty: number): boolean {
+    const tile = this.level.getTile(tx, ty);
+    return !!tile && (tile.passable || tile.type === TileType.Obstacle) && !this.level.slopes.has(tx + ty * this.level.width);
   }
 
   /** Notes the sub-tiles a north slope tile's end columns (if its slant ends there) will stand in. */

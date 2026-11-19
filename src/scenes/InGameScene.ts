@@ -14,7 +14,7 @@ import { LightRenderer } from '../level/LightRenderer';
 import type { LightSource } from '../level/LightRenderer';
 import { createPlayer } from '../entities/PlayerFactory';
 import { bindingFor, cleanName, settings } from '../game/Settings';
-import { camera, GAME_HEIGHT, GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
+import { camera, GAME_HEIGHT, GAME_WIDTH, viewHeight, viewWidth, zoomBy } from '../render/Camera';
 import { TILE_WIDTH, TILE_HEIGHT, FOG_REVEAL_TILES } from '../level/TileType';
 import { initInput, pointerFree, resetInput, setInputCaptured, setPanelsOpen } from '../systems/InputSystem';
 import { runCommand } from '../game/Console';
@@ -127,6 +127,15 @@ export class InGameScene implements Scene {
   /** The companion this screen's fallen hero is watching (null: their own body). */
   private watched: Player | null = null;
   private readonly onPointerDown: (e: MouseEvent) => void;
+  /**
+   * The mouse wheel over the world zooms in and out (render/Camera.ts); over a panel or a control it is theirs (to scroll
+   * a list), and while the game is paused or a panel is open it does nothing.
+   */
+  private readonly onWheel = (e: WheelEvent): void => {
+    if (!pointerFree() || this.pause.open || isInventoryOpen() || isShopOpen() || e.deltaY === 0) return;
+    e.preventDefault();
+    zoomBy(e.deltaY < 0 ? 1 : -1);
+  };
   private readonly status: PixelLabel;
   private prompt: Prompt = 'none';
   /** Whether this screen's hero was alive last tick, to toll their death the moment it comes. */
@@ -226,6 +235,7 @@ export class InGameScene implements Scene {
     window.addEventListener('keydown', this.onKeyDown);
     this.onPointerDown = (e) => this.switchWatched(e);
     manager.canvas.addEventListener('mousedown', this.onPointerDown);
+    manager.canvas.addEventListener('wheel', this.onWheel, { passive: false });
     level.reveal(Math.floor(spawns.playerSpawn.x / TILE_WIDTH), Math.floor(spawns.playerSpawn.y / TILE_HEIGHT), START_REVEAL_TILES);
     exposeForDebugging({ __world: world, __level: level });
   }
@@ -361,8 +371,11 @@ export class InGameScene implements Scene {
     if (view) this.follow(view);
     this.updateFallen(player);
     this.revealAroundPlayers();
-    this.gameLayer.x = -camera.x;
-    this.gameLayer.y = -camera.y;
+    // Zoomed in, the world (and its light) is drawn larger about the view's top left; the HUD stays as it is.
+    this.gameLayer.scale.set(camera.zoom);
+    this.gameLayer.x = -camera.x * camera.zoom;
+    this.gameLayer.y = -camera.y * camera.zoom;
+    this.lights.overlay.scale.set(camera.zoom);
     // Walls, columns and rocks clear over whoever stands behind them near the hero followed (where this frame draws them).
     if (this.terrain) updateSeeThrough(this.terrain.seeThrough, view?.position, this.gameLayer, this.level.width * TILE_WIDTH);
 
@@ -390,8 +403,10 @@ export class InGameScene implements Scene {
   private follow(player: Player): void {
     const pos = player.position;
     sound.setListener(pos.x, pos.y);
-    camera.x = Math.max(0, Math.min(this.level.width * TILE_WIDTH - GAME_WIDTH, Math.round(pos.x - GAME_WIDTH / 2)));
-    camera.y = Math.max(0, Math.min(this.level.height * TILE_HEIGHT - VIEW_HEIGHT, Math.round(pos.y - VIEW_HEIGHT / 2)));
+    const w = viewWidth();
+    const h = viewHeight();
+    camera.x = Math.max(0, Math.min(this.level.width * TILE_WIDTH - w, Math.round(pos.x - w / 2)));
+    camera.y = Math.max(0, Math.min(this.level.height * TILE_HEIGHT - h, Math.round(pos.y - h / 2)));
   }
 
   /**
@@ -679,6 +694,7 @@ export class InGameScene implements Scene {
   destroy(): void {
     window.removeEventListener('keydown', this.onKeyDown);
     this.manager.canvas.removeEventListener('mousedown', this.onPointerDown);
+    this.manager.canvas.removeEventListener('wheel', this.onWheel);
     // Leaving with the menu open: the game is this screen's no longer to hold.
     if (this.mode === 'host' && this.pause.open) setSeatPaused('host', false);
     if (this.console.visible) setInputCaptured(false);

@@ -34,6 +34,9 @@ const CHASM_WANDER = 2;
 const CHASM_WAVE = 0.45;
 /** Where its line may run, tried in turn: through the caverns' middle, or this many tiles to one side or the other. */
 const CHASM_SHIFTS = [0, -4, 4, -7, 7] as const;
+/** Floor with the chasm on this many sides falls in, looked for this many times over (one spit may leave another). */
+const SPIT_SIDES = 3;
+const SPIT_PASSES = 2;
 /** Bridges: at most this many, never closer than this many rows to another; each two tiles wide (two rows of planks). */
 const MAX_BRIDGES = 4;
 const BRIDGE_ROWS = 2;
@@ -149,7 +152,8 @@ export class CaveZone {
   /** Floor of the cave the chasm may take: not the safe rooms', nor a slanted wall's. */
   private chasmable(x: number, y: number): boolean {
     const i = x + y * this.level.width;
-    return this.site.isFloor(x, y) && this.level.caveZone.has(i) && !this.level.isSafeZone(x, y) && !this.level.slopes.has(i);
+    return this.site.isFloor(x, y) && this.level.caveZone.has(i) && !this.level.isSafeZone(x, y) && !this.level.slopes.has(i)
+      && !this.level.bridges.has(i);
   }
 
   /** Whether a bridge can cross the chasm at rows y and y + 1: floor beyond both ends of its span on both rows. */
@@ -210,5 +214,29 @@ export class CaveZone {
       if (reached[i] !== 1 && this.chasmable(x, y)) lost.push([x, y]);
     }
     this.site.setTiles(lost, TileType.Hole);
+    for (let pass = 0; pass < SPIT_PASSES; pass++) this.swallowSpits();
+  }
+
+  /** Whether a bridge's end rests on the tile (a bridge beside it): it must stay ground to walk off onto. */
+  private byBridge(x: number, y: number): boolean {
+    const W = this.level.width;
+    return this.level.bridges.has(x - 1 + y * W) || this.level.bridges.has(x + 1 + y * W);
+  }
+
+  /**
+   * Single tiles of floor the chasm's steps leave jutting into it (the chasm on three sides) fall in too: they would read
+   * as squares of ground hanging in the dark. A dead end each, so nothing is cut off by losing them.
+   */
+  private swallowSpits(): void {
+    const spits: Array<[number, number]> = [];
+    const W = this.level.width;
+    const hole = (x: number, y: number) => this.level.getTile(x, y)?.type === TileType.Hole;
+    for (const i of this.level.caveFloor) {
+      const x = i % W;
+      const y = Math.floor(i / W);
+      const around = Number(hole(x - 1, y)) + Number(hole(x + 1, y)) + Number(hole(x, y - 1)) + Number(hole(x, y + 1));
+      if (around >= SPIT_SIDES && this.chasmable(x, y) && !this.byBridge(x, y)) spits.push([x, y]);
+    }
+    this.site.setTiles(spits, TileType.Hole);
   }
 }

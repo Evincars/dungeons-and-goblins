@@ -209,6 +209,16 @@ function gemCrystal(images: readonly PropImage[]): PropDef {
   };
 }
 
+/**
+ * A rock spire blocks a deep base: its heap of stones rises from a broad foot, so whoever comes from the north stops well
+ * short of its peak (SPIRE_DEPTH of its height), not at a thin strip along its front.
+ */
+const SPIRE_DEPTH = 0.42;
+const SPIRE_INSET = 6;
+function spireBase(w: number, h: number): { w: number; d: number } {
+  return { w: w - 2 * SPIRE_INSET, d: Math.round(h * SPIRE_DEPTH) };
+}
+
 function plant(image: PropImage, kind: number): PropDef {
   const rect = PLANT_RECTS[kind];
   return { image, rect, mount: 'floor', frames: framesInRow(rect, PLANT_FRAMES, PLANT_STEP), frameTime: PLANT_FRAME_TICKS };
@@ -584,18 +594,18 @@ export const PROPS = {
 
   // ── Cave decor (/caves/decorative.png): rock spires, crystals and stones for cave halls ──
   // Light spires, then the same set mirrored; the widest block three tiles across.
-  cave_spires:      { image: 'cave_decor', rect: { x: 4, y: 37, w: 84, h: 91 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 2 } },
-  cave_spire_twin:  { image: 'cave_decor', rect: { x: 96, y: 50, w: 64, h: 78 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 1 } },
-  cave_spire_pair:  { image: 'cave_decor', rect: { x: 161, y: 61, w: 62, h: 67 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 1 } },
-  cave_spire:       { image: 'cave_decor', rect: { x: 235, y: 77, w: 49, h: 51 }, mount: 'floor', solid: true, seeThrough: true },
-  cave_spire_s:     { image: 'cave_decor', rect: { x: 303, y: 80, w: 40, h: 48 }, mount: 'floor', solid: true, seeThrough: true },
-  cave_spire_xs:    { image: 'cave_decor', rect: { x: 355, y: 103, w: 26, h: 25 }, mount: 'floor', solid: true, seeThrough: true },
-  cave_spires_b:     { image: 'cave_decor', rect: { x: 296, y: 165, w: 84, h: 91 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 2 } },
-  cave_spire_twin_b: { image: 'cave_decor', rect: { x: 224, y: 178, w: 64, h: 78 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 1 } },
-  cave_spire_pair_b: { image: 'cave_decor', rect: { x: 161, y: 189, w: 62, h: 67 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 1 } },
-  cave_spire_b:      { image: 'cave_decor', rect: { x: 100, y: 205, w: 49, h: 51 }, mount: 'floor', solid: true, seeThrough: true },
-  cave_spire_s_b:    { image: 'cave_decor', rect: { x: 41, y: 208, w: 40, h: 48 }, mount: 'floor', solid: true, seeThrough: true },
-  cave_spire_xs_b:   { image: 'cave_decor', rect: { x: 3, y: 231, w: 26, h: 25 }, mount: 'floor', solid: true, seeThrough: true },
+  cave_spires:      { image: 'cave_decor', rect: { x: 4, y: 37, w: 84, h: 91 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 2 }, base: spireBase(84, 91) },
+  cave_spire_twin:  { image: 'cave_decor', rect: { x: 96, y: 50, w: 64, h: 78 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 1 }, base: spireBase(64, 78) },
+  cave_spire_pair:  { image: 'cave_decor', rect: { x: 161, y: 61, w: 62, h: 67 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 1 }, base: spireBase(62, 67) },
+  cave_spire:       { image: 'cave_decor', rect: { x: 235, y: 77, w: 49, h: 51 }, mount: 'floor', solid: true, seeThrough: true, base: spireBase(49, 51) },
+  cave_spire_s:     { image: 'cave_decor', rect: { x: 303, y: 80, w: 40, h: 48 }, mount: 'floor', solid: true, seeThrough: true, base: spireBase(40, 48) },
+  cave_spire_xs:    { image: 'cave_decor', rect: { x: 355, y: 103, w: 26, h: 25 }, mount: 'floor', solid: true, seeThrough: true, base: spireBase(26, 25) },
+  cave_spires_b:     { image: 'cave_decor', rect: { x: 296, y: 165, w: 84, h: 91 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 2 }, base: spireBase(84, 91) },
+  cave_spire_twin_b: { image: 'cave_decor', rect: { x: 224, y: 178, w: 64, h: 78 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 1 }, base: spireBase(64, 78) },
+  cave_spire_pair_b: { image: 'cave_decor', rect: { x: 161, y: 189, w: 62, h: 67 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 1 }, base: spireBase(62, 67) },
+  cave_spire_b:      { image: 'cave_decor', rect: { x: 100, y: 205, w: 49, h: 51 }, mount: 'floor', solid: true, seeThrough: true, base: spireBase(49, 51) },
+  cave_spire_s_b:    { image: 'cave_decor', rect: { x: 41, y: 208, w: 40, h: 48 }, mount: 'floor', solid: true, seeThrough: true, base: spireBase(40, 48) },
+  cave_spire_xs_b:   { image: 'cave_decor', rect: { x: 3, y: 231, w: 26, h: 25 }, mount: 'floor', solid: true, seeThrough: true, base: spireBase(26, 25) },
   // Dark spires fading to black at the foot (mapped for later; nothing places them yet).
   cave_dark_spire:     { image: 'cave_decor', rect: { x: 225, y: 267, w: 96, h: 117 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 2 } },
   cave_dark_spire_m:   { image: 'cave_decor', rect: { x: 128, y: 301, w: 64, h: 83 }, mount: 'floor', solid: true, seeThrough: true, footprint: { w: 3, h: 1 } },

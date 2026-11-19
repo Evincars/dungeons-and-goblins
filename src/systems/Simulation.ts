@@ -18,6 +18,7 @@ import { updateDoors } from './DoorSystem';
 import { updateExit } from './ExitSystem';
 import { updateTraps } from './TrapSystem';
 import { updateMist } from './MistSystem';
+import { updateAimGuide } from './AimGuideSystem';
 import { updateShop } from './ShopSystem';
 import { animateTraders } from './TraderSystem';
 import { updateRespawns } from './RespawnSystem';
@@ -62,6 +63,8 @@ export type FrameContext = {
   dt: number;
   tick: number;
   gameLayer: Container;
+  /** The world again, laid over its light and fog (moved and zoomed with the game layer): guides drawn unshaded. */
+  overLayer: Container;
   rebuildTerrain: () => void;
 };
 
@@ -136,6 +139,7 @@ export const PRESENTATION: readonly System[] = [
   ({ gameLayer }) => updateBars(gameLayer),
   ({ gameLayer }) => updateRollTexts(gameLayer),
   ({ gameLayer }) => updateMarker(gameLayer),
+  ({ overLayer }) => updateAimGuide(overLayer),
   ({ gameLayer, tick }) => updateMist(gameLayer, tick),
   () => updateMusic(),
   ({ level }) => updateAmbience(level),

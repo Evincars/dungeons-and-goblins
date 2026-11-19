@@ -42,6 +42,8 @@ const ICON_ZOOM = 1.7;
 const ICON_SIZE = 64;
 /** A spell recovering is shaded from the top by the share of its recovery left; one not learnt yet is dimmed. */
 const SHADE_ALPHA = 0.65;
+/** Under this many seconds left, the time is shown in tenths. */
+const TENTHS_BELOW = 10;
 const LOCKED_ALPHA = 0.3;
 /** A spell with no picture yet shows the first letters of its name. */
 const INITIALS = 2;
@@ -68,6 +70,9 @@ type SlotView = {
   /** A feature used by charges (Bladesong): how many are left, top right. */
   chargesTag: PixelLabel;
   charges: number | null;
+  /** While it recovers, the time left, in its middle over the shade; and what that was last written for (`timeShown`). */
+  timeTag: PixelLabel;
+  timeShown: number;
   /** What it was last drawn as, so it is drawn again only when that changes. */
   bound: string | null;
   active: boolean;
@@ -217,7 +222,9 @@ export class QuickBar {
     keyTag.position.set(SLOT - 1, SLOT - 9);
     const chargesTag = new PixelLabel('', { color: THEME.title, align: 'right', outline: true });
     chargesTag.position.set(SLOT - 1, CHARGES_TAG_Y);
-    square.addChild(frame, mask, icon, initials, shade, levelTag, keyTag, chargesTag);
+    const timeTag = new PixelLabel('', { color: THEME.title, align: 'center', outline: true });
+    timeTag.position.set(SLOT / 2, SLOT / 2 - 4);
+    square.addChild(frame, mask, icon, initials, shade, levelTag, keyTag, chargesTag, timeTag);
     square.eventMode = 'static';
     square.cursor = 'pointer';
     square.hitArea = new Rectangle(0, 0, SLOT, SLOT);
@@ -225,7 +232,7 @@ export class QuickBar {
     square.on('pointerout', () => { if (this.hovered === i) this.hovered = -1; claimPointer(square, false); setOverQuickSquare(false); });
     square.on('pointertap', () => this.pick(i));
     square.on('rightclick', () => this.unbind(i));
-    this.slots.push({ square, frame, icon, shade, initials, levelTag, keyTag, chargesTag, charges: null, bound: null, active: false, locked: false, shadeH: -1 });
+    this.slots.push({ square, frame, icon, shade, initials, levelTag, keyTag, chargesTag, charges: null, timeTag, timeShown: 0, bound: null, active: false, locked: false, shadeH: -1 });
     this.row.addChild(square);
     this.drawFrame(this.slots[i]);
   }
@@ -291,12 +298,26 @@ export class QuickBar {
     view.chargesTag.text = charges === null ? '' : String(charges);
   }
 
+  /**
+   * The time left until it is ready, over its shade: whole seconds from TENTHS_BELOW up, tenths under it (where a moment
+   * matters), written again only when what it shows changes.
+   */
+  private updateTime(view: SlotView, left: number): void {
+    const seconds = left / TICKS_PER_SECOND;
+    const shown = left <= 0 ? 0 : seconds >= TENTHS_BELOW ? Math.ceil(seconds) : -Math.ceil(seconds * 10);
+    if (view.timeShown === shown) return;
+    view.timeShown = shown;
+    view.timeTag.text = shown === 0 ? '' : shown > 0 ? String(shown) : (-shown / 10).toFixed(1);
+    view.initials.visible = shown === 0;
+  }
+
   /** The shade over a spell recovering, by the share of its recovery left. */
   private updateShade(view: SlotView, binding: QuickBinding | null, left: number, player: Player): void {
     const spell = binding && isSpellId(binding.spell) ? castDef(SPELLS[binding.spell], binding.level, player.playerStats.level) : null;
     const feature = featureOfBinding(binding, player.heroClass);
     const total = spell ? spell.recoveryTicks : feature ? featureCooldown(feature, player.playerStats.level) * TICKS_PER_SECOND : 0;
     const shadeH = total > 0 && left > 0 ? Math.ceil(SLOT * Math.min(1, left / total)) : 0;
+    this.updateTime(view, shadeH > 0 ? left : 0);
     if (view.shadeH === shadeH) return;
     view.shadeH = shadeH;
     view.shade.clear();

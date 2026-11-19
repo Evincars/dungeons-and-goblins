@@ -21,14 +21,48 @@
     "improved_extra_attack": "class-features-icons/fighter-improved-extra-attack_pixelart.png",
     "superior_critical": "class-features-icons/fighter-champion-improved-critical-hit_pixelart.png",
     "improved_war_magic": "class-features-icons/fighter-eldritch-knight-war-magic_pixelart.png",
-    "extra_attack_3": "class-features-icons/fighter-improved-extra-attack_pixelart.png"
+    "extra_attack_3": "class-features-icons/fighter-improved-extra-attack_pixelart.png",
+    "fighting_style": "class-features-icons/barbarian-reckless-attack_pixelart.png",
+    "additional_fighting_style": "class-features-icons/barbarian-berserker-enraged-throw_pixelart.png",
+    "martial_archetype": "class-features-icons/barbarian-berserker-frenzy_pixelart.png",
+    "champion": "class-features-icons/fighter-champion-remarkable-athlete-proficiency_pixelart.png",
+    "battle_master": "class-features-icons/barbarian-giant-mighty-impel_pixelart.png",
+    "eldritch_knight": "class-features-icons/fighter-arcane-archer-magic-arrow_pixelart.png",
+    "spellcasting_knight": "class-features-icons/sorcerer-create-spell-slot_pixelart.png",
+    "arcane_charge": "class-features-icons/fighter-arcane-archer-curving-shot_pixelart.png",
+    "student_of_war": "class-features-icons/barbarian-feral-instinct_pixelart.png",
+    "know_your_enemy": "class-features-icons/cleric-knowledge-domain-read-thoughts_pixelart.png",
+    "commanders_strike": "class-features-icons/barbarian-berserker-frenzied-strike_pixelart.png",
+    "disarming_attack": "class-features-icons/rogue-swashbuckler-dirty-trick-flick-o-the-wrist_pixelart.png",
+    "distracting_strike": "class-features-icons/rogue-swashbuckler-dirty-trick-sand-toss_pixelart.png",
+    "evasive_footwork": "class-features-icons/rogue-swashbuckler-fancy-footwork_pixelart.png",
+    "feinting_attack": "class-features-icons/rogue-swashbuckler-panache_pixelart.png",
+    "goading_attack": "class-features-icons/rogue-swashbuckler-dirty-trick-vicious-mockery_pixelart.png",
+    "lunging_attack": "class-features-icons/rogue-swashbuckler-rakish-sneak-attack-melee_pixelart.png",
+    "maneuvering_attack": "class-features-icons/rogue-cunning-action-disengage_pixelart.png",
+    "menacing_attack": "class-features-icons/barbarian-berserker-intimidating-presence_pixelart.png",
+    "parry": "class-features-icons/barbarian-unarmoured-defence-barbarian_pixelart.png",
+    "precision_attack": "class-features-icons/rogue-swashbuckler-rakish-sneak-attack-ranged_pixelart.png",
+    "pushing_attack": "class-features-icons/barbarian-giant-boot-of-the-giants_pixelart.png",
+    "rally": "class-features-icons/cleric-divine-intervention-arm-thy-servant_pixelart.png",
+    "riposte": "class-features-icons/rogue-swashbuckler-rakish-audacity_pixelart.png",
+    "sweeping_attack": "class-features-icons/barbarian-giant-elemental-cleaver_pixelart.png",
+    "trip_attack": "class-features-icons/rogue-thief-second-story-work-falling_pixelart.png",
+    "relentless": "class-features-icons/barbarian-relentless-rage_pixelart.png",
+    "survivor": "class-features-icons/cleric-divine-intervention-opulent-revival_pixelart.png"
   },
   "rogue": {
     "sneak_attack": "class-features-icons/rogue-sneak-attack-melee_pixelart.png",
     "cunning_action": "class-features-icons/rogue-cunning-action-dash_pixelart.png",
     "uncanny_dodge": "class-features-icons/rogue-uncanny-dodge_pixelart.png",
     "evasion": "class-features-icons/rogue-evasion_pixelart.png",
-    "reliable_talent": "class-features-icons/rogue-reliable-talent_pixelart.png"
+    "reliable_talent": "class-features-icons/rogue-reliable-talent_pixelart.png",
+    "expertise": "class-features-icons/rogue-assassin-infiltration-expertise_pixelart.png",
+    "thieves_cant": "class-features-icons/rogue-thief-fast-hands_pixelart.png",
+    "blindsense": "class-features-icons/sorcerer-shadow-magic-eyes-of-the-dark_pixelart.png",
+    "slippery_mind": "class-features-icons/rogue-arcane-trickster-mage-hand-legerdemain_pixelart.png",
+    "elusive": "class-features-icons/rogue-thief-supreme-sneak_pixelart.png",
+    "stroke_of_luck": "class-features-icons/sorcerer-wild-magic-bend-luck_pixelart.png"
   },
   "cleric": {
     "disciple_of_life": "class-features-icons/cleric-life-disciple-of-life_pixelart.png",
@@ -36,7 +70,9 @@
     "destroy_undead": "class-features-icons/cleric-destroy-undead_pixelart.png",
     "blessed_healer": "class-features-icons/cleric-life-domain-blessed-healer_pixelart.png",
     "divine_strike": "class-features-icons/cleric-life-domain-divine-strike-radiant_pixelart.png",
-    "divine_intervention": "class-features-icons/cleric-divine-intervention_pixelart.png"
+    "divine_intervention": "class-features-icons/cleric-divine-intervention_pixelart.png",
+    "spellcasting": "class-features-icons/cleric-knowledge-domain-potent-spellcasting_pixelart.png",
+    "supreme_healing": "class-features-icons/cleric-divine-intervention-golden-generosity_pixelart.png"
   },
   "wizard": {
     "arcane_recovery": "class-features-icons/wizard-arcane-recovery_pixelart.png",
@@ -72,6 +108,17 @@
     "bladesong": "class-features-icons/wizard-bladesinging-bladesong_pixelart.png",
     "bladesong_climax": "class-features-icons/wizard-bladesinging-bladesong_pixelart.png",
     "extra_attack": "class-features-icons/wizard-bladesinging-extra-attack_pixelart.png",
-    "song_of_defence": "class-features-icons/wizard-bladesinging-song-of-defence_pixelart.png"
+    "song_of_defence": "class-features-icons/wizard-bladesinging-song-of-defence_pixelart.png",
+    "spellcasting": "class-features-icons/cleric-light-domain-potent-spellcasting_pixelart.png",
+    "arcane_tradition": "class-features-icons/barbarian-wild-magic-magic-awareness_pixelart.png",
+    "arcane_recovery_charge_3": "class-features-icons/sorcerer-create-sorcery-points_pixelart.png",
+    "arcane_recovery_charge_5": "class-features-icons/sorcerer-metamagic-quickened-spell_pixelart.png",
+    "arcane_recovery_charge_7": "class-features-icons/sorcerer-metamagic-extended-spell_pixelart.png",
+    "arcane_recovery_charge_9": "class-features-icons/sorcerer-metamagic-distant-spell_pixelart.png",
+    "arcane_recovery_charge_11": "class-features-icons/sorcerer-metamagic-twinned-spell_pixelart.png",
+    "additional_cantrip_4": "class-features-icons/sorcerer-metamagic-careful-spell_pixelart.png",
+    "additional_cantrip_10": "class-features-icons/sorcerer-metamagic-subtle-spell_pixelart.png",
+    "spell_mastery": "class-features-icons/sorcerer-metamagic-heightened-spell_pixelart.png",
+    "signature_spells": "class-features-icons/sorcerer-wild-magic-controlled-chaos_pixelart.png"
   }
 }

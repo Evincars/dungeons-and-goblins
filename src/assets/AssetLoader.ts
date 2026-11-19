@@ -5,7 +5,11 @@ import { getTexture, hasTexture, setTexture } from './Textures';
 import { loadSheets } from './SpriteSheet';
 import { registerSheet } from '../render/Sheets';
 import { allSheets, registerLazyArt } from './SheetCatalog';
-import { BRINK_BLOCK, BRINK_DARKEST_GROUND, CAVE_BRINKS, CAVE_SHEET } from '../level/CaveTerrain';
+import {
+  CAVE_ROCK_CUT, CAVE_SHEET, ROCK_BLACK, ROCK_CUT, SLANT_FACE, SLANT_RIM, SLANT_SHEAR,
+  caveSlantKey, slantShift,
+} from '../level/CaveTerrain';
+import type { SlantLean } from '../level/CaveTerrain';
 import {
   genSpellBoltSheet, genPuddleSheet,
   genSpawnerSheet, genLeverSheet, genPortcullis,
@@ -122,21 +126,40 @@ function buildCampfireFloor(): void {
   setTexture('campfire_floor', texture);
 }
 
-/** The caverns' ragged brinks: the cave set's chasm block with its ground cleared, only the dark spikes left. */
-function buildCaveBrinks(): void {
-  const { x, y, w, h } = BRINK_BLOCK;
+/** The caverns' rock sheared down the slant, each column pushed down by half its distance along: slanted walls lean. */
+function buildCaveSlants(): void {
+  for (const [part, art] of [['rim', SLANT_RIM], ['face', SLANT_FACE]] as const) {
+    for (const lean of ['down', 'up'] as const) setTexture(caveSlantKey(part, lean), shearedRock(art, lean));
+  }
+}
+
+/** A piece of the cave set sheared down the slant (two across for one down), leaning `lean`. */
+function shearedRock(art: { x: number; y: number; w: number; h: number }, lean: SlantLean): Texture {
+  const image = imageFor(CAVE_SHEET);
+  const canvas = createCanvas(art.w, art.h + art.w / SLANT_SHEAR);
+  const ctx = context2d(canvas);
+  ctx.imageSmoothingEnabled = false;
+  for (let c = 0; c < art.w; c++) ctx.drawImage(image, art.x + c, art.y, 1, art.h, c, slantShift(c, art.w, lean), 1, art.h);
+  const texture = Texture.from(canvas);
+  texture.source.scaleMode = 'nearest';
+  return texture;
+}
+
+/** The caverns' rock with its black cleared: what spills over the ground beside a wall is only its stones. */
+function buildCaveRockCut(): void {
+  const { x, y, w, h } = ROCK_CUT;
   const canvas = createCanvas(w, h);
   const ctx = context2d(canvas, { willReadFrequently: true });
   ctx.drawImage(imageFor(CAVE_SHEET), x, y, w, h, 0, 0, w, h);
   const pixels = ctx.getImageData(0, 0, w, h);
   const d = pixels.data;
   for (let i = 0; i < d.length; i += 4) {
-    if (Math.max(d[i], d[i + 1], d[i + 2]) > BRINK_DARKEST_GROUND) d[i + 3] = 0;
+    if (Math.max(d[i], d[i + 1], d[i + 2]) <= ROCK_BLACK) d[i + 3] = 0;
   }
   ctx.putImageData(pixels, 0, 0);
   const texture = Texture.from(canvas);
   texture.source.scaleMode = 'nearest';
-  setTexture(CAVE_BRINKS, texture);
+  setTexture(CAVE_ROCK_CUT, texture);
 }
 
 type Rgb = { r: number; g: number; b: number };
@@ -177,7 +200,8 @@ export async function loadAllAssets(onProgress?: (done: number, total: number) =
   buildTorchStrip();
   buildCampfireStrip();
   buildCampfireFloor();
-  buildCaveBrinks();
+  buildCaveRockCut();
+  buildCaveSlants();
   recolor('button', 'button_steel', STEEL, BUTTON_FRAME);
   for (const [key, draw] of Object.entries(PROCEDURAL)) setTexture(key, Texture.from(draw()));
   setTexture('panel_hud', Texture.from(genPanelBg(HUD_PANEL.w, HUD_PANEL.h)));

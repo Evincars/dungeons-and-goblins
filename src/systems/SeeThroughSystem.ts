@@ -113,14 +113,16 @@ function lookAt(entity: Figure, walls: SeeThroughWalls): void {
 
 /**
  * Where the game layer puts the world on screen once moved to this frame's camera (its own transform is only worked out
- * as it is drawn): its parent's scale and offset, with the layer's own offset.
+ * as it is drawn): its parent's scale and offset, with the layer's own offset and scale (the view's zoom).
  */
 function viewOf(layer: Container): ScreenTransform {
   const parent = layer.parent?.worldTransform;
-  view.a = parent?.a ?? 1;
-  view.d = parent?.d ?? 1;
-  view.tx = (parent?.tx ?? 0) + view.a * layer.x;
-  view.ty = (parent?.ty ?? 0) + view.d * layer.y;
+  const pa = parent?.a ?? 1;
+  const pd = parent?.d ?? 1;
+  view.a = pa * layer.scale.x;
+  view.d = pd * layer.scale.y;
+  view.tx = (parent?.tx ?? 0) + pa * layer.x;
+  view.ty = (parent?.ty ?? 0) + pd * layer.y;
   return view;
 }
 

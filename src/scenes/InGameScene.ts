@@ -104,6 +104,8 @@ export class InGameScene implements Scene {
   private readonly mode: Mode;
   private readonly gameLayer = new Container();
   private readonly uiLayer = new Container();
+  /** The world drawn over its light and fog (the aim guide), placed and zoomed as the game layer is. */
+  private readonly overLayer = new Container();
   private terrain: LevelView | null = null;
   private readonly darkness = new FogRenderer();
   private readonly lights = new LightRenderer();
@@ -183,7 +185,7 @@ export class InGameScene implements Scene {
     const built = sent ? { ...buildSentDungeon(sent), layout: sent } : buildDungeon(seed, this.mode !== 'guest', run.theme);
     const { level, spawns } = built;
     this.level = level;
-    this.ctx = { level, dt: 1, tick: 0, gameLayer: this.gameLayer, rebuildTerrain: () => this.rebuildTerrain() };
+    this.ctx = { level, dt: 1, tick: 0, gameLayer: this.gameLayer, overLayer: this.overLayer, rebuildTerrain: () => this.rebuildTerrain() };
     this.mountTerrain();
     level.clearDirty();
     this.torchSources = spawns.torchPositions.map((p, i) => ({
@@ -206,7 +208,8 @@ export class InGameScene implements Scene {
     this.gameLayer.addChild(this.darkness.container);
     // Light overlay placed in uiLayer so it sits above game but below HUD
     this.lights.init();
-    this.uiLayer.addChild(this.lights.overlay, this.hud.container, this.fallen.view, this.combatLog.container, this.inv.container, this.shop.container);
+    this.overLayer.sortableChildren = true;
+    this.uiLayer.addChild(this.lights.overlay, this.overLayer, this.hud.container, this.fallen.view, this.combatLog.container, this.inv.container, this.shop.container);
 
     this.status = makeText('', 0xff8888, 8, 'center');
     this.status.x = GAME_WIDTH / 2;
@@ -376,6 +379,8 @@ export class InGameScene implements Scene {
     this.gameLayer.x = -camera.x * camera.zoom;
     this.gameLayer.y = -camera.y * camera.zoom;
     this.lights.overlay.scale.set(camera.zoom);
+    this.overLayer.scale.set(camera.zoom);
+    this.overLayer.position.copyFrom(this.gameLayer.position);
     // Walls, columns and rocks clear over whoever stands behind them near the hero followed (where this frame draws them).
     if (this.terrain) updateSeeThrough(this.terrain.seeThrough, view?.position, this.gameLayer, this.level.width * TILE_WIDTH);
 

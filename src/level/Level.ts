@@ -8,7 +8,7 @@ import { insidePit, pitTileBounds } from './PitShapes';
 import type { Pit } from './PitShapes';
 import type { LevelTheme } from './Theme';
 import { OPEN_CHASMS } from './Theme';
-import { CAVE_FACE_SPILL, caveBulge } from './CaveShape';
+import { CAVE_FACE_SPILL, caveBulgeSolid } from './CaveShape';
 import { isSouthSlope, slopeBlocks, slopeClearance, slopePush, slopeSupport } from './Slopes';
 import type { Slope } from './Slopes';
 
@@ -454,19 +454,25 @@ export class Level {
   private addCaveRockClip(tx: number, ty: number): void {
     const southOpen = this.rockOpen(tx, ty + 1);
     for (const side of [-1, 1] as const) {
-      if (this.rockOpen(tx + side, ty)) this.addBulgeClips(tx, ty, side, southOpen ? 1 : 2);
+      if (this.rockOpen(tx + side, ty)) this.addBulgeClips(tx, ty, side, southOpen ? 1 : 2, this.rockOpen(tx, ty - 1));
     }
     if (!southOpen) return;
     this.clipBoxes.push(this.clipPool.between(tx * TILE_WIDTH, (ty + 1) * TILE_HEIGHT, (tx + 1) * TILE_WIDTH, (ty + 1) * TILE_HEIGHT + CAVE_FACE_SPILL));
   }
 
-  /** The strips of a wall's side its rim's stones spill over, a quarter row at a time (`rows` of them). */
-  private addBulgeClips(tx: number, ty: number, side: -1 | 1, rows: number): void {
+  /**
+   * The strips of a wall's side its rim's stones spill over, a quarter row at a time (`rows` of them). Below open ground
+   * north (feet reach over a wall's top edge, WALL_SINK) they start as low as the wall's own box does, or they would snag
+   * whoever walks along its north side.
+   */
+  private addBulgeClips(tx: number, ty: number, side: -1 | 1, rows: number, northOpen: boolean): void {
     const half = TILE_HEIGHT / 2;
     for (let row = 0; row < rows; row++) {
-      const out = caveBulge(tx, ty, side, row === 0 ? 0 : 1);
+      const out = caveBulgeSolid(tx, ty, side, row === 0 ? 0 : 1, northOpen);
+      if (out <= 0) continue;
       const x0 = side < 0 ? tx * TILE_WIDTH - out : (tx + 1) * TILE_WIDTH;
-      this.clipBoxes.push(this.clipPool.between(x0, ty * TILE_HEIGHT + row * half, x0 + out, ty * TILE_HEIGHT + (row + 1) * half));
+      const top = ty * TILE_HEIGHT + Math.max(row * half, northOpen ? WALL_SINK : 0);
+      this.clipBoxes.push(this.clipPool.between(x0, top, x0 + out, ty * TILE_HEIGHT + (row + 1) * half));
     }
   }
 

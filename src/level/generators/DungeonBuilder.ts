@@ -205,8 +205,7 @@ const PORTAL_HALF = 1;
 const PORTAL_CANDELABRA = 2;
 const PORTAL_STEP = 1;
 const PORTAL_LIGHT: PropKind = 'castle_candelabra';
-/** Exit room: campfires this many tiles either side of the exit, banners every other tile of its north wall. */
-const CAMPFIRE_SPREAD = 3;
+/** Exit room: banners every other tile of its north wall. */
 const EXIT_BANNERS: readonly PropKind[] = ['banner_red', 'banner_blue', 'pennant_red', 'pennant_blue'];
 /** Casks, crates and heaps stood in the corners of the safe and exit rooms. */
 const GATHERING_CORNERS: readonly PropKind[] = [
@@ -390,7 +389,9 @@ export class DungeonBuilder {
     }
     // Each door's lever stands just inside its room, beside the doorway (above it when there is room).
     const leverTile = { x: doorX - 1, y: doorY - 1 >= safe.y ? doorY - 1 : doorY + cw };
-    const exitLeverTile = { x: exit.x, y: exitDoorY - 1 >= exit.y ? exitDoorY - 1 : exitDoorY + cw };
+    // Candelabras stand inside the exit room either side of its gate; its lever stands beside the upper one.
+    const gateLights = [exitDoorY - 1, exitDoorY + cw].filter((y) => y >= exit.y && y < exit.y + exit.h).map((y) => ({ x: exit.x, y }));
+    const exitLeverTile = { x: exit.x + 1, y: exitDoorY - 1 >= exit.y ? exitDoorY - 1 : exitDoorY + cw };
 
     this.removeSlivers();
 
@@ -467,7 +468,9 @@ export class DungeonBuilder {
       this.usedTiles.add(t.x + t.y * W);
     }
     const safeFire = { x: shopTile.x, y: safe.y + Math.floor(safe.h / 2) + 1 };
-    const exitFires = [exitTile.x - CAMPFIRE_SPREAD, exitTile.x + CAMPFIRE_SPREAD].map((x) => ({ x, y: exitTile.y }));
+    // One fire in the middle of the exit room (just south of its very middle, which stays open floor).
+    const exitFires = [{ x: exitTile.x, y: exitTile.y + 1 }];
+    for (const t of gateLights) this.placeSolid([[t.x, t.y]], [PORTAL_LIGHT], props, keepIfReachable);
     const campfires = [
       ...this.dressGatheringRoom(safe, [safeFire], torchTiles, props, keepIfReachable),
       ...this.dressGatheringRoom(exit, exitFires, torchTiles, props, keepIfReachable),

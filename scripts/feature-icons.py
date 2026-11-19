@@ -57,6 +57,67 @@ ALIASES = {
 }
 
 
+# Features bg3.wiki has no icon of their own for (the Battle Master's maneuvers, Spellcasting, Arcane Tradition…): each shows
+# an icon of another feature with a name like it, from any class's page, that no other feature shows (checked below).
+BORROWED = {
+    "fighter": {
+        "fighting_style": "barbarian-reckless-attack",
+        "additional_fighting_style": "barbarian-berserker-enraged-throw",
+        "martial_archetype": "barbarian-berserker-frenzy",
+        "champion": "fighter-champion-remarkable-athlete-proficiency",
+        "battle_master": "barbarian-giant-mighty-impel",
+        "eldritch_knight": "fighter-arcane-archer-magic-arrow",
+        "spellcasting_knight": "sorcerer-create-spell-slot",
+        "arcane_charge": "fighter-arcane-archer-curving-shot",
+        "student_of_war": "barbarian-feral-instinct",
+        "know_your_enemy": "cleric-knowledge-domain-read-thoughts",
+        "commanders_strike": "barbarian-berserker-frenzied-strike",
+        "disarming_attack": "rogue-swashbuckler-dirty-trick-flick-o-the-wrist",
+        "distracting_strike": "rogue-swashbuckler-dirty-trick-sand-toss",
+        "evasive_footwork": "rogue-swashbuckler-fancy-footwork",
+        "feinting_attack": "rogue-swashbuckler-panache",
+        "goading_attack": "rogue-swashbuckler-dirty-trick-vicious-mockery",
+        "lunging_attack": "rogue-swashbuckler-rakish-sneak-attack-melee",
+        "maneuvering_attack": "rogue-cunning-action-disengage",
+        "menacing_attack": "barbarian-berserker-intimidating-presence",
+        "parry": "barbarian-unarmoured-defence-barbarian",
+        "precision_attack": "rogue-swashbuckler-rakish-sneak-attack-ranged",
+        "pushing_attack": "barbarian-giant-boot-of-the-giants",
+        "rally": "cleric-divine-intervention-arm-thy-servant",
+        "riposte": "rogue-swashbuckler-rakish-audacity",
+        "sweeping_attack": "barbarian-giant-elemental-cleaver",
+        "trip_attack": "rogue-thief-second-story-work-falling",
+        "relentless": "barbarian-relentless-rage",
+        "survivor": "cleric-divine-intervention-opulent-revival",
+    },
+    "rogue": {
+        "expertise": "rogue-assassin-infiltration-expertise",
+        "thieves_cant": "rogue-thief-fast-hands",
+        "blindsense": "sorcerer-shadow-magic-eyes-of-the-dark",
+        "slippery_mind": "rogue-arcane-trickster-mage-hand-legerdemain",
+        "elusive": "rogue-thief-supreme-sneak",
+        "stroke_of_luck": "sorcerer-wild-magic-bend-luck",
+    },
+    "cleric": {
+        "spellcasting": "cleric-knowledge-domain-potent-spellcasting",
+        "supreme_healing": "cleric-divine-intervention-golden-generosity",
+    },
+    "wizard": {
+        "spellcasting": "cleric-light-domain-potent-spellcasting",
+        "arcane_tradition": "barbarian-wild-magic-magic-awareness",
+        "arcane_recovery_charge_3": "sorcerer-create-sorcery-points",
+        "arcane_recovery_charge_5": "sorcerer-metamagic-quickened-spell",
+        "arcane_recovery_charge_7": "sorcerer-metamagic-extended-spell",
+        "arcane_recovery_charge_9": "sorcerer-metamagic-distant-spell",
+        "arcane_recovery_charge_11": "sorcerer-metamagic-twinned-spell",
+        "additional_cantrip_4": "sorcerer-metamagic-careful-spell",
+        "additional_cantrip_10": "sorcerer-metamagic-subtle-spell",
+        "spell_mastery": "sorcerer-metamagic-heightened-spell",
+        "signature_spells": "sorcerer-wild-magic-controlled-chaos",
+    },
+}
+
+
 def slug(text: str) -> str:
     """As scripts/class-feature-icons.sh names the files: lower case, apostrophes dropped, the rest dashes."""
     text = re.sub(r"[’']", "", text.lower())
@@ -88,8 +149,20 @@ def main() -> None:
             if not (ICONS / file).exists():
                 raise SystemExit(f"{cls}.{feature['id']}: {file} is not in {ICONS.relative_to(ROOT)} (run scripts/class-feature-icons.sh)")
             icons[feature["id"]] = f"class-features-icons/{file}"
+        for fid, stem in BORROWED.get(cls, {}).items():
+            file = f"{stem}_pixelart.png"
+            if fid in icons:
+                raise SystemExit(f"{cls}.{fid} has an icon of its own: drop it from BORROWED")
+            if not (ICONS / file).exists():
+                raise SystemExit(f"{cls}.{fid}: {file} is not in {ICONS.relative_to(ROOT)}")
+            icons[fid] = f"class-features-icons/{file}"
         out[cls] = icons
         print(f"{cls}: {len(icons)} of {len(features.get(cls, []))} features have an icon")
+    borrowed = [f"{stem}_pixelart.png" for table in BORROWED.values() for stem in table.values()]
+    shown = [path.split("/")[-1] for icons in out.values() for path in icons.values()]
+    twice = sorted({f for f in borrowed if shown.count(f) > 1})
+    if twice:
+        raise SystemExit(f"borrowed icons shown by more than one feature: {', '.join(twice)}")
     OUT.write_text(json.dumps({"$comment": "Made by scripts/feature-icons.py: each class feature's icon under public/, by class and feature id (src/data/features.json).", **out}, indent=2) + "\n")
     print(f"wrote {OUT.relative_to(ROOT)}")
 

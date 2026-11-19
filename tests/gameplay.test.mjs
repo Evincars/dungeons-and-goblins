@@ -616,12 +616,16 @@ test('rooms get a centrepiece in the middle (or nearby) with open floor around i
   assert.ok(centred > rooms * 0.3, `${centred} of ${rooms} rooms have something in the middle`);
 });
 
-test('the safe and exit rooms have campfires (two beside the exit), banners, and a portal each in their north walls', () => {
+test('the safe and exit rooms have a campfire each, banners, and a portal each in their north walls; candelabras flank the exit gate', () => {
   const { campfires, rooms, props, exitButtonPos, level } = new DungeonBuilder({ ...DEFAULT_CONFIG, seed: 7 }).build();
   const exit = rooms.find((r) => r.type === 'exit');
   const safe = rooms.find((r) => r.type === 'safe');
   const inRoom = (r) => (c) => c.x >= r.x * 32 && c.x < (r.x + r.w) * 32;
-  assert.equal(campfires.filter(inRoom(exit)).length, 2);
+  assert.equal(campfires.filter(inRoom(exit)).length, 1, 'one fire, in the middle of the exit room');
+  const exitFire = campfires.find(inRoom(exit));
+  assert.ok(Math.abs(exitFire.x - (exit.x + exit.w / 2) * 32) <= 32, 'in its middle');
+  const gate = props.filter((p) => p.kind === 'castle_candelabra' && p.tx === exit.x);
+  assert.equal(gate.length, 2, 'a candelabra above and below the gate, inside the room');
   assert.equal(campfires.filter(inRoom(safe)).length, 1, 'a fire in the safe room too');
   for (const c of campfires) assert.equal(level.getTileAt(c.x, c.y).type, TileType.Obstacle, 'a campfire blocks its tile');
   assert.equal(level.getTileAt(exitButtonPos.x, exitButtonPos.y).type, TileType.Floor, 'the floor before the exit portal stays clear');
@@ -6126,6 +6130,7 @@ test('class features show their bg3.wiki icons: every icon named in feature-icon
   const { readFileSync, existsSync } = await import('node:fs');
   const { featureOfClass, featureIconSources } = await load('rules/ClassFeatures');
   const icons = JSON.parse(readFileSync('src/data/feature-icons.json', 'utf8'));
+  const features = JSON.parse(readFileSync('src/data/features.json', 'utf8')).classes;
   for (const cls of ['fighter', 'rogue', 'cleric', 'wizard']) {
     for (const [id, src] of Object.entries(icons[cls])) {
       assert.ok(existsSync(`public/${src}`), `${cls}.${id}: ${src}`);
@@ -6134,7 +6139,12 @@ test('class features show their bg3.wiki icons: every icon named in feature-icon
   }
   assert.equal(featureOfClass('fighter', 'second_wind').icon, 'feature_icon_fighter_second_wind');
   assert.notEqual(featureOfClass('fighter', 'extra_attack').icon, featureOfClass('wizard', 'extra_attack').icon, 'each class its own');
-  assert.equal(featureOfClass('fighter', 'fighting_style').icon, null, 'a feature with no icon shows its initials');
+  for (const cls of ['fighter', 'rogue', 'cleric', 'wizard']) {
+    assert.ok(features[cls].every((f) => icons[cls][f.id]), `every ${cls} feature has an icon`);
+  }
+  const borrowed = ['fighting_style', 'parry', 'riposte'].map((id) => icons.fighter[id]).concat(icons.wizard.spellcasting, icons.wizard.arcane_tradition);
+  const shown = Object.values(icons).filter((m) => typeof m === 'object').flatMap((m) => Object.values(m));
+  assert.ok(borrowed.every((src) => shown.filter((s) => s === src).length === 1), 'one borrowed for a feature with none of its own is shown by it alone');
   assert.ok(featureIconSources().every((s) => s.src.startsWith('/class-features-icons/')));
 });
 
@@ -6343,8 +6353,8 @@ test("a wall jutting out past another's face runs its edge on up to the top of t
 
 test('now and then a catacomb level runs through caverns: rock and cave ground, a chasm down through them, bridges over it', async () => {
   const { dungeonConfig } = await load('level/generators/DungeonConfig');
-  const { buildTerrainPieces } = await load('level/TerrainAutotile');
-  const { CAVE_SHEET, CAVE_BRINKS } = await load('level/CaveTerrain');
+  const { buildTerrainPieces, groundAt } = await load('level/TerrainAutotile');
+  const { CAVE_SHEET } = await load('level/CaveTerrain');
   const { encodeLevelMap, decodeLevelMap } = await load('level/LevelMap');
   let caves = 0;
   for (const seed of [1, 4, 7, 10, 12, 15]) {
@@ -6372,7 +6382,7 @@ test('now and then a catacomb level runs through caverns: rock and cave ground, 
     }
     const pieces = buildTerrainPieces(level);
     assert.ok(pieces.some((p) => p.sheet === CAVE_SHEET && !p.floor), 'rock and chasm from the cave set');
-    assert.ok(pieces.some((p) => p.sheet === CAVE_BRINKS), 'ragged brinks round the chasm');
+    assert.ok(chasm.every((i) => groundAt(level, i % W, Math.floor(i / W))), 'ground runs on under the chasm (its dark is one soft shape over it)');
     const back = decodeLevelMap(JSON.parse(JSON.stringify(encodeLevelMap(layout))));
     assert.deepEqual([...back.level.caveZone].sort(), [...level.caveZone].sort(), 'co-op guests get the caverns');
     assert.deepEqual([...back.level.bridges].sort(), [...level.bridges].sort(), 'and the bridges');
@@ -6444,4 +6454,24 @@ test('a blow can knock an enemy over the edge of a pit, where it falls; the mous
   assert.deepEqual(screenToWorld(40, 20), { x: 120, y: 60 }, 'the mouse points into the zoomed world');
   for (let i = 0; i < 20; i++) zoomBy(-1);
   assert.equal(camera.zoom, 1, 'and back out to the picture as made, no further');
+});
+
+test('the aim guide follows the bow in hand (grey in range, amber past its normal range, red past its long) or the spell picked', async () => {
+  const { currentAim, colourFor, IN_REACH, PENALISED, OUT_OF_REACH } = await load('systems/AimGuideSystem');
+  const { metresToPx } = await load('rules/Scale');
+  world.clear();
+  const hero = playerAt(3, 3, 'fighter');
+  const { HAND_WEAPONS, catalogueItem } = await load('entities/ItemCatalog');
+  const bow = catalogueItem(HAND_WEAPONS, 'shortbow');
+  assert.ok(bow, 'a shortbow in the catalogue');
+  hero.equipped.primary = bow;
+  const aim = currentAim(hero);
+  assert.ok(aim && aim.normal < aim.reach && aim.radius === 0, 'a shot: a normal and a long range, no area');
+  assert.equal(aim.reach % 1, 0);
+  assert.ok(aim.normal >= metresToPx(1));
+  assert.equal(colourFor(aim.normal - 1, aim), IN_REACH);
+  assert.equal(colourFor(aim.normal + 1, aim), PENALISED, 'past normal range, with disadvantage');
+  assert.equal(colourFor(aim.reach + 1, aim), OUT_OF_REACH, 'past all it reaches');
+  hero.equipped.primary = undefined;
+  assert.equal(currentAim(hero), null, 'a sword in hand and no spell picked: nothing to aim');
 });

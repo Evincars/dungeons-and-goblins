@@ -267,11 +267,12 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   bridges (`level.bridges`, floor nothing is set on) only where they are needed to reach everything; floor it cuts off is
   lost to it. The caverns are drawn from the cave set `public/caves/MainLev2.0.png` (`level/CaveTerrain.ts`): rock walls of
   heaped stones (their rims and cliffs read quarter by quarter from the dark rock block, the side rims' stones spilling a
-  few pixels over the ground so the edges wander, `level/CaveShape.ts`, which bodies bump into too, as into the stones at
-  a cliff's foot; a corridor down the slant has its cliff or rim of stones follow the slant 16 px at a time, with the rim
-  or cliff's end where it meets open ground; where the caverns meet the catacombs the bricks end in their edge), cave ground with patches of
-  purplish heath, the chasm block's cliff and dark, its ragged brinks (`cave_brinks`, the block's ring with its ground
-  cleared at load) laid over the ground beside it (never at a mere corner), the chasm itself one even dark, and the bridge's planks (their
+  few pixels over the ground so the edges wander — drawn from the block with its black cleared, `cave_rock_cut`, and
+  stopping bodies only where its stones are, below a wall's top edge, `level/CaveShape.ts` — as do the stones at a cliff's
+  foot; a corridor down the slant leans: its rim (with the dark under it) or cliff is the rock sheared down the slant at
+  load, `cave_slant_*`, `buildCaveSlants`, with the rim or cliff's end where it meets open ground; where the caverns meet the catacombs the bricks end in their edge), cave ground with patches of
+  purplish heath, the chasm's dark one soft shape laid over the ground that runs on under it (`render/ChasmShade.ts`:
+  a blob round each of its tiles, run together and blurred, so its brinks curve and fade, no tile's edge showing), and the bridge's planks (their
   ends resting on the ground beyond the brinks, under the rock where they run into a wall) and legs (only where all below is
   dark); the rock spires block a broad base (`spireBase`, `Props.ts`); the catacombs' torches, hangings and
   spike traps stay out of them.
@@ -373,6 +374,14 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   window's; the window shows it as large as fits, with bars. In a level the mouse wheel zooms the world (not the HUD) in and
   out between the picture as made and twice as close (`camera.zoom`, `zoomBy`; `screenToWorld` follows it); the game layer
   and the light overlay are scaled, the camera follows the hero over the smaller stretch of world in view.
+- While the hero aims, a faint guide (`systems/AimGuideSystem.ts`, drawn over the light and fog, `overLayer`) arcs from
+  them to the crosshair, for the spell being cast, else the bow or crossbow in hand, else the spell picked on the quick
+  bar: grey within reach, amber past a bow's normal range (disadvantage), red past all it reaches (a tick on the arc where
+  its reach ends); an area spell's circle where it will go off, a mark under each enemy it would catch, and the distance
+  in metres. A quick-bar square recovering shows its time left over its shade (tenths under 10 s). A class feature bg3.wiki
+  has no icon for shows another feature's of a like name, each borrowed icon shown by that feature alone
+  (`scripts/feature-icons.py` `BORROWED`). The exit room has one campfire, in its middle, and a candelabra either side of
+  its gate inside it (its lever beside the upper one).
 - An enemy knocked back hard by a blow may be driven over a pit's or chasm's edge, and falls (`MovementSystem.ts`
   `KNOCKED_OVER_SPEED`); walking, enemies keep out of holes. A spike trap springs under feet two pixels inside its tile.
 - `src/core/` — cross-cutting: `errors/`, `log/`, `geometry.ts`, `guards.ts`, `debugHooks.ts`, `compression.ts` (gzip with a size limit).

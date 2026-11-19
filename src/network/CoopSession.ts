@@ -100,6 +100,11 @@ export class CoopSession {
   slot: PlayerSlot | null = null;
   /** Everyone in the room, host first; kept current on every browser. */
   roster: RosterEntry[] = [];
+  /**
+   * Host, taking up a saved game: the saved hero each seat will play, as a line for the roster (set by the lobby, from
+   * game/SaveGame.ts seatHeroLines). Seats it leaves out start fresh heroes.
+   */
+  describeSeats: ((seats: ReadonlyArray<{ slot: PlayerSlot; name: string }>) => ReadonlyMap<PlayerSlot, string>) | null = null;
   /** Guest: the number of the next input frame (counting on across levels). */
   private inputSequence = 0;
   /** Set once a level is under way, so nobody else can join half-way. */
@@ -394,7 +399,21 @@ export class CoopSession {
   private refreshRoster(): void {
     if (this.role !== 'host') return;
     const guests = this.guestSlots().map((slot) => ({ slot, name: this.links.get(slot)?.name ?? slot, heroClass: this.classOf(slot) }));
-    this.roster = [{ slot: 'host', name: this.hostName, heroClass: settings.heroClass }, ...guests];
+    const roster: RosterEntry[] = [{ slot: 'host', name: this.hostName, heroClass: settings.heroClass }, ...guests];
+    const saved = this.describeSeats?.(roster);
+    for (const entry of roster) {
+      const line = saved?.get(entry.slot);
+      if (line) entry.saved = line;
+    }
+    this.roster = roster;
+  }
+
+  /** Host: the roster told again (a saved game was picked or dropped in the lobby). */
+  refreshSeats(): void {
+    if (this.role !== 'host') return;
+    this.refreshRoster();
+    this.broadcastRoster();
+    this.onChange?.();
   }
 
   private broadcastRoster(): void {
@@ -685,7 +704,7 @@ export class CoopSession {
     clearTimeout(this.timeout);
     this.stopHeartbeat();
     this.onChange = null; this.onStart = null; this.onState = null;
-    this.onLeave = null; this.onCommand = null;
+    this.onLeave = null; this.onCommand = null; this.describeSeats = null;
     for (const link of this.allLinks()) this.hangUp(link);
     this.links.clear();
     this.uplink = null;

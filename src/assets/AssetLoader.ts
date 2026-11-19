@@ -93,7 +93,7 @@ function buildCampfireStrip(): void {
  * The hearth under a campfire: a ring of the tileset's warm cobbles (the cobblestone face's stones, cols 5–8, rows
  * 22–24), unlike the floor round it, darkening a little to a sooty rim.
  */
-const HEARTH = { w: 56, h: 34 };
+const HEARTH = { w: 50, h: 22 };
 const HEARTH_STONES = { x: 80, y: 352, w: 64, h: 48 };
 const HEARTH_SOOT = 0.35;
 const HEARTH_RIM = 'rgba(24,18,14,0.9)';

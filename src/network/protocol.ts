@@ -25,13 +25,18 @@ import { bindingFeatId } from '../rules/Feats';
  */
 
 /** Bumped whenever messages or the world they describe change, so mismatched browsers are told to reload. */
-export const PROTOCOL_VERSION = 10;
+export const PROTOCOL_VERSION = 11;
 /** The most guests a room takes: the host plus three others make four players. */
 export const MAX_GUESTS = PLAYER_SLOTS.length - 1;
 
 export type InputFrame = { input: PlayerInput; aim: { x: number; y: number }; sequence: number };
-/** Someone in the room: their seat, their name and the hero they picked (heroes may be picked twice). */
-export type RosterEntry = { slot: PlayerSlot; name: string; heroClass: HeroClassId };
+/**
+ * Someone in the room: their seat, their name and the hero they picked (heroes may be picked twice); `saved`, when the host
+ * takes up a saved game, the saved hero they will play (class and level, experience, weapon: game/SaveGame.ts heroLine).
+ */
+export type RosterEntry = { slot: PlayerSlot; name: string; heroClass: HeroClassId; saved?: string };
+/** The longest line of a saved hero in the roster. */
+const MAX_SAVED_LINE = 80;
 
 /** A square of the inventory screen: one in the bag, or an equipment slot. */
 export type ItemSquare = { bag: number } | { slot: EquipSlot };
@@ -130,10 +135,16 @@ export function validInput(value: unknown): value is InputFrame {
   return slotOk && isFiniteNumber(i.mouseX) && isFiniteNumber(i.mouseY) && (i.keyAim === null || validPoint(i.keyAim, 1));
 }
 
+/** A saved hero's line: none, or short text with no control characters. */
+function validSavedLine(value: unknown): boolean {
+  if (value === undefined) return true;
+  return typeof value === 'string' && value.length <= MAX_SAVED_LINE && !/\p{Cc}/u.test(value);
+}
+
 export function validRoster(value: unknown): value is RosterEntry[] {
   if (!Array.isArray(value) || value.length < 1 || value.length > PLAYER_SLOTS.length) return false;
   const entries = value.every((p) => isRecord(p) && isPlayerSlot(p.slot) && typeof p.name === 'string' && cleanName(p.name) === p.name
-    && isHeroClassId(p.heroClass));
+    && isHeroClassId(p.heroClass) && validSavedLine(p.saved));
   return entries && new Set(value.map((p) => (isRecord(p) ? p.slot : null))).size === value.length;
 }
 

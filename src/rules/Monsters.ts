@@ -6,6 +6,9 @@ import { abilityModifier } from './Abilities';
 import { isWeaponBase } from './WeaponTable';
 import type { WeaponBase } from './WeaponTable';
 import stats from '../data/stats.json';
+import { isRecord } from '../core/guards';
+import { isSpellId } from './Spells';
+import type { SpellId } from './Spells';
 
 /**
  * Enemies as the tabletop rules see them, from the SRD monster blocks in src/data/stats.json: Armor Class,
@@ -24,9 +27,30 @@ export type MonsterStats = {
   /** Experience for the kill (SRD, by challenge rating). */
   xp: number;
   deathPoints: number;
+  /** The bows a share of this kind carry instead of their weapons (they shoot from afar), if any. */
+  ranged: { weapons: readonly WeaponBase[]; share: number } | null;
+  /** Casts the heroes' spells (systems/EnemyRangedSystem.ts): with this ability, these spells, at the party's level. */
+  caster: { ability: StatName; spells: readonly SpellId[] } | null;
 };
 
 type RawMonster = (typeof stats.mobs)[MobType];
+
+/** A kind's bows, if its block lists any. */
+function readRanged(type: MobType, raw: unknown): MonsterStats['ranged'] {
+  if (!isRecord(raw) || !isRecord(raw.ranged)) return null;
+  const { weapons, share } = raw.ranged;
+  ensure(Array.isArray(weapons) && weapons.every(isWeaponBase) && typeof share === 'number', `Bad ranged block for ${type}`, { type });
+  return { weapons: weapons.filter(isWeaponBase), share };
+}
+
+/** A kind's spellcasting, if its block lists any: every spell one the heroes can cast too. */
+function readCaster(type: MobType, raw: unknown): MonsterStats['caster'] {
+  if (!isRecord(raw) || !isRecord(raw.spellcaster)) return null;
+  const { ability, spells } = raw.spellcaster;
+  const stat = STAT_NAMES.find((name) => name === ability);
+  ensure(!!stat && Array.isArray(spells) && spells.every(isSpellId), `Bad spellcaster block for ${type}`, { type });
+  return { ability: stat ?? 'charisma', spells: Array.isArray(spells) ? spells.filter(isSpellId) : [] };
+}
 
 function readMonster(type: MobType, raw: RawMonster): MonsterStats {
   const abilities: Record<StatName, number> = raw.abilities;
@@ -37,6 +61,7 @@ function readMonster(type: MobType, raw: RawMonster): MonsterStats {
   return {
     source: raw.source, health: raw.health, ac: raw.ac, proficiency: raw.proficiency,
     abilities, modifiers, weapons: raw.weapons.filter(isWeaponBase), xp: raw.xp, deathPoints: raw.deathPoints,
+    ranged: readRanged(type, raw), caster: readCaster(type, raw),
   };
 }
 
@@ -54,8 +79,9 @@ export const MONSTERS = {
   grick: readMonster('grick', stats.mobs.grick),
 } as const satisfies Record<MobType, MonsterStats>;
 
-/** One of the weapons this kind of enemy may carry, picked at random. */
+/** One of the weapons this kind of enemy may carry, picked at random: now and then a bow, for a kind that has some. */
 export function randomMonsterWeapon(type: MobType): WeaponBase {
-  const weapons = MONSTERS[type].weapons;
+  const { ranged } = MONSTERS[type];
+  const weapons = ranged && Math.random() < ranged.share ? ranged.weapons : MONSTERS[type].weapons;
   return weapons[MathUtils.randInt(0, weapons.length - 1)];
 }

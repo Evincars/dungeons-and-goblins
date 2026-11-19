@@ -34,7 +34,7 @@
   },
   "burning_hands": {
     "kind": "burst", "level": 1, "damage": "3d6", "damageType": "fire", "save": "dexterity", "range": 56, "radius": 40, "recovery": 6,
-    "effect": ["cloud_burst", "coral"], "effectScale": 1.4
+    "effect": ["fire_cone", "coral"], "effectScale": 2
   },
   "thunderwave": {
     "kind": "burst", "level": 1, "damage": "2d8", "damageType": "thunder", "save": "constitution", "range": 0, "radius": 48, "recovery": 6,

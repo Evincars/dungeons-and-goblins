@@ -53,6 +53,8 @@ export function strike(target: Entity, attack: AttackProfile, logOn: Entity | un
   if (outcome.critical && target.position) sound.playSound('critical', target.position.x, target.position.y);
   if (outcome.damage > 0 && bleeds(target)) spawnBlood(target);
   if (!logOn) return outcome;
+  if (logOn.playerStats && outcome.critical) logOn.playerStats.critHits++;
+  if (logOn.playerStats && outcome.fumble) logOn.playerStats.critMisses++;
   logAttack(logOn, outcome);
   recordBlow(logOn, outcome, spell);
   return outcome;

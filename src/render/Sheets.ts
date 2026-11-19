@@ -18,7 +18,7 @@ const SHEETS: Record<string, SheetInfo> = {
   // Campfire — stones and logs under torch flames, 4 frames of 24×24
   campfire:           { frameWidth: 24, frameHeight: 24 },
   // The hearth of flagstones under a campfire
-  campfire_floor:     { frameWidth: 56, frameHeight: 34 },
+  campfire_floor:     { frameWidth: 50, frameHeight: 22 },
 
   // ── Procedural UI / FX sheets ───────────────────────────────────────────────
   spell_bolt:         { frameWidth: 16,  frameHeight: 16  },

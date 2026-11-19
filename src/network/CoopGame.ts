@@ -63,7 +63,12 @@ export class HostGame {
   constructor(host: Entity, spawn: { x: number; y: number }, seed: number, depth: number, map: LevelMap) {
     setName(host, coop.nameOf('host') ?? coop.hostName);
     resetPause();
-    coop.guestSlots().forEach((slot, i) => this.addGuest(slot, spawn, i));
+    // A saved game taken up has already put back the heroes of the guests who take them up (game/SaveRestore.ts).
+    coop.guestSlots().forEach((slot, i) => {
+      const saved = playerInSlot(slot);
+      if (saved) this.adoptGuest(saved, slot);
+      else this.addGuest(slot, spawn, i);
+    });
     coop.onLeave = this.onLeave;
     coop.onCommand = handleGuestCommand;
     sound.onEffect = this.onEffect;
@@ -76,8 +81,14 @@ export class HostGame {
     const guest = createPlayer(spawn.x + dx, spawn.y + dy, coop.classOf(slot));
     world.addComponent(guest, 'playerSlot', slot);
     restorePlayer(guest);
+    this.adoptGuest(guest, slot);
+  }
+
+  /** A guest's hero answers to the controls their browser sends, under the name they go by. */
+  private adoptGuest(guest: Entity, slot: PlayerSlot): void {
+    const at = guest.position ?? { x: 0, y: 0 };
     world.addComponent(guest, 'remoteInput', true);
-    world.addComponent(guest, 'aimWorld', { x: spawn.x + dx, y: spawn.y + dy + 1 });
+    world.addComponent(guest, 'aimWorld', { x: at.x, y: at.y + 1 });
     setName(guest, coop.nameOf(slot) ?? slot);
     guest.minimapColor = GUEST_MINIMAP_COLOR;
   }

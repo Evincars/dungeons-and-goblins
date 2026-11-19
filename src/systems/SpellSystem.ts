@@ -1,5 +1,7 @@
-import { world, q, isActivePlayer, isPlayer, isTarget, QUICK_SLOTS } from '../world';
+import { world, q, isActivePlayer, isPlayer, isTarget, QUICK_SLOTS, Team } from '../world';
 import type { Entity, Player, SpellEffect } from '../world';
+import type { DamageType } from '../rules/DamageTypes';
+import { hurtPlayer } from './CombatSystem';
 import type { Level } from '../level/Level';
 import { bonusSwing, earnBonusAttack, hitMob } from './SwordSystem';
 import { bonusShot, holdsBow } from './ArrowSystem';
@@ -29,7 +31,7 @@ import { diceRange, plus, rollCheck, rollDice, rollDie } from '../rules/Dice';
 import type { Dice } from '../rules/Dice';
 import { spawnFx } from '../entities/FxFactory';
 import { AIM_HEIGHT, createSpellBolt } from '../entities/ProjectileFactory';
-import { playEffect } from '../assets/Effects';
+import { CONE_EFFECTS, playCone, playEffect } from '../assets/Effects';
 import { SPELL_STATS } from '../entities/WeaponStats';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 import { sound } from '../audio/SoundPlayer';
@@ -210,7 +212,7 @@ function startCast(caster: Player, level: Level): void {
   caster.castCooldown = SPELL_STATS.cooldown;
 }
 
-const impactOf = (def: SpellDef): SpellEffect => ({ shape: def.effect.shape, colour: def.effect.colour, scale: def.effect.scale });
+export const impactOf = (def: SpellDef): SpellEffect => ({ shape: def.effect.shape, colour: def.effect.colour, scale: def.effect.scale });
 
 /** Eldritch Blast with Agonizing Blast adds the casting ability to its damage; every other bolt rolls its dice. */
 function boltDamage(caster: Player, def: SpellDef, sheet: CharacterSheet): Dice {
@@ -273,10 +275,23 @@ function burstHits(caster: Player, def: SpellDef, foe: Entity, dc: number): void
   splitEnchantment(caster, foe, def.id, damage);
 }
 
+/** A burst's art: where it goes off, or (a cone, Burning Hands) from the caster's hands towards it. */
+export function playBurstArt(caster: { position: { x: number; y: number } }, def: SpellDef, centre: { x: number; y: number }): void {
+  const { shape, colour, scale } = def.effect;
+  const dx = centre.x - caster.position.x;
+  const dy = centre.y - caster.position.y;
+  const dist = Math.hypot(dx, dy);
+  if (!CONE_EFFECTS.has(shape) || dist === 0) {
+    playEffect(shape, colour, centre.x, centre.y, 0, scale);
+    return;
+  }
+  playCone(shape, colour, caster.position.x, caster.position.y, dx / dist, dy / dist, scale);
+}
+
 /** A burst: the effect where it goes off, and a save for every foe within its radius. */
 function castBurst(caster: Player, def: SpellDef, targetX: number, targetY: number): void {
   const centre = burstCentre(caster, def, targetX, targetY);
-  playEffect(def.effect.shape, def.effect.colour, centre.x, centre.y, 0, def.effect.scale);
+  playBurstArt(caster, def, centre);
   // A burst round the caster is all in its casting sound; one thrown further off goes off where it lands.
   if (def.range > 0) sound.playSound(SPELL_IMPACTS[def.damageType], centre.x, centre.y);
   const dc = spellcastingFor(characterSheet(caster), def.id).dc;
@@ -441,8 +456,44 @@ function flyBolt(level: Level, bolt: Bolt): void {
     burst(bolt, false);
     return;
   }
+  // An enemy's shot or spell strikes the heroes; the heroes' strike their foes.
+  if (bolt.projectile.team === Team.Mob) {
+    const hero = heroVictim(bolt);
+    if (hero) burst(bolt, strikeHero(bolt, hero));
+    return;
+  }
   const victim = boltVictim(bolt);
   if (victim) burst(bolt, strikeWith(bolt, victim));
+}
+
+/** The first hero, on their feet, whose body an enemy's shot touches. */
+function heroVictim(bolt: Bolt): Player | null {
+  const pos = bolt.position;
+  for (const hero of q.players) {
+    if (!isActivePlayer(hero) || !hero.radius) continue;
+    const near = Math.abs(hero.position.x - pos.x) <= hero.radius.x + SPELL_STATS.reachX
+      && Math.abs(hero.position.y - pos.y) <= hero.radius.y + SPELL_STATS.reachY;
+    if (near) return hero;
+  }
+  return null;
+}
+
+/**
+ * An enemy's arrow or spell meets a hero: a dart always hits; anything else is rolled against their Armor Class (past the
+ * bow's normal range with disadvantage), as the heroes' own shots are. What gets through hurts by its kind.
+ */
+function strikeHero(bolt: Bolt, hero: Player): boolean {
+  const p = bolt.projectile;
+  const shooter = p.owner === undefined ? undefined : world.entity(p.owner);
+  const type: DamageType = p.spell ? SPELLS[p.spell].damageType : 'piercing';
+  if (p.autoHit) {
+    hurtPlayer(hero, shooter ?? bolt, Math.max(MIN_HIT_DAMAGE, rollDice(p.attack.damage, false, rollDie, 0)), type);
+    return true;
+  }
+  const attack = beyondNormalRange(p) ? withDisadvantage(p.attack) : p.attack;
+  const outcome = strike(hero, attack, shooter, p.spell);
+  if (outcome.hit) hurtPlayer(hero, shooter ?? bolt, outcome.damage, type);
+  return outcome.hit;
 }
 
 /** Casting (right mouse / R) toward the crosshair, and flying spell bolts and arrows. */

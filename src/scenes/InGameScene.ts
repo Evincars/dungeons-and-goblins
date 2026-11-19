@@ -2,7 +2,9 @@ import { Container, Graphics } from 'pixi.js';
 import type { LevelTheme } from '../level/Theme';
 import type { Application } from 'pixi.js';
 import { world, q, localPlayer } from '../world';
-import type { DepartChoice, Entity, Player } from '../world';
+import type { Entity, Player, PlayerSlot } from '../world';
+import { heroName } from '../rules/Names';
+import { heroClass } from '../rules/Classes';
 import type { Scene, SceneManager } from '../game/SceneManager';
 import { text } from '../core/texts';
 import { buildDungeon, buildSentDungeon, prepareLevel, randomSeed } from '../level/DungeonGenerator';
@@ -49,10 +51,15 @@ import type { Level } from '../level/Level';
 import { exposeForDebugging } from '../core/debugHooks';
 import { coop } from '../network/CoopSession';
 import { GuestGame, HostGame, pauserName } from '../network/CoopGame';
-import { descend, rebuildLevelAs, restorePlayer, run, startRun } from '../game/Run';
+import { carriedPartyLevel, descend, nextTheme, rebuildLevelAs, restorePlayer, resumeRun, run, startRun } from '../game/Run';
+import { captureSave, savedLayout, savedPartyLevel, seatsFor, takeChosenSave } from '../game/SaveGame';
+import type { SaveFile, SaveSource } from '../game/SaveGame';
+import { storeSave } from '../game/SaveStore';
+import { restoreSavedWorld } from '../game/SaveRestore';
+import { setDifficulty } from '../game/Difficulty';
 import { ResultPanel } from '../ui/ResultPanel';
 import { updateSeeThrough } from '../systems/SeeThroughSystem';
-import { attempt, report } from '../core/errors';
+import { attempt, report, reportRejection } from '../core/errors';
 
 /** The Third Eye's darkvision lifts the fog this many times as far round its hero. */
 const DARKVISION_FACTOR = 2;
@@ -85,6 +92,29 @@ type RunTotals = { kills: number; xp: number; gold: number };
  */
 type Prompt = 'none' | 'ask' | 'wait' | 'ended';
 type ExitState = NonNullable<Entity['exitButton']>;
+
+/** What a hero has done over the run, for a level's summary (its share is now less then). */
+type LevelTally = { kills: number; xp: number; damage: number; crits: number; fumbles: number };
+const TALLY_KEYS = ['kills', 'xp', 'damage', 'crits', 'fumbles'] as const satisfies ReadonlyArray<keyof LevelTally>;
+const SUMMARY_COLUMNS = [
+  'game.level_complete.col.hero', 'game.level_complete.col.kills', 'game.level_complete.col.xp', 'game.level_complete.col.damage',
+  'game.level_complete.col.crits', 'game.level_complete.col.fumbles',
+] as const;
+
+/** The note in the pause menu that the game was saved. */
+const SAVED_COLOR = 0x9be08a;
+
+/** A new hero for this screen's player, at the level's start (with what they carried, or the starting kit). */
+function freshHero(spawn: { x: number; y: number }): Entity {
+  const me = createPlayer(spawn.x, spawn.y, settings.heroClass);
+  world.addComponent(me, 'playerSlot', 'host');
+  restorePlayer(me);
+  return me;
+}
+
+function tallyOf(stats: NonNullable<Player['playerStats']>): LevelTally {
+  return { kills: stats.kills, xp: totalXp(stats), damage: stats.damageDealt ?? 0, crits: stats.critHits ?? 0, fumbles: stats.critMisses ?? 0 };
+}
 
 /** Everything the player has earned so far in the run. */
 function totalsOf(stats: NonNullable<Player['playerStats']>): RunTotals {
@@ -145,7 +175,11 @@ export class InGameScene implements Scene {
   private gameOverShown = false;
   /** What the player carried in, to tell this level's kills, XP and gold from the run's total. */
   private baseline: RunTotals | null = null;
+  /** Each hero's tallies as this level began (seen first), for the level's summary table. */
+  private readonly levelStart = new Map<PlayerSlot, LevelTally>();
   private readonly level: Level;
+  /** What a save of this level is made from. */
+  private readonly saveSource: SaveSource;
   private tick = 0;
   private torchSources: LightSource[] = [];
   /** This frame's lights: the torches, then pooled entries for lanterns and glowing entities. */
@@ -175,16 +209,24 @@ export class InGameScene implements Scene {
     this.gameLayer.sortableChildren = true;
     this.container.addChild(this.gameLayer, this.uiLayer);
 
-    // A guest builds the level the host announced; alone or hosting, a fresh one.
+    // A saved game picked on the load screen is taken up (alone or hosting): its depth, its kind of dungeon, its map.
+    const loaded = this.mode === 'guest' ? null : takeChosenSave();
+    if (loaded) resumeRun(loaded.run.depth, loaded.run.theme, loaded.run.seed);
+    // A guest builds the level the host announced; alone or hosting, a fresh one (or the saved one).
     const seed = this.mode === 'guest' ? coop.level?.seed ?? 0 : run.nextSeed ?? randomSeed();
     run.nextSeed = null;
     const depth = this.mode === 'guest' ? coop.level?.depth ?? 1 : run.depth;
     resetAmbience(depth);
-    // A guest builds the very dungeon the host sent (its map came before this scene); the host sends its own.
-    const sent = this.mode === 'guest' ? coop.level?.layout : undefined;
+    // A guest builds the very dungeon the host sent (its map came before this scene); the host sends its own. A saved
+    // game's dungeon is built from its map, its live pieces made from the saved world below.
+    const sent = this.mode === 'guest' ? coop.level?.layout : loaded ? savedLayout(loaded) : undefined;
+    // How hard the level is: by its depth, the heroes in the party and their level (game/Difficulty.ts).
+    const players = this.mode === 'host' ? coop.guestSlots().length + 1 : 1;
+    setDifficulty({ depth, players, partyLevel: loaded ? savedPartyLevel(loaded) : carriedPartyLevel() });
     const built = sent ? { ...buildSentDungeon(sent), layout: sent } : buildDungeon(seed, this.mode !== 'guest', run.theme);
     const { level, spawns } = built;
     this.level = level;
+    this.saveSource = { level, layout: built.layout, seed, depth, theme: run.theme };
     this.ctx = { level, dt: 1, tick: 0, gameLayer: this.gameLayer, overLayer: this.overLayer, rebuildTerrain: () => this.rebuildTerrain() };
     this.mountTerrain();
     level.clearDirty();
@@ -196,11 +238,11 @@ export class InGameScene implements Scene {
       this.guest = new GuestGame(() => manager.goto('in_game'));
       coop.sendLoaded(seed);
     } else {
-      const me = createPlayer(spawns.playerSpawn.x, spawns.playerSpawn.y, settings.heroClass);
-      world.addComponent(me, 'playerSlot', 'host');
+      const me = (loaded && this.restoreSave(loaded)) || freshHero(spawns.playerSpawn);
       // The name typed on the character select; the combat log calls the hero by it (co-op renames it below).
-      world.addComponent(me, 'playerName', cleanName(settings.playerName) || text('combat_log.default_hero'));
-      restorePlayer(me);
+      const name = cleanName(settings.playerName) || text('combat_log.default_hero');
+      if (me.playerName === undefined) world.addComponent(me, 'playerName', name);
+      else me.playerName = name;
       if (this.mode === 'host') this.host = new HostGame(me, spawns.playerSpawn, seed, depth, encodeLevelMap(built.layout));
     }
 
@@ -222,6 +264,8 @@ export class InGameScene implements Scene {
     this.pause = new PauseMenu({
       resume: () => this.setPaused(false),
       settings: () => manager.pushOverlay('settings'),
+      // Whoever runs the game keeps it: the host (for the whole party) or a player alone.
+      saveGame: this.mode === 'guest' ? undefined : () => this.saveGame(),
       mainMenu: () => manager.goto('title'),
       exitGame: () => this.exitGame(),
     }, this.mode === 'guest'
@@ -333,6 +377,22 @@ export class InGameScene implements Scene {
   }
 
   /** Browsers only let a script close a tab it opened, so fall back to the main menu. */
+  /** The save's heroes put back in the seats taking them up now (the host's own, and each guest's in co-op). */
+  private restoreSave(save: SaveFile): Player | undefined {
+    const guests = this.mode === 'host' ? coop.guestSlots().map((slot) => ({ slot, name: coop.nameOf(slot) ?? slot })) : [];
+    return restoreSavedWorld(save, this.level, seatsFor(save, [{ slot: 'host', name: '' }, ...guests]));
+  }
+
+  /** Keeps the game as it stands in the browser (the load screen lists it, and downloads it as a file). */
+  private saveGame(): void {
+    const save = captureSave(this.saveSource);
+    reportRejection(storeSave(save).then((stored) => {
+      if (!this.pause.open) return;
+      if (stored.ok) this.pause.show(text('menu.pause.saved', { name: stored.value.name }), SAVED_COLOR);
+      else this.pause.show(report(stored.error, text('menu.pause.save_failed'), 'save').message);
+    }), text('menu.pause.save_failed'), 'save');
+  }
+
   private exitGame(): void {
     window.close();
     this.manager.goto('title');
@@ -368,6 +428,7 @@ export class InGameScene implements Scene {
 
     const player = localPlayer();
     this.baseline ??= player ? totalsOf(player.playerStats) : null;
+    for (const hero of q.players) if (!this.levelStart.has(seatOf(hero))) this.levelStart.set(seatOf(hero), tallyOf(hero.playerStats));
     if (this.mode !== 'solo') updateNameTags(this.gameLayer, player);
     this.noticeDeath(player);
     const view = this.viewOf(player);
@@ -590,26 +651,34 @@ export class InGameScene implements Scene {
     resetInput();
   }
 
-  /** The level's summary, with the choice to go deeper or end the run here (once chosen, a wait for the others in the room). */
+  /**
+   * The level's summary, a victory: what every hero did on it, in a table, and the way on to the next dungeon (once
+   * chosen, a wait for the others in the room).
+   */
   private askToLeave(chosen: boolean): void {
     holdMusic('rest');
     closeShop();
-    const gained = this.levelTotals();
-    const choose = (choice: DepartChoice) => () => requestDeparture(choice);
     this.result.show({
       title: text('game.level_complete.title'),
-      titleColor: 0xffcc44,
-      lines: [
-        text('game.level_complete.kills', { count: gained.kills }),
-        text('game.level_complete.xp', { count: gained.xp }),
-        text('game.level_complete.gold', { count: gained.gold }),
-      ],
+      titleColor: 0xffdd66,
+      victory: true,
+      lines: [text('game.level_complete.subtitle', { depth: this.mode === 'guest' ? coop.level?.depth ?? run.depth : run.depth })],
+      table: { header: SUMMARY_COLUMNS.map((key) => text(key)), rows: this.summaryRows() },
       waiting: chosen ? text('game.level_complete.waiting') : undefined,
-      buttons: [
-        { label: text('game.level_complete.next'), action: choose('next') },
-        { label: text('game.level_complete.end_run'), action: choose('end') },
-      ],
+      buttons: [{ label: text('game.level_complete.next'), action: () => requestDeparture('next') }],
     });
+  }
+
+  /** A row per hero: their name, then what they did on this level (kills, experience, damage dealt, 20s and 1s rolled). */
+  private summaryRows(): string[][] {
+    const rows: string[][] = [];
+    for (const hero of q.players) {
+      const now = tallyOf(hero.playerStats);
+      const start = this.levelStart.get(seatOf(hero)) ?? now;
+      const name = hero.playerName || heroName(heroClass(hero.heroClass).id);
+      rows.push([name, ...TALLY_KEYS.map((key) => String(now[key] - start[key]))]);
+    }
+    return rows;
   }
 
   /** Someone in the exit room chose to end the run: every screen shows the run's totals, and the way out. */
@@ -654,19 +723,13 @@ export class InGameScene implements Scene {
   private prepareNextLevel(): void {
     const seed = randomSeed();
     run.nextSeed = seed;
+    run.theme = nextTheme();
     setTimeout(() => {
       const ready = attempt(() => prepareLevel(seed, run.theme));
       if (!ready.ok) report(ready.error, 'Could not prepare the next level', 'level');
     }, 0);
   }
 
-  /** Kills, XP and gold earned on this level alone. */
-  private levelTotals(): RunTotals {
-    const stats = localPlayer()?.playerStats;
-    const now = stats ? totalsOf(stats) : { kills: 0, xp: 0, gold: 0 };
-    const start = this.baseline ?? { kills: 0, xp: 0, gold: 0 };
-    return { kills: now.kills - start.kills, xp: now.xp - start.xp, gold: now.gold - start.gold };
-  }
 
   /** The whole party is down (alone, the first death or fall): the world stays as it was, with the choice on top. */
   private gameOver(): void {

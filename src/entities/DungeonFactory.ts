@@ -9,6 +9,7 @@ import { COFFINS, PROPS, PROP_GROUND, SARCOPHAGI } from '../level/Props';
 import type { PropDef, PropKind, PropPlacement } from '../level/Props';
 import { TOMB_GEAR_CHANCE, stashCoins } from './LootFactory';
 import { CHEST_TIERS, rollChestTier } from './Drops';
+import { DUMMY_STILL } from '../systems/DummySystem';
 import { ARMORS, HAND_WEAPONS, MEDALS, SHIELDS, catalogueItem } from './ItemCatalog';
 import type { DoorData, RoomData, TilePos } from '../level/generators/DungeonBuilder';
 
@@ -26,7 +27,7 @@ const CAMPFIRE_SCALE = 1.5;
 /** The fire's art stands on the lower part of its 24px cell. */
 const CAMPFIRE_LIFT = 10;
 /** The hearth under it lies centred this far below its middle, under its ring of stones. */
-const HEARTH_DROP = 3;
+const HEARTH_DROP = 5;
 /** Torch mounts sit this far above the foot of their wall. */
 const TORCH_LIFT = 30;
 const TORCH_LIGHT_RADIUS = 120;
@@ -377,7 +378,6 @@ export function createChest(x: number, y: number, look: ChestLook = isoChest()):
 const DUMMY_SCALE = 1.5;
 const DUMMY_FEET_Y = 28;
 const DUMMY_FRAME = 32;
-const DUMMY_IDLE_FRAMES = 4;
 const DUMMY_FRAME_TICKS = 6;
 /** Health only for show: the dummy is healed after every blow. */
 const DUMMY_HEALTH = 1000;
@@ -386,7 +386,8 @@ const DUMMY_HEALTH = 1000;
 export function dummyLook(): Pick<Entity, 'visual' | 'animation' | 'yOffset'> {
   return {
     visual: { sheet: 'training_dummy', scale: DUMMY_SCALE },
-    animation: { sheet: 'training_dummy', frameX: 0, frameY: 0, frameCount: DUMMY_IDLE_FRAMES, frameTime: DUMMY_FRAME_TICKS, timer: 0, loop: true },
+    // At rest it stands still on the first frame (its strips are all hits, systems/DummySystem.ts).
+    animation: { sheet: 'training_dummy', frameX: 0, frameY: 0, frameCount: 1, frameTime: DUMMY_FRAME_TICKS, timer: 0, loop: true },
     yOffset: (DUMMY_FEET_Y - DUMMY_FRAME / 2) * DUMMY_SCALE,
   };
 }
@@ -403,7 +404,7 @@ export function createTrainingDummy(x: number, y: number): Entity {
     radius: { x: 10, y: 6 },
     blocking: true,
     team: Team.Neutral,
-    dummy: { row: 0 },
+    dummy: { row: DUMMY_STILL },
     ...dummyLook(),
   });
 }

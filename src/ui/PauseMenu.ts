@@ -12,6 +12,8 @@ const BTN_H = 26;
 const BTN_GAP = 4;
 const MENU_TOP = 92;
 const STATUS_Y = 66;
+/** The note over the buttons: red for trouble, unless told otherwise. */
+const NOTE_COLOR = 0xff8888;
 const DIM_ALPHA = 0.6;
 const DIALOG_ALPHA = 0.85;
 const DIALOG = { x: LAYOUT_LEFT + 90, y: 112, w: LAYOUT_WIDTH - 180, h: 148 };
@@ -19,6 +21,8 @@ const DIALOG = { x: LAYOUT_LEFT + 90, y: 112, w: LAYOUT_WIDTH - 180, h: 148 };
 export type PauseActions = {
   resume: () => void;
   settings: () => void;
+  /** Saves the game (game/SaveStore.ts): only for whoever runs it, the host or a player alone. */
+  saveGame?: () => void;
   mainMenu: () => void;
   exitGame: () => void;
 };
@@ -40,7 +44,7 @@ export class PauseMenu {
     return this.container.visible;
   }
 
-  show(status = ''): void {
+  show(status = '', color = NOTE_COLOR): void {
     this.closeDialog();
     this.container.removeChildren().forEach((c) => c.destroy({ children: true }));
     const dim = new Graphics().rect(0, 0, GAME_WIDTH, GAME_HEIGHT).fill({ color: 0x000000, alpha: DIM_ALPHA });
@@ -51,7 +55,7 @@ export class PauseMenu {
     title.height = GAME_HEIGHT;
     this.container.addChild(dim, title);
     if (status) {
-      const note = makeText(status.slice(0, 60), 0xff8888, 8, 'center');
+      const note = makeText(status.slice(0, 60), color, 8, 'center');
       note.x = GAME_WIDTH / 2;
       note.y = STATUS_Y;
       this.container.addChild(note);
@@ -59,6 +63,7 @@ export class PauseMenu {
     const entries: Array<{ label: string; action: () => void }> = [
       { label: text('menu.pause.resume'), action: this.actions.resume },
       { label: text('menu.pause.settings'), action: this.actions.settings },
+      ...(this.actions.saveGame ? [{ label: text('menu.pause.save'), action: this.actions.saveGame }] : []),
       { label: text('menu.pause.main_menu'), action: () => this.confirmMainMenu() },
       { label: text('menu.pause.exit'), action: this.actions.exitGame },
     ];

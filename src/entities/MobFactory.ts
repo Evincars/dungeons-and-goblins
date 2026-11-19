@@ -8,6 +8,7 @@ import { EVIL_WIZARD, GHOST_WIZARD } from '../characters/Wizards';
 import { GRICK, SHADE } from '../characters/IsoFoes';
 import { NEVER_TICK, SENSE_TICKS } from '../ai/constants';
 import { MONSTERS, randomMonsterWeapon } from '../rules/Monsters';
+import { difficulty, enemyHealthScale } from '../game/Difficulty';
 
 /** Gap between the top of the head and the health bar. */
 const HEALTH_BAR_GAP = 6;
@@ -106,9 +107,18 @@ export function createMobAI(): MobAI {
   };
 }
 
+/** An enemy spellcaster's spells (MONSTERS' `caster`), cast at the party's level, each with its own recovery. */
+export function casterOf(type: MobType): Pick<Entity, 'mobCaster'> {
+  const caster = MONSTERS[type].caster;
+  if (!caster) return {};
+  return { mobCaster: { level: difficulty.partyLevel, ability: caster.ability, spells: [...caster.spells], recovery: caster.spells.map(() => 0) } };
+}
+
 export function createMob(_level: Level, type: MobType, x: number, y: number): Entity {
   const cfg: MobConfig = MOB_CONFIGS[type];
   const def = characterDef(cfg.character);
+  // Tougher the deeper the party goes and the more heroes there are (game/Difficulty.ts).
+  const health = Math.round(cfg.health * enemyHealthScale());
 
   return world.add({
     position: { x, y },
@@ -118,7 +128,7 @@ export function createMob(_level: Level, type: MobType, x: number, y: number): E
     physicsSlide: true,
     team: Team.Neutral,
     mobType: type,
-    health: { current: cfg.health, max: cfg.health },
+    health: { current: health, max: health },
     // Above the head: feet → sprite centre (yOffset) → top of the head, plus a small gap.
     healthBarOffset: -(cfg.yOffset + headAboveCenter(def, cfg.scale) + HEALTH_BAR_GAP),
     hurtTime: 0,
@@ -135,6 +145,7 @@ export function createMob(_level: Level, type: MobType, x: number, y: number): E
     bump: { x: 0, y: 0 },
     chasing: false,
     ai: createMobAI(),
+    ...casterOf(type),
     ...characterComponents(cfg.character, cfg.scale),
     // The kind's own scale may differ from the character's, so the lift comes from the table.
     yOffset: cfg.yOffset,

@@ -295,6 +295,19 @@ export class Level {
     this.seeCorner(tileX + 1 + (tileY + 1) * w);
   }
 
+  /** What has been seen, as a string of '1' (seen) and '0' corner by corner: kept in a saved game. */
+  seenBits(): string {
+    let bits = '';
+    for (const corner of this.seen) bits += corner ? '1' : '0';
+    return bits;
+  }
+
+  /** Brings back what a saved game had seen (bits as seenBits wrote them; a map of another size is ignored). */
+  restoreSeen(bits: string): void {
+    if (bits.length !== this.seen.length) return;
+    for (let i = 0; i < bits.length; i++) if (bits[i] === '1') this.seeCorner(i);
+  }
+
   private seeCorner(index: number): void {
     if (this.seen[index]) return;
     this.seen[index] = true;

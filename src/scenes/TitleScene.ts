@@ -8,14 +8,15 @@ import type { Scene, SceneManager } from '../game/SceneManager';
 import { text } from '../core/texts';
 import { coop } from '../network/CoopSession';
 import { startRun } from '../game/Run';
+import { chooseSave } from '../game/SaveGame';
 import { world } from '../world';
 import { chooseHeroThen } from './CharacterSelectScene';
 import { music } from '../audio/MusicPlayer';
 import { ambience } from '../audio/AmbiencePlayer';
 
 const BUTTON_W = 220;
-const BUTTON_H = 26;
-const BUTTON_GAP = 6;
+const BUTTON_H = 24;
+const BUTTON_GAP = 4;
 const MENU_TOP = 156;
 /** The logo fills the space above the buttons: this far from the top, and this tall. */
 const LOGO_TOP = 10;
@@ -43,6 +44,7 @@ export class TitleScene implements Scene {
     // Back at the menu: any room is left, and the next game starts from the top of the dungeon.
     coop.close();
     startRun();
+    chooseSave(null);
     clearJoinLink();
     // Nothing of the last game is needed here; a new one fills the world again.
     world.clear();
@@ -61,6 +63,8 @@ export class TitleScene implements Scene {
       { label: text('menu.title.start'), action: () => chooseHeroThen(manager, 'in_game') },
       { label: text('menu.title.host'), action: () => chooseHeroThen(manager, 'coop_host') },
       { label: text('menu.title.join'), action: () => chooseHeroThen(manager, 'coop_join') },
+      // A saved game, taken up alone or hosted for the party (scenes/LoadGameScene.ts).
+      { label: text('menu.title.load'), action: () => manager.goto('load_game') },
       { label: text('menu.title.settings'), action: () => manager.goto('settings') },
       { label: text('menu.title.exit'), action: () => this.exit() },
     ];

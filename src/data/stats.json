@@ -1,10 +1,11 @@
 {
-  "$comment": "Enemies, from the D&D 5e SRD monster blocks (source). health: hit points. ac: Armor Class. proficiency: proficiency bonus (+2 up to challenge 4, +3 from 5). abilities: the six scores (modifiers are worked out from them). weapons: the low-end weapons each one may carry, picked at random when it spawns (names from src/rules/WeaponTable.ts); it attacks with d20 + proficiency + STR (DEX for finesse) and deals the weapon's dice + the same modifier. xp: experience for the kill (SRD, by challenge rating; the party shares it). deathPoints: what the coins it drops are worth. The heroes are in classes.json.",
+  "$comment": "Enemies, from the D&D 5e SRD monster blocks (source). ranged: the bows a share of them carry instead (they shoot from afar). spellcaster: casts the heroes' spells as a caster of that class and ability, at the party's level (systems/EnemyRangedSystem.ts). health: hit points. ac: Armor Class. proficiency: proficiency bonus (+2 up to challenge 4, +3 from 5). abilities: the six scores (modifiers are worked out from them). weapons: the low-end weapons each one may carry, picked at random when it spawns (names from src/rules/WeaponTable.ts); it attacks with d20 + proficiency + STR (DEX for finesse) and deals the weapon's dice + the same modifier. xp: experience for the kill (SRD, by challenge rating; the party shares it). deathPoints: what the coins it drops are worth. The heroes are in classes.json.",
   "mobs": {
     "goblin": {
       "source": "Goblin", "health": 7, "ac": 15, "proficiency": 2, "xp": 50,
       "abilities": { "strength": 8, "dexterity": 14, "constitution": 10, "intelligence": 10, "wisdom": 8, "charisma": 8 },
-      "weapons": ["club", "dagger", "sickle", "light_hammer"], "deathPoints": 50
+      "weapons": ["club", "dagger", "sickle", "light_hammer"], "deathPoints": 50,
+      "ranged": { "weapons": ["shortbow", "light_crossbow"], "share": 0.35 }
     },
     "skeleton": {
       "source": "Skeleton", "health": 13, "ac": 13, "proficiency": 2, "xp": 50,
@@ -24,12 +25,14 @@
     "goblin_grunt": {
       "source": "Goblin", "health": 7, "ac": 15, "proficiency": 2, "xp": 50,
       "abilities": { "strength": 8, "dexterity": 14, "constitution": 10, "intelligence": 10, "wisdom": 8, "charisma": 8 },
-      "weapons": ["club", "dagger", "sickle", "light_hammer"], "deathPoints": 50
+      "weapons": ["club", "dagger", "sickle", "light_hammer"], "deathPoints": 50,
+      "ranged": { "weapons": ["shortbow", "light_crossbow"], "share": 0.3 }
     },
     "goblin_rogue": {
       "source": "Goblin", "health": 7, "ac": 15, "proficiency": 2, "xp": 50,
       "abilities": { "strength": 8, "dexterity": 14, "constitution": 10, "intelligence": 10, "wisdom": 8, "charisma": 8 },
-      "weapons": ["dagger", "sickle"], "deathPoints": 100
+      "weapons": ["dagger", "sickle"], "deathPoints": 100,
+      "ranged": { "weapons": ["shortbow", "light_crossbow"], "share": 0.5 }
     },
     "goblin_warrior": {
       "source": "Goblin Boss", "health": 21, "ac": 17, "proficiency": 2, "xp": 200,
@@ -39,17 +42,20 @@
     "ghost_wizard": {
       "source": "Specter", "health": 22, "ac": 12, "proficiency": 2, "xp": 200,
       "abilities": { "strength": 1, "dexterity": 14, "constitution": 11, "intelligence": 10, "wisdom": 10, "charisma": 11 },
-      "weapons": ["dagger"], "deathPoints": 160
+      "weapons": ["dagger"], "deathPoints": 160,
+      "spellcaster": { "class": "sorcerer", "ability": "charisma", "spells": ["fire_bolt", "burning_hands", "magic_missile", "chromatic_orb", "scorching_ray", "fireball"] }
     },
     "evil_wizard": {
       "source": "Mage", "health": 40, "ac": 12, "proficiency": 3, "xp": 2300,
       "abilities": { "strength": 9, "dexterity": 14, "constitution": 11, "intelligence": 17, "wisdom": 12, "charisma": 11 },
-      "weapons": ["dagger", "quarterstaff"], "deathPoints": 320
+      "weapons": ["dagger", "quarterstaff"], "deathPoints": 320,
+      "spellcaster": { "class": "wizard", "ability": "intelligence", "spells": ["fire_bolt", "ray_of_frost", "magic_missile", "thunderwave", "ice_knife", "lightning_bolt"] }
     },
     "shade": {
       "source": "Shadow", "health": 16, "ac": 12, "proficiency": 2, "xp": 100,
       "abilities": { "strength": 6, "dexterity": 14, "constitution": 13, "intelligence": 6, "wisdom": 10, "charisma": 8 },
-      "weapons": ["dagger", "sickle"], "deathPoints": 120
+      "weapons": ["dagger", "sickle"], "deathPoints": 120,
+      "spellcaster": { "class": "warlock", "ability": "charisma", "spells": ["chill_touch", "eldritch_blast"] }
     },
     "grick": {
       "source": "Grick", "health": 27, "ac": 14, "proficiency": 2, "xp": 450,

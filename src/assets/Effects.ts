@@ -22,6 +22,8 @@ export const EFFECT_SHAPES = {
   petal_cross: [16, 769, 8],
   ring_pulse: [16, 776, 8],
   cloud_burst: [16, 777, 8],
+  // A cone of flame bursting from the hands, pointing right from its frame's left edge (CONE_ORIGIN): played turned the way it is cast.
+  fire_cone: [24, 1176, 9],
   spark_scatter: [16, 778, 8],
   orb_charge: [16, 779, 8],
   triangle_shard: [16, 786, 8],
@@ -297,6 +299,26 @@ export function playEffect(shape: EffectShape, colour: EffectColour, x: number, 
   const frames = EFFECT_SHAPES[shape][2];
   const row = EFFECT_COLOURS.indexOf(colour);
   const spawn = (): Entity => spawnFx(x, y, key, frames, frames * EFFECT_FRAME_TICKS, { row, yOffset: lift, scale });
+  reportRejection(requestArt(key).then(spawn), `Effect ${shape} did not load`, 'render');
+}
+
+/** Effects that are cones: played from the caster's hands, turned the way the spell was cast (`playCone`). */
+export const CONE_EFFECTS: ReadonlySet<EffectShape> = new Set<EffectShape>(['fire_cone']);
+/** Where a cone's flame starts in its 64 px frame: this far left of the frame's middle. */
+const CONE_ORIGIN = 20;
+/** A cone leaves the hands this far above the feet. */
+const CONE_LIFT = 12;
+
+/** Plays a cone effect once from (x, y) (the caster's feet) along the unit direction (dirX, dirY), sized by `scale`. */
+export function playCone(shape: EffectShape, colour: EffectColour, x: number, y: number, dirX: number, dirY: number, scale = 1): void {
+  const key = effectSheetKey(shape);
+  const frames = EFFECT_SHAPES[shape][2];
+  const row = EFFECT_COLOURS.indexOf(colour);
+  const reach = CONE_ORIGIN * scale;
+  const rotation = Math.atan2(dirY, dirX);
+  // Its frame's middle lies out along the cone, so its start is at the hands; drawn in front of the caster.
+  const spawn = (): Entity => spawnFx(x + dirX * reach, y + dirY * reach + 1, key, frames, frames * EFFECT_FRAME_TICKS,
+    { row, yOffset: CONE_LIFT, scale, rotation });
   reportRejection(requestArt(key).then(spawn), `Effect ${shape} did not load`, 'render');
 }
 

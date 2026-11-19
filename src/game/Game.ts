@@ -5,6 +5,7 @@ import { loadAllAssets } from '../assets/AssetLoader';
 import { GAME_WIDTH, GAME_HEIGHT, displayScale } from '../render/Camera';
 import { SceneManager } from './SceneManager';
 import { TitleScene } from '../scenes/TitleScene';
+import { LoadGameScene } from '../scenes/LoadGameScene';
 import { InGameScene } from '../scenes/InGameScene';
 import { SettingsScene } from '../scenes/SettingsScene';
 import { KeyBindingsScene } from '../scenes/KeyBindingsScene';
@@ -70,7 +71,8 @@ export class Game {
       .register('intro', (m) => new IntroScene(m))
       .register('coop_host', (m) => new CoopScene(m, 'host'))
       .register('coop_join', (m) => new CoopScene(m, 'guest', joinParam()))
-      .register('in_game', (m) => new InGameScene(m));
+      .register('in_game', (m) => new InGameScene(m))
+      .register('load_game', (m) => new LoadGameScene(m));
     // An invite link opens straight into the room it invites to.
     this.manager.goto(joinParam() ? 'coop_join' : 'title');
     // The other effects arrive in the background while the menus are up.

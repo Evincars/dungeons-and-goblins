@@ -54,6 +54,8 @@ export type FxOptions = {
   follow?: number;
   /** Colours the effect (its white row takes the colour whole). */
   tint?: number;
+  /** Turned this far (radians): a cone of fire pointing the way it was cast. */
+  rotation?: number;
 };
 
 /** A one-off effect playing `frames` frames of a sheet across `duration` ticks, then gone (as in Catacomb Snatch Redux). */
@@ -61,7 +63,7 @@ export function spawnFx(x: number, y: number, sheet: string, frames: number, dur
   return world.add({
     position: { x, y },
     yOffset: opts.yOffset ?? 0,
-    visual: { sheet, col: 0, row: opts.row, scale: opts.scale, tint: opts.tint },
+    visual: { sheet, col: 0, row: opts.row, scale: opts.scale, tint: opts.tint, rotation: opts.rotation },
     fx: {
       age: 0, duration, frames,
       cycle: opts.cycle, scale: opts.scale, rise: opts.rise, orderId: opts.orderId, orderBias: opts.orderBias, first: opts.first, follow: opts.follow,

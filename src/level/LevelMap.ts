@@ -10,7 +10,7 @@ import type { PropKind } from './Props';
 import type { DungeonLayout, RoomData, RoomType } from './generators/DungeonBuilder';
 import { ensure } from '../core/errors';
 import { hasKey, isFiniteNumber, isRecord } from '../core/guards';
-import { gunzipJson, gzipText } from '../core/compression';
+import { base64ToBytes, bytesToBase64, gunzipJson, gzipText } from '../core/compression';
 
 /**
  * A generated dungeon as plain JSON, so the co-op host can send its clients the very map it built (and a
@@ -96,16 +96,6 @@ function toRuns(indices: Iterable<number>): Pair[] {
     else runs.push([i, 1]);
   }
   return runs;
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = '';
-  for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary);
-}
-
-function base64ToBytes(text: string): Uint8Array {
-  return Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
 }
 
 const pair = (p: { x: number; y: number }): Pair => [p.x, p.y];

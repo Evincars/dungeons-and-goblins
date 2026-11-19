@@ -13,7 +13,7 @@ import type { SpellId } from './rules/Spells';
 import type { QuickBinding } from './rules/Spellbook';
 import type { EffectColour, EffectShape } from './assets/Effects';
 
-export const enum Team { Neutral = 0, Player = 1 }
+export const enum Team { Neutral = 0, Player = 1, Mob = 2 }
 
 export const enum Facing { North = 0, East = 1, South = 2, West = 3 }
 
@@ -350,6 +350,11 @@ export type Entity = {
   mobType?: MobType;
   /** The weapon an enemy carries (its dice, src/rules/WeaponTable.ts), picked when it spawns. */
   mobWeapon?: WeaponBase;
+  /**
+   * An enemy spellcaster (systems/EnemyRangedSystem.ts): the level it casts at, the ability it casts with, its spells (the
+   * heroes' own, src/data/spells.json) and each one's recovery (ticks). The host's alone: guests never see it.
+   */
+  mobCaster?: { level: number; ability: StatName; spells: SpellId[]; recovery: number[] };
   /** A player's hero class (src/data/classes.json): their abilities, hit points and training. */
   heroClass?: HeroClassId;
   /** What the player decided for their hero: bought ability scores, fighting style, Improvements (src/rules/Build.ts). */
@@ -582,6 +587,10 @@ export type Entity = {
     goldEarned: number;
     /** The share more coins enemies drop (from Charisma). */
     lootBonus: number;
+    /** Over the run: damage dealt to foes, and the natural 20s and 1s of the hero's attack rolls (for the level's summary). */
+    damageDealt: number;
+    critHits: number;
+    critMisses: number;
   };
   /** The bag, square by square (index = grid square); empty squares are null. */
   inventory?: BagSquare[];

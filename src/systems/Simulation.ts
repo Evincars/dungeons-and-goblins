@@ -5,6 +5,7 @@ import { updateInput } from './InputSystem';
 import { updateTargeting, resolveUses } from './TargetSystem';
 import { updateSpells } from './SpellSystem';
 import { updateAI } from './AISystem';
+import { updateEnemyRanged } from './EnemyRangedSystem';
 import { updateMovement } from './MovementSystem';
 import { updateTrails } from './TrailSystem';
 import { updateCombatTimers, updateContactDamage } from './CombatSystem';
@@ -83,6 +84,7 @@ export const SIMULATION: readonly System[] = [
   ({ level }) => updateInventory(level),
   () => updateWeaponSwap(),
   ({ level, tick }) => updateAI(level, tick),
+  ({ level }) => updateEnemyRanged(level),
   ({ level }) => updateSummons(level),
   () => updateDecoys(),
   () => updateInitiative(),

@@ -5,6 +5,7 @@
 import type { MobType } from '../../world';
 import { TILE_WIDTH, TILE_HEIGHT, TileType } from '../TileType';
 import { createMob } from '../../entities/MobFactory';
+import { depthWeight, enemyCountScale } from '../../game/Difficulty';
 import {
   createCampfire, createChest, createSpikeTrap, createExitButton, createExitDoor, createProp, createRoom, createLever, createSafeDoor, createShopNpc, createStash,
   createSconce, createTorch, createTrainingDummy,
@@ -40,11 +41,12 @@ const CHEST_CHANCE = 0.4;
 
 type FloorSpot = { tx: number; ty: number; x: number; y: number };
 
-/** A kind of enemy drawn from a mix by weight. */
+/** A kind of enemy drawn from a mix by weight, each weighed again by how common it is at this depth (game/Difficulty.ts). */
 function randomEnemy(mix: EnemyMix): MobType {
-  let roll = Math.random() * mix.reduce((sum, e) => sum + e.weight, 0);
+  const weightOf = (entry: EnemyMix[number]) => entry.weight * depthWeight(entry.type);
+  let roll = Math.random() * mix.reduce((sum, e) => sum + weightOf(e), 0);
   for (const entry of mix) {
-    roll -= entry.weight;
+    roll -= weightOf(entry);
     if (roll < 0) return entry.type;
   }
   return mix[0].type;
@@ -66,7 +68,8 @@ function populateRoom(level: Level, room: RoomData, cfg: DungeonConfig): void {
   if (floors.length === 0) return;
   const pick = () => floors.splice(Math.floor(Math.random() * floors.length), 1)[0];
 
-  const enemyCount = Math.max(1, Math.round(floors.length * cfg.enemyDensity / 100));
+  // More the deeper the party goes, and the more heroes there are (game/Difficulty.ts).
+  const enemyCount = Math.max(1, Math.round((floors.length * cfg.enemyDensity / 100) * enemyCountScale()));
   const mix = level.theme === 'castle2' ? ISO_ENEMY_MIX : ENEMY_MIX;
   for (let i = 0; i < enemyCount && floors.length; i++) {
     const t = pick();

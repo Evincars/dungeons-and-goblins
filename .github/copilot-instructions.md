@@ -139,7 +139,11 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   Elemental Adept's damage type — is offered in the level panel (`ui/FeatPicks.ts`), checked by `rules/FeatPicks.ts` and kept
   as the Improvement's `picks`; a feat's spells sit in the Skills tab's Feat spells row, are bound at their own level, count
   against no bind limit and are cast with the feat's ability, `spellcastingFor`; the Skills tab runs: class features, the
-  school, Passive Feats and feat spells, then cantrips and each spell level; only `worked` feats are offered, `OFFERED_FEATS`); enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`;
+  school, Passive Feats and feat spells, then cantrips and each spell level; only `worked` feats are offered, `OFFERED_FEATS`); enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`
+  (with which kinds carry a bow or crossbow and how often, `ranged`, and which cast spells as what class and with which
+  ability, `spellcaster`: their spells are the heroes' own from `spells.json`, cast at the party's level, so a change to a
+  spell changes it for both); how hard a level is (more and tougher enemies the deeper it lies and in direct proportion
+  to the heroes playing, which kinds turn up at which depth) in `src/game/Difficulty.ts`;
   castable spells (dice, recovery, save, area, effect; a buff, zone or puddle's duration and concentration) in
   `src/data/spells.json`; every spell of Baldur's Gate 3 the game knows (name, level, school, the classes that learn it,
   the Eldritch Knight's, its BG3 text and icon) in `src/data/spell-list.json`, made by `scripts/bg3-spells.mjs` from the BG3
@@ -384,6 +388,14 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   has no icon for shows another feature's of a like name, each borrowed icon shown by that feature alone
   (`scripts/feature-icons.py` `BORROWED`). The exit room has one campfire, in its middle, and a candelabra either side of
   its gate inside it (its lever beside the upper one).
+- Enemies with a bow or crossbow and enemy spellcasters (`systems/EnemyRangedSystem.ts`) shoot and cast only at a hero
+  in sight whose screen shows them (never from off-screen), stand to do it, lead a moving target and pick the spell that
+  harms most (a burst by how many heroes it catches); their shots are the heroes' bolts and arrows on the enemies' side
+  (`Team.Mob`), striking heroes; they draw no aim guide. The level's summary (the exit's question) is a victory panel
+  (`ui/ResultPanel.ts` `victory`) with one button, Go to next dungeon, and a table of each hero's kills, experience,
+  damage dealt, natural 20s and 1s on this level (`playerStats.damageDealt`, `critHits`, `critMisses`). The training dummy
+  stands still until struck, then plays one of its three hit rows (a heavy blow spins it, `systems/DummySystem.ts`);
+  Burning Hands is a cone of fire from the caster's hands towards the aim (`assets/Effects.ts` `CONE_EFFECTS`, `playCone`).
 - An enemy knocked back hard by a blow may be driven over a pit's or chasm's edge, and falls (`MovementSystem.ts`
   `KNOCKED_OVER_SPEED`); walking, enemies keep out of holes. A spike trap springs under feet two pixels inside its tile.
 - `src/core/` — cross-cutting: `errors/`, `log/`, `geometry.ts`, `guards.ts`, `debugHooks.ts`, `compression.ts` (gzip with a size limit).
@@ -396,8 +408,17 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   the fallen watch their companions, `Spectate.ts`), resting (`Rest.ts`: short and long rests; in a short rest each hero
   spends the hit dice they chose as they asked or agreed, and one refusal means nobody rests), pausing (`Pause.ts`: in
   co-op the game stops for everyone while anyone has the pause menu open), payments (`Purse.ts`: kills, chests and stashes pay straight into the
-  purse), Need / Pass rolls for rare finds (`LootRoll.ts`) and the ~ console's commands (`Console.ts`; `/freeze` and `/killall` for testing, the switches in `Cheats.ts`). `src/scenes/` — title, settings,
-  key bindings, character select, co-op lobby and the level itself. `src/ui/` — buttons, HUD (health bar, round
+  purse), Need / Pass rolls for rare finds (`LootRoll.ts`) and the ~ console's commands (`Console.ts`; `/freeze` and `/killall` for testing, the switches in `Cheats.ts`).
+  Saved games (`SaveGame.ts`: the level's map as it stands, what has been seen of it, every entity of the world as
+  `captureWorld` sends it, the run's depth and theme, and the heroes listed for show; `validateSave` checks it all;
+  `SaveStore.ts`: kept gzipped in localStorage, the newest `MAX_SAVES`, downloaded and imported as JSON files;
+  `SaveRestore.ts`: the world made again from it, every entity id inside components remapped and the host's own
+  bookkeeping, `trail` and `mobCaster`, given back). The host or a player alone saves from the pause menu; the title's Load
+  game lists the saves (`scenes/LoadGameScene.ts`): Play takes one up alone, Host opens the lobby, where each player is
+  shown the saved hero they will take up (`seatsFor`: the host's own, a guest's by name, else by seat; the roster's
+  `saved` line) and the level starts from the save. After the first level each level is a dungeon of any theme at random
+  (`Run.ts` `nextTheme`). `src/scenes/` — title, settings,
+  key bindings, character select, co-op lobby, the load screen and the level itself. `src/ui/` — buttons, HUD (health bar, round
   buttons, `HudDialog`, `MinimapView`, `QuickBar`, `RestMenu`, `PartyBanner`, `LootRollPanel`), `PopupMenu`, `HeroPicker`,
   `ConsoleView`, combat log, the inventory (`InventoryOverlay`: the bag filtered, searched as typed — the letters of a name in order,
   `core/fuzzy.ts`, matched ones lit in the tooltip — and sorted by price, weight or training, `game/BagView.ts`, without moving a

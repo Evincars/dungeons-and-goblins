@@ -663,6 +663,8 @@ export type Entity = {
 
   // --- torch (light source) ---
   torch?: { radius: number; color: number; flicker: number };
+  /** Sparks fly up from its flame (systems/SparkSystem.ts, a NixieFX effect), this far above its position (px). */
+  sparks?: { lift: number };
 
   // --- AI ---
   ai?: MobAI;

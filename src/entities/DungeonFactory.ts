@@ -35,6 +35,8 @@ const TORCH_COLOR = 0xffcc66;
 const TORCH_SCALE = 1.5;
 const TORCH_FRAMES = 4;
 const TORCH_FRAME_TICKS = 7;
+/** The torch's flame burns this far above the middle of its 16 px art (before TORCH_SCALE): where its sparks fly from. */
+const TORCH_FLAME_RISE = 4;
 /** Wall props hang from just under the face's cap molding. */
 const HANG_TOP = 54;
 /**
@@ -161,12 +163,13 @@ export function createLever(x: number, y: number, exit = false): Entity {
 
 /**
  * A torch hung on a brick face. The entity stands at the foot of the wall (so anyone in front of the
- * wall draws over it); the sprite is lifted up onto the bricks.
+ * wall draws over it); the sprite is lifted up onto the bricks, sparks flying up from its flame.
  */
 export function createTorch(x: number, y: number): Entity {
   return world.add({
     position: { x, y: y + TORCH_LIFT },
     torch: { radius: TORCH_LIGHT_RADIUS, color: TORCH_COLOR, flicker: Math.random() * Math.PI * 2 },
+    sparks: { lift: TORCH_LIFT + TORCH_FLAME_RISE * TORCH_SCALE },
     visual: { sheet: 'torch', scale: TORCH_SCALE },
     animation: {
       sheet: 'torch',

@@ -1,10 +1,11 @@
 import { Texture } from 'pixi.js';
 import { context2d, createCanvas, imageOf } from '../render/canvas';
-import { LoadError } from '../core/errors';
+import { LoadError, report } from '../core/errors';
 import { getTexture, hasTexture, setTexture } from './Textures';
 import { loadSheets } from './SpriteSheet';
 import { registerSheet } from '../render/Sheets';
 import { allSheets, registerLazyArt } from './SheetCatalog';
+import { loadVfx } from '../render/Vfx';
 import {
   CAVE_ROCK_CUT, CAVE_SHEET, ROCK_BLACK, ROCK_CUT, SLANT_FACE, SLANT_RIM, SLANT_SHEAR,
   caveSlantKey, slantShift,
@@ -206,6 +207,9 @@ export async function loadAllAssets(onProgress?: (done: number, total: number) =
   for (const [key, draw] of Object.entries(PROCEDURAL)) setTexture(key, Texture.from(draw()));
   setTexture('panel_hud', Texture.from(genPanelBg(HUD_PANEL.w, HUD_PANEL.h)));
   setTexture('panel_inv', Texture.from(genPanelBg(INVENTORY_PANEL.w, INVENTORY_PANEL.h)));
+  // The particle effects are only looks: without them the game plays on, and the log says why.
+  const vfx = await loadVfx();
+  if (!vfx.ok) report(vfx.error, 'Particle effects could not be loaded', 'assets');
   onProgress?.(sheets.length, sheets.length);
 }
 

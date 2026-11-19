@@ -60,6 +60,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 | 2-D spatial queries (R-tree) | **rbush** | `src/ai/perception/spatial.ts` |
 | Peer-to-peer networking | **PeerJS** (WebRTC) | `src/network/CoopSession.ts` |
 | Sound effects, music and ambience (loading, sprites, pitch, pan, fades, streaming) | **Howler** | `src/audio/` |
+| Particle effects (sparks, embers, bursts) | **NixieFX** (`nixie-fx`): authored in its editor as the project in `vfx/`, exported by `npm run vfx:export` to `public/vfx`, played by one `PixiVfxRenderer` | `src/render/Vfx.ts` |
 
 - Never write your own A*, Dijkstra, heap, spatial hash, vector or bounding-box class.
 - **Yuka first for graphs and pathfinding.** Add another graph library only for an algorithm Yuka
@@ -291,7 +292,8 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `PropDef.backing`, and blue fire burning beyond them, `PropDef.fire`, `entities/WindowFire.ts`, its foot hidden by the
   sill); drain grates keep a tile clear of any wall; their faces also show stretches with vents and dark cracked stretches (`TerrainAutotile.ts` face
   styles), and where a wall juts out past another's face it ends in its edge strip all the way up its face
-  (`shallowerFace`) and on up to the wall's north edge (`seamW`/`seamE`). Campfires stand on a ring of cobbles
+  (`shallowerFace`) and on up to the wall's north edge (`seamW`/`seamE`). Wall torches throw sparks from their flames (`sparks`, `systems/SparkSystem.ts`: the NixieFX
+  effect `vfx/torch-sparks.json`, one unit 16 px with y up, moved on a tick at a time). Campfires stand on a ring of cobbles
   (`campfire_floor`, built at load in `assets/AssetLoader.ts`). Coffins and sarcophagi are searched like
   other stashes and may hold gear (`TOMB_GEAR_CHANCE`, `entities/LootFactory.ts`). A spike trap in a
   corridor (`spikeTrap`, `systems/TrapSystem.ts`) bites the first hero to step on it, told over their head and in the

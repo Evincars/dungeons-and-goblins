@@ -19,6 +19,7 @@ import { updateDoors } from './DoorSystem';
 import { updateExit } from './ExitSystem';
 import { updateTraps } from './TrapSystem';
 import { updateMist } from './MistSystem';
+import { updateSparks } from './SparkSystem';
 import { updateAimGuide } from './AimGuideSystem';
 import { updateShop } from './ShopSystem';
 import { animateTraders } from './TraderSystem';
@@ -143,6 +144,7 @@ export const PRESENTATION: readonly System[] = [
   ({ gameLayer }) => updateMarker(gameLayer),
   ({ overLayer }) => updateAimGuide(overLayer),
   ({ gameLayer, tick }) => updateMist(gameLayer, tick),
+  ({ gameLayer }) => updateSparks(gameLayer),
   () => updateMusic(),
   ({ level }) => updateAmbience(level),
 ];

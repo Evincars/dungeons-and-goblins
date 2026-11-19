@@ -6584,3 +6584,23 @@ test('a saved game keeps the level, its world and the heroes, and is taken up ag
   assert.ok(!validRoster([{ slot: 'host', name: 'Ada', heroClass: 'wizard', saved: 'a\nb' }]), 'no control characters');
   world.clear();
 });
+
+test('torches throw sparks: the NixieFX effect exported to public/vfx is whole, and each wall torch has a flame to throw them from', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { parseVfxBundle, vfxPoint, VFX_PIXELS_PER_UNIT } = await load('render/Vfx');
+  const manifest = JSON.parse(readFileSync('public/vfx/manifest.json', 'utf8'));
+  const effectsByPath = Object.fromEntries(manifest.effects.map(({ path }) => [path, JSON.parse(readFileSync(`public/vfx/${path}`, 'utf8'))]));
+  const bundle = parseVfxBundle(manifest, effectsByPath);
+  assert.ok(bundle.ok, bundle.ok ? '' : bundle.error.message);
+  assert.ok(bundle.value.effectsById.has('torch-sparks'));
+  assert.equal(parseVfxBundle(manifest, {}).ok, false, 'a bundle missing its effect files is refused');
+
+  // The effect's y runs up: a flame higher on the screen is higher in the effect.
+  assert.deepEqual(vfxPoint(32, 48, [0, 0, 0]), [32 / VFX_PIXELS_PER_UNIT, -48 / VFX_PIXELS_PER_UNIT, 0]);
+
+  world.clear();
+  const torch = createTorch(100, 200);
+  const flameY = torch.position.y - torch.sparks.lift;
+  assert.ok(flameY < 200, 'the sparks fly from the flame, above the middle of the torch drawn at its mount');
+  world.clear();
+});

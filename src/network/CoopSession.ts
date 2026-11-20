@@ -9,6 +9,8 @@ import type { DataConnection } from 'peerjs';
 import { PLAYER_SLOTS, isPlayerSlot } from '../world';
 import type { PlayerSlot } from '../world';
 import { isSfxName, sound } from '../audio/SoundPlayer';
+import { playVfxLocal } from '../render/VfxPlayer';
+import type { VfxShot } from '../render/VfxPlayer';
 import type { SfxName } from '../audio/SoundPlayer';
 import { cleanName, settings } from '../game/Settings';
 import { text } from '../core/texts';
@@ -16,7 +18,7 @@ import { NetworkError, StateError, ValidationError, attempt, errorMessage, repor
 import { isRecord } from '../core/guards';
 import { createLog } from '../core/log';
 import {
-  MAX_GUESTS, PROTOCOL_VERSION, inviteLink, isMessage, validCommand, validInput, validRoster, validSound, validStart,
+  MAX_GUESTS, PROTOCOL_VERSION, inviteLink, isMessage, validCommand, validInput, validRoster, validSound, validStart, validVfxShot,
 } from './protocol';
 import type { GuestCommand, InputFrame, Message, RosterEntry } from './protocol';
 import { validateNetState } from './WorldSync';
@@ -292,6 +294,10 @@ export class CoopSession {
       case 'sound':
         if (!validSound(message.name, message.x, message.y, isSfxName)) throw new NetworkError('Invalid sound event');
         sound.playSound(message.name, message.x, message.y);
+        return;
+      case 'vfx':
+        if (!validVfxShot(message.shot)) throw new NetworkError('Invalid effect event');
+        playVfxLocal(message.shot);
         return;
       case 'state':
         if (!Number.isSafeInteger(message.seq) || !validPacket(message.compressed)) throw new NetworkError('Invalid world packet');
@@ -627,6 +633,11 @@ export class CoopSession {
   /** Guest: asks the host to do something for this player's character. */
   sendCommand(command: GuestCommand): void {
     if (this.role === 'guest' && this.uplink?.ready) this.send(this.uplink, { type: 'command', command });
+  }
+
+  /** Host: a one-shot particle effect played here, for every guest to render. */
+  sendVfx(shot: VfxShot): void {
+    this.broadcast({ type: 'vfx', shot });
   }
 
   sendSound(name: SfxName, x?: number, y?: number): void {

@@ -10,13 +10,19 @@ import { assetUrl } from '../assets/assetUrl';
  * Particle effects made with NixieFX (https://nixiefx.com): authored in its editor as the project in `vfx/` (open the
  * folder at nixiefx.com/editor, or `npx nixie-fx effect create --project vfx …`), compiled by `npm run vfx:export` into
  * `public/vfx` (a manifest and one JSON file per effect), loaded here once with the art and played by one shared renderer.
- * An effect's units are world tiles of VFX_PIXELS_PER_UNIT pixels with y up, as the editor shows them; `vfxPoint` turns a
- * spot in the world (px, y down) into one. Effects are only looks: every screen plays its own, nothing is sent or saved.
+ * An effect's units are VFX_PIXELS_PER_UNIT pixels with y up, as the editor shows them, and it plays at its own origin: whoever
+ * plays it puts the instance's root where it goes off (and turns it the way it faces). Effects are only looks: every screen
+ * plays its own (systems/VfxSystem.ts), a one-shot asked for by the co-op host as a short signal (render/VfxPlayer.ts);
+ * nothing of them is sent in the world's state or saved.
  */
 
 /** The effects the game plays: the exported bundle must hold every one of them. */
-export const VFX_EFFECTS = ['torch-sparks'] as const;
+export const VFX_EFFECTS = ['torch-sparks', 'campfire-embers', 'burning-hands'] as const;
 export type VfxEffectId = (typeof VFX_EFFECTS)[number];
+
+export function isVfxEffectId(value: unknown): value is VfxEffectId {
+  return VFX_EFFECTS.some((id) => id === value);
+}
 
 /** One unit of an effect is this many pixels of the world. */
 export const VFX_PIXELS_PER_UNIT = 16;
@@ -75,12 +81,4 @@ export function vfxRenderer(): PixiVfxRenderer {
     fallbackTextures: createPixiVfxProceduralTextures(),
   });
   return renderer;
-}
-
-/** A spot in the world (px, y down) as an effect position (units, y up), written into `out`. */
-export function vfxPoint(x: number, y: number, out: [number, number, number]): [number, number, number] {
-  out[0] = x / VFX_PIXELS_PER_UNIT;
-  out[1] = -y / VFX_PIXELS_PER_UNIT;
-  out[2] = 0;
-  return out;
 }

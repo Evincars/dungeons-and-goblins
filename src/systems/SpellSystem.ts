@@ -31,7 +31,10 @@ import { diceRange, plus, rollCheck, rollDice, rollDie } from '../rules/Dice';
 import type { Dice } from '../rules/Dice';
 import { spawnFx } from '../entities/FxFactory';
 import { AIM_HEIGHT, createSpellBolt } from '../entities/ProjectileFactory';
-import { CONE_EFFECTS, playCone, playEffect } from '../assets/Effects';
+import { playEffect } from '../assets/Effects';
+import { areaBounds, areaCentre, coneLength, inArea } from '../rules/SpellArea';
+import { playVfx } from '../render/VfxPlayer';
+import type { VfxEffectId } from '../render/Vfx';
 import { SPELL_STATS } from '../entities/WeaponStats';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 import { sound } from '../audio/SoundPlayer';
@@ -63,6 +66,12 @@ const DART_GAP_TICKS = 5;
 const FEEDBACK_TICKS = 30;
 const victims: Entity[] = [];
 const aimed = { x: 0, y: 0 };
+const facing = { x: 0, y: 1 };
+const bounds = { x: 0, y: 0, r: 0 };
+/** The cone spells played as particles (vfx/), by spell; the rest play their library effect. */
+const CONE_VFX: Partial<Record<SpellDef['id'], VfxEffectId>> = { burning_hands: 'burning-hands' };
+/** A cone leaves the caster's hands this far above their feet. */
+const CONE_HANDS = 12;
 
 /** Where a projectile ends: the spell's effect (and a caster's own burst art) where it struck; an arrow glints. */
 function burst(bolt: Bolt, struck: boolean): void {
@@ -245,17 +254,6 @@ function castMissiles(caster: Player, def: SpellDef, dirX: number, dirY: number)
   }
 }
 
-/** Where a burst goes off: on the caster, or at the point aimed at, no further than the spell reaches. */
-function burstCentre(caster: Player, def: SpellDef, targetX: number, targetY: number): { x: number; y: number } {
-  const { x, y } = caster.position;
-  const dx = targetX - x;
-  const dy = targetY - y;
-  const dist = Math.hypot(dx, dy);
-  if (def.range <= 0 || dist === 0) return { x, y };
-  const reach = Math.min(dist, def.range);
-  return { x: x + (dx / dist) * reach, y: y + (dy / dist) * reach };
-}
-
 /**
  * One foe caught in a burst saves against the spell DC (a diviner's Portent die may make it fail): a failure takes all the
  * damage, a success half (a cantrip's nothing, but half with Potent Cantrip).
@@ -275,29 +273,38 @@ function burstHits(caster: Player, def: SpellDef, foe: Entity, dc: number): void
   splitEnchantment(caster, foe, def.id, damage);
 }
 
-/** A burst's art: where it goes off, or (a cone, Burning Hands) from the caster's hands towards it. */
+/**
+ * A burst's art: a cone's (Burning Hands) a particle effect from the caster's hands towards its tip, played on every screen
+ * (render/VfxPlayer.ts); any other's the library effect where it goes off (a cone without particles, at its middle).
+ */
 export function playBurstArt(caster: { position: { x: number; y: number } }, def: SpellDef, centre: { x: number; y: number }): void {
   const { shape, colour, scale } = def.effect;
-  const dx = centre.x - caster.position.x;
-  const dy = centre.y - caster.position.y;
-  const dist = Math.hypot(dx, dy);
-  if (!CONE_EFFECTS.has(shape) || dist === 0) {
-    playEffect(shape, colour, centre.x, centre.y, 0, scale);
+  const { x, y } = caster.position;
+  const vfx = CONE_VFX[def.id];
+  if (def.area === 'cone' && vfx) {
+    const length = coneLength(def);
+    playVfx(vfx, x, y, CONE_HANDS, (centre.x - x) / length, (centre.y - y) / length);
     return;
   }
-  playCone(shape, colour, caster.position.x, caster.position.y, dx / dist, dy / dist, scale);
+  const at = def.area === 'cone' ? { x: (x + centre.x) / 2, y: (y + centre.y) / 2 } : centre;
+  playEffect(shape, colour, at.x, at.y, 0, scale);
 }
 
-/** A burst: the effect where it goes off, and a save for every foe within its radius. */
-function castBurst(caster: Player, def: SpellDef, targetX: number, targetY: number): void {
-  const centre = burstCentre(caster, def, targetX, targetY);
+/** A burst: the effect where it goes off, and a save for every foe its area catches. */
+function castBurst(caster: Player, def: SpellDef, targetX: number, targetY: number, dirX: number, dirY: number): void {
+  facing.x = dirX;
+  facing.y = dirY;
+  aimed.x = targetX;
+  aimed.y = targetY;
+  const centre = areaCentre(def, caster.position, aimed, { x: 0, y: 0 }, facing);
   playBurstArt(caster, def, centre);
   // A burst round the caster is all in its casting sound; one thrown further off goes off where it lands.
   if (def.range > 0) sound.playSound(SPELL_IMPACTS[def.damageType], centre.x, centre.y);
   const dc = spellcastingFor(characterSheet(caster), def.id).dc;
-  for (const foe of nearby(centre.x, centre.y, def.radius + MAX_MOB_RADIUS, Sense.mob, victims)) {
+  const near = areaBounds(def, caster.position, centre, bounds);
+  for (const foe of nearby(near.x, near.y, near.r + MAX_MOB_RADIUS, Sense.mob, victims)) {
     if (!isTarget(foe) || foe.health.current <= 0) continue;
-    if (Math.hypot(foe.position.x - centre.x, foe.position.y - centre.y) > def.radius + Math.max(foe.radius.x, foe.radius.y)) continue;
+    if (!inArea(def, caster.position, centre, foe.position.x, foe.position.y, Math.max(foe.radius.x, foe.radius.y))) continue;
     burstHits(caster, def, foe, dc);
   }
   // Thunder charges the water it reaches with lightning.
@@ -353,7 +360,7 @@ function release(caster: Player, cast: NonNullable<Entity['casting']>): void {
   if (def.kind === 'buff' && !castBuff(caster, def)) return;
   if (def.kind === 'bolt') castBolt(caster, def, cast.dirX, cast.dirY);
   else if (def.kind === 'missiles') castMissiles(caster, def, cast.dirX, cast.dirY);
-  else if (def.kind === 'burst') castBurst(caster, def, targetX, targetY);
+  else if (def.kind === 'burst') castBurst(caster, def, targetX, targetY, cast.dirX, cast.dirY);
   else if (def.kind === 'zone') castZone(caster, def, cast.level ?? base.level, targetX, targetY);
   else if (def.kind === 'water') castWater(caster, def, targetX, targetY);
   else castHeal(caster, def);

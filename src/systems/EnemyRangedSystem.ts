@@ -10,7 +10,9 @@ import { SPELLS } from '../rules/Spells';
 import type { SpellDef } from '../rules/Spells';
 import { castDef } from '../rules/Spellbook';
 import { diceRange, rollDice, rollDie } from '../rules/Dice';
-import { metresToPx } from '../rules/Scale';
+import { feetToPx } from '../rules/Scale';
+import { areaCentre, inArea } from '../rules/SpellArea';
+import type { Point } from '../rules/SpellArea';
 import { MIN_HIT_DAMAGE } from '../rules/Combat';
 import { createArrow, createSpellBolt } from '../entities/ProjectileFactory';
 import { ARROW_STATS, ATTACK_PERIOD, SPELL_STATS } from '../entities/WeaponStats';
@@ -73,6 +75,8 @@ function targetFor(level: Level, mob: Shooter, reach: number): Player | null {
 
 /** The way to aim (a unit vector, reused every tick): reworked by `aimAt`. */
 const aim = { x: 0, y: 1 };
+/** Where the burst being weighed or cast goes off (areaCentre writes it). */
+const centreAt: Point = { x: 0, y: 0 };
 
 /** Aims at a hero so a shot `speed` px a tick meets them: ahead of where they run. */
 function aimAt(mob: Shooter, hero: Player, speed: number): typeof aim {
@@ -101,7 +105,7 @@ function shoot(level: Level, mob: Shooter): boolean {
   if (!archer(mob) || !mob.mobWeapon) return false;
   const distance = weaponStats(mob.mobWeapon).distance;
   if (!distance) return false;
-  const reach = { normal: metresToPx(distance[0]), long: metresToPx(distance[1]) };
+  const reach = { normal: feetToPx(distance[0]), long: feetToPx(distance[1]) };
   const hero = targetFor(level, mob, reach.long);
   if (!hero || Math.hypot(hero.position.x - mob.position.x, hero.position.y - mob.position.y) < POINT_BLANK) return false;
   const dir = aimAt(mob, hero, ARROW_STATS.speed);
@@ -120,21 +124,18 @@ function spellReach(def: SpellDef): number {
   return def.range + def.radius;
 }
 
-/** The heroes on their feet within `radius` of a point. */
-function heroesNear(x: number, y: number, radius: number): number {
+/** The heroes on their feet a burst cast from the enemy, going off at `centre`, would catch. */
+function heroesCaught(mob: Shooter, def: SpellDef, centre: Point): number {
   let count = 0;
   for (const hero of q.players) {
-    if (isActivePlayer(hero) && Math.hypot(hero.position.x - x, hero.position.y - y) <= radius) count++;
+    if (isActivePlayer(hero) && inArea(def, mob.position, centre, hero.position.x, hero.position.y)) count++;
   }
   return count;
 }
 
-/** Where a burst cast at a hero goes off: on them, or as far towards them as it reaches (on the caster, for a range of 0). */
-function burstCentre(mob: Shooter, def: SpellDef, hero: Player): { x: number; y: number } {
-  const d = Math.hypot(hero.position.x - mob.position.x, hero.position.y - mob.position.y);
-  if (def.range <= 0 || d === 0) return { x: mob.position.x, y: mob.position.y };
-  const share = Math.min(1, def.range / d);
-  return { x: mob.position.x + (hero.position.x - mob.position.x) * share, y: mob.position.y + (hero.position.y - mob.position.y) * share };
+/** Where a burst cast at a hero goes off: on them, or as far towards them as it reaches (a cone, its tip that way). */
+function burstCentre(mob: Shooter, def: SpellDef, hero: Player): Point {
+  return areaCentre(def, mob.position, hero.position, centreAt);
 }
 
 /** The harm a spell would do now: its mean damage, times the darts it looses or the heroes its burst catches. */
@@ -144,7 +145,7 @@ function spellValue(mob: Shooter, def: SpellDef, hero: Player): number {
   if (def.kind === 'missiles') return mean * def.count;
   if (def.kind !== 'burst') return 0;
   const centre = burstCentre(mob, def, hero);
-  return mean * heroesNear(centre.x, centre.y, def.radius);
+  return mean * heroesCaught(mob, def, centre);
 }
 
 type Caster = NonNullable<Entity['mobCaster']>;
@@ -192,10 +193,10 @@ function bestSpell(mob: Shooter, caster: Caster, hero: Player): { index: number;
 }
 
 /** A burst on the heroes: each in it saves against the caster's DC, taking half on a success (none, from a cantrip). */
-function burstOnHeroes(mob: Shooter, def: SpellDef, centre: { x: number; y: number }, dc: number): void {
+function burstOnHeroes(mob: Shooter, def: SpellDef, centre: Point, dc: number): void {
   playBurstArt(mob, def, centre);
   for (const hero of q.players) {
-    if (!isActivePlayer(hero) || Math.hypot(hero.position.x - centre.x, hero.position.y - centre.y) > def.radius) continue;
+    if (!isActivePlayer(hero) || !inArea(def, mob.position, centre, hero.position.x, hero.position.y)) continue;
     const saved = heroSavingThrow(hero, def.save ?? 'dexterity', dc, rollDie, mob);
     const rolled = Math.max(MIN_HIT_DAMAGE, rollDice(def.damage, false, rollDie, 0));
     const damage = saved ? (def.level === 0 ? 0 : Math.floor(rolled / 2)) : rolled;

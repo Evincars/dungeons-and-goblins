@@ -993,11 +993,9 @@ export function groundAt(level: Level, tx: number, ty: number): Ground | null {
   const t = level.getTile(tx, ty);
   // A pit's own tiles are floored too: a quatrefoil leaves their corners open ground, and the pit art covers the rest.
   const pitFloor = t?.type === TileType.Hole && level.hasPit(tx, ty);
-  // A slanted wall's tiles are floored too: its art covers the wall's side of the slant. So is the caverns' chasm: its dark
-  // is laid over the ground as one soft shape (render/ChasmShade.ts), its brinks wandering across the tiles.
+  // A slanted wall's tiles are floored too: its art covers the wall's side of the slant.
   const sloped = level.slopes.has(tx + ty * level.width);
-  const caveChasm = t?.type === TileType.Hole && level.caveZone.has(tx + ty * level.width);
-  if (!t || (t.type !== TileType.Floor && t.type !== TileType.Obstacle && !pitFloor && !sloped && !caveChasm)) return null;
+  if (!t || (t.type !== TileType.Floor && t.type !== TileType.Obstacle && !pitFloor && !sloped)) return null;
   // A bridge's planks lie over the dark of the chasm (CaveTerrain.ts), not over ground.
   if (level.bridges.has(tx + ty * level.width)) return null;
   if (level.theme === 'castle') {

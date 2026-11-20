@@ -856,7 +856,7 @@ test('weapons and armour come from their JSON tables alone: D&D stats, the table
     const rule = armorStats(base);
     assert.deepEqual([rule.name, rule.category, rule.ac, rule.dexCap, rule.strength, rule.stealthDisadvantage, rule.cost, rule.weight], [raw.name, raw.category, raw.ac, raw.dexCap, raw.strength, raw.stealthDisadvantage, raw.cost, raw.weight], base);
   }
-  assert.deepEqual(weaponStats('longbow').distance, [30, 120], 'metres, as the Czech table gives them');
+  assert.deepEqual(weaponStats('longbow').distance, [150, 600], 'feet, as the D&D table gives them');
   assert.equal(formatDice(weaponStats('blowgun').damage), '1', 'a flat 1');
   assert.deepEqual([armorStats('plate').strength, armorStats('chain_mail').strength, armorStats('leather').strength], [15, 13, null]);
   assert.equal(SHIELDS.every((s) => ['shield', 'tower_shield'].includes(s.base) && s.type === 'shield' && s.gear === 'offhand'), true);
@@ -5219,20 +5219,20 @@ test('the DMG tooltip names both weapons: the off hand with its whole blow, or w
 
 test('what the tables say is what plays: range, loading, reach, both hands, the STR to wear armour, clothes', async () => {
   const { characterSheet, armorClass } = await load('rules/CharacterSheet');
-  const { metresToPx } = await load('rules/Scale');
+  const { feetToPx } = await load('rules/Scale');
   const { wearRefusal } = PlayerActions;
   const { ARROW_STATS } = await load('entities/WeaponStats');
   const hero = heroWith('champion', 5);
   hero.aimVector = { x: 1, y: 0 };
-  // A longbow's shot flies its long range (120 m), past its normal range (30 m) with disadvantage.
+  // A longbow's shot flies its long range (600 ft), past its normal range (150 ft) with disadvantage.
   hero.equipped = { primary: weaponItem('longbow') };
   hero.arrowCooldown = 0;
   hero.playerInput.intents.attack = true;
   updateArrows();
   const shots = () => world.entities.filter((e) => e.projectile?.arrow && e.projectile.owner === world.id(hero));
   const arrow = shots()[0];
-  assert.equal(arrow.projectile.life, Math.ceil(metresToPx(120) / ARROW_STATS.speed), 'it drops at its long range');
-  assert.equal(arrow.projectile.life - arrow.projectile.closeLife, Math.ceil(metresToPx(30) / ARROW_STATS.speed), 'past its normal range it rolls with disadvantage');
+  assert.equal(arrow.projectile.life, Math.ceil(feetToPx(600) / ARROW_STATS.speed), 'it drops at its long range');
+  assert.equal(arrow.projectile.life - arrow.projectile.closeLife, Math.ceil(feetToPx(150) / ARROW_STATS.speed), 'past its normal range it rolls with disadvantage');
   for (let t = 0; t < 120; t++) updateArrows();
   assert.equal(shots().length, 2, 'Extra Attack: two arrows a volley');
   for (const e of shots()) world.remove(e);
@@ -6355,7 +6355,7 @@ test("a wall jutting out past another's face runs its edge on up to the top of t
 test('now and then a catacomb level runs through caverns: rock and cave ground, a chasm down through them, bridges over it', async () => {
   const { dungeonConfig } = await load('level/generators/DungeonConfig');
   const { buildTerrainPieces, groundAt } = await load('level/TerrainAutotile');
-  const { CAVE_SHEET } = await load('level/CaveTerrain');
+  const { CAVE_SHEET, CAVE_BRINKS } = await load('level/CaveTerrain');
   const { encodeLevelMap, decodeLevelMap } = await load('level/LevelMap');
   let caves = 0;
   for (const seed of [1, 4, 7, 10, 12, 15]) {
@@ -6383,7 +6383,7 @@ test('now and then a catacomb level runs through caverns: rock and cave ground, 
     }
     const pieces = buildTerrainPieces(level);
     assert.ok(pieces.some((p) => p.sheet === CAVE_SHEET && !p.floor), 'rock and chasm from the cave set');
-    assert.ok(chasm.every((i) => groundAt(level, i % W, Math.floor(i / W))), 'ground runs on under the chasm (its dark is one soft shape over it)');
+    assert.ok(pieces.some((p) => p.sheet === CAVE_BRINKS), 'ragged brinks round the chasm, from the cave set');
     const back = decodeLevelMap(JSON.parse(JSON.stringify(encodeLevelMap(layout))));
     assert.deepEqual([...back.level.caveZone].sort(), [...level.caveZone].sort(), 'co-op guests get the caverns');
     assert.deepEqual([...back.level.bridges].sort(), [...level.bridges].sort(), 'and the bridges');
@@ -6459,7 +6459,7 @@ test('a blow can knock an enemy over the edge of a pit, where it falls; the mous
 
 test('the aim guide follows the bow in hand (grey in range, amber past its normal range, red past its long) or the spell picked', async () => {
   const { currentAim, colourFor, IN_REACH, PENALISED, OUT_OF_REACH } = await load('systems/AimGuideSystem');
-  const { metresToPx } = await load('rules/Scale');
+  const { feetToPx } = await load('rules/Scale');
   world.clear();
   const hero = playerAt(3, 3, 'fighter');
   const { HAND_WEAPONS, catalogueItem } = await load('entities/ItemCatalog');
@@ -6469,7 +6469,7 @@ test('the aim guide follows the bow in hand (grey in range, amber past its norma
   const aim = currentAim(hero);
   assert.ok(aim && aim.normal < aim.reach && aim.radius === 0, 'a shot: a normal and a long range, no area');
   assert.equal(aim.reach % 1, 0);
-  assert.ok(aim.normal >= metresToPx(1));
+  assert.ok(aim.normal >= feetToPx(1));
   assert.equal(colourFor(aim.normal - 1, aim), IN_REACH);
   assert.equal(colourFor(aim.normal + 1, aim), PENALISED, 'past normal range, with disadvantage');
   assert.equal(colourFor(aim.reach + 1, aim), OUT_OF_REACH, 'past all it reaches');
@@ -6585,22 +6585,68 @@ test('a saved game keeps the level, its world and the heroes, and is taken up ag
   world.clear();
 });
 
-test('torches throw sparks: the NixieFX effect exported to public/vfx is whole, and each wall torch has a flame to throw them from', async () => {
+test('particle effects: the NixieFX bundle holds every effect; fires throw sparks; Burning Hands plays its flames on every screen from a signal', async () => {
   const { readFileSync } = await import('node:fs');
-  const { parseVfxBundle, vfxPoint, VFX_PIXELS_PER_UNIT } = await load('render/Vfx');
+  const { parseVfxBundle, VFX_EFFECTS } = await load('render/Vfx');
+  const { vfxEvents, takeQueuedVfx } = await load('render/VfxPlayer');
+  const { validVfxShot } = await load('network/protocol');
+  const { createCampfire } = await load('entities/DungeonFactory');
   const manifest = JSON.parse(readFileSync('public/vfx/manifest.json', 'utf8'));
   const effectsByPath = Object.fromEntries(manifest.effects.map(({ path }) => [path, JSON.parse(readFileSync(`public/vfx/${path}`, 'utf8'))]));
   const bundle = parseVfxBundle(manifest, effectsByPath);
   assert.ok(bundle.ok, bundle.ok ? '' : bundle.error.message);
-  assert.ok(bundle.value.effectsById.has('torch-sparks'));
+  for (const id of VFX_EFFECTS) assert.ok(bundle.value.effectsById.has(id), `${id} is exported`);
   assert.equal(parseVfxBundle(manifest, {}).ok, false, 'a bundle missing its effect files is refused');
-
-  // The effect's y runs up: a flame higher on the screen is higher in the effect.
-  assert.deepEqual(vfxPoint(32, 48, [0, 0, 0]), [32 / VFX_PIXELS_PER_UNIT, -48 / VFX_PIXELS_PER_UNIT, 0]);
 
   world.clear();
   const torch = createTorch(100, 200);
-  const flameY = torch.position.y - torch.sparks.lift;
-  assert.ok(flameY < 200, 'the sparks fly from the flame, above the middle of the torch drawn at its mount');
+  assert.equal(torch.sparks.effect, 'torch-sparks');
+  assert.ok(torch.position.y - torch.sparks.lift < 200, 'the sparks fly from the flame, above the middle of the torch drawn at its mount');
+  const fire = createCampfire(300, 300);
+  assert.equal(fire.sparks.effect, 'campfire-embers', 'a campfire throws sparks and embers too');
+
+  // Burning Hands: the host plays its flames and tells every guest (a short signal they render themselves).
   world.clear();
+  const sent = [];
+  vfxEvents.onPlay = (shot) => sent.push(shot);
+  takeQueuedVfx([]);
+  const wizard = playerAt(6, 6, 'wizard');
+  wizard.playerStats.level = 3;
+  wizard.aimVector = { x: 1, y: 0 };
+  wizard.casting = { ticks: 0, dirX: 1, dirY: 0, released: false, spell: 'burning_hands', level: 1, targetX: wizard.position.x + 200, targetY: wizard.position.y };
+  for (let t = 0; t < 40; t++) updateSpells(arena(20, 12));
+  vfxEvents.onPlay = null;
+  assert.equal(sent.length, 1, 'one signal for one cast');
+  assert.equal(sent[0].effect, 'burning-hands');
+  assert.deepEqual([sent[0].dirX, sent[0].dirY], [1, 0], 'turned the way it was cast');
+  assert.ok(validVfxShot(sent[0]), 'the guest accepts it');
+  assert.equal(takeQueuedVfx([]).length, 1, 'and the host plays it too');
+  assert.ok(!validVfxShot({ ...sent[0], effect: 'nope' }) && !validVfxShot({ ...sent[0], dirX: 3 }), 'an unknown effect or a facing that is no direction is refused');
+  world.clear();
+});
+
+test('a burst strikes its own shape: a sphere round where it lands, a cube as a square, a cone from the hands; aimed too far it goes off as far as it reaches', async () => {
+  const { areaCentre, inArea, coneLength } = await load('rules/SpellArea');
+  const { SPELLS } = await load('rules/Spells');
+  const caster = { x: 0, y: 0 };
+  const out = { x: 0, y: 0 };
+  const fireball = SPELLS.fireball;
+  assert.equal(fireball.area, 'sphere');
+  areaCentre(fireball, caster, { x: 10000, y: 0 }, out);
+  assert.deepEqual(out, { x: fireball.range, y: 0 }, 'aimed past its range, it goes off at the end of it');
+  assert.ok(inArea(fireball, caster, out, fireball.range + fireball.radius - 1, 0) && !inArea(fireball, caster, out, fireball.range, fireball.radius + 1));
+
+  const wave = SPELLS.thunderwave;
+  assert.equal(wave.area, 'cube');
+  areaCentre(wave, caster, { x: 30, y: 30 }, out);
+  assert.deepEqual(out, caster, 'a cube of range 0 sits on its caster');
+  assert.ok(inArea(wave, caster, out, wave.radius - 1, wave.radius - 1), 'its corner is in: a square, not a circle');
+
+  const hands = SPELLS.burning_hands;
+  assert.equal(hands.area, 'cone');
+  areaCentre(hands, caster, { x: 5, y: 0 }, out);
+  assert.deepEqual(out, { x: coneLength(hands), y: 0 }, 'a cone always runs its whole length towards the aim');
+  assert.ok(inArea(hands, caster, out, coneLength(hands) - 2, coneLength(hands) * 0.4), 'wide at its far end');
+  assert.ok(!inArea(hands, caster, out, 10, 20), 'narrow at the hands');
+  assert.ok(!inArea(hands, caster, out, -20, 0), 'nothing behind the caster');
 });

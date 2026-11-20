@@ -15,6 +15,14 @@ import { caveBulge, rimRowOf } from './CaveShape';
 
 /** The cave set's texture key (the cave ground's too). */
 export const CAVE_SHEET = 'cave_ground';
+/**
+ * The chasm block's ring with its ground cleared, only its dark ragged brinks left (built at load, assets/AssetLoader.ts
+ * `buildCaveBrinks`), laid over whatever ground runs up to the chasm. Its pixels are the block's, from its top left.
+ */
+export const CAVE_BRINKS = 'cave_brinks';
+/** The block the brinks are cut from, and how bright a pixel of it may be and still be brink (not ground). */
+export const BRINK_BLOCK = { x: 1440, y: 256, w: 192, h: 192 };
+export const BRINK_DARKEST_GROUND = 26;
 
 const T = TILE_WIDTH;
 const Q = T / 2;
@@ -31,6 +39,15 @@ const FACE_FLOOR = 64;
 const FACE_THIN = 48;
 const EDGE_COL = 5;
 const MID_TILES = 4;
+/**
+ * The chasm block (cols 45–50, rows 8–13): a hole ringed by ground, the ring's ragged brinks on the ground's side, the
+ * hole's top row the cliff under its north brink, black below. HOLE_MID is the column and row of its even dark, CLIFF_ROW
+ * the row of its cliff; the middle has two columns of each to alternate.
+ */
+const HOLE = { x: BRINK_BLOCK.x, y: BRINK_BLOCK.y };
+const HOLE_MID = 2;
+const CLIFF_ROW = 1;
+const HOLE_COLS = 2;
 /** The bridge (cols 45–49, rows 32–37): its deck of planks, and a leg under it. */
 const DECK = { x: 1442, y: 1024, w: 156, h: 38 };
 const DECK_RISE = 3;
@@ -115,11 +132,50 @@ class CaveLayer {
     const W = this.level.width;
     const zone = [...this.level.caveZone];
     const at = (i: number): [number, number] => [i % W, Math.floor(i / W)];
+    for (const i of zone) this.ground(...at(i));
     // The bridges lie over the chasm but under the rock: where a deck runs into a wall, the wall's stones are in front.
     for (const i of zone) this.deck(...at(i));
     for (const i of zone) this.top(...at(i));
     for (const i of zone) this.face(...at(i));
     for (const i of zone) this.slant(...at(i));
+  }
+
+  /** What lies on a tile: a wall's top, the chasm, or the ragged brinks over ground beside the chasm. */
+  private ground(tx: number, ty: number): void {
+    if (this.wall(tx, ty)) return;
+    if (this.chasm(tx, ty)) this.hole(tx, ty);
+    else this.brinks(tx, ty);
+  }
+
+  /**
+   * A chasm tile: the cliff falling into the dark under ground to its north, else the even dark of the hole's middle (its
+   * edges are the brinks laid over the ground round it; the block's own edge tiles, a shade lighter, would show the tiles as
+   * squares).
+   */
+  private hole(tx: number, ty: number): void {
+    const cliff = !this.chasm(tx, ty - 1) && !this.wall(tx, ty - 1);
+    const col = HOLE_MID + (tx % HOLE_COLS);
+    const row = cliff ? CLIFF_ROW : HOLE_MID + (ty % HOLE_COLS);
+    this.walls.push(piece(tx * T, ty * T, HOLE.x + col * T, HOLE.y + row * T, T, T));
+  }
+
+  /** Ground beside the chasm: the ring's ragged brink over each quarter that faces it (along a side, or round a corner). */
+  private brinks(tx: number, ty: number): void {
+    for (const [cx, cy] of QUARTERS) {
+      const sx = cx === 0 ? -1 : 1;
+      const sy = cy === 0 ? -1 : 1;
+      const h = this.chasm(tx + sx, ty);
+      const v = this.chasm(tx, ty + sy);
+      // Touching the chasm only at a corner, the ground keeps its own edge: the block's corner piece is mostly dark there
+      // and would show as a square.
+      if (!h && !v) continue;
+      const col = h || !v ? (cx === 0 ? EDGE_COL : 0) : HOLE_MID + (tx % HOLE_COLS);
+      const row = v || !h ? (cy === 0 ? EDGE_COL : 0) : HOLE_MID + (ty % HOLE_COLS);
+      const quarter = piece(tx * T + cx * Q, ty * T + cy * Q, col * T + cx * Q, row * T + cy * Q, Q, Q);
+      quarter.sheet = CAVE_BRINKS;
+      quarter.floor = true;
+      this.floors.push(quarter);
+    }
   }
 
   private sloped(tx: number, ty: number): boolean {

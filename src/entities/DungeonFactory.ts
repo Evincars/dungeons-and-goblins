@@ -26,6 +26,8 @@ const CAMPFIRE_FRAME_TICKS = 6;
 const CAMPFIRE_SCALE = 1.5;
 /** The fire's art stands on the lower part of its 24px cell. */
 const CAMPFIRE_LIFT = 10;
+/** Its flames burn this far above the middle of its 24 px art (before CAMPFIRE_SCALE): where its sparks and embers fly from. */
+const CAMPFIRE_FLAME_RISE = 3;
 /** The hearth under it lies centred this far below its middle, under its ring of stones. */
 const HEARTH_DROP = 5;
 /** Torch mounts sit this far above the foot of their wall. */
@@ -169,7 +171,7 @@ export function createTorch(x: number, y: number): Entity {
   return world.add({
     position: { x, y: y + TORCH_LIFT },
     torch: { radius: TORCH_LIGHT_RADIUS, color: TORCH_COLOR, flicker: Math.random() * Math.PI * 2 },
-    sparks: { lift: TORCH_LIFT + TORCH_FLAME_RISE * TORCH_SCALE },
+    sparks: { effect: 'torch-sparks', lift: TORCH_LIFT + TORCH_FLAME_RISE * TORCH_SCALE },
     visual: { sheet: 'torch', scale: TORCH_SCALE },
     animation: {
       sheet: 'torch',
@@ -205,7 +207,7 @@ export function createSconce(x: number, y: number): Entity {
   });
 }
 
-/** A campfire on its (blocked) tile in the exit room, on a hearth of flagstones, smoke curling up from its flames. */
+/** A campfire on its (blocked) tile, on a hearth of flagstones, smoke curling up and sparks flying from its flames, embers popping out onto the hearth. */
 export function createCampfire(x: number, y: number): Entity {
   world.add({ position: { x, y: y + HEARTH_DROP }, visual: { sheet: 'campfire_floor' }, flat: true, localOnly: true });
   createSmoke(x, y, CAMPFIRE_SMOKE);
@@ -217,6 +219,7 @@ export function createCampfire(x: number, y: number): Entity {
       timer: Math.floor(Math.random() * CAMPFIRE_FRAME_TICKS), loop: true,
     },
     glow: { radius: CAMPFIRE_LIGHT_RADIUS, flicker: Math.random() * Math.PI * 2 },
+    sparks: { effect: 'campfire-embers', lift: CAMPFIRE_LIFT + CAMPFIRE_FLAME_RISE * CAMPFIRE_SCALE },
     yOffset: CAMPFIRE_LIFT,
     localOnly: true,
   });

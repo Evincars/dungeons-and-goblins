@@ -67,7 +67,7 @@
   "item.tooltip.shield_ac": "+{ac} AC",
   "item.tooltip.strength_needed": "Needs STR {score}",
   "item.tooltip.too_weak": "Needs STR {score}: too weak to wear",
-  "item.tooltip.distance": "Range {normal}/{long} m",
+  "item.tooltip.distance": "Range {normal}/{long} ft",
   "item.tooltip.stealth": "Stealth disadvantage",
   "item.tooltip.weapon_kind": "{base} ({category} {range})",
   "item.tooltip.armor_kind": "{base} ({category})",

@@ -7,7 +7,7 @@ import { registerSheet } from '../render/Sheets';
 import { allSheets, registerLazyArt } from './SheetCatalog';
 import { loadVfx } from '../render/Vfx';
 import {
-  CAVE_ROCK_CUT, CAVE_SHEET, ROCK_BLACK, ROCK_CUT, SLANT_FACE, SLANT_RIM, SLANT_SHEAR,
+  BRINK_BLOCK, BRINK_DARKEST_GROUND, CAVE_BRINKS, CAVE_ROCK_CUT, CAVE_SHEET, ROCK_BLACK, ROCK_CUT, SLANT_FACE, SLANT_RIM, SLANT_SHEAR,
   caveSlantKey, slantShift,
 } from '../level/CaveTerrain';
 import type { SlantLean } from '../level/CaveTerrain';
@@ -146,6 +146,23 @@ function shearedRock(art: { x: number; y: number; w: number; h: number }, lean: 
   return texture;
 }
 
+/** The caverns' ragged brinks: the cave set's chasm block with its ground cleared, only the dark spikes left. */
+function buildCaveBrinks(): void {
+  const { x, y, w, h } = BRINK_BLOCK;
+  const canvas = createCanvas(w, h);
+  const ctx = context2d(canvas, { willReadFrequently: true });
+  ctx.drawImage(imageFor(CAVE_SHEET), x, y, w, h, 0, 0, w, h);
+  const pixels = ctx.getImageData(0, 0, w, h);
+  const d = pixels.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if (Math.max(d[i], d[i + 1], d[i + 2]) > BRINK_DARKEST_GROUND) d[i + 3] = 0;
+  }
+  ctx.putImageData(pixels, 0, 0);
+  const texture = Texture.from(canvas);
+  texture.source.scaleMode = 'nearest';
+  setTexture(CAVE_BRINKS, texture);
+}
+
 /** The caverns' rock with its black cleared: what spills over the ground beside a wall is only its stones. */
 function buildCaveRockCut(): void {
   const { x, y, w, h } = ROCK_CUT;
@@ -201,6 +218,7 @@ export async function loadAllAssets(onProgress?: (done: number, total: number) =
   buildTorchStrip();
   buildCampfireStrip();
   buildCampfireFloor();
+  buildCaveBrinks();
   buildCaveRockCut();
   buildCaveSlants();
   recolor('button', 'button_steel', STEEL, BUTTON_FRAME);

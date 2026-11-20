@@ -3,7 +3,7 @@ import type { Container } from 'pixi.js';
 import { localPlayer } from '../world';
 import type { Entity, Player } from '../world';
 import { screenToWorld } from '../render/Camera';
-import { chosenQuickSlot, pointer, pointerFree } from './InputSystem';
+import { heldQuickSlot, pointer, pointerFree } from './InputSystem';
 import { isInventoryOpen } from './InventorySystem';
 import { isShopOpen } from './ShopSystem';
 import { holdsBow } from './ArrowSystem';
@@ -12,20 +12,23 @@ import type { SpellDef } from '../rules/Spells';
 import { castDef, quickBinding } from '../rules/Spellbook';
 import { weaponRule } from '../rules/Equipment';
 import { weaponInHand } from '../rules/CharacterSheet';
-import { metresToPx } from '../rules/Scale';
+import { feetToPx, pxToFeet } from '../rules/Scale';
+import { areaBounds, areaCentre, coneCorners, inArea } from '../rules/SpellArea';
+import type { Point } from '../rules/SpellArea';
 import { SPELL_STATS } from '../entities/WeaponStats';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { PixelLabel } from '../ui/PixelText';
 
 /**
- * Where a shot will go, shown faintly while the hero aims: a soft arc from the hero to the crosshair, the area a spell
- * will strike (where it will really go off, no further than it reaches) with a faint mark under each enemy it would catch,
- * and how far that is, in metres. Grey within reach; amber past a bow's normal range (shots roll with disadvantage
- * there); red past what it can reach at all. It follows the spell being cast (the cast key or the right button held),
- * else the bow or crossbow in hand, else the spell picked on the quick bar. Drawn on this screen only.
+ * Where a shot will go, shown faintly while the hero aims. A bolt, darts or an arrow fly straight: a dotted line from the
+ * hero's hands the way they aim, as far as the shot flies (it goes off there if it strikes nothing on the way) — grey, and
+ * amber past a bow's normal range, where shots roll with disadvantage. A spell with an area shows only that area where it
+ * will go off — a circle, a square (a cube) or a cone from the hands — at the crosshair, or as far towards it as it reaches,
+ * a faint mark under each enemy it would catch, and how far off it is, in feet. A spell's guide shows while its quick-bar key
+ * is held (let go, it casts) or while it is cast; a bow's or crossbow's while it is in hand. Drawn on this screen only.
  */
 
-/** Colours and how faint the guide is: its arc's dots, the area's ring and fill. */
+/** Colours and how faint the guide is: its line's dots, the area's edge and fill. */
 export const IN_REACH = 0xd8d8d8;
 export const PENALISED = 0xd8b060;
 export const OUT_OF_REACH = 0xe06a5a;
@@ -33,59 +36,65 @@ const DOT_ALPHA = 0.4;
 const RING_ALPHA = 0.35;
 const FILL_ALPHA = 0.06;
 const CAUGHT_ALPHA = 0.55;
-/** The arc: a dot every so many px along it, so big; it bows up by this share of its length (at most ARC_RISE_MAX px). */
+/** The line: a dot every so many px along it, so big; a ring this big where it ends. */
 const DOT_STEP = 7;
 const DOT_RADIUS = 0.8;
-const ARC_RISE = 0.16;
-const ARC_RISE_MAX = 40;
-/** The arc leaves the hero this far above their feet (where a spell or arrow leaves their hands). */
+const END_RADIUS = 2.5;
+/** The line leaves the hero this far above their feet (where a spell or arrow leaves their hands). */
 const HAND_HEIGHT = 12;
-/** A mark across the arc where its reach ends, when the crosshair lies past it: this long. */
-const REACH_TICK = 4;
 /** The mark under an enemy the area would catch: an ellipse this wide and tall. */
 const CAUGHT_RX = 8;
 const CAUGHT_RY = 3;
-/** The distance label sits this far right of and above the crosshair. */
+/** The distance label sits this far right of and above the point it measures to. */
 const LABEL_DX = 6;
 const LABEL_DY = -12;
 /** Over the world, under the fog and the HUD (as the corner brackets). */
 const GUIDE_Z = 999_999;
-/** A pixel of the map in metres (a 5-foot square, 1.5 m, is 48 px). */
-const METRES_PER_PX = 1.5 / metresToPx(1.5);
 
-/** What the hero is aiming: how far it reaches (and from where it is penalised), and the area it strikes. */
-export type Aim = { reach: number; normal: number; radius: number; landsWhere: 'target' | 'caster' };
+/**
+ * What the hero is aiming: how far it reaches (and from where it is penalised), and the spell whose area it strikes (null
+ * for a shot that flies straight). `radius` and `landsWhere` describe that area: its breadth, and whether it is thrown at
+ * the crosshair or wrapped round the caster.
+ */
+export type Aim = { reach: number; normal: number; radius: number; landsWhere: 'target' | 'caster'; area: SpellDef | null };
 
 let guide: Graphics | null = null;
 let label: PixelLabel | null = null;
-let shownMetres = -1;
+let shownFeet = -1;
 const aim = { x: 0, y: 0 };
+const centre: Point = { x: 0, y: 0 };
+const bounds = { x: 0, y: 0, r: 0 };
+const corners: [Point, Point, Point] = [{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }];
 const caught: Entity[] = [];
 
 /** The spell a binding casts, at the level it is cast, if it is one that is aimed (a bolt, darts, an area). */
 function aimedSpell(player: Player, slot: number): SpellDef | null {
+  if (slot < 0) return null;
   const binding = quickBinding(player, slot);
   if (!binding || !isSpellId(binding.spell)) return null;
   const def = castDef(SPELLS[binding.spell], binding.level, player.playerStats.level);
-  return def.kind === 'buff' ? null : def;
+  if (def.kind === 'buff') return null;
+  return def.kind === 'heal' && def.radius <= 0 ? null : def;
 }
 
+/** A shot that flies straight (as far as a spell bolt flies), or a spell's area, thrown or round the caster. */
 function spellAim(def: SpellDef): Aim {
   if (def.kind === 'bolt' || def.kind === 'missiles') {
     const reach = SPELL_STATS.boltSpeed * SPELL_STATS.boltLife;
-    return { reach, normal: reach, radius: 0, landsWhere: 'target' };
+    return { reach, normal: reach, radius: 0, landsWhere: 'target', area: null };
   }
-  const landsWhere = def.range > 0 ? 'target' : 'caster';
-  return { reach: def.range, normal: def.range, radius: def.radius, landsWhere };
+  const thrown = def.range > 0 || def.area === 'cone';
+  return { reach: def.range, normal: def.range, radius: def.radius, landsWhere: thrown ? 'target' : 'caster', area: def };
 }
 
-/** What the hero aims now, if anything: the spell being cast, else the bow in hand, else the spell picked. */
+/** What the hero aims now, if anything: the spell being cast or whose key is held, else the bow in hand. */
 export function currentAim(player: Player): Aim | null {
-  const picked = aimedSpell(player, player.casting ? player.playerInput.spellSlot : chosenQuickSlot());
-  if (player.casting && picked) return spellAim(picked);
+  const slot = player.casting ? player.playerInput.spellSlot : heldQuickSlot();
+  const spell = aimedSpell(player, slot);
+  if (spell) return spellAim(spell);
   const distance = holdsBow(player) ? weaponRule(weaponInHand(player.equipped ?? {}) ?? undefined)?.rule.distance : undefined;
-  if (distance) return { reach: metresToPx(distance[1]), normal: metresToPx(distance[0]), radius: 0, landsWhere: 'target' };
-  return picked ? spellAim(picked) : null;
+  if (!distance) return null;
+  return { reach: feetToPx(distance[1]), normal: feetToPx(distance[0]), radius: 0, landsWhere: 'target', area: null };
 }
 
 function layers(gameLayer: Container): { g: Graphics; text: PixelLabel } {
@@ -97,7 +106,7 @@ function layers(gameLayer: Container): { g: Graphics; text: PixelLabel } {
     label.zIndex = GUIDE_Z;
     label.alpha = RING_ALPHA * 2;
     gameLayer.addChild(label);
-    shownMetres = -1;
+    shownFeet = -1;
   }
   return { g: guide, text: label ?? new PixelLabel('') };
 }
@@ -114,68 +123,81 @@ export function colourFor(dist: number, a: Aim): number {
   return dist > a.normal ? PENALISED : IN_REACH;
 }
 
-/** The soft arc from (x0, y0) to (x1, y1), dot by dot; a tick across it where it reaches `reach` px out, if it is short of the end. */
-function drawArc(g: Graphics, x0: number, y0: number, x1: number, y1: number, colour: number, reach: number): void {
-  const dist = Math.hypot(x1 - x0, y1 - y0);
-  const rise = Math.min(ARC_RISE_MAX, dist * ARC_RISE);
-  const cx = (x0 + x1) / 2;
-  const cy = (y0 + y1) / 2 - rise;
-  const steps = Math.max(2, Math.floor(dist / DOT_STEP));
-  for (let i = 1; i < steps; i++) {
-    const t = i / steps;
-    const u = 1 - t;
-    g.circle(u * u * x0 + 2 * u * t * cx + t * t * x1, u * u * y0 + 2 * u * t * cy + t * t * y1, DOT_RADIUS);
-  }
+/** Dots from `from` px to `to` px along the unit direction (ux, uy) out of (x0, y0), in one colour. */
+function dots(g: Graphics, x0: number, y0: number, ux: number, uy: number, from: number, to: number, colour: number): void {
+  if (to <= from) return;
+  for (let d = from + DOT_STEP; d < to; d += DOT_STEP) g.circle(x0 + ux * d, y0 + uy * d, DOT_RADIUS);
   g.fill({ color: colour, alpha: DOT_ALPHA });
-  if (reach <= 0 || reach >= dist) return;
-  const t = reach / dist;
-  const u = 1 - t;
-  const px = u * u * x0 + 2 * u * t * cx + t * t * x1;
-  const py = u * u * y0 + 2 * u * t * cy + t * t * y1;
-  g.moveTo(px, py - REACH_TICK).lineTo(px, py + REACH_TICK).stroke({ color: OUT_OF_REACH, alpha: RING_ALPHA * 2, width: 1 });
 }
 
-/** The area a spell strikes, and a faint mark under each enemy standing in it. */
-function drawArea(g: Graphics, x: number, y: number, radius: number, colour: number): void {
-  g.circle(x, y, radius).fill({ color: colour, alpha: FILL_ALPHA }).stroke({ color: colour, alpha: RING_ALPHA, width: 1 });
-  for (const foe of nearby(x, y, radius, Sense.mob, caught)) {
+/** A straight shot's line, the way the hero aims, all the way it flies: grey to its normal range, amber past it; a ring where it ends. */
+function drawLine(g: Graphics, x0: number, y0: number, ux: number, uy: number, a: Aim): void {
+  dots(g, x0, y0, ux, uy, 0, a.normal, IN_REACH);
+  dots(g, x0, y0, ux, uy, a.normal - DOT_STEP, a.reach, PENALISED);
+  const end = a.reach > a.normal ? PENALISED : IN_REACH;
+  g.circle(x0 + ux * a.reach, y0 + uy * a.reach, END_RADIUS).stroke({ color: end, alpha: RING_ALPHA * 2, width: 1 });
+}
+
+/** A spell's area as it will go off: a circle, a square (a cube) or a cone from the caster's hands. */
+function drawShape(g: Graphics, def: SpellDef, from: Point, at: Point): void {
+  if (def.area === 'cube') g.rect(at.x - def.radius, at.y - def.radius, def.radius * 2, def.radius * 2);
+  else if (def.area === 'sphere') g.circle(at.x, at.y, def.radius);
+  else {
+    const [a, b, c] = coneCorners(def, from, at, corners);
+    g.poly([a.x, a.y, b.x, b.y, c.x, c.y]);
+  }
+  g.fill({ color: IN_REACH, alpha: FILL_ALPHA }).stroke({ color: IN_REACH, alpha: RING_ALPHA, width: 1 });
+}
+
+/** The area, and a faint mark under each enemy standing in it. */
+function drawArea(g: Graphics, def: SpellDef, from: Point, at: Point): void {
+  drawShape(g, def, from, at);
+  const near = areaBounds(def, from, at, bounds);
+  for (const foe of nearby(near.x, near.y, near.r, Sense.mob, caught)) {
     if (!foe.position || (foe.health?.current ?? 0) <= 0) continue;
-    g.ellipse(foe.position.x, foe.position.y, CAUGHT_RX, CAUGHT_RY);
+    if (inArea(def, from, at, foe.position.x, foe.position.y)) g.ellipse(foe.position.x, foe.position.y, CAUGHT_RX, CAUGHT_RY);
   }
   g.stroke({ color: OUT_OF_REACH, alpha: CAUGHT_ALPHA, width: 1 });
 }
 
-/** The distance to the crosshair, in metres to a tenth, by it (written again only when it changes). */
-function showDistance(text: PixelLabel, dist: number, colour: number): void {
-  const metres = Math.round(dist * METRES_PER_PX * 10);
-  text.position.set(Math.round(aim.x + LABEL_DX), Math.round(aim.y + LABEL_DY));
+/** How far off (x, y) lies, in feet, beside it (written again only when it changes). */
+function showDistance(text: PixelLabel, x: number, y: number, dist: number, colour: number): void {
+  const feet = pxToFeet(dist);
+  text.visible = true;
+  text.position.set(Math.round(x + LABEL_DX), Math.round(y + LABEL_DY));
   text.tint = colour;
-  if (metres === shownMetres) return;
-  shownMetres = metres;
-  text.text = `${(metres / 10).toFixed(1)} m`;
+  if (feet === shownFeet) return;
+  shownFeet = feet;
+  text.text = `${feet} ft`;
+}
+
+/** An area spell: only its area, where it will go off; thrown ones say how far off that is. */
+function guideArea(g: Graphics, text: PixelLabel, player: Player, def: SpellDef, thrown: boolean): void {
+  const from = player.position;
+  areaCentre(def, from, aim, centre, player.aimVector);
+  drawArea(g, def, from, centre);
+  if (!thrown) return;
+  const dist = Math.hypot(centre.x - from.x, centre.y - from.y);
+  showDistance(text, centre.x, centre.y, dist, IN_REACH);
 }
 
 /** Once a tick: the guide for what this screen's hero aims, or nothing. */
 export function updateAimGuide(gameLayer: Container): void {
   const { g, text } = layers(gameLayer);
   g.clear();
+  text.visible = false;
   const player = localPlayer();
   const a = aiming(player) ? currentAim(player) : null;
-  text.visible = !!a;
   if (!player || !a) return;
   const p = pointer();
   screenToWorld(p.x, p.y, aim);
-  const { x, y } = player.position;
-  const dist = Math.hypot(aim.x - x, aim.y - y);
-  const colour = colourFor(dist, a);
-  showDistance(text, dist, colour);
-  if (a.landsWhere === 'caster') {
-    if (a.radius > 0) drawArea(g, x, y, a.radius, IN_REACH);
+  if (a.area) {
+    guideArea(g, text, player, a.area, a.landsWhere === 'target');
     return;
   }
-  drawArc(g, x, y - HAND_HEIGHT, aim.x, aim.y, colour, a.reach);
-  if (a.radius <= 0) return;
-  // An area goes off where the shot gets to: at the crosshair, or as far towards it as it reaches.
-  const share = dist > a.reach && dist > 0 ? a.reach / dist : 1;
-  drawArea(g, x + (aim.x - x) * share, y + (aim.y - y) * share, a.radius, colour === OUT_OF_REACH ? PENALISED : colour);
+  const { x, y } = player.position;
+  const dist = Math.hypot(aim.x - x, aim.y - y);
+  if (dist <= 0) return;
+  drawLine(g, x, y - HAND_HEIGHT, (aim.x - x) / dist, (aim.y - y) / dist, a);
+  showDistance(text, aim.x, aim.y, dist, colourFor(dist, a));
 }

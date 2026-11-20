@@ -9,8 +9,7 @@ import { blendTexture, commitBlendAtlas } from '../render/BlendAtlas';
 import { mineGroundOverlays } from './MineGround';
 import { commitMineGroundAtlas, mineOverlayTexture } from '../render/MineGroundAtlas';
 import { THEME_VOID, tilesetKey } from './Theme';
-import { CAVE_ROCK_CUT } from './CaveTerrain';
-import { chasmShade } from '../render/ChasmShade';
+import { CAVE_BRINKS, CAVE_ROCK_CUT } from './CaveTerrain';
 import { SeeThroughWalls } from '../render/SeeThrough';
 import { TILE_HEIGHT, TILE_WIDTH } from './TileType';
 
@@ -28,7 +27,7 @@ export type LevelView = {
 
 /** The flat batches pieces go to, bottom up (the caverns' rock, chasm and bridges over the catacombs' walls). */
 type FlatLayers = {
-  cave: StaticTileLayer; floors: StaticTileLayer; base: StaticTileLayer; caveWalls: StaticTileLayer; rockCut: StaticTileLayer;
+  cave: StaticTileLayer; floors: StaticTileLayer; brinks: StaticTileLayer; base: StaticTileLayer; caveWalls: StaticTileLayer; rockCut: StaticTileLayer;
   slants: Map<string, StaticTileLayer>;
 };
 /** Occluder batches by depth, one per sheet (a batch draws from one image): keyed `sheet@z`. */
@@ -37,6 +36,7 @@ type DepthLayers = Map<string, StaticTileLayer>;
 /** A piece's batch: cave ground at the very bottom, then floors, then the walls and overlays (or their depth's layer). */
 function pieceLayer(p: TerrainPiece, flat: FlatLayers, byZ: DepthLayers): StaticTileLayer {
   const cave = p.sheet === CAVE_GROUND;
+  if (p.sheet === CAVE_BRINKS) return flat.brinks;
   if (p.sheet === CAVE_ROCK_CUT) return layerFor(p, flat.rockCut, byZ);
   if (p.sheet && p.sheet.startsWith(CAVE_SLANT_PREFIX)) return layerFor(p, flatFor(p.sheet, flat), byZ);
   if (cave && p.floor) return flat.cave;
@@ -96,10 +96,11 @@ export function buildLevelView(level: Level): LevelView {
   const base = new StaticTileLayer();
   const caveWalls = new StaticTileLayer();
   const rockCut = new StaticTileLayer();
+  const brinks = new StaticTileLayer();
   const byZ: DepthLayers = new Map();
   // Walls and overlays come from the level's own tileset: the catacombs' or the castle's.
   const tileset = tilesetKey(level.theme);
-  const flat = { cave, floors, base, caveWalls, rockCut, slants: new Map<string, StaticTileLayer>() };
+  const flat = { cave, floors, brinks, base, caveWalls, rockCut, slants: new Map<string, StaticTileLayer>() };
   // Walls, overlays and the isometric castle's chasm rims may come from another sheet than the level's own.
   const seeThrough = new SeeThroughWalls(level.width * TILE_WIDTH);
   for (const p of buildTerrainPieces(level)) {
@@ -112,9 +113,6 @@ export function buildLevelView(level: Level): LevelView {
   commitBlendAtlas();
   commitMineGroundAtlas();
   const container = new Container();
-  container.addChild(voidBackdrop(level), cave, floors, blends);
-  const shade = chasmShade(level);
-  if (shade) container.addChild(shade);
-  container.addChild(base, caveWalls, rockCut, ...flat.slants.values());
+  container.addChild(voidBackdrop(level), cave, floors, blends, brinks, base, caveWalls, rockCut, ...flat.slants.values());
   return { base: container, occluders: [...byZ.values()], seeThrough };
 }

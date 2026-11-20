@@ -10,6 +10,12 @@ const keys = new Set<string>();
 const pending = new Set<string>();
 /** Keys first pressed since the previous tick; refilled from `pending` each tick (never reallocated). */
 const pressed = new Set<string>();
+/** Keys let go since the previous tick, and those of this tick (as `pending` and `pressed`). */
+const pendingLifts = new Set<string>();
+const lifted = new Set<string>();
+/** The quick-bar key held down and the square it picked (its aim guide shows while it is held; let go, it casts). */
+let heldCode: string | null = null;
+let heldSlot = -1;
 /** Pointer position in game pixels; handed out read-only so callers allocate nothing. */
 const mouse = { x: 0, y: 0 };
 let mouseDown = false;
@@ -97,10 +103,27 @@ export function quickRow(): number {
   return !captured && shiftHeld() ? 1 : 0;
 }
 
-/** Which quick-bar square's key went down this tick (with Shift, the square in the second row), or -1. */
-function quickSlotPressed(): number {
-  for (let i = 0; i < QUICK_KEYS.length; i++) if (pressed.has(QUICK_KEYS[i])) return i + quickRow() * QUICK_ROW;
-  return -1;
+/** A quick-bar key that went down this tick picks its square (with Shift, the one in the second row) and is held. */
+function holdQuickKey(): void {
+  for (let i = 0; i < QUICK_KEYS.length; i++) {
+    if (!pressed.has(QUICK_KEYS[i])) continue;
+    heldCode = QUICK_KEYS[i];
+    heldSlot = i + quickRow() * QUICK_ROW;
+    chooseQuickSlot(heldSlot);
+    return;
+  }
+}
+
+/** The square whose held quick-bar key was let go this tick (it casts now), or -1. */
+function quickKeyLetGo(): number {
+  if (heldCode === null || !lifted.has(heldCode)) return -1;
+  heldCode = null;
+  return heldSlot;
+}
+
+/** The quick-bar square whose key is held down now (its aim guide shows), or -1. */
+export function heldQuickSlot(): number {
+  return heldCode === null ? -1 : heldSlot;
 }
 
 /** The quick-bar square picked on this screen (shown at once, before a guest's host has heard of it). */
@@ -120,6 +143,9 @@ function wasActionPressed(action: ActionName): boolean {
 export function resetInput(): void {
   pending.clear();
   pressed.clear();
+  pendingLifts.clear();
+  lifted.clear();
+  heldCode = null;
   clickPending = false;
   clicked = false;
   mouseDown = false;
@@ -156,8 +182,14 @@ export function initInput(canvas: HTMLCanvasElement): void {
   bound = true;
 
   window.addEventListener('keydown', onKeyDown);
-  window.addEventListener('keyup', (e) => keys.delete(e.code));
-  window.addEventListener('blur', () => keys.clear());
+  window.addEventListener('keyup', (e) => {
+    keys.delete(e.code);
+    if (!captured) pendingLifts.add(e.code);
+  });
+  window.addEventListener('blur', () => {
+    keys.clear();
+    heldCode = null;
+  });
 
   canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
@@ -175,11 +207,14 @@ export function updateInput(): void {
   pressed.clear();
   for (const code of pending) pressed.add(code);
   pending.clear();
+  lifted.clear();
+  for (const code of pendingLifts) lifted.add(code);
+  pendingLifts.clear();
   clicked = clickPending && !captured;
   clickPending = false;
-  // A quick-bar key picks its square and casts it at once (a click on a square only picks it).
-  const quickCast = captured ? -1 : quickSlotPressed();
-  chooseQuickSlot(quickCast);
+  // A quick-bar key picks its square while held, showing where it would go; let go, it casts (a click on a square only picks it).
+  if (!captured) holdQuickKey();
+  const quickCast = captured ? -1 : quickKeyLetGo();
 
   for (const entity of q.players) {
     // Remote players are driven by their own browser's input frames.

@@ -251,7 +251,8 @@ export class InGameScene implements Scene {
     // Light overlay placed in uiLayer so it sits above game but below HUD
     this.lights.init();
     this.overLayer.sortableChildren = true;
-    this.uiLayer.addChild(this.lights.overlay, this.overLayer, this.hud.container, this.fallen.view, this.combatLog.container, this.inv.container, this.shop.container);
+    // The combat log lies under the HUD, so the HUD's tooltips and dialogs open over it.
+    this.uiLayer.addChild(this.lights.overlay, this.overLayer, this.combatLog.container, this.hud.container, this.fallen.view, this.inv.container, this.shop.container);
 
     this.status = makeText('', 0xff8888, 8, 'center');
     this.status.x = GAME_WIDTH / 2;

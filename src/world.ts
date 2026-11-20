@@ -1,3 +1,4 @@
+import type { VfxEffectId } from './render/Vfx';
 import { World } from 'miniplex';
 import type { Sprite, Container, Graphics } from 'pixi.js';
 import type { PixelLabel } from './ui/PixelText';
@@ -663,8 +664,8 @@ export type Entity = {
 
   // --- torch (light source) ---
   torch?: { radius: number; color: number; flicker: number };
-  /** Sparks fly up from its flame (systems/SparkSystem.ts, a NixieFX effect), this far above its position (px). */
-  sparks?: { lift: number };
+  /** Sparks fly from its flame (a looping NixieFX effect, systems/VfxSystem.ts), this far above its position (px). */
+  sparks?: { effect: VfxEffectId; lift: number };
 
   // --- AI ---
   ai?: MobAI;

@@ -8,6 +8,8 @@ import { restorePlayer } from '../game/Run';
 import { pausingSeat, resetPause, setSeatPaused } from '../game/Pause';
 import { cleanName } from '../game/Settings';
 import { sound } from '../audio/SoundPlayer';
+import { vfxEvents } from '../render/VfxPlayer';
+import type { VfxShot } from '../render/VfxPlayer';
 import type { SfxName } from '../audio/SoundPlayer';
 import { screenToWorld } from '../render/Camera';
 import { beginPerception } from '../ai/perception/spatial';
@@ -58,6 +60,7 @@ export class HostGame {
     setSeatPaused(slot, false);
   };
   private readonly onEffect = (name: SfxName, x?: number, y?: number) => coop.sendSound(name, x, y);
+  private readonly onVfx = (shot: VfxShot) => coop.sendVfx(shot);
 
   /** `map`: the dungeon just built, sent to every guest so they build the very same one. */
   constructor(host: Entity, spawn: { x: number; y: number }, seed: number, depth: number, map: LevelMap) {
@@ -72,6 +75,7 @@ export class HostGame {
     coop.onLeave = this.onLeave;
     coop.onCommand = handleGuestCommand;
     sound.onEffect = this.onEffect;
+    vfxEvents.onPlay = this.onVfx;
     this.seed = seed;
     coop.startLevel(seed, depth, map);
   }
@@ -140,6 +144,7 @@ export class HostGame {
   dispose(): void {
     if (coop.onLeave === this.onLeave) coop.onLeave = null;
     if (sound.onEffect === this.onEffect) sound.onEffect = null;
+    if (vfxEvents.onPlay === this.onVfx) vfxEvents.onPlay = null;
   }
 }
 

@@ -6644,7 +6644,7 @@ test('particle effects: the NixieFX bundle holds every effect; fires throw spark
   world.clear();
 });
 
-test('the wizard\'s cantrips and 1st-level spells play particles: a bolt bursts in its own when it strikes, and every effect named is exported', async () => {
+test('the wizard\'s cantrips and 1st-level spells play particles their whole course: a bolt flares in the hands and bursts in its own where it ends; every effect named is exported', async () => {
   const { SPELL_VFX } = await load('render/SpellVfx');
   const { VFX_EFFECTS } = await load('render/Vfx');
   const { vfxEvents, takeQueuedVfx } = await load('render/VfxPlayer');
@@ -6660,7 +6660,8 @@ test('the wizard\'s cantrips and 1st-level spells play particles: a bolt bursts 
   wizard.casting = { ticks: 0, dirX: 1, dirY: 0, released: false, spell: 'fire_bolt', level: 0, targetX: wizard.position.x + 300, targetY: wizard.position.y };
   for (let t = 0; t < 200; t++) updateSpells(arena(30, 8));
   vfxEvents.onPlay = null;
-  assert.ok(sent.includes('impact-fire'), 'the fire bolt burst in flame where it ended');
+  assert.ok(sent.includes('fire-bolt-cast'), 'the fire bolt flared in the hands as it left them');
+  assert.ok(sent.includes('fire-bolt-impact'), 'and burst in flame where it ended');
   world.clear();
 });
 

@@ -18,7 +18,7 @@
   "emitters": [
     {
       "id": "flames",
-      "name": "Flames",
+      "name": "flames",
       "enabled": true,
       "mode": "billboard",
       "maxParticles": 160,
@@ -2309,7 +2309,7 @@
     },
     {
       "id": "sparks",
-      "name": "Sparks",
+      "name": "sparks",
       "enabled": true,
       "mode": "billboard",
       "maxParticles": 40,

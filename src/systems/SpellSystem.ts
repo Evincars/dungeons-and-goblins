@@ -296,6 +296,14 @@ export function playBurstArt(caster: { position: { x: number; y: number } }, def
   playEffect(shape, colour, at.x, at.y, 0, scale);
 }
 
+/** The flare in the caster's hands as a flying spell leaves them (its particles, render/SpellVfx.ts), turned the way it goes. */
+export function playCastArt(caster: { position: { x: number; y: number } }, def: SpellDef, dirX: number, dirY: number): void {
+  const look = SPELL_VFX[def.id]?.cast;
+  if (!look) return;
+  const hands = SPELL_STATS.boltSpawnOffset;
+  playVfx(look, caster.position.x + dirX * hands, caster.position.y + dirY * hands, AIM_HEIGHT, dirX, dirY);
+}
+
 /** A burst: the effect where it goes off, and a save for every foe its area catches. */
 function castBurst(caster: Player, def: SpellDef, targetX: number, targetY: number, dirX: number, dirY: number): void {
   facing.x = dirX;
@@ -364,6 +372,7 @@ function release(caster: Player, cast: NonNullable<Entity['casting']>): void {
   const targetY = cast.targetY ?? caster.position.y;
   // Mage Armour cast while it is on is switched off: nothing went off, so nothing follows from it (a ward, War Magic).
   if (def.kind === 'buff' && !castBuff(caster, def)) return;
+  if (def.kind === 'bolt' || def.kind === 'missiles') playCastArt(caster, def, cast.dirX, cast.dirY);
   if (def.kind === 'bolt') castBolt(caster, def, cast.dirX, cast.dirY);
   else if (def.kind === 'missiles') castMissiles(caster, def, cast.dirX, cast.dirY);
   else if (def.kind === 'burst') castBurst(caster, def, targetX, targetY, cast.dirX, cast.dirY);

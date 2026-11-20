@@ -17,8 +17,8 @@
   },
   "emitters": [
     {
-      "id": "motes",
-      "name": "Motes",
+      "id": "glints",
+      "name": "glints",
       "enabled": true,
       "mode": "billboard",
       "maxParticles": 40,
@@ -53,30 +53,30 @@
         "customData": false
       },
       "spawn": {
-        "rate": 70,
+        "rate": 80,
         "rateValue": {
           "mode": "constant",
-          "value": 70,
-          "min": 70,
-          "max": 70,
+          "value": 80,
+          "min": 80,
+          "max": 80,
           "curve": [
             {
               "x": 0,
-              "y": 70
+              "y": 80
             },
             {
               "x": 1,
-              "y": 70
+              "y": 80
             }
           ],
           "curveB": [
             {
               "x": 0,
-              "y": 70
+              "y": 80
             },
             {
               "x": 1,
-              "y": 70
+              "y": 80
             }
           ],
           "editorMin": 0,
@@ -112,43 +112,43 @@
           "editorMax": 1000
         },
         "bursts": [],
-        "shape": "box",
-        "radius": 0,
+        "shape": "circle",
+        "radius": 1.1,
         "radiusValue": {
           "mode": "constant",
-          "value": 0,
-          "min": 0,
-          "max": 0,
+          "value": 1.1,
+          "min": 1.1,
+          "max": 1.1,
           "curve": [
             {
               "x": 0,
-              "y": 0
+              "y": 1.1
             },
             {
               "x": 1,
-              "y": 0
+              "y": 1.1
             }
           ],
           "curveB": [
             {
               "x": 0,
-              "y": 0
+              "y": 1.1
             },
             {
               "x": 1,
-              "y": 0
+              "y": 1.1
             }
           ],
           "editorMin": 0,
           "editorMax": 24
         },
         "box": [
-          1.3,
-          1.6,
+          0,
+          0,
           0
         ],
         "angle": 25,
-        "radiusThickness": 1,
+        "radiusThickness": 0,
         "arc": 360,
         "arcMode": "random",
         "arcSpread": 0,
@@ -190,7 +190,7 @@
           0
         ],
         "rotation": [
-          0,
+          90,
           0,
           0
         ],
@@ -210,7 +210,7 @@
           "mode": "random",
           "value": 0.5,
           "min": 0.5,
-          "max": 0.9,
+          "max": 0.8,
           "curve": [
             {
               "x": 0,
@@ -716,12 +716,12 @@
           "mode": "vector",
           "min": [
             -0.3,
-            0.8,
+            0.3,
             0
           ],
           "max": [
             0.3,
-            2,
+            1,
             0
           ],
           "speed": {
@@ -784,30 +784,30 @@
           "editorMin": 0,
           "editorMax": 20
         },
-        "drag": 0.8,
+        "drag": 0,
         "dragValue": {
           "mode": "constant",
-          "value": 0.8,
-          "min": 0.8,
-          "max": 0.8,
+          "value": 0,
+          "min": 0,
+          "max": 0,
           "curve": [
             {
               "x": 0,
-              "y": 0.8
+              "y": 0
             },
             {
               "x": 1,
-              "y": 0.8
+              "y": 0
             }
           ],
           "curveB": [
             {
               "x": 0,
-              "y": 0.8
+              "y": 0
             },
             {
               "x": 1,
-              "y": 0.8
+              "y": 0
             }
           ],
           "editorMin": 0,

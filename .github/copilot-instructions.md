@@ -60,7 +60,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 | 2-D spatial queries (R-tree) | **rbush** | `src/ai/perception/spatial.ts` |
 | Peer-to-peer networking | **PeerJS** (WebRTC) | `src/network/CoopSession.ts` |
 | Sound effects, music and ambience (loading, sprites, pitch, pan, fades, streaming) | **Howler** | `src/audio/` |
-| Particle effects (sparks, embers, bursts) | **NixieFX** (`nixie-fx`): authored in its editor as the project in `vfx/`, exported by `npm run vfx:export` to `public/vfx`, played by one `PixiVfxRenderer` | `src/render/Vfx.ts` |
+| Particle effects (sparks, embers, spells) | **NixieFX** (`nixie-fx`): the editor project `vfx/`, every effect built by `scripts/vfx-effects.mjs` (`npm run vfx:effects`; tune the numbers there, a run writes over edits made in the editor), exported by `npm run vfx:export` to `public/vfx` (restart a running dev server after), played by one `PixiVfxRenderer` | `src/render/Vfx.ts` |
 
 - Never write your own A*, Dijkstra, heap, spatial hash, vector or bounding-box class.
 - **Yuka first for graphs and pathfinding.** Add another graph library only for an algorithm Yuka
@@ -296,11 +296,13 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   (`shallowerFace`) and on up to the wall's north edge (`seamW`/`seamE`). Wall torches and campfires throw sparks from their flames, now and then an ember dropping to the
   floor (`sparks`, `systems/VfxSystem.ts`: the NixieFX effects `vfx/torch-sparks.json` and `campfire-embers.json`, one unit 16 px
   with y up, played at the root's origin, moved on a tick at a time). The wizard's cantrips and 1st-level spells
-  play particles (`render/SpellVfx.ts`, `SPELL_VFX`; the effects are made by the NixieFX project in `vfx/`): a trail behind a
-  flying spell (every screen follows the projectiles it has, guests' from the host's state) and an impact where it ends, a
-  burst where an area spell goes off (Burning Hands' flames from the hands), an aura round the caster of a buff. One-shots are
-  asked for with `playVfx` (`render/VfxPlayer.ts`): the co-op host sends each guest only a short `vfx` signal (which effect,
-  where, which way) and every screen renders it itself. A spell without particles plays its library effect. Campfires stand on a ring of cobbles
+  play particles their whole course (`render/SpellVfx.ts`, `SPELL_VFX`): a flare in the hands as a flying spell leaves them,
+  the projectile itself as particles (no sprite, no caster's bolt art: every screen follows the projectiles it has, guests'
+  from the host's state), its impact where it ends, an area spell's burst over the whole of its area (Burning Hands' flames
+  from the hands), an aura round the caster of a buff; each spell its own look, after its description and Baldur's Gate.
+  One-shots are asked for with `playVfx` (`render/VfxPlayer.ts`): the co-op host sends each guest only a short `vfx` signal
+  (which effect, where, which way) and every screen renders it itself. A spell without particles plays its library effect.
+  The library's circle of spawn lies flat to a 2-D view: turn it into the screen's plane (`SCREEN_PLANE`, the script). Campfires stand on a ring of cobbles
   (`campfire_floor`, built at load in `assets/AssetLoader.ts`). Coffins and sarcophagi are searched like
   other stashes and may hold gear (`TOMB_GEAR_CHANCE`, `entities/LootFactory.ts`). A spike trap in a
   corridor (`spikeTrap`, `systems/TrapSystem.ts`) bites the first hero to step on it, told over their head and in the

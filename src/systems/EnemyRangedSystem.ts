@@ -20,7 +20,7 @@ import { sound } from '../audio/SoundPlayer';
 import { MOB_CRIES, SPELL_SOUNDS } from '../audio/SoundBank';
 import { heroSavingThrow } from './FeatureSystem';
 import { hurtPlayer } from './CombatSystem';
-import { impactOf, playBurstArt } from './SpellSystem';
+import { impactOf, playBurstArt, playCastArt } from './SpellSystem';
 import { chargesWater, electrify } from './LastingSpells';
 
 /**
@@ -235,6 +235,7 @@ function release(mob: Shooter, def: SpellDef, dir: typeof aim, hero: Player, att
     burstOnHeroes(mob, def, burstCentre(mob, def, hero), dc);
     return;
   }
+  playCastArt(mob, def, dir.x, dir.y);
   const darts = def.kind === 'missiles' ? def.count : 1;
   for (let i = 0; i < darts; i++) {
     createSpellBolt(mob.position.x, mob.position.y, dir.x, dir.y, attack, world.id(mob), mob.character?.def,

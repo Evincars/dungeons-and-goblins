@@ -17,11 +17,11 @@
   "targetProfile": "pixi-ui-2d",
   "sourceEffectFile": "torch-sparks.json",
   "sourceEffectId": "torch-sparks",
-  "sourceHash": "fnv1a32:79aa90b8",
+  "sourceHash": "fnv1a32:2d43116f",
   "emitters": [
     {
       "id": "sparks",
-      "name": "Sparks",
+      "name": "sparks",
       "enabled": true,
       "mode": "billboard",
       "maxParticles": 24,
@@ -2180,7 +2180,7 @@
     },
     {
       "id": "embers",
-      "name": "Falling embers",
+      "name": "embers",
       "enabled": true,
       "mode": "billboard",
       "maxParticles": 4,

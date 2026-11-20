@@ -10,8 +10,8 @@ import type { VfxShot } from '../render/VfxPlayer';
 
 /**
  * The particle effects on this screen (NixieFX, render/Vfx.ts): each torch's and campfire's sparks (`sparks`) playing at its
- * flame for as long as it stands, the trail each flying spell sheds (render/SpellVfx.ts; its sparks stay where they were
- * shed, and fade out after it is gone), and the one-shots asked for (render/VfxPlayer.ts: a spell's flames, a strike)
+ * flame for as long as it stands, each flying spell's particles (render/SpellVfx.ts `flight`: the projectile itself and
+ * what it sheds, which stays where it was shed and fades out after it is gone), and the one-shots asked for (render/VfxPlayer.ts: a spell's flames, a strike)
  * until they burn out.
  * Each effect's root is put where it plays and drawn among the entities by depth. They move on a tick at a time, so they
  * freeze with the game.
@@ -97,7 +97,7 @@ type Trail = { effect: PixiVfxEffectInstance; at: [number, number, number] };
 
 /** Starts the trail of a flying spell that has one (none for an arrow, or before the effects are loaded). */
 function startTrail(shot: (typeof flying)['entities'][number], gameLayer: Container): Trail | undefined {
-  const look = shot.projectile.spell ? SPELL_VFX[shot.projectile.spell]?.trail : undefined;
+  const look = shot.projectile.spell ? SPELL_VFX[shot.projectile.spell]?.flight : undefined;
   const definition = look ? vfxEffect(look) : undefined;
   if (!definition) return undefined;
   // Left at the origin, the effect is moved itself, so the sparks it has shed stay where they were.

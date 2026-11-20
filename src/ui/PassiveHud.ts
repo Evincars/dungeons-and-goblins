@@ -25,15 +25,18 @@ import { featTopic, featureTopic, spellTopic } from './SpellTopics';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
 
-/** Top left: this far from the screen's edges; a line this tall, its icon this big and its words this far right of it. */
+/** Top left: this far from the screen's edges; each icon this big, this far from the next, stacked down a column. */
 const MARGIN = 8;
-const LINE_H = 14;
-const ICON = 12;
-const TEXT_GAP = 4;
-/** The words sit this far down their line (centred on the icon). */
-const TEXT_DROP = 2;
-/** The most lines there can be (a class has fewer passives than this). */
-const MAX_LINES = 18;
+const ICON = 20;
+const ICON_GAP = 2;
+/** A column holds this many icons; more start a column beside it. */
+const PER_COLUMN = 12;
+/** The most icons there can be (a class has fewer passives than this). */
+const MAX_LINES = 24;
+/** A count on an icon (the ward's strength, dice left…) sits in its bottom right corner, this far in. */
+const BADGE_INSET = 1;
+/** A feat's initials sit this far down its box. */
+const INITIALS_DROP = 6;
 /** An icon box: its dark fill and edge; a feat (no icon) shows its initials, so many letters at most. */
 const BOX_FILL = 0x000000;
 const BOX_FILL_ALPHA = 0.55;
@@ -46,6 +49,8 @@ const CLOCK_RING_ALPHA = 0.9;
 /** The clock starts at the top and runs clockwise. */
 const CLOCK_START = -Math.PI / 2;
 const FULL_TURN = Math.PI * 2;
+/** A recovering passive's icon is dimmed to this. */
+const RECOVERING_ALPHA = 0.55;
 /** A passive that is ready is shown in this colour; one that is recovering is dimmed. */
 const READY_COLOR = THEME.title;
 /** The passives that need time to recover between uses, and the ticks each has left. */
@@ -77,8 +82,12 @@ const secondsOf = (ticks: number): string => (Math.ceil((ticks / TICKS_PER_SECON
 /** What a line's icon and tooltip tell about: a class feature, a spell or a feat. */
 type About = { feature: FeatureDef } | { spell: string } | { feat: FeatId } | null;
 
-/** One line: its words and colour, what it is about (its icon and tooltip), and its timer (ticks left), if one runs. */
-type Line = { content: string; color: number; about: About; timer?: { key: string; left: number } };
+/**
+ * One icon: what it says (its tooltip's first line) and in what colour, what it is about (its picture and tooltip), its
+ * timer (ticks left) if one runs, a count to show on it, and whether it is the hero's for good (a passive, a feat) — those
+ * stand at the top, what comes and goes (a boost, a spell lasting, a charge) under them.
+ */
+type Line = { content: string; color: number; about: About; timer?: { key: string; left: number }; badge?: string; permanent?: true };
 
 const featureAbout = (cls: DndClass, id: string): About => {
   const feature = featureOfClass(cls, id);
@@ -93,8 +102,8 @@ function schoolLines(player: Player, cls: DndClass): Line[] {
   const lines: Line[] = [];
   const arcana = player.arcana;
   if (!arcana) return lines;
-  if (featureOn(player, 'arcane_ward')) lines.push({ content: text('hud.passive.ward', { amount: arcana.ward }), color: READY_COLOR, about: featureAbout(cls, 'arcane_ward') });
-  if (featureOn(player, 'portent')) lines.push({ content: text('hud.passive.portent', { dice: arcana.portent.join(' ') || '-' }), color: READY_COLOR, about: featureAbout(cls, 'portent') });
+  if (featureOn(player, 'arcane_ward')) lines.push({ content: text('hud.passive.ward', { amount: arcana.ward }), color: READY_COLOR, about: featureAbout(cls, 'arcane_ward'), badge: String(arcana.ward), permanent: true });
+  if (featureOn(player, 'portent')) lines.push({ content: text('hud.passive.portent', { dice: arcana.portent.join(' ') || '-' }), color: READY_COLOR, about: featureAbout(cls, 'portent'), badge: String(arcana.portent.length), permanent: true });
   if (arcana.songTicks > 0) {
     const impeded = bladesongImpeded(player.equipped ?? {});
     const song = featureAbout(cls, 'bladesong');
@@ -104,7 +113,7 @@ function schoolLines(player: Player, cls: DndClass): Line[] {
     });
     // The Bladesong Charges gathered for its Climax: all of them, then how many of each kind.
     const charges = { total: arcana.damageCharges + arcana.healingCharges, damage: arcana.damageCharges, healing: arcana.healingCharges };
-    lines.push({ content: text('hud.passive.song_charges', charges), color: BOOST_COLOR, about: featureAbout(cls, 'bladesong_climax') });
+    lines.push({ content: text('hud.passive.song_charges', charges), color: BOOST_COLOR, about: featureAbout(cls, 'bladesong_climax'), badge: String(charges.total) });
   }
   if (arcana.darkvision) lines.push({ content: text('hud.passive.darkvision'), color: READY_COLOR, about: featureAbout(cls, 'third_eye_darkvision') });
   if (arcana.seeInvisible) lines.push({ content: text('hud.passive.see_invisible'), color: READY_COLOR, about: featureAbout(cls, 'third_eye_see_invisibility') });
@@ -116,7 +125,7 @@ function schoolLines(player: Player, cls: DndClass): Line[] {
     });
   }
   const undead = undeadOf(player);
-  if (undead > 0) lines.push({ content: text('hud.passive.undead', { count: undead }), color: READY_COLOR, about: featureAbout(cls, 'undead_thralls') });
+  if (undead > 0) lines.push({ content: text('hud.passive.undead', { count: undead }), color: READY_COLOR, about: featureAbout(cls, 'undead_thralls'), badge: String(undead) });
   return lines;
 }
 
@@ -142,8 +151,8 @@ function featureLines(player: Player, cls: DndClass): Line[] {
     .filter((f) => f.kind === 'passive' && f.worked && !off.includes(f.id) && !TOLD_APART.has(f.id));
   const lines: Line[] = active.map((feature) => {
     const left = RECOVERING[feature.id]?.(player) ?? 0;
-    if (left <= 0) return { content: feature.name, color: READY_COLOR, about: { feature } };
-    return { content: text('hud.passive.recovering', { name: feature.name, seconds: secondsOf(left) }), color: THEME.muted, about: { feature }, timer: { key: feature.id, left } };
+    if (left <= 0) return { content: feature.name, color: READY_COLOR, about: { feature }, permanent: true };
+    return { content: text('hud.passive.recovering', { name: feature.name, seconds: secondsOf(left) }), color: THEME.muted, about: { feature }, timer: { key: feature.id, left }, permanent: true };
   });
   for (const boost of BOOSTS) {
     const left = boost.left(player);
@@ -168,8 +177,8 @@ function featLines(player: Player): Line[] {
     if (!auto && !player.featsOn?.includes(feat)) continue;
     const left = feat === 'defensive_duelist' ? player.duelistCooldown ?? 0 : 0;
     lines.push(left > 0
-      ? { content: text('hud.passive.recovering', { name: featName(feat), seconds: secondsOf(left) }), color: THEME.muted, about: { feat }, timer: { key: `feat:${feat}`, left } }
-      : { content: featName(feat), color: READY_COLOR, about: { feat } });
+      ? { content: text('hud.passive.recovering', { name: featName(feat), seconds: secondsOf(left) }), color: THEME.muted, about: { feat }, timer: { key: `feat:${feat}`, left }, permanent: true }
+      : { content: featName(feat), color: READY_COLOR, about: { feat }, permanent: true });
   }
   if (player.bonusAttack) lines.push({ content: text('hud.bonus_attack'), color: BONUS_ATTACK_COLOR, about: player.bonusAttack ? { feat: 'great_weapon_master' } : null });
   return lines;
@@ -181,17 +190,18 @@ function battleLines(player: Player, cls: DndClass): Line[] {
   if (player.build?.archetype === 'battle_master') {
     const level = player.playerStats.level;
     const dice = text('hud.dice', { left: player.superiorityLeft ?? superiorityDice(level), max: superiorityDice(level), sides: superioritySides(level) });
-    lines.push({ content: dice, color: READY_COLOR, about: featureAbout(cls, 'combat_superiority') });
+    lines.push({ content: dice, color: READY_COLOR, about: featureAbout(cls, 'combat_superiority'), badge: String(player.superiorityLeft ?? superiorityDice(level)), permanent: true });
   }
   const ready = player.maneuver?.id;
   if (ready) lines.push({ content: text('hud.maneuver_ready', { name: featureOfClass(cls, ready)?.name ?? ready }), color: THEME.buttonText, about: featureAbout(cls, ready) });
   return lines;
 }
 
-/** Every line the hero's HUD lists now. */
+/** Every icon the hero's HUD shows now: theirs for good first, then what comes and goes. */
 function linesOf(player: Player): Line[] {
   const cls = heroClass(player.heroClass).dndClass;
-  return [...featureLines(player, cls), ...schoolLines(player, cls), ...spellLines(player), ...featLines(player), ...battleLines(player, cls)];
+  const all = [...featureLines(player, cls), ...schoolLines(player, cls), ...spellLines(player), ...featLines(player), ...battleLines(player, cls)];
+  return [...all.filter((line) => line.permanent), ...all.filter((line) => !line.permanent)];
 }
 
 /** The icon of what a line is about: a feature's or a spell's (a feat has none). */
@@ -207,15 +217,21 @@ function initialsOf(about: About): string {
   return featName(about.feat).split(/[\s:]+/).filter(Boolean).map((word) => word[0]).join('').slice(0, INITIALS).toUpperCase();
 }
 
-/** One line's view: its icon in a box (or a feat's initials), its clock, its words, and the area that takes the pointer. */
-type Row = { root: Container; box: Graphics; icon: Sprite; initials: PixelLabel; clock: Graphics; label: PixelLabel; iconKey: string | null };
+/** One icon's view: its picture in a box (or a feat's initials), its clock, its count, and the area that takes the pointer. */
+type Row = { root: Container; icon: Sprite; initials: PixelLabel; clock: Graphics; badge: PixelLabel; iconKey: string | null };
+
+/** Where the i-th icon stands: down a column, then on in the next. */
+function slotOf(i: number): { x: number; y: number } {
+  const step = ICON + ICON_GAP;
+  return { x: MARGIN + Math.floor(i / PER_COLUMN) * step, y: MARGIN + (i % PER_COLUMN) * step };
+}
 
 /**
- * The passive class features that are switched on, top left corner, a line each with its icon and name; whatever recovers
- * or lasts for a while (Protection, Indomitable, Action Surge, a Shield spell…) shows its seconds left and a clock over its
- * icon that empties as they run out. A passive switched off in the Skills tab is not listed. The school's state, the spells
- * lasting on the hero, the Passive Feats at work and a Battle Master's dice come after them. The pointer over a line shows
- * the tooltip of what it is about.
+ * What the hero has at work, top left corner, as icons stacked down: first what is theirs for good (the passive class
+ * features switched on, the Passive Feats, the ward, Portent, a Battle Master's dice), then what comes and goes (a boost,
+ * a spell lasting on them, the one they concentrate on, the Bladesong). Whatever recovers or lasts for a while has a clock
+ * over its icon that empties as it runs out; a count (the ward's strength, dice left…) sits in its corner. The pointer over
+ * an icon shows what it is and how it stands now. A passive switched off in the Skills tab is not shown.
  */
 export class PassiveHud {
   readonly view = new Container();
@@ -236,25 +252,26 @@ export class PassiveHud {
 
   private makeRow(i: number): Row {
     const root = new Container();
-    root.position.set(MARGIN, MARGIN + i * LINE_H);
+    const at = slotOf(i);
+    root.position.set(at.x, at.y);
     root.visible = false;
     root.eventMode = 'static';
-    root.hitArea = new Rectangle(0, 0, ICON + TEXT_GAP, ICON);
+    root.hitArea = new Rectangle(0, 0, ICON, ICON);
     root.on('pointerover', () => { this.hovered = i; claimPointer(root, true); });
     root.on('pointerout', () => { if (this.hovered === i) this.hovered = -1; claimPointer(root, false); });
     const box = new Graphics().rect(0, 0, ICON, ICON).fill({ color: BOX_FILL, alpha: BOX_FILL_ALPHA }).stroke({ color: THEME.panelBorder, alpha: BOX_EDGE_ALPHA, width: 1, alignment: 1 });
     const icon = new Sprite(Texture.EMPTY);
-    const initials = new PixelLabel('', { color: THEME.buttonText, align: 'center', scale: 0.75, shadow: true });
-    initials.position.set(ICON / 2, TEXT_DROP);
+    const initials = new PixelLabel('', { color: THEME.buttonText, align: 'center', shadow: true });
+    initials.position.set(ICON / 2, INITIALS_DROP);
     const clock = new Graphics();
-    const label = new PixelLabel('', { color: READY_COLOR, outline: true });
-    label.position.set(ICON + TEXT_GAP, TEXT_DROP);
-    root.addChild(box, icon, initials, clock, label);
+    const badge = new PixelLabel('', { color: THEME.title, align: 'right', scale: 0.75, outline: true });
+    badge.position.set(ICON - BADGE_INSET, ICON - BADGE_INSET - 6);
+    root.addChild(box, icon, initials, clock, badge);
     this.view.addChild(root);
-    return { root, box, icon, initials, clock, label, iconKey: null };
+    return { root, icon, initials, clock, badge, iconKey: null };
   }
 
-  /** Shows a line's icon (loaded the first time it is asked for). */
+  /** Shows an icon's picture (loaded the first time it is asked for). */
   private setIcon(row: Row, key: string | null): void {
     if (row.iconKey === key) return;
     row.iconKey = key;
@@ -276,7 +293,7 @@ export class PassiveHud {
     return timer.left / Math.max(1, this.totals.get(timer.key) ?? timer.left);
   }
 
-  /** The clock over a line's icon: the time gone darkens it clockwise from the top, the time left runs round it in the line's colour. */
+  /** The clock over an icon: the time gone darkens it clockwise from the top, the time left runs round it in the line's colour. */
   private drawClock(row: Row, line: Line): void {
     const g = row.clock.clear();
     if (!line.timer) return;
@@ -287,31 +304,30 @@ export class PassiveHud {
     g.arc(c, c, c, gone, CLOCK_START + FULL_TURN).stroke({ color: line.color, alpha: CLOCK_RING_ALPHA, width: CLOCK_RING_WIDTH });
   }
 
-  /** Lays the lines out again (only when what they say changes). */
+  /** Lays the icons out again (only when what they show changes). */
   private layout(lines: Line[]): void {
     this.rows.forEach((row, i) => {
       const line = lines[i];
       row.root.visible = !!line;
       if (!line) return;
-      row.label.text = line.content;
-      row.label.fill = line.color;
       row.initials.text = initialsOf(line.about);
+      row.badge.text = line.badge ?? '';
+      // A passive recovering is dimmed until it is ready again.
+      row.icon.alpha = line.color === THEME.muted ? RECOVERING_ALPHA : 1;
       this.setIcon(row, iconOf(line.about));
-      row.root.hitArea = new Rectangle(0, 0, ICON + TEXT_GAP + row.label.textWidth, ICON);
     });
   }
 
-  /** The tooltip of what the line under the pointer is about, beside it. */
+  /** The tooltip of what the icon under the pointer is about, beside it, opening with how it stands now. */
   private updateTip(player: Player): void {
     const line = this.lines[this.hovered];
-    const topic = line ? topicOf(line.about, player) : null;
+    const topic = line ? topicOf(line, player) : null;
     if (!topic) {
       this.tip.hide();
       return;
     }
-    const row = this.rows[this.hovered].root;
-    const anchor = { x: row.x, y: row.y, w: ICON + TEXT_GAP + this.rows[this.hovered].label.textWidth, h: ICON };
-    this.tip.showAt(topic, anchor, { w: GAME_WIDTH, h: GAME_HEIGHT }, 'beside');
+    const root = this.rows[this.hovered].root;
+    this.tip.showAt(topic, { x: root.x, y: root.y, w: ICON, h: ICON }, { w: GAME_WIDTH, h: GAME_HEIGHT }, 'beside');
     this.tip.refresh();
   }
 
@@ -319,7 +335,7 @@ export class PassiveHud {
     const player = localPlayer();
     if (!player) return;
     const lines = linesOf(player);
-    const key = JSON.stringify(lines.map((line) => [line.content, line.color, iconOf(line.about), initialsOf(line.about)]));
+    const key = JSON.stringify(lines.map((line) => [line.content, line.color, iconOf(line.about), line.badge ?? '']));
     this.lines = lines;
     if (key !== this.shown) {
       this.shown = key;
@@ -354,12 +370,20 @@ function squareWedge(g: Graphics, c: number, from: number, to: number): Graphics
   return g.closePath();
 }
 
-/** What a line's tooltip tells: its feature's, spell's or feat's story. */
-function topicOf(about: About, player: Player): TipTopic | null {
+/** The story of what an icon is about: its feature's, spell's or feat's. */
+function storyOf(about: About, player: Player): TipTopic | null {
   if (!about) return null;
   const level = player.playerStats.level;
   if ('feature' in about) return featureTopic(about.feature, false, level);
   if ('feat' in about) return featTopic(about.feat, true);
   const spell = CATALOG[about.spell];
   return spell ? spellTopic(spell, spell.level, level) : null;
+}
+
+/** An icon's tooltip: how it stands now (its seconds left, the ward's strength…), then its story. */
+function topicOf(line: Line, player: Player): TipTopic {
+  const story = storyOf(line.about, player);
+  const now = { text: line.content, color: line.color };
+  if (!story) return { title: line.content, body: '' };
+  return { ...story, detail: [now, ...(story.detail ?? [])] };
 }

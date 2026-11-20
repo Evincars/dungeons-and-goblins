@@ -92,7 +92,6 @@ const facingOf = ({ x, y }) => (Math.abs(x) > Math.abs(y) ? (x > 0 ? 1 : 3) : (y
 
 function mobAt(level, type, tx, ty, heading = { x: 1, y: 0 }) {
   const mob = createMob(level, type, centre(tx), centre(ty));
-  mob.limp = 0;
   mob.aimVector = { ...heading };
   mob.facing = facingOf(heading);
   return mob;
@@ -5683,6 +5682,26 @@ test('Create Water leaves a puddle for good; thunder charges it, and then it sho
   assert.doesNotThrow(() => validateNetState(JSON.parse(JSON.stringify(captureWorld(false, 7)))), 'puddles travel to guests');
 });
 
+test('lightning charges water too, a bolt of it flying across a puddle; the aim guide shows where Minor Conjuration\'s water will land', async () => {
+  const { currentAim } = await load('systems/AimGuideSystem');
+  const { featureBinding } = await load('rules/ClassFeatures');
+  const level = arena(14, 6);
+  const conjurer = wizardOf('conjuration', 6);
+  conjurer.spellbook.bound ??= [];
+  conjurer.spellbook.bound[11] = { spell: featureBinding('minor_conjuration'), level: 0 };
+  conjurer.playerInput.spellSlot = 11;
+  conjurer.casting = { ticks: 0, dirX: 1, dirY: 0, released: true, level: 0, targetX: 0, targetY: 0 };
+  const aim = currentAim(conjurer);
+  assert.ok(aim && aim.area && aim.radius > 0 && aim.landsWhere === 'target', 'a circle where the water will land');
+  world.removeComponent(conjurer, 'casting');
+  usedFeature(conjurer, 'minor_conjuration', 11, level, { x: conjurer.position.x + 96, y: conjurer.position.y });
+  const [puddle] = world.with('surface');
+  conjurer.aimVector = { x: 1, y: 0 };
+  conjurer.casting = { ticks: 0, dirX: 1, dirY: 0, released: false, spell: 'shocking_grasp', level: 0, targetX: conjurer.position.x + 300, targetY: conjurer.position.y };
+  for (let t = 0; t < 60; t++) updateSpells(level);
+  assert.equal(puddle.surface.kind, 'shock', 'the lightning bolt charged the water it flew over');
+});
+
 test('Bladesong spends a charge and gathers Bladesong Charges for its Climax, which strikes and heals and ends the song', () => {
   const level = arena(14, 6);
   const singer = wizardOf('bladesinging', 3);
@@ -6622,6 +6641,26 @@ test('particle effects: the NixieFX bundle holds every effect; fires throw spark
   assert.ok(validVfxShot(sent[0]), 'the guest accepts it');
   assert.equal(takeQueuedVfx([]).length, 1, 'and the host plays it too');
   assert.ok(!validVfxShot({ ...sent[0], effect: 'nope' }) && !validVfxShot({ ...sent[0], dirX: 3 }), 'an unknown effect or a facing that is no direction is refused');
+  world.clear();
+});
+
+test('the wizard\'s cantrips and 1st-level spells play particles: a bolt bursts in its own when it strikes, and every effect named is exported', async () => {
+  const { SPELL_VFX } = await load('render/SpellVfx');
+  const { VFX_EFFECTS } = await load('render/Vfx');
+  const { vfxEvents, takeQueuedVfx } = await load('render/VfxPlayer');
+  for (const [spell, looks] of Object.entries(SPELL_VFX)) {
+    for (const id of Object.values(looks)) assert.ok(VFX_EFFECTS.includes(id), `${spell}: ${id} is an effect of the bundle`);
+  }
+  world.clear();
+  const sent = [];
+  vfxEvents.onPlay = (shot) => sent.push(shot.effect);
+  takeQueuedVfx([]);
+  const wizard = playerAt(3, 3, 'wizard');
+  wizard.aimVector = { x: 1, y: 0 };
+  wizard.casting = { ticks: 0, dirX: 1, dirY: 0, released: false, spell: 'fire_bolt', level: 0, targetX: wizard.position.x + 300, targetY: wizard.position.y };
+  for (let t = 0; t < 200; t++) updateSpells(arena(30, 8));
+  vfxEvents.onPlay = null;
+  assert.ok(sent.includes('impact-fire'), 'the fire bolt burst in flame where it ended');
   world.clear();
 });
 

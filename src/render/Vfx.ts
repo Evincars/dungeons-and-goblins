@@ -17,7 +17,12 @@ import { assetUrl } from '../assets/assetUrl';
  */
 
 /** The effects the game plays: the exported bundle must hold every one of them. */
-export const VFX_EFFECTS = ['torch-sparks', 'campfire-embers', 'burning-hands'] as const;
+export const VFX_EFFECTS = [
+  'torch-sparks', 'campfire-embers', 'burning-hands',
+  'trail-fire', 'trail-frost', 'trail-necrotic', 'trail-lightning', 'trail-acid', 'trail-poison', 'trail-force',
+  'impact-fire', 'impact-frost', 'impact-necrotic', 'impact-lightning', 'impact-acid', 'impact-poison', 'impact-force',
+  'acid-splash', 'poison-spray', 'ice-knife', 'thunderwave', 'blade-ward', 'false-life', 'mage-armor', 'shield',
+] as const;
 export type VfxEffectId = (typeof VFX_EFFECTS)[number];
 
 export function isVfxEffectId(value: unknown): value is VfxEffectId {
@@ -81,4 +86,12 @@ export function vfxRenderer(): PixiVfxRenderer {
     fallbackTextures: createPixiVfxProceduralTextures(),
   });
   return renderer;
+}
+
+/** A spot in the world (px, y down) as an effect position (units, y up), written into `out`: for an effect left at its root's origin that moves (a trail). */
+export function vfxPoint(x: number, y: number, out: [number, number, number]): [number, number, number] {
+  out[0] = x / VFX_PIXELS_PER_UNIT;
+  out[1] = -y / VFX_PIXELS_PER_UNIT;
+  out[2] = 0;
+  return out;
 }

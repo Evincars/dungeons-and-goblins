@@ -734,7 +734,6 @@
   "hud.slot.detail": "{dice} {type}, recovers in {seconds}s",
   "hud.slot.heal_detail": "Heals {dice} + {ability}, recovers in {seconds}s",
   "hud.slot.locked": "Learnt at level {level}",
-  "hud.dialog.placeholder": "test text",
   "spell.fire_bolt.name": "Fire Bolt",
   "spell.fire_bolt.description": "A mote of fire hurled at a foe: a spell attack for 1d10 fire damage.",
   "spell.ray_of_frost.name": "Ray of Frost",

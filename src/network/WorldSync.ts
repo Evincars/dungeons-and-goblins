@@ -145,7 +145,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   party: { shortRestsLeft: 'number', vote: 'object?', notice: 'object?' },
 };
 
-/** Components that are plain values. */
+/** Components that are plain values (`limp` is no longer given, but saves made while it was still load). */
 const VALUES: Readonly<Record<string, FieldType>> = {
   blocking: 'boolean', physicsSlide: 'boolean', team: 'number', hurtTime: 'number', attackTime: 'number', attackCooldown: 'number', freezeTime: 'number',
   bounceWallTime: 'number', deathPoints: 'number',

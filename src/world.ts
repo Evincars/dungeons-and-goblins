@@ -325,7 +325,6 @@ export type Entity = {
   friction?: number;
   aimVector?: { x: number; y: number };
   walkTime?: number;
-  limp?: number;
   bump?: { x: number; y: number };
   chasing?: boolean;
 

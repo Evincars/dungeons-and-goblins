@@ -6,7 +6,8 @@ export const STATE_PRIORITY: readonly CharacterState[] = [
   'death', 'hurt', 'cast', 'runAttack', 'walkAttack', 'attack', 'run', 'walk', 'idle',
 ];
 
-const MOVING_SPEED = 0.15;
+/** A body going faster than this (px a tick) is walking, the slowest enemy's steady stride included. */
+const MOVING_SPEED = 0.03;
 /** Ticks a mob rests after a swing before it can start the next, so the attack clip can restart. */
 export const ATTACK_RECOVERY = 10;
 

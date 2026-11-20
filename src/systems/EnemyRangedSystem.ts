@@ -21,6 +21,7 @@ import { MOB_CRIES, SPELL_SOUNDS } from '../audio/SoundBank';
 import { heroSavingThrow } from './FeatureSystem';
 import { hurtPlayer } from './CombatSystem';
 import { impactOf, playBurstArt } from './SpellSystem';
+import { chargesWater, electrify } from './LastingSpells';
 
 /**
  * Enemies that fight from afar: goblins with a bow or crossbow, and the spellcasters (the red ghost a sorcerer, the evil
@@ -195,6 +196,7 @@ function bestSpell(mob: Shooter, caster: Caster, hero: Player): { index: number;
 /** A burst on the heroes: each in it saves against the caster's DC, taking half on a success (none, from a cantrip). */
 function burstOnHeroes(mob: Shooter, def: SpellDef, centre: Point, dc: number): void {
   playBurstArt(mob, def, centre);
+  if (chargesWater(def.damageType)) electrify(centre.x, centre.y, def.radius);
   for (const hero of q.players) {
     if (!isActivePlayer(hero) || !inArea(def, mob.position, centre, hero.position.x, hero.position.y)) continue;
     const saved = heroSavingThrow(hero, def.save ?? 'dexterity', dc, rollDie, mob);

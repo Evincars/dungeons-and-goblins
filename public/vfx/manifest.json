@@ -2,8 +2,174 @@
   "kind": "vfx-manifest",
   "version": 1,
   "generatedAt": "2026-11-19T22:22:01.852Z",
-  "sourceHash": "fnv1a32:10390f94",
+  "sourceHash": "fnv1a32:6a6402fb",
   "effects": [
+    {
+      "id": "acid-splash",
+      "name": "Acid Splash",
+      "path": "effects/acid-splash.json",
+      "sourceEffectFile": "acid-splash.json",
+      "sourceEffectId": "acid-splash",
+      "sourceHash": "fnv1a32:e31b2d7a",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "blade-ward",
+      "name": "Blade Ward",
+      "path": "effects/blade-ward.json",
+      "sourceEffectFile": "blade-ward.json",
+      "sourceEffectId": "blade-ward",
+      "sourceHash": "fnv1a32:91ef79d7",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
     {
       "id": "burning-hands",
       "name": "Burning Hands",
@@ -220,6 +386,1176 @@
       }
     },
     {
+      "id": "false-life",
+      "name": "False Life",
+      "path": "effects/false-life.json",
+      "sourceEffectFile": "false-life.json",
+      "sourceEffectId": "false-life",
+      "sourceHash": "fnv1a32:4f436bc0",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "ice-knife",
+      "name": "Ice Knife",
+      "path": "effects/ice-knife.json",
+      "sourceEffectFile": "ice-knife.json",
+      "sourceEffectId": "ice-knife",
+      "sourceHash": "fnv1a32:91c8c233",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "impact-acid",
+      "name": "Impact acid",
+      "path": "effects/impact-acid.json",
+      "sourceEffectFile": "impact-acid.json",
+      "sourceEffectId": "impact-acid",
+      "sourceHash": "fnv1a32:21eb7c2a",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "impact-fire",
+      "name": "Impact fire",
+      "path": "effects/impact-fire.json",
+      "sourceEffectFile": "impact-fire.json",
+      "sourceEffectId": "impact-fire",
+      "sourceHash": "fnv1a32:b92c7a1b",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "impact-force",
+      "name": "Impact force",
+      "path": "effects/impact-force.json",
+      "sourceEffectFile": "impact-force.json",
+      "sourceEffectId": "impact-force",
+      "sourceHash": "fnv1a32:c625624d",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "impact-frost",
+      "name": "Impact frost",
+      "path": "effects/impact-frost.json",
+      "sourceEffectFile": "impact-frost.json",
+      "sourceEffectId": "impact-frost",
+      "sourceHash": "fnv1a32:37d588af",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "impact-lightning",
+      "name": "Impact lightning",
+      "path": "effects/impact-lightning.json",
+      "sourceEffectFile": "impact-lightning.json",
+      "sourceEffectId": "impact-lightning",
+      "sourceHash": "fnv1a32:d433694b",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "impact-necrotic",
+      "name": "Impact necrotic",
+      "path": "effects/impact-necrotic.json",
+      "sourceEffectFile": "impact-necrotic.json",
+      "sourceEffectId": "impact-necrotic",
+      "sourceHash": "fnv1a32:e42b995b",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "impact-poison",
+      "name": "Impact poison",
+      "path": "effects/impact-poison.json",
+      "sourceEffectFile": "impact-poison.json",
+      "sourceEffectId": "impact-poison",
+      "sourceHash": "fnv1a32:6270bdbd",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "mage-armor",
+      "name": "Mage Armour",
+      "path": "effects/mage-armor.json",
+      "sourceEffectFile": "mage-armor.json",
+      "sourceEffectId": "mage-armor",
+      "sourceHash": "fnv1a32:794eb1b6",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "poison-spray",
+      "name": "Poison Spray",
+      "path": "effects/poison-spray.json",
+      "sourceEffectFile": "poison-spray.json",
+      "sourceEffectId": "poison-spray",
+      "sourceHash": "fnv1a32:50bb3b1b",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "shield",
+      "name": "Shield",
+      "path": "effects/shield.json",
+      "sourceEffectFile": "shield.json",
+      "sourceEffectId": "shield",
+      "sourceHash": "fnv1a32:f0a700d0",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "thunderwave",
+      "name": "Thunderwave",
+      "path": "effects/thunderwave.json",
+      "sourceEffectFile": "thunderwave.json",
+      "sourceEffectId": "thunderwave",
+      "sourceHash": "fnv1a32:d1fa9674",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.1.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.1.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
       "id": "torch-sparks",
       "name": "Torch Sparks",
       "path": "effects/torch-sparks.json",
@@ -337,6 +1673,496 @@
         ],
         "blockers": []
       }
+    },
+    {
+      "id": "trail-acid",
+      "name": "Trail acid",
+      "path": "effects/trail-acid.json",
+      "sourceEffectFile": "trail-acid.json",
+      "sourceEffectId": "trail-acid",
+      "sourceHash": "fnv1a32:973474d4",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "trail-fire",
+      "name": "Trail fire",
+      "path": "effects/trail-fire.json",
+      "sourceEffectFile": "trail-fire.json",
+      "sourceEffectId": "trail-fire",
+      "sourceHash": "fnv1a32:2f1fcbdf",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "trail-force",
+      "name": "Trail force",
+      "path": "effects/trail-force.json",
+      "sourceEffectFile": "trail-force.json",
+      "sourceEffectId": "trail-force",
+      "sourceHash": "fnv1a32:f23a4f6e",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "trail-frost",
+      "name": "Trail frost",
+      "path": "effects/trail-frost.json",
+      "sourceEffectFile": "trail-frost.json",
+      "sourceEffectId": "trail-frost",
+      "sourceHash": "fnv1a32:b000e242",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "trail-lightning",
+      "name": "Trail lightning",
+      "path": "effects/trail-lightning.json",
+      "sourceEffectFile": "trail-lightning.json",
+      "sourceEffectId": "trail-lightning",
+      "sourceHash": "fnv1a32:4e34d3a9",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "trail-necrotic",
+      "name": "Trail necrotic",
+      "path": "effects/trail-necrotic.json",
+      "sourceEffectFile": "trail-necrotic.json",
+      "sourceEffectId": "trail-necrotic",
+      "sourceHash": "fnv1a32:ddf820a1",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
+    },
+    {
+      "id": "trail-poison",
+      "name": "Trail poison",
+      "path": "effects/trail-poison.json",
+      "sourceEffectFile": "trail-poison.json",
+      "sourceEffectId": "trail-poison",
+      "sourceHash": "fnv1a32:bcf62842",
+      "support": {
+        "status": "supported",
+        "overall": "supported",
+        "targetProfile": "pixi-ui-2d",
+        "preferredBackend": "pixi2d",
+        "portableSubset": true,
+        "backends": {
+          "pixi2d": {
+            "backend": "pixi2d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": [],
+            "notes": [
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthTest",
+                "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              },
+              {
+                "code": "unsupported-module",
+                "path": "emitters.0.render.depthInk",
+                "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+              }
+            ]
+          },
+          "three3d": {
+            "backend": "three3d",
+            "status": "supported",
+            "warnings": [],
+            "blockers": []
+          }
+        },
+        "unsupportedModules": [],
+        "partialModules": [],
+        "warnings": [],
+        "notes": [
+          "[pixi2d] depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+          "[pixi2d] depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering."
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "infos": [
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthTest",
+            "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          },
+          {
+            "severity": "info",
+            "code": "unsupported-module",
+            "path": "emitters.0.render.depthInk",
+            "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+            "backend": "pixi2d"
+          }
+        ],
+        "blockers": []
+      }
     }
   ],
   "assets": [],
@@ -403,6 +2229,20 @@
       {
         "severity": "info",
         "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
         "path": "emitters.1.render.depthTest",
         "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
         "backend": "pixi2d"
@@ -439,6 +2279,454 @@
         "severity": "info",
         "code": "unsupported-module",
         "path": "emitters.1.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.1.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
+        "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthTest",
+        "message": "depthTest exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
+        "backend": "pixi2d"
+      },
+      {
+        "severity": "info",
+        "code": "unsupported-module",
+        "path": "emitters.0.render.depthInk",
         "message": "depthInk exports as deterministic Pixi 2.5D draw-order/ink semantics, not GPU depth-buffer rendering.",
         "backend": "pixi2d"
       }

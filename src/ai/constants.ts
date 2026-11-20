@@ -54,6 +54,12 @@ export const MELEE_RANGE = 2.5 * TILE_WIDTH;
 export const SURROUND_RANGE = 4 * TILE_WIDTH;
 /** An enemy this close to its place in the ring (pixels) has taken it, and presses straight in at the target. */
 export const RING_ARRIVED = 4;
+/**
+ * An enemy whose place in the ring lies further round the target than this (radians) walks round to it, a step of this
+ * angle at a time, on a ring this much wider than reach, instead of pressing straight through the target's body.
+ */
+export const RING_WALK_ROUND = Math.PI / 4;
+export const RING_WALK_WIDEN = 1.8;
 /** An ally below this share of its health, or fighting alone, gets help. */
 export const SUPPORT_HEALTH = 0.6;
 /** Supporters head for allies no farther than this. */

@@ -295,9 +295,12 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   styles), and where a wall juts out past another's face it ends in its edge strip all the way up its face
   (`shallowerFace`) and on up to the wall's north edge (`seamW`/`seamE`). Wall torches and campfires throw sparks from their flames, now and then an ember dropping to the
   floor (`sparks`, `systems/VfxSystem.ts`: the NixieFX effects `vfx/torch-sparks.json` and `campfire-embers.json`, one unit 16 px
-  with y up, played at the root's origin, moved on a tick at a time). One-shot effects (Burning Hands' flames,
-  `vfx/burning-hands.json`) are asked for with `playVfx` (`render/VfxPlayer.ts`): the co-op host sends each guest only a short
-  `vfx` signal (which effect, where, which way) and every screen renders it itself. Campfires stand on a ring of cobbles
+  with y up, played at the root's origin, moved on a tick at a time). The wizard's cantrips and 1st-level spells
+  play particles (`render/SpellVfx.ts`, `SPELL_VFX`; the effects are made by the NixieFX project in `vfx/`): a trail behind a
+  flying spell (every screen follows the projectiles it has, guests' from the host's state) and an impact where it ends, a
+  burst where an area spell goes off (Burning Hands' flames from the hands), an aura round the caster of a buff. One-shots are
+  asked for with `playVfx` (`render/VfxPlayer.ts`): the co-op host sends each guest only a short `vfx` signal (which effect,
+  where, which way) and every screen renders it itself. A spell without particles plays its library effect. Campfires stand on a ring of cobbles
   (`campfire_floor`, built at load in `assets/AssetLoader.ts`). Coffins and sarcophagi are searched like
   other stashes and may hold gear (`TOMB_GEAR_CHANCE`, `entities/LootFactory.ts`). A spike trap in a
   corridor (`spikeTrap`, `systems/TrapSystem.ts`) bites the first hero to step on it, told over their head and in the
@@ -315,7 +318,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `ui/CombatLogPanel.ts`; `recordEvent` also writes rests, healing, kills, levels and level-panel choices, `LOG_EVENTS` in `world.ts`), and spends a won initiative's first strike as advantage (`systems/InitiativeSystem.ts`).
   Spells (`Spells.ts`, from `src/data/spells.json`: bolt, missiles, burst with a save, heal; buff, zone and water last, in
   `systems/LastingSpells.ts`: buffs on the caster (`buffs`: Blade Ward, Shield, Mage Armour, Stoneskin; False Life's temporary
-  hit points), zones that strike every 6 s (`zone`, `q.zones`), puddles a thunder spell charges (`surface`, `q.surfaces`),
+  hit points), zones that strike every 6 s (`zone`, `q.zones`), puddles a thunder or lightning spell charges (a lightning bolt flying over them too) (`surface`, `q.surfaces`),
   and one spell held by `concentration` that a failed Constitution save on being hurt ends; what lasts until a long rest also
   ends on a fall, `endUntilRest`) have no slots but a
   recovery each (`spellbook.recovery`), sit on the quick bar (two rows of ten: Q R T 1–5 X C cast the first row's squares — held, the key shows the spell's aim guide, let go, it casts —
@@ -330,8 +333,10 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   tooltip, `sheet.defences`). Tooltips with
   more to tell show it while Alt is held (`ui/InfoTooltip.ts`). Class features (`rules/ClassFeatures.ts`) fill the Skills tab above the cantrips: a worked passive is on from its
   level and a click switches it off and on (`featuresOff`, the `toggle_feature` command; `featureOn` is what effects ask, and the
-  HUD's top left lists the ones on, `ui/PassiveHud.ts`: a line each with its icon, a clock over the icon emptying while
-  it recovers or lasts, its tooltip under the pointer); an active (Second Wind, Action Surge…) is bound to a quick-bar square as
+  HUD's top left shows the ones on, `ui/PassiveHud.ts`: icons only, stacked down a column, what is the hero's for good
+  (passives, Passive Feats, the ward, a Battle Master's dice) at the top and what comes and goes (boosts, buffs, concentration)
+  under them; a clock over an icon empties while it recovers or lasts, a count sits in its corner, and its tooltip under the
+  pointer says how it stands now); an active (Second Wind, Action Surge…) is bound to a quick-bar square as
   `feature:<id>` and used with the cast key (`systems/FeatureSystem.ts`; an active with several uses recovers in its share, `featureCooldown`).
   Every blow of a chain plays at the hero's own swing pace, one after another (`blowTiming`; the attack clip follows
   `swordSwing.tempo`), and the next click waits for the attack period. Action Surge doubles the attacks of every swing and
@@ -405,7 +410,9 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   stands still until struck, then plays one of its three hit rows (a heavy blow spins it, `systems/DummySystem.ts`);
   Burning Hands is a cone of flame particles from the caster's hands towards the aim (`vfx/burning-hands.json`, played by
   `playBurstArt` in `systems/SpellSystem.ts`). The combat log lies under the HUD, so tooltips and dialogs open over it.
-- An enemy knocked back hard by a blow may be driven over a pit's or chasm's edge, and falls (`MovementSystem.ts`
+- Enemies walk on steadily (no limp: `MOB_CONFIGS` speeds are their steady pace), and one whose place in the ring round its
+  target lies further round walks round to it on a wider ring (`RING_WALK_ROUND`, `ai/execution/pursuit.ts`) rather than
+  pressing into the target's body. An enemy knocked back hard by a blow may be driven over a pit's or chasm's edge, and falls (`MovementSystem.ts`
   `KNOCKED_OVER_SPEED`); walking, enemies keep out of holes. A spike trap springs under feet two pixels inside its tile.
 - `src/core/` — cross-cutting: `errors/`, `log/`, `geometry.ts`, `guards.ts`, `debugHooks.ts`, `compression.ts` (gzip with a size limit).
 - `src/game/` — game loop, `SceneManager`, persisted settings, player actions (item gifts too), the party's votes
@@ -428,7 +435,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `saved` line) and the level starts from the save. After the first level each level is a dungeon of any theme at random
   (`Run.ts` `nextTheme`). `src/scenes/` — title, settings,
   key bindings, character select, co-op lobby, the load screen and the level itself. `src/ui/` — buttons, HUD (health bar, round
-  buttons, `HudDialog`, `MinimapView`, `QuickBar`, `RestMenu`, `PartyBanner`, `LootRollPanel`), `PopupMenu`, `HeroPicker`,
+  buttons — the sword opens and shuts the inventory as Tab does —, `HudDialog`, `MinimapView`, `QuickBar`, `RestMenu`, `PartyBanner`, `LootRollPanel`), `PopupMenu`, `HeroPicker`,
   `ConsoleView`, combat log, the inventory (`InventoryOverlay`: the bag filtered, searched as typed — the letters of a name in order,
   `core/fuzzy.ts`, matched ones lit in the tooltip — and sorted by price, weight or training, `game/BagView.ts`, without moving a
   thing; a right-click menu to equip — a weapon in the primary hand or the off-hand — take off, drop, compare or send; a click

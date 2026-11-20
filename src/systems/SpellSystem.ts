@@ -15,7 +15,7 @@ import { heroClass, spellLevelFor } from '../rules/Classes';
 import { bindingFeatureId, featureCooldown, featureOn, featureOfClass, hasClassFeature } from '../rules/ClassFeatures';
 import { switchFeat, usedFeature } from './FeatureSystem';
 import { foreseeHit, foreseenSave, grimHarvest, savedDamage, sculptAt, spellCast, spellDamageBonus, splitEnchantment } from './SchoolSystem';
-import { castBuff, castWater, castZone, electrify } from './LastingSpells';
+import { castBuff, castWater, castZone, chargesWater, electrify } from './LastingSpells';
 import { FEATS, bindingFeatId } from '../rules/Feats';
 import { passiveFeats } from '../rules/Build';
 import { useFeat } from './FeatActions';
@@ -34,7 +34,7 @@ import { AIM_HEIGHT, createSpellBolt } from '../entities/ProjectileFactory';
 import { playEffect } from '../assets/Effects';
 import { areaBounds, areaCentre, coneLength, inArea } from '../rules/SpellArea';
 import { playVfx } from '../render/VfxPlayer';
-import type { VfxEffectId } from '../render/Vfx';
+import { SPELL_VFX } from '../render/SpellVfx';
 import { SPELL_STATS } from '../entities/WeaponStats';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 import { sound } from '../audio/SoundPlayer';
@@ -68,8 +68,6 @@ const victims: Entity[] = [];
 const aimed = { x: 0, y: 0 };
 const facing = { x: 0, y: 1 };
 const bounds = { x: 0, y: 0, r: 0 };
-/** The cone spells played as particles (vfx/), by spell; the rest play their library effect. */
-const CONE_VFX: Partial<Record<SpellDef['id'], VfxEffectId>> = { burning_hands: 'burning-hands' };
 /** A cone leaves the caster's hands this far above their feet. */
 const CONE_HANDS = 12;
 
@@ -81,7 +79,10 @@ function burst(bolt: Bolt, struck: boolean): void {
   if (arrow && struck) sound.playSound('arrow_hit', p.x, p.y);
   if (spell) sound.playSound(SPELL_IMPACTS[SPELLS[spell].damageType], p.x, p.y);
   if (art) spawnFx(p.x, p.y, art.sheet, art.count, art.count * art.frameTime, { first: art.first, scale: art.scale, yOffset: AIM_HEIGHT });
-  if (impact) playEffect(impact.shape, impact.colour, p.x, p.y, AIM_HEIGHT, impact.scale);
+  // A spell with particles of its own strikes in them (render/SpellVfx.ts), every other in its library effect.
+  const particles = spell ? SPELL_VFX[spell]?.impact : undefined;
+  if (particles) playVfx(particles, p.x, p.y, AIM_HEIGHT);
+  else if (impact) playEffect(impact.shape, impact.colour, p.x, p.y, AIM_HEIGHT, impact.scale);
   // An evoker's spell leaves its Sculpt Spells bubble where it landed.
   if (spell && bolt.projectile.owner !== undefined) sculptAt(world.entity(bolt.projectile.owner), spell, p.x, p.y, SPELLS[spell].radius);
   world.addComponent(bolt, 'removed', true);
@@ -274,16 +275,21 @@ function burstHits(caster: Player, def: SpellDef, foe: Entity, dc: number): void
 }
 
 /**
- * A burst's art: a cone's (Burning Hands) a particle effect from the caster's hands towards its tip, played on every screen
- * (render/VfxPlayer.ts); any other's the library effect where it goes off (a cone without particles, at its middle).
+ * A burst's art: its particles where possible (render/SpellVfx.ts; played on every screen, render/VfxPlayer.ts) — a cone's
+ * from the caster's hands towards its tip, any other's where it goes off — else its library effect there (a cone's at its
+ * middle).
  */
 export function playBurstArt(caster: { position: { x: number; y: number } }, def: SpellDef, centre: { x: number; y: number }): void {
   const { shape, colour, scale } = def.effect;
   const { x, y } = caster.position;
-  const vfx = CONE_VFX[def.id];
-  if (def.area === 'cone' && vfx) {
+  const vfx = SPELL_VFX[def.id]?.burst;
+  if (vfx && def.area === 'cone') {
     const length = coneLength(def);
     playVfx(vfx, x, y, CONE_HANDS, (centre.x - x) / length, (centre.y - y) / length);
+    return;
+  }
+  if (vfx) {
+    playVfx(vfx, centre.x, centre.y);
     return;
   }
   const at = def.area === 'cone' ? { x: (x + centre.x) / 2, y: (y + centre.y) / 2 } : centre;
@@ -307,8 +313,8 @@ function castBurst(caster: Player, def: SpellDef, targetX: number, targetY: numb
     if (!inArea(def, caster.position, centre, foe.position.x, foe.position.y, Math.max(foe.radius.x, foe.radius.y))) continue;
     burstHits(caster, def, foe, dc);
   }
-  // Thunder charges the water it reaches with lightning.
-  if (def.damageType === 'thunder') electrify(centre.x, centre.y, def.radius);
+  // Thunder and lightning charge the water they reach.
+  if (chargesWater(def.damageType)) electrify(centre.x, centre.y, def.radius);
   sculptAt(caster, def.id, centre.x, centre.y, def.radius);
 }
 
@@ -459,6 +465,9 @@ function flyBolt(level: Level, bolt: Bolt): void {
   const pos = bolt.position;
   pos.x += bolt.velocity.x;
   pos.y += bolt.velocity.y;
+  // A lightning bolt (or a thunderous one) charges the water it flies over.
+  const spell = bolt.projectile.spell;
+  if (spell && chargesWater(SPELLS[spell].damageType)) electrify(pos.x, pos.y, 0);
   if (--bolt.projectile.life <= 0 || level.blocksPoint(pos.x, pos.y)) {
     burst(bolt, false);
     return;

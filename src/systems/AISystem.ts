@@ -5,7 +5,6 @@ import { formSquads, droppedThisTick } from '../ai/decision/squads';
 import { assignRoles } from '../ai/decision/tactics';
 import { surround } from '../ai/decision/surround';
 import { agentOf } from '../ai/decision/states';
-import { limping } from '../ai/execution/locomotion';
 import { cheats } from '../game/Cheats';
 import { followLure } from './DecoySystem';
 
@@ -17,10 +16,11 @@ function holdStill(): void {
   }
 }
 
-/** Whether the enemy gets to act this tick: alive, not stunned by a hit, and not on the lame beat of its limp. */
+/** Whether the enemy gets to act this tick: alive and not stunned by a hit. It walks on steadily: its stride counts up. */
 function canAct(mob: Mob): boolean {
   if (mob.removed || mob.health.current <= 0 || (mob.freezeTime ?? 0) > 0) return false;
-  return !limping(mob);
+  mob.walkTime = (mob.walkTime ?? 0) + 1;
+  return true;
 }
 
 /**

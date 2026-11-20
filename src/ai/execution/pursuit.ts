@@ -4,7 +4,7 @@ import { isMob, world } from '../../world';
 import type { Mob, Player, Trail } from '../../world';
 import {
   ASSIST_RADIUS, FLANK_DETOUR_SLACK, FLANK_DISTANCE, FLANK_MAX_DETOUR, FLANK_SNAP_TILES, LOOKAHEAD_TILES,
-  REPATH_TICKS, RING_ARRIVED, SENSE_TICKS, SPLIT_DETOUR_SLACK, SPLIT_MAX_DETOUR, STRIKE_RANGE, SURROUND_RANGE, TRAIL_LOOKAHEAD,
+  REPATH_TICKS, RING_ARRIVED, RING_WALK_ROUND, RING_WALK_WIDEN, SENSE_TICKS, SPLIT_DETOUR_SLACK, SPLIT_MAX_DETOUR, STRIKE_RANGE, SURROUND_RANGE, TRAIL_LOOKAHEAD,
 } from '../constants';
 import { clearLine, mobRoute, nearestStandable, standable } from '../perception/navigation';
 import { crumbAfter, crumbCount, crumbTick, crumbX, crumbY } from '../perception/trail';
@@ -31,6 +31,8 @@ type Point = { x: number; y: number };
 const flankTarget: Point = { x: 0, y: 0 };
 /** An enemy's place in the ring round its target, reused every tick. */
 const ringSpot: Point = { x: 0, y: 0 };
+/** Whether the ring spot just worked out is a step round the target (on the wider ring), not the enemy's own place. */
+let walkingRound = false;
 
 function dist(a: Point, b: Point): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
@@ -168,9 +170,33 @@ function placeInRing(level: Level, mob: Mob, target: Player, x: number, y: numbe
   const angle = ringAngle(mob, tick);
   if (angle === undefined || Math.hypot(mob.position.x - x, mob.position.y - y) > SURROUND_RANGE) return false;
   const reach = (target.radius?.x ?? 0) + mob.radius.x;
-  ringSpot.x = x + Math.cos(angle) * reach;
-  ringSpot.y = y + Math.sin(angle) * reach;
+  const heading = roundTo(mob, x, y, angle);
+  setRingSpot(x, y, heading, walkingRound ? reach * RING_WALK_WIDEN : reach);
+  if (canTake(level, mob)) return true;
+  // The way round is blocked (a wall at the target's side): its own place, straight, if that can be reached.
+  setRingSpot(x, y, angle, reach);
+  return canTake(level, mob);
+}
+
+function setRingSpot(x: number, y: number, angle: number, radius: number): void {
+  ringSpot.x = x + Math.cos(angle) * radius;
+  ringSpot.y = y + Math.sin(angle) * radius;
+}
+
+/** Whether the ring spot is ground the enemy can stand on and walk straight to. */
+function canTake(level: Level, mob: Mob): boolean {
   return standable(level, level.tileIndexAt(ringSpot.x, ringSpot.y)) && clearLine(level, mob.position.x, mob.position.y, ringSpot.x, ringSpot.y);
+}
+
+/**
+ * The angle round the target (at x, y) to head for now: its place in the ring when that lies near the side it stands on,
+ * else a step round towards it (on a wider ring, `walkingRound`), so it walks round the target rather than into its body.
+ */
+function roundTo(mob: Mob, x: number, y: number, angle: number): number {
+  const here = Math.atan2(mob.position.y - y, mob.position.x - x);
+  const turn = Math.atan2(Math.sin(angle - here), Math.cos(angle - here));
+  walkingRound = Math.abs(turn) > RING_WALK_ROUND;
+  return walkingRound ? here + Math.sign(turn) * RING_WALK_ROUND : angle;
 }
 
 /**

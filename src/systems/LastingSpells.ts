@@ -1,3 +1,6 @@
+import type { DamageType } from '../rules/DamageTypes';
+import { SPELL_VFX } from '../render/SpellVfx';
+import { playVfx } from '../render/VfxPlayer';
 import { world, q, isActivePlayer, isMob, isPlayer, isTarget, PUDDLE_FRAMES } from '../world';
 import type { Entity, Player } from '../world';
 import { text } from '../core/texts';
@@ -26,7 +29,7 @@ import { recordSpell } from './CombatLogSystem';
 /**
  * Spells that last after they are cast: buffs on the caster (Blade Ward, Shield, Mage Armour, Stoneskin; False Life's
  * temporary hit points), zones that strike whoever stands in them every round (Cloud of Daggers, Cloudkill, Spirit
- * Guardians…), and puddles of water (Create Water) that a thunder spell charges with lightning. A spell held by
+ * Guardians…), and puddles of water (Create Water) that a thunder or lightning spell charges with lightning. A spell held by
  * concentration ends when its caster casts another such spell or fails a Constitution save on being hurt (an evoker's
  * Focused Conjuration keeps a Conjuration spell whatever the damage).
  */
@@ -64,6 +67,9 @@ export function buffsOf(hero: Player): Buffs {
   return buffs;
 }
 
+/** A buff's particles rise round the caster's body from this far above their feet. */
+const BODY_MIDDLE = 16;
+
 /**
  * A buff spell takes hold on its caster (one held by concentration ends the last one they held). Mage Armour is switched:
  * cast while it is on, it ends instead. Returns whether the spell took hold (false: it was switched off).
@@ -75,7 +81,10 @@ export function castBuff(caster: Player, def: SpellDef): boolean {
   }
   const id = world.id(caster);
   if (id !== undefined) playAura(BUFF_AURA, id, caster.position.x, caster.position.y);
-  playEffect(def.effect.shape, def.effect.colour, caster.position.x, caster.position.y, AIM_HEIGHT, def.effect.scale);
+  // Its particles round the body where it has them (render/SpellVfx.ts), else its library effect.
+  const aura = SPELL_VFX[def.id]?.aura;
+  if (aura) playVfx(aura, caster.position.x, caster.position.y, BODY_MIDDLE);
+  else playEffect(def.effect.shape, def.effect.colour, caster.position.x, caster.position.y, AIM_HEIGHT, def.effect.scale);
   if (def.concentration) concentrate(caster, def.id, -1);
   const buffs = buffsOf(caster);
   if (def.buff === 'blade_ward') buffs.bladeWard = def.durationTicks;
@@ -233,7 +242,18 @@ export function createPuddle(owner: Player, x: number, y: number, radius: number
 
 type Puddle = (typeof q.surfaces)['entities'][number];
 
-/** A thunder spell went off over this circle: every puddle it reaches is charged with lightning, for good. */
+/** The damage that charges water: thunder and lightning. */
+const WATER_CHARGERS: ReadonlySet<DamageType> = new Set<DamageType>(['thunder', 'lightning']);
+
+/** Whether a spell of this damage type charges the water it reaches (and the water then conducts it). */
+export function chargesWater(type: DamageType): boolean {
+  return WATER_CHARGERS.has(type);
+}
+
+/**
+ * A thunder or lightning spell went off over this circle (a bolt passing over water, a circle of 0): every puddle it reaches
+ * is charged, for good — it shocks everyone standing in it at once and every round after.
+ */
 export function electrify(x: number, y: number, radius: number): void {
   for (const puddle of q.surfaces) {
     if (puddle.surface.kind === 'shock' || Math.hypot(puddle.position.x - x, puddle.position.y - y) > radius + puddle.surface.radius) continue;

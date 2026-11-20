@@ -10,11 +10,14 @@ import { holdsBow } from './ArrowSystem';
 import { SPELLS, isSpellId } from '../rules/Spells';
 import type { SpellDef } from '../rules/Spells';
 import { castDef, quickBinding } from '../rules/Spellbook';
+import type { QuickBinding } from '../rules/Spellbook';
 import { weaponRule } from '../rules/Equipment';
 import { weaponInHand } from '../rules/CharacterSheet';
 import { feetToPx, pxToFeet } from '../rules/Scale';
 import { areaBounds, areaCentre, coneCorners, inArea } from '../rules/SpellArea';
-import type { Point } from '../rules/SpellArea';
+import type { AreaShape, Point } from '../rules/SpellArea';
+import { bindingFeatureId } from '../rules/ClassFeatures';
+import { FEATURE_AREAS } from './SchoolSystem';
 import { SPELL_STATS } from '../entities/WeaponStats';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { PixelLabel } from '../ui/PixelText';
@@ -56,7 +59,7 @@ const GUIDE_Z = 999_999;
  * for a shot that flies straight). `radius` and `landsWhere` describe that area: its breadth, and whether it is thrown at
  * the crosshair or wrapped round the caster.
  */
-export type Aim = { reach: number; normal: number; radius: number; landsWhere: 'target' | 'caster'; area: SpellDef | null };
+export type Aim = { reach: number; normal: number; radius: number; landsWhere: 'target' | 'caster'; area: AreaShape | null };
 
 let guide: Graphics | null = null;
 let label: PixelLabel | null = null;
@@ -68,30 +71,42 @@ const corners: [Point, Point, Point] = [{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, 
 const caught: Entity[] = [];
 
 /** The spell a binding casts, at the level it is cast, if it is one that is aimed (a bolt, darts, an area). */
-function aimedSpell(player: Player, slot: number): SpellDef | null {
-  if (slot < 0) return null;
-  const binding = quickBinding(player, slot);
-  if (!binding || !isSpellId(binding.spell)) return null;
+function aimedSpell(player: Player, binding: QuickBinding): SpellDef | null {
+  if (!isSpellId(binding.spell)) return null;
   const def = castDef(SPELLS[binding.spell], binding.level, player.playerStats.level);
   if (def.kind === 'buff') return null;
   return def.kind === 'heal' && def.radius <= 0 ? null : def;
 }
 
-/** A shot that flies straight (as far as a spell bolt flies), or a spell's area, thrown or round the caster. */
-function spellAim(def: SpellDef): Aim {
-  if (def.kind === 'bolt' || def.kind === 'missiles') {
-    const reach = SPELL_STATS.boltSpeed * SPELL_STATS.boltLife;
-    return { reach, normal: reach, radius: 0, landsWhere: 'target', area: null };
-  }
-  const thrown = def.range > 0 || def.area === 'cone';
-  return { reach: def.range, normal: def.range, radius: def.radius, landsWhere: thrown ? 'target' : 'caster', area: def };
+/** An area, thrown (to the crosshair, a cone towards it) or round the caster. */
+function areaAim(area: AreaShape): Aim {
+  const thrown = area.range > 0 || area.area === 'cone';
+  return { reach: area.range, normal: area.range, radius: area.radius, landsWhere: thrown ? 'target' : 'caster', area };
 }
 
-/** What the hero aims now, if anything: the spell being cast or whose key is held, else the bow in hand. */
+/** A shot that flies straight (as far as a spell bolt flies), or a spell's area. */
+function spellAim(def: SpellDef): Aim {
+  if (def.kind !== 'bolt' && def.kind !== 'missiles') return areaAim(def);
+  const reach = SPELL_STATS.boltSpeed * SPELL_STATS.boltLife;
+  return { reach, normal: reach, radius: 0, landsWhere: 'target', area: null };
+}
+
+/** What a quick-bar square aims, if anything: its spell, or a class feature aimed at an area (Minor Conjuration's water). */
+function slotAim(player: Player, slot: number): Aim | null {
+  const binding = slot < 0 ? null : quickBinding(player, slot);
+  if (!binding) return null;
+  const feature = bindingFeatureId(binding.spell);
+  const area = feature ? FEATURE_AREAS[feature] : undefined;
+  if (area) return areaAim(area);
+  const spell = aimedSpell(player, binding);
+  return spell ? spellAim(spell) : null;
+}
+
+/** What the hero aims now, if anything: the spell or feature being cast or whose key is held, else the bow in hand. */
 export function currentAim(player: Player): Aim | null {
   const slot = player.casting ? player.playerInput.spellSlot : heldQuickSlot();
-  const spell = aimedSpell(player, slot);
-  if (spell) return spellAim(spell);
+  const aimed = slotAim(player, slot);
+  if (aimed) return aimed;
   const distance = holdsBow(player) ? weaponRule(weaponInHand(player.equipped ?? {}) ?? undefined)?.rule.distance : undefined;
   if (!distance) return null;
   return { reach: feetToPx(distance[1]), normal: feetToPx(distance[0]), radius: 0, landsWhere: 'target', area: null };
@@ -139,7 +154,7 @@ function drawLine(g: Graphics, x0: number, y0: number, ux: number, uy: number, a
 }
 
 /** A spell's area as it will go off: a circle, a square (a cube) or a cone from the caster's hands. */
-function drawShape(g: Graphics, def: SpellDef, from: Point, at: Point): void {
+function drawShape(g: Graphics, def: AreaShape, from: Point, at: Point): void {
   if (def.area === 'cube') g.rect(at.x - def.radius, at.y - def.radius, def.radius * 2, def.radius * 2);
   else if (def.area === 'sphere') g.circle(at.x, at.y, def.radius);
   else {
@@ -150,7 +165,7 @@ function drawShape(g: Graphics, def: SpellDef, from: Point, at: Point): void {
 }
 
 /** The area, and a faint mark under each enemy standing in it. */
-function drawArea(g: Graphics, def: SpellDef, from: Point, at: Point): void {
+function drawArea(g: Graphics, def: AreaShape, from: Point, at: Point): void {
   drawShape(g, def, from, at);
   const near = areaBounds(def, from, at, bounds);
   for (const foe of nearby(near.x, near.y, near.r, Sense.mob, caught)) {
@@ -172,7 +187,7 @@ function showDistance(text: PixelLabel, x: number, y: number, dist: number, colo
 }
 
 /** An area spell: only its area, where it will go off; thrown ones say how far off that is. */
-function guideArea(g: Graphics, text: PixelLabel, player: Player, def: SpellDef, thrown: boolean): void {
+function guideArea(g: Graphics, text: PixelLabel, player: Player, def: AreaShape, thrown: boolean): void {
   const from = player.position;
   areaCentre(def, from, aim, centre, player.aimVector);
   drawArea(g, def, from, centre);

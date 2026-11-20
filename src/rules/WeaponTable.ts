@@ -35,7 +35,7 @@ export type WeaponRule = {
   properties: readonly WeaponProperty[];
   /** Versatile weapons deal these dice instead when held in both hands. */
   versatile?: Dice;
-  /** A thrown or shooting weapon's range in metres: normal (no penalty), and long (with disadvantage). */
+  /** A thrown or shooting weapon's range in feet: normal (no penalty), and long (with disadvantage). */
   distance?: readonly [normal: number, long: number];
   /** Price in gold (fractions for silver and copper), weight in kg. */
   cost: number;

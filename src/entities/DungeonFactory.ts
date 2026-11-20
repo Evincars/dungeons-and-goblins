@@ -9,6 +9,7 @@ import { COFFINS, PROPS, PROP_GROUND, SARCOPHAGI } from '../level/Props';
 import type { PropDef, PropKind, PropPlacement } from '../level/Props';
 import { TOMB_GEAR_CHANCE, stashCoins } from './LootFactory';
 import { CHEST_TIERS, rollChestTier } from './Drops';
+import { DUMMY_STILL } from '../systems/DummySystem';
 import { ARMORS, HAND_WEAPONS, MEDALS, SHIELDS, catalogueItem } from './ItemCatalog';
 import type { DoorData, RoomData, TilePos } from '../level/generators/DungeonBuilder';
 
@@ -25,8 +26,10 @@ const CAMPFIRE_FRAME_TICKS = 6;
 const CAMPFIRE_SCALE = 1.5;
 /** The fire's art stands on the lower part of its 24px cell. */
 const CAMPFIRE_LIFT = 10;
+/** Its flames burn this far above the middle of its 24 px art (before CAMPFIRE_SCALE): where its sparks and embers fly from. */
+const CAMPFIRE_FLAME_RISE = 3;
 /** The hearth under it lies centred this far below its middle, under its ring of stones. */
-const HEARTH_DROP = 3;
+const HEARTH_DROP = 5;
 /** Torch mounts sit this far above the foot of their wall. */
 const TORCH_LIFT = 30;
 const TORCH_LIGHT_RADIUS = 120;
@@ -34,6 +37,8 @@ const TORCH_COLOR = 0xffcc66;
 const TORCH_SCALE = 1.5;
 const TORCH_FRAMES = 4;
 const TORCH_FRAME_TICKS = 7;
+/** The torch's flame burns this far above the middle of its 16 px art (before TORCH_SCALE): where its sparks fly from. */
+const TORCH_FLAME_RISE = 4;
 /** Wall props hang from just under the face's cap molding. */
 const HANG_TOP = 54;
 /**
@@ -160,12 +165,13 @@ export function createLever(x: number, y: number, exit = false): Entity {
 
 /**
  * A torch hung on a brick face. The entity stands at the foot of the wall (so anyone in front of the
- * wall draws over it); the sprite is lifted up onto the bricks.
+ * wall draws over it); the sprite is lifted up onto the bricks, sparks flying up from its flame.
  */
 export function createTorch(x: number, y: number): Entity {
   return world.add({
     position: { x, y: y + TORCH_LIFT },
     torch: { radius: TORCH_LIGHT_RADIUS, color: TORCH_COLOR, flicker: Math.random() * Math.PI * 2 },
+    sparks: { effect: 'torch-sparks', lift: TORCH_LIFT + TORCH_FLAME_RISE * TORCH_SCALE },
     visual: { sheet: 'torch', scale: TORCH_SCALE },
     animation: {
       sheet: 'torch',
@@ -201,7 +207,7 @@ export function createSconce(x: number, y: number): Entity {
   });
 }
 
-/** A campfire on its (blocked) tile in the exit room, on a hearth of flagstones, smoke curling up from its flames. */
+/** A campfire on its (blocked) tile, on a hearth of flagstones, smoke curling up and sparks flying from its flames, embers popping out onto the hearth. */
 export function createCampfire(x: number, y: number): Entity {
   world.add({ position: { x, y: y + HEARTH_DROP }, visual: { sheet: 'campfire_floor' }, flat: true, localOnly: true });
   createSmoke(x, y, CAMPFIRE_SMOKE);
@@ -213,6 +219,7 @@ export function createCampfire(x: number, y: number): Entity {
       timer: Math.floor(Math.random() * CAMPFIRE_FRAME_TICKS), loop: true,
     },
     glow: { radius: CAMPFIRE_LIGHT_RADIUS, flicker: Math.random() * Math.PI * 2 },
+    sparks: { effect: 'campfire-embers', lift: CAMPFIRE_LIFT + CAMPFIRE_FLAME_RISE * CAMPFIRE_SCALE },
     yOffset: CAMPFIRE_LIFT,
     localOnly: true,
   });
@@ -377,7 +384,6 @@ export function createChest(x: number, y: number, look: ChestLook = isoChest()):
 const DUMMY_SCALE = 1.5;
 const DUMMY_FEET_Y = 28;
 const DUMMY_FRAME = 32;
-const DUMMY_IDLE_FRAMES = 4;
 const DUMMY_FRAME_TICKS = 6;
 /** Health only for show: the dummy is healed after every blow. */
 const DUMMY_HEALTH = 1000;
@@ -386,7 +392,8 @@ const DUMMY_HEALTH = 1000;
 export function dummyLook(): Pick<Entity, 'visual' | 'animation' | 'yOffset'> {
   return {
     visual: { sheet: 'training_dummy', scale: DUMMY_SCALE },
-    animation: { sheet: 'training_dummy', frameX: 0, frameY: 0, frameCount: DUMMY_IDLE_FRAMES, frameTime: DUMMY_FRAME_TICKS, timer: 0, loop: true },
+    // At rest it stands still on the first frame (its strips are all hits, systems/DummySystem.ts).
+    animation: { sheet: 'training_dummy', frameX: 0, frameY: 0, frameCount: 1, frameTime: DUMMY_FRAME_TICKS, timer: 0, loop: true },
     yOffset: (DUMMY_FEET_Y - DUMMY_FRAME / 2) * DUMMY_SCALE,
   };
 }
@@ -403,7 +410,7 @@ export function createTrainingDummy(x: number, y: number): Entity {
     radius: { x: 10, y: 6 },
     blocking: true,
     team: Team.Neutral,
-    dummy: { row: 0 },
+    dummy: { row: DUMMY_STILL },
     ...dummyLook(),
   });
 }

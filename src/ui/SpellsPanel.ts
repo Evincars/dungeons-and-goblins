@@ -61,12 +61,19 @@ const CHOICE_FILL_ALPHA = 0.94;
 const SCROLLBAR_W = 2;
 const SCROLLBAR_MIN_H = 8;
 const LIT_LABEL = 'lit';
-/** A switched-on passive has a train of coloured beads running round its box: how many, how far apart (px), how big, and how fast (px an update). */
-const BEADS = 16;
-const BEAD_GAP = 5;
+/**
+ * A switched-on passive (or toggle feat) is framed in gold that breathes softly, with a short bright comet running round it:
+ * so many beads in its tail, this far apart and this big, moving this many px an update; the frame's alpha swings between
+ * ON_EDGE_ALPHA ± ON_PULSE over one lap of the comet.
+ */
+const BEADS = 6;
+const BEAD_GAP = 1.5;
 const BEAD_SIZE = 2;
-const BEAD_SPEED = 0.6;
-const BEAD_COLOURS = [0x4de1ff, 0xff5fd2, 0xffe14d, 0x7dff6a] as const;
+const BEAD_SPEED = 0.5;
+const ON_EDGE = 0xd9a441;
+const ON_COMET = 0xfff0c0;
+const ON_EDGE_ALPHA = 0.75;
+const ON_PULSE = 0.2;
 /** The hint at the top turns this colour outside a safe room, where spells can't be prepared. */
 const UNSAFE_HINT = 0xff9a6a;
 /** A box greyed out (a spell or feature above the hero's level): its picture this faint, under a veil this dark. */
@@ -86,7 +93,7 @@ const REFUSAL_UPDATES = 180;
 
 /**
  * The inventory's Skills tab: first "Class features:" (what the class has given the hero by their level: a passive is
- * switched off and on by a click, and while it is on a train of coloured beads runs round its box; an active one is bound
+ * switched off and on by a click, and while it is on its box is framed in breathing gold with a comet running round it; an active one is bound
  * to the quick bar like a spell), then under "Cantrips:" and then "Level 1 spells:", "Level 2 spells:"… (as far as the hero
  * has slots) a small box for every spell the hero's class has learnt by their level. A spell has no picture yet, so
  * it is an empty box that tells about itself under the pointer. Click one to put it on the quick bar: a spell that can
@@ -396,7 +403,8 @@ export class SpellsPanel {
 
   /** What the pointer is over tells about itself: a spell box its base numbers, a feature its text (a level box has `levelTipAt`). */
   topicAt(x: number, y: number): TipTopic | null {
-    if (this.optionAt(x, y)) return null;
+    // With a spell's level boxes open, its tooltip would lie over them: only a level box's own tip shows then.
+    if (this.choice) return null;
     const box = this.boxAt(x, y);
     if (!box || !this.list) return null;
     if (box.feature) return featureTopic(box.feature, this.isOff(box.feature), this.heroLevel);
@@ -480,7 +488,7 @@ export class SpellsPanel {
     return true;
   }
 
-  /** Every update: the hint follows whether the hero is in a safe room, and the train of beads runs round each switched-on passive. */
+  /** Every update: the hint follows whether the hero is in a safe room, and each switched-on passive's gold frame breathes, a comet running round it. */
   animate(): void {
     this.updateHint();
     this.updateCounters();
@@ -495,13 +503,16 @@ export class SpellsPanel {
 
   private drawBeads(g: Graphics, rect: Rectangle): void {
     const perimeter = 4 * BOX;
+    const pulse = ON_EDGE_ALPHA + ON_PULSE * Math.sin((this.bead / perimeter) * Math.PI * 2);
+    g.rect(rect.x, rect.y, rect.width, rect.height).stroke({ color: ON_EDGE, alpha: pulse, width: 1, alignment: 1 });
     for (let i = 0; i < BEADS; i++) {
-      const t = (this.bead + i * BEAD_GAP) % perimeter;
+      const t = (this.bead - i * BEAD_GAP + perimeter) % perimeter;
       const side = Math.floor(t / BOX);
       const along = t - side * BOX;
       const x = side === 0 ? along : side === 1 ? BOX : side === 2 ? BOX - along : 0;
       const y = side === 0 ? 0 : side === 1 ? along : side === 2 ? BOX : BOX - along;
-      g.rect(rect.x + x - BEAD_SIZE / 2, rect.y + y - BEAD_SIZE / 2, BEAD_SIZE, BEAD_SIZE).fill({ color: BEAD_COLOURS[i % BEAD_COLOURS.length] });
+      // The comet's head is brightest, its tail fading out behind it.
+      g.rect(rect.x + x - BEAD_SIZE / 2, rect.y + y - BEAD_SIZE / 2, BEAD_SIZE, BEAD_SIZE).fill({ color: ON_COMET, alpha: 1 - i / BEADS });
     }
   }
 

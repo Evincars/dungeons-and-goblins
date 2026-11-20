@@ -23,7 +23,7 @@ export function createSpellBolt(
   return world.add({
     position: { x: x + dx * SPELL_STATS.boltSpawnOffset, y: y + dy * SPELL_STATS.boltSpawnOffset },
     velocity: { x: dx * SPELL_STATS.boltSpeed, y: dy * SPELL_STATS.boltSpeed },
-    projectile: { life: SPELL_STATS.boltLife, team: Team.Player, attack, owner, burst: bolt && def ? boltBurst(def, bolt) : undefined, ...carries },
+    projectile: { life: SPELL_STATS.boltLife, attack, owner, burst: bolt && def ? boltBurst(def, bolt) : undefined, ...carries, team: carries.team ?? Team.Player },
     ...flight,
     // Bolts travel at hand height above the ground they're tracked on.
     yOffset: AIM_HEIGHT,
@@ -35,7 +35,7 @@ export function createSpellBolt(
  * What a spell's projectile carries: the spell, whether it always hits, the effect it strikes with, how many ticks
  * it waits before it flies (a volley leaves one dart after another), and the level it was cast at (Grim Harvest).
  */
-export type SpellCarry = { spell?: SpellId; autoHit?: boolean; impact?: SpellEffect; wait?: number; castLevel?: number };
+export type SpellCarry = { spell?: SpellId; autoHit?: boolean; impact?: SpellEffect; wait?: number; castLevel?: number; team?: Team };
 
 /** A caster's own bolt: its flight frames looping, turned along (dx, dy). */
 function boltArt(def: CharacterDef, bolt: BoltDef, dx: number, dy: number): Partial<Entity> {
@@ -55,9 +55,11 @@ function boltBurst(def: CharacterDef, bolt: BoltDef): ProjectileBurst | undefine
 /** How far a shot flies (px): its weapon's normal range, past which it rolls with disadvantage, and its long range, where it drops. */
 export type ShotReach = { normal: number; long: number };
 
-export function createArrow(x: number, y: number, dx: number, dy: number, attack: AttackProfile, owner?: number, reach?: ShotReach): Entity {
+export function createArrow(
+  x: number, y: number, dx: number, dy: number, attack: AttackProfile, owner?: number, reach?: ShotReach, team: Team = Team.Player,
+): Entity {
   const life = reach ? Math.ceil(reach.long / ARROW_STATS.speed) : ARROW_STATS.life;
-  const projectile: NonNullable<Entity['projectile']> = { life, team: Team.Player, arrow: true, attack, owner };
+  const projectile: NonNullable<Entity['projectile']> = { life, team, arrow: true, attack, owner };
   if (reach) projectile.closeLife = life - Math.ceil(reach.normal / ARROW_STATS.speed);
   return world.add({
     position: { x: x + dx * ARROW_STATS.spawnOffset, y: y + dy * ARROW_STATS.spawnOffset },

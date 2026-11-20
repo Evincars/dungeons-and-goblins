@@ -27,3 +27,14 @@ export async function gunzipJson(input: ArrayBuffer | Uint8Array, limit: number,
   }
   return JSON.parse(await new Blob(chunks).text());
 }
+
+/** Bytes as base64 text (to keep in text: a map's tiles, a save in the browser's storage). */
+export function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary);
+}
+
+export function base64ToBytes(text: string): Uint8Array {
+  return Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
+}

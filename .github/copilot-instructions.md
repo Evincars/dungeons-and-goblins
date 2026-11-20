@@ -60,6 +60,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 | 2-D spatial queries (R-tree) | **rbush** | `src/ai/perception/spatial.ts` |
 | Peer-to-peer networking | **PeerJS** (WebRTC) | `src/network/CoopSession.ts` |
 | Sound effects, music and ambience (loading, sprites, pitch, pan, fades, streaming) | **Howler** | `src/audio/` |
+| Particle effects (sparks, embers, bursts) | **NixieFX** (`nixie-fx`): authored in its editor as the project in `vfx/`, exported by `npm run vfx:export` to `public/vfx`, played by one `PixiVfxRenderer` | `src/render/Vfx.ts` |
 
 - Never write your own A*, Dijkstra, heap, spatial hash, vector or bounding-box class.
 - **Yuka first for graphs and pathfinding.** Add another graph library only for an algorithm Yuka
@@ -123,7 +124,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   made by `scripts/iso-sheets.py` into each tileset's `mainlevbuild-isometric.png` copy (keep the two in step); the Wizard's bind table, Bladesong's blades
   and the undead's stats in `src/rules/Schools.ts`, the school features' timings in `src/systems/SchoolSystem.ts`; enemy AI knobs (sight, squad sizes, flanking, trail
   following) in `src/ai/constants.ts`; the D&D weapons in `src/data/weapons.json`
-  (every weapon of both D&D tables: damage, sort, properties, range in metres, versatile dice, price, weight, and its pictures in
+  (every weapon of both D&D tables: damage, sort, properties, range in feet (every distance the game tells or reads is in feet, `rules/Scale.ts`), versatile dice, price, weight, and its pictures in
   `public/weapons`, one found weapon each, no two kinds sharing a picture) and the armour and robe in `src/data/armors.json` (AC, DEX
   cap, the STR needed to put it on at all, stealth, price, weight; a suit's picture a column of `public/armors.png`, whose first four
   rows are colours picked at random for each suit made), the shields in `src/data/shields.json` (the same fields, their pictures in
@@ -139,8 +140,12 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   Elemental Adept's damage type — is offered in the level panel (`ui/FeatPicks.ts`), checked by `rules/FeatPicks.ts` and kept
   as the Improvement's `picks`; a feat's spells sit in the Skills tab's Feat spells row, are bound at their own level, count
   against no bind limit and are cast with the feat's ability, `spellcastingFor`; the Skills tab runs: class features, the
-  school, Passive Feats and feat spells, then cantrips and each spell level; only `worked` feats are offered, `OFFERED_FEATS`); enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`;
-  castable spells (dice, recovery, save, area, effect; a buff, zone or puddle's duration and concentration) in
+  school, Passive Feats and feat spells, then cantrips and each spell level; only `worked` feats are offered, `OFFERED_FEATS`); enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`
+  (with which kinds carry a bow or crossbow and how often, `ranged`, and which cast spells as what class and with which
+  ability, `spellcaster`: their spells are the heroes' own from `spells.json`, cast at the party's level, so a change to a
+  spell changes it for both); how hard a level is (more and tougher enemies the deeper it lies and in direct proportion
+  to the heroes playing, which kinds turn up at which depth) in `src/game/Difficulty.ts`;
+  castable spells (dice, recovery, save, area and its shape — sphere, cube or cone, `rules/SpellArea.ts`, shared by the heroes, the enemies and the aim guide — effect; a buff, zone or puddle's duration and concentration) in
   `src/data/spells.json`; every spell of Baldur's Gate 3 the game knows (name, level, school, the classes that learn it,
   the Eldritch Knight's, its BG3 text and icon) in `src/data/spell-list.json`, made by `scripts/bg3-spells.mjs` from the BG3
   wiki (it matches spells to the icons `scripts/spell-icons.sh` pixelates in `public/spells-icons` into
@@ -273,8 +278,9 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   stopping bodies only where its stones are, below a wall's top edge, `level/CaveShape.ts` — as do the stones at a cliff's
   foot; a corridor down the slant leans: its rim (with the dark under it) or cliff is the rock sheared down the slant at
   load, `cave_slant_*`, `buildCaveSlants`, with the rim or cliff's end where it meets open ground; where the caverns meet the catacombs the bricks end in their edge), cave ground with patches of
-  purplish heath, the chasm's dark one soft shape laid over the ground that runs on under it (`render/ChasmShade.ts`:
-  a blob round each of its tiles, run together and blurred, so its brinks curve and fade, no tile's edge showing), and the bridge's planks (their
+  purplish heath, the chasm drawn from the set's chasm block (its ragged brinks cut from the block's ring with the ground cleared,
+  `cave_brinks`, `buildCaveBrinks`, over the ground beside it; the cliff falling into the dark under ground to its north; the
+  even dark of the block's middle), and the bridge's planks (their
   ends resting on the ground beyond the brinks, under the rock where they run into a wall) and legs (only where all below is
   dark); the rock spires block a broad base (`spireBase`, `Props.ts`); the catacombs' torches, hangings and
   spike traps stay out of them.
@@ -287,7 +293,14 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `PropDef.backing`, and blue fire burning beyond them, `PropDef.fire`, `entities/WindowFire.ts`, its foot hidden by the
   sill); drain grates keep a tile clear of any wall; their faces also show stretches with vents and dark cracked stretches (`TerrainAutotile.ts` face
   styles), and where a wall juts out past another's face it ends in its edge strip all the way up its face
-  (`shallowerFace`) and on up to the wall's north edge (`seamW`/`seamE`). Campfires stand on a ring of cobbles
+  (`shallowerFace`) and on up to the wall's north edge (`seamW`/`seamE`). Wall torches and campfires throw sparks from their flames, now and then an ember dropping to the
+  floor (`sparks`, `systems/VfxSystem.ts`: the NixieFX effects `vfx/torch-sparks.json` and `campfire-embers.json`, one unit 16 px
+  with y up, played at the root's origin, moved on a tick at a time). The wizard's cantrips and 1st-level spells
+  play particles (`render/SpellVfx.ts`, `SPELL_VFX`; the effects are made by the NixieFX project in `vfx/`): a trail behind a
+  flying spell (every screen follows the projectiles it has, guests' from the host's state) and an impact where it ends, a
+  burst where an area spell goes off (Burning Hands' flames from the hands), an aura round the caster of a buff. One-shots are
+  asked for with `playVfx` (`render/VfxPlayer.ts`): the co-op host sends each guest only a short `vfx` signal (which effect,
+  where, which way) and every screen renders it itself. A spell without particles plays its library effect. Campfires stand on a ring of cobbles
   (`campfire_floor`, built at load in `assets/AssetLoader.ts`). Coffins and sarcophagi are searched like
   other stashes and may hold gear (`TOMB_GEAR_CHANCE`, `entities/LootFactory.ts`). A spike trap in a
   corridor (`spikeTrap`, `systems/TrapSystem.ts`) bites the first hero to step on it, told over their head and in the
@@ -305,10 +318,10 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `ui/CombatLogPanel.ts`; `recordEvent` also writes rests, healing, kills, levels and level-panel choices, `LOG_EVENTS` in `world.ts`), and spends a won initiative's first strike as advantage (`systems/InitiativeSystem.ts`).
   Spells (`Spells.ts`, from `src/data/spells.json`: bolt, missiles, burst with a save, heal; buff, zone and water last, in
   `systems/LastingSpells.ts`: buffs on the caster (`buffs`: Blade Ward, Shield, Mage Armour, Stoneskin; False Life's temporary
-  hit points), zones that strike every 6 s (`zone`, `q.zones`), puddles a thunder spell charges (`surface`, `q.surfaces`),
+  hit points), zones that strike every 6 s (`zone`, `q.zones`), puddles a thunder or lightning spell charges (a lightning bolt flying over them too) (`surface`, `q.surfaces`),
   and one spell held by `concentration` that a failed Constitution save on being hurt ends; what lasts until a long rest also
   ends on a fall, `endUntilRest`) have no slots but a
-  recovery each (`spellbook.recovery`), sit on the quick bar (two rows of ten: Q R T 1–5 X C cast the first row's squares,
+  recovery each (`spellbook.recovery`), sit on the quick bar (two rows of ten: Q R T 1–5 X C cast the first row's squares — held, the key shows the spell's aim guide, let go, it casts —
   Shift with them the second, whose squares hold the active class features until bound; `playerInput.spellSlot`) and are cast by
   `systems/SpellSystem.ts` with effects from the library (`assets/Effects.ts`). `Spellbook.ts` reads the whole list: a class opens
   spell levels as the tabletop does, a cantrip's dice grow at hero levels 5/11/17, and a spell cast above its own level
@@ -320,7 +333,10 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   tooltip, `sheet.defences`). Tooltips with
   more to tell show it while Alt is held (`ui/InfoTooltip.ts`). Class features (`rules/ClassFeatures.ts`) fill the Skills tab above the cantrips: a worked passive is on from its
   level and a click switches it off and on (`featuresOff`, the `toggle_feature` command; `featureOn` is what effects ask, and the
-  HUD's top left lists the ones on, `ui/PassiveHud.ts`); an active (Second Wind, Action Surge…) is bound to a quick-bar square as
+  HUD's top left shows the ones on, `ui/PassiveHud.ts`: icons only, stacked down a column, what is the hero's for good
+  (passives, Passive Feats, the ward, a Battle Master's dice) at the top and what comes and goes (boosts, buffs, concentration)
+  under them; a clock over an icon empties while it recovers or lasts, a count sits in its corner, and its tooltip under the
+  pointer says how it stands now); an active (Second Wind, Action Surge…) is bound to a quick-bar square as
   `feature:<id>` and used with the cast key (`systems/FeatureSystem.ts`; an active with several uses recovers in its share, `featureCooldown`).
   Every blow of a chain plays at the hero's own swing pace, one after another (`blowTiming`; the attack clip follows
   `swordSwing.tempo`), and the next click waits for the attack period. Action Surge doubles the attacks of every swing and
@@ -376,15 +392,27 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   window's; the window shows it as large as fits, with bars. In a level the mouse wheel zooms the world (not the HUD) in and
   out between the picture as made and twice as close (`camera.zoom`, `zoomBy`; `screenToWorld` follows it); the game layer
   and the light overlay are scaled, the camera follows the hero over the smaller stretch of world in view.
-- While the hero aims, a faint guide (`systems/AimGuideSystem.ts`, drawn over the light and fog, `overLayer`) arcs from
-  them to the crosshair, for the spell being cast, else the bow or crossbow in hand, else the spell picked on the quick
-  bar: grey within reach, amber past a bow's normal range (disadvantage), red past all it reaches (a tick on the arc where
-  its reach ends); an area spell's circle where it will go off, a mark under each enemy it would catch, and the distance
-  in metres. A quick-bar square recovering shows its time left over its shade (tenths under 10 s). A class feature bg3.wiki
+- While the hero aims, a faint guide (`systems/AimGuideSystem.ts`, drawn over the light and fog, `overLayer`) shows where
+  it goes, for the spell being cast or whose quick-bar key is held, else the bow or crossbow in hand: a shot that flies
+  straight (a bolt, darts, an arrow) is a dotted straight line from the hands the way the hero aims, as far as it flies (where
+  it goes off if it strikes nothing), grey, amber past a bow's normal range (disadvantage); a spell with an area shows only
+  that area — a circle, a square (cube) or a cone from the hands — where it will go off (aimed past its reach, as far that
+  way as it reaches), a mark under each enemy it would catch, and how far off it is, in feet. A quick-bar square recovering shows its time left over its shade (tenths under 10 s). A class feature bg3.wiki
   has no icon for shows another feature's of a like name, each borrowed icon shown by that feature alone
   (`scripts/feature-icons.py` `BORROWED`). The exit room has one campfire, in its middle, and a candelabra either side of
   its gate inside it (its lever beside the upper one).
-- An enemy knocked back hard by a blow may be driven over a pit's or chasm's edge, and falls (`MovementSystem.ts`
+- Enemies with a bow or crossbow and enemy spellcasters (`systems/EnemyRangedSystem.ts`) shoot and cast only at a hero
+  in sight whose screen shows them (never from off-screen), stand to do it, lead a moving target and pick the spell that
+  harms most (a burst by how many heroes it catches); their shots are the heroes' bolts and arrows on the enemies' side
+  (`Team.Mob`), striking heroes; they draw no aim guide. The level's summary (the exit's question) is a victory panel
+  (`ui/ResultPanel.ts` `victory`) with one button, Go to next dungeon, and a table of each hero's kills, experience,
+  damage dealt, natural 20s and 1s on this level (`playerStats.damageDealt`, `critHits`, `critMisses`). The training dummy
+  stands still until struck, then plays one of its three hit rows (a heavy blow spins it, `systems/DummySystem.ts`);
+  Burning Hands is a cone of flame particles from the caster's hands towards the aim (`vfx/burning-hands.json`, played by
+  `playBurstArt` in `systems/SpellSystem.ts`). The combat log lies under the HUD, so tooltips and dialogs open over it.
+- Enemies walk on steadily (no limp: `MOB_CONFIGS` speeds are their steady pace), and one whose place in the ring round its
+  target lies further round walks round to it on a wider ring (`RING_WALK_ROUND`, `ai/execution/pursuit.ts`) rather than
+  pressing into the target's body. An enemy knocked back hard by a blow may be driven over a pit's or chasm's edge, and falls (`MovementSystem.ts`
   `KNOCKED_OVER_SPEED`); walking, enemies keep out of holes. A spike trap springs under feet two pixels inside its tile.
 - `src/core/` — cross-cutting: `errors/`, `log/`, `geometry.ts`, `guards.ts`, `debugHooks.ts`, `compression.ts` (gzip with a size limit).
 - `src/game/` — game loop, `SceneManager`, persisted settings, player actions (item gifts too), the party's votes
@@ -396,9 +424,18 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   the fallen watch their companions, `Spectate.ts`), resting (`Rest.ts`: short and long rests; in a short rest each hero
   spends the hit dice they chose as they asked or agreed, and one refusal means nobody rests), pausing (`Pause.ts`: in
   co-op the game stops for everyone while anyone has the pause menu open), payments (`Purse.ts`: kills, chests and stashes pay straight into the
-  purse), Need / Pass rolls for rare finds (`LootRoll.ts`) and the ~ console's commands (`Console.ts`; `/freeze` and `/killall` for testing, the switches in `Cheats.ts`). `src/scenes/` — title, settings,
-  key bindings, character select, co-op lobby and the level itself. `src/ui/` — buttons, HUD (health bar, round
-  buttons, `HudDialog`, `MinimapView`, `QuickBar`, `RestMenu`, `PartyBanner`, `LootRollPanel`), `PopupMenu`, `HeroPicker`,
+  purse), Need / Pass rolls for rare finds (`LootRoll.ts`) and the ~ console's commands (`Console.ts`; `/freeze` and `/killall` for testing, the switches in `Cheats.ts`).
+  Saved games (`SaveGame.ts`: the level's map as it stands, what has been seen of it, every entity of the world as
+  `captureWorld` sends it, the run's depth and theme, and the heroes listed for show; `validateSave` checks it all;
+  `SaveStore.ts`: kept gzipped in localStorage, the newest `MAX_SAVES`, downloaded and imported as JSON files;
+  `SaveRestore.ts`: the world made again from it, every entity id inside components remapped and the host's own
+  bookkeeping, `trail` and `mobCaster`, given back). The host or a player alone saves from the pause menu; the title's Load
+  game lists the saves (`scenes/LoadGameScene.ts`): Play takes one up alone, Host opens the lobby, where each player is
+  shown the saved hero they will take up (`seatsFor`: the host's own, a guest's by name, else by seat; the roster's
+  `saved` line) and the level starts from the save. After the first level each level is a dungeon of any theme at random
+  (`Run.ts` `nextTheme`). `src/scenes/` — title, settings,
+  key bindings, character select, co-op lobby, the load screen and the level itself. `src/ui/` — buttons, HUD (health bar, round
+  buttons — the sword opens and shuts the inventory as Tab does —, `HudDialog`, `MinimapView`, `QuickBar`, `RestMenu`, `PartyBanner`, `LootRollPanel`), `PopupMenu`, `HeroPicker`,
   `ConsoleView`, combat log, the inventory (`InventoryOverlay`: the bag filtered, searched as typed — the letters of a name in order,
   `core/fuzzy.ts`, matched ones lit in the tooltip — and sorted by price, weight or training, `game/BagView.ts`, without moving a
   thing; a right-click menu to equip — a weapon in the primary hand or the off-hand — take off, drop, compare or send; a click

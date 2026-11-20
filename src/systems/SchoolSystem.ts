@@ -1,3 +1,4 @@
+import type { AreaShape } from '../rules/SpellArea';
 import { world, q, isActivePlayer, isMob, isPlayer, isTarget } from '../world';
 import type { Entity, Player, TransmuterStone } from '../world';
 import type { Level } from '../level/Level';
@@ -77,6 +78,13 @@ const CLIMAX_DIE = 6;
 /** Create Water: a puddle up to 30 feet away, about 5 feet across each way. */
 const CREATE_WATER_RANGE = 288;
 const CREATE_WATER_RADIUS = 28;
+/**
+ * The class features aimed at an area, as the aim guide shows them (systems/AimGuideSystem.ts): Minor Conjuration's puddle,
+ * a circle where it lands, no further off than it reaches.
+ */
+export const FEATURE_AREAS: Readonly<Partial<Record<string, AreaShape>>> = {
+  minor_conjuration: { area: 'sphere', range: CREATE_WATER_RANGE, radius: CREATE_WATER_RADIUS },
+};
 /** Song of Defence takes this much damage off for every level of the spell it spends. */
 const SONG_OF_DEFENCE_PER_LEVEL = 5;
 /** Grim Harvest gives back hit points of twice the spell's level, three times for a Necromancy spell. */

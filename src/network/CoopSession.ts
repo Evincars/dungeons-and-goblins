@@ -9,6 +9,8 @@ import type { DataConnection } from 'peerjs';
 import { PLAYER_SLOTS, isPlayerSlot } from '../world';
 import type { PlayerSlot } from '../world';
 import { isSfxName, sound } from '../audio/SoundPlayer';
+import { playVfxLocal } from '../render/VfxPlayer';
+import type { VfxShot } from '../render/VfxPlayer';
 import type { SfxName } from '../audio/SoundPlayer';
 import { cleanName, settings } from '../game/Settings';
 import { text } from '../core/texts';
@@ -16,7 +18,7 @@ import { NetworkError, StateError, ValidationError, attempt, errorMessage, repor
 import { isRecord } from '../core/guards';
 import { createLog } from '../core/log';
 import {
-  MAX_GUESTS, PROTOCOL_VERSION, inviteLink, isMessage, validCommand, validInput, validRoster, validSound, validStart,
+  MAX_GUESTS, PROTOCOL_VERSION, inviteLink, isMessage, validCommand, validInput, validRoster, validSound, validStart, validVfxShot,
 } from './protocol';
 import type { GuestCommand, InputFrame, Message, RosterEntry } from './protocol';
 import { validateNetState } from './WorldSync';
@@ -100,6 +102,11 @@ export class CoopSession {
   slot: PlayerSlot | null = null;
   /** Everyone in the room, host first; kept current on every browser. */
   roster: RosterEntry[] = [];
+  /**
+   * Host, taking up a saved game: the saved hero each seat will play, as a line for the roster (set by the lobby, from
+   * game/SaveGame.ts seatHeroLines). Seats it leaves out start fresh heroes.
+   */
+  describeSeats: ((seats: ReadonlyArray<{ slot: PlayerSlot; name: string }>) => ReadonlyMap<PlayerSlot, string>) | null = null;
   /** Guest: the number of the next input frame (counting on across levels). */
   private inputSequence = 0;
   /** Set once a level is under way, so nobody else can join half-way. */
@@ -288,6 +295,10 @@ export class CoopSession {
         if (!validSound(message.name, message.x, message.y, isSfxName)) throw new NetworkError('Invalid sound event');
         sound.playSound(message.name, message.x, message.y);
         return;
+      case 'vfx':
+        if (!validVfxShot(message.shot)) throw new NetworkError('Invalid effect event');
+        playVfxLocal(message.shot);
+        return;
       case 'state':
         if (!Number.isSafeInteger(message.seq) || !validPacket(message.compressed)) throw new NetworkError('Invalid world packet');
         this.queueState(link, message.seq, message.compressed instanceof ArrayBuffer
@@ -394,7 +405,21 @@ export class CoopSession {
   private refreshRoster(): void {
     if (this.role !== 'host') return;
     const guests = this.guestSlots().map((slot) => ({ slot, name: this.links.get(slot)?.name ?? slot, heroClass: this.classOf(slot) }));
-    this.roster = [{ slot: 'host', name: this.hostName, heroClass: settings.heroClass }, ...guests];
+    const roster: RosterEntry[] = [{ slot: 'host', name: this.hostName, heroClass: settings.heroClass }, ...guests];
+    const saved = this.describeSeats?.(roster);
+    for (const entry of roster) {
+      const line = saved?.get(entry.slot);
+      if (line) entry.saved = line;
+    }
+    this.roster = roster;
+  }
+
+  /** Host: the roster told again (a saved game was picked or dropped in the lobby). */
+  refreshSeats(): void {
+    if (this.role !== 'host') return;
+    this.refreshRoster();
+    this.broadcastRoster();
+    this.onChange?.();
   }
 
   private broadcastRoster(): void {
@@ -610,6 +635,11 @@ export class CoopSession {
     if (this.role === 'guest' && this.uplink?.ready) this.send(this.uplink, { type: 'command', command });
   }
 
+  /** Host: a one-shot particle effect played here, for every guest to render. */
+  sendVfx(shot: VfxShot): void {
+    this.broadcast({ type: 'vfx', shot });
+  }
+
   sendSound(name: SfxName, x?: number, y?: number): void {
     this.broadcast({ type: 'sound', name, ...(x === undefined ? {} : { x }), ...(y === undefined ? {} : { y }) });
   }
@@ -685,7 +715,7 @@ export class CoopSession {
     clearTimeout(this.timeout);
     this.stopHeartbeat();
     this.onChange = null; this.onStart = null; this.onState = null;
-    this.onLeave = null; this.onCommand = null;
+    this.onLeave = null; this.onCommand = null; this.describeSeats = null;
     for (const link of this.allLinks()) this.hangUp(link);
     this.links.clear();
     this.uplink = null;

@@ -8,6 +8,8 @@ import { restorePlayer } from '../game/Run';
 import { pausingSeat, resetPause, setSeatPaused } from '../game/Pause';
 import { cleanName } from '../game/Settings';
 import { sound } from '../audio/SoundPlayer';
+import { vfxEvents } from '../render/VfxPlayer';
+import type { VfxShot } from '../render/VfxPlayer';
 import type { SfxName } from '../audio/SoundPlayer';
 import { screenToWorld } from '../render/Camera';
 import { beginPerception } from '../ai/perception/spatial';
@@ -58,15 +60,22 @@ export class HostGame {
     setSeatPaused(slot, false);
   };
   private readonly onEffect = (name: SfxName, x?: number, y?: number) => coop.sendSound(name, x, y);
+  private readonly onVfx = (shot: VfxShot) => coop.sendVfx(shot);
 
   /** `map`: the dungeon just built, sent to every guest so they build the very same one. */
   constructor(host: Entity, spawn: { x: number; y: number }, seed: number, depth: number, map: LevelMap) {
     setName(host, coop.nameOf('host') ?? coop.hostName);
     resetPause();
-    coop.guestSlots().forEach((slot, i) => this.addGuest(slot, spawn, i));
+    // A saved game taken up has already put back the heroes of the guests who take them up (game/SaveRestore.ts).
+    coop.guestSlots().forEach((slot, i) => {
+      const saved = playerInSlot(slot);
+      if (saved) this.adoptGuest(saved, slot);
+      else this.addGuest(slot, spawn, i);
+    });
     coop.onLeave = this.onLeave;
     coop.onCommand = handleGuestCommand;
     sound.onEffect = this.onEffect;
+    vfxEvents.onPlay = this.onVfx;
     this.seed = seed;
     coop.startLevel(seed, depth, map);
   }
@@ -76,8 +85,14 @@ export class HostGame {
     const guest = createPlayer(spawn.x + dx, spawn.y + dy, coop.classOf(slot));
     world.addComponent(guest, 'playerSlot', slot);
     restorePlayer(guest);
+    this.adoptGuest(guest, slot);
+  }
+
+  /** A guest's hero answers to the controls their browser sends, under the name they go by. */
+  private adoptGuest(guest: Entity, slot: PlayerSlot): void {
+    const at = guest.position ?? { x: 0, y: 0 };
     world.addComponent(guest, 'remoteInput', true);
-    world.addComponent(guest, 'aimWorld', { x: spawn.x + dx, y: spawn.y + dy + 1 });
+    world.addComponent(guest, 'aimWorld', { x: at.x, y: at.y + 1 });
     setName(guest, coop.nameOf(slot) ?? slot);
     guest.minimapColor = GUEST_MINIMAP_COLOR;
   }
@@ -129,6 +144,7 @@ export class HostGame {
   dispose(): void {
     if (coop.onLeave === this.onLeave) coop.onLeave = null;
     if (sound.onEffect === this.onEffect) sound.onEffect = null;
+    if (vfxEvents.onPlay === this.onVfx) vfxEvents.onPlay = null;
   }
 }
 

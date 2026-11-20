@@ -32,7 +32,7 @@ import { isDieSides } from '../rules/Dice';
 /** Display objects: rebuilt on each screen, never sent. */
 const RUNTIME_KEYS = ['sprite', 'container', 'healthBar', 'hurtOverlay', 'sprintBar', 'fallMask', 'priceLabel'] as const satisfies readonly (keyof Entity)[];
 /** Host bookkeeping a guest has no use for, or sets for itself. */
-const HOST_KEYS = ['trail', 'remoteInput', 'aimWorld', 'removed', 'localOnly', 'initiative', 'lastHitBy', 'godMode'] as const satisfies readonly (keyof Entity)[];
+const HOST_KEYS = ['trail', 'remoteInput', 'aimWorld', 'removed', 'localOnly', 'initiative', 'lastHitBy', 'godMode', 'mobCaster'] as const satisfies readonly (keyof Entity)[];
 type UnsentKey = (typeof RUNTIME_KEYS)[number] | (typeof HOST_KEYS)[number];
 const UNSENT: ReadonlySet<string> = new Set([...RUNTIME_KEYS, ...HOST_KEYS]);
 /** Keys an entity may never be built with, whatever a packet claims. */
@@ -102,7 +102,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   glow: { radius: 'number' },
   playerStats: { level: 'number', exp: 'number', gold: 'number', swordTier: 'number', hitDice: 'number',
     sprinting: 'boolean', sprint: 'number', maxSprint: 'number', sprintLocked: 'boolean', kills: 'number', goldEarned: 'number',
-    lootBonus: 'number' },
+    lootBonus: 'number', damageDealt: 'number', critHits: 'number', critMisses: 'number' },
   swordSwing: { delay: 'number', ticks: 'number', dirX: 'number', dirY: 'number', range: 'number', hitIds: 'object', blow: 'number', blows: 'number', offHand: 'boolean', tempo: 'number' },
   maneuver: { id: 'string', ticks: 'number', bonus: 'number' },
   status: { prone: 'number', frightened: 'number', goaded: 'number', distracted: 'number', eldritch: 'number', charmed: 'number', by: 'number' },
@@ -145,7 +145,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   party: { shortRestsLeft: 'number', vote: 'object?', notice: 'object?' },
 };
 
-/** Components that are plain values. */
+/** Components that are plain values (`limp` is no longer given, but saves made while it was still load). */
 const VALUES: Readonly<Record<string, FieldType>> = {
   blocking: 'boolean', physicsSlide: 'boolean', team: 'number', hurtTime: 'number', attackTime: 'number', attackCooldown: 'number', freezeTime: 'number',
   bounceWallTime: 'number', deathPoints: 'number',

@@ -17,6 +17,7 @@ import { heroName } from '../rules/Names';
 import { GAME_WIDTH, GAME_HEIGHT, LAYOUT_LEFT } from '../render/Camera';
 import { attempt, attemptAsync, report, StateError } from '../core/errors';
 import { sound } from '../audio/SoundPlayer';
+import { chosenSave, seatHeroLines } from '../game/SaveGame';
 
 const CENTER = GAME_WIDTH / 2;
 const COL_X = LAYOUT_LEFT + 136;
@@ -34,8 +35,16 @@ const START_Y = GAME_HEIGHT - 78;
 const CANCEL_Y = GAME_HEIGHT - 46;
 /** How often the lobby checks whether the settings screen covers it (its text boxes must hide then). */
 const OVERLAY_POLL_MS = 150;
+/** The line naming the saved game the host takes up, under the status. */
+const SAVED_Y = 72;
+const SAVED_COLOR = 0x9be08a;
 
 export type CoopRole = 'host' | 'guest';
+
+/** A saved hero's line under their player in the roster, its parts (class and level, experience; weapon) a line each. */
+function savedLines(saved: string | undefined): string {
+  return saved ? saved.split(' - ').map((part) => `\n   ${part}`).join('') : '';
+}
 
 /**
  * The co-op room. Everyone types the name the others will see and picks their hero (whoever took a hero is
@@ -101,7 +110,22 @@ export class CoopScene implements Scene {
     }
     this.button(text('coop.cancel'), CANCEL_Y, () => manager.goto('title'));
     this.connect(destination);
+    this.offerSave();
     this.watchOverlays();
+  }
+
+  /**
+   * Host taking up a saved game (picked on the load screen): the lobby says which, and each player in the roster is shown
+   * the saved hero they will play (game/SaveGame.ts seatsFor: by name, else by seat); the guests see it too.
+   */
+  private offerSave(): void {
+    const save = this.role === 'host' ? chosenSave() : null;
+    if (!save) return;
+    const banner = makeText(text('coop.saved_game', { name: save.name, depth: save.run.depth }), SAVED_COLOR, 8, 'center');
+    banner.position.set(CENTER, SAVED_Y);
+    this.container.addChild(banner);
+    coop.describeSeats = (seats) => seatHeroLines(save, seats);
+    coop.refreshSeats();
   }
 
   private button(text: string, y: number, action: () => void): PixelButton {
@@ -171,7 +195,7 @@ export class CoopScene implements Scene {
     if (this.role === 'host') this.invite.value = coop.invite;
     this.start?.setEnabled(coop.connected);
     this.action.setEnabled(this.role !== 'host' || !!coop.invite);
-    const lines = coop.roster.map((p, i) => `${i + 1}. ${p.name}${p.slot === 'host' ? text('coop.roster_host_tag') : ''}`);
+    const lines = coop.roster.map((p, i) => `${i + 1}. ${p.name}${p.slot === 'host' ? text('coop.roster_host_tag') : ''}${savedLines(p.saved)}`);
     this.roster.text = lines.length ? text('coop.roster', { players: lines.join('\n') }) : '';
     this.showTakers();
   }

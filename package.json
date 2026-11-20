@@ -8,6 +8,8 @@
     "typecheck": "tsc --noEmit",
     "lint:style": "node scripts/check-style.mjs",
     "rules:sync": "node scripts/sync-rules.mjs",
+    "vfx:validate": "nixie-fx validate vfx",
+    "vfx:export": "nixie-fx export vfx",
     "check": "npm run typecheck && npm run lint:style && node scripts/sync-rules.mjs --check && npm test",
     "build": "tsc && vite build",
     "preview": "vite preview"
@@ -15,8 +17,9 @@
   "dependencies": {
     "howler": "^2.2.4",
     "miniplex": "^2.0.0",
+    "nixie-fx": "^0.1.25",
     "peerjs": "^1.5.5",
-    "pixi.js": "^8.5.0",
+    "pixi.js": "^8.19.0",
     "rbush": "^4.0.1",
     "yuka": "^0.7.8"
   },

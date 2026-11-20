@@ -8,6 +8,7 @@ import { EVIL_WIZARD, GHOST_WIZARD } from '../characters/Wizards';
 import { GRICK, SHADE } from '../characters/IsoFoes';
 import { NEVER_TICK, SENSE_TICKS } from '../ai/constants';
 import { MONSTERS, randomMonsterWeapon } from '../rules/Monsters';
+import { difficulty, enemyHealthScale } from '../game/Difficulty';
 
 /** Gap between the top of the head and the health bar. */
 const HEALTH_BAR_GAP = 6;
@@ -19,7 +20,6 @@ export type MobConfig = {
   health: number;
   speed: number;
   deathPoints: number;
-  limp: number;
   radius: { x: number; y: number };
   /** Which CharacterDef draws this kind of enemy. */
   character: string;
@@ -38,47 +38,47 @@ const STATS = MONSTERS satisfies Record<MobType, Pick<MobConfig, 'health' | 'dea
 /** Every enemy stands with its feet on its position, like the player, so none looks sunk into the wall above it. */
 export const MOB_CONFIGS = {
   goblin: {
-    health: STATS.goblin.health, deathPoints: STATS.goblin.deathPoints, character: ORC.id, speed: 0.7, limp: 4,
+    health: STATS.goblin.health, deathPoints: STATS.goblin.deathPoints, character: ORC.id, speed: 0.525,
     radius: { x: 10, y: 10 }, yOffset: groundOffset(ORC, 1.3), scale: 1.3, minimapColor: 0xff4040,
   },
   skeleton: {
-    health: STATS.skeleton.health, deathPoints: STATS.skeleton.deathPoints, character: ORC.id, speed: 0.6, limp: 3,
+    health: STATS.skeleton.health, deathPoints: STATS.skeleton.deathPoints, character: ORC.id, speed: 0.4,
     radius: { x: 10, y: 10 }, yOffset: groundOffset(ORC, 1.4), scale: 1.4, minimapColor: 0xff4040,
   },
   orc: {
-    health: STATS.orc.health, deathPoints: STATS.orc.deathPoints, character: ORC.id, speed: 0.5, limp: 3,
+    health: STATS.orc.health, deathPoints: STATS.orc.deathPoints, character: ORC.id, speed: 0.333,
     radius: { x: 12, y: 12 }, yOffset: groundOffset(ORC, 1.6), scale: 1.6, minimapColor: 0xff4040,
   },
   troll: {
-    health: STATS.troll.health, deathPoints: STATS.troll.deathPoints, character: ORC.id, speed: 0.4, limp: 2,
+    health: STATS.troll.health, deathPoints: STATS.troll.deathPoints, character: ORC.id, speed: 0.2,
     radius: { x: 16, y: 14 }, yOffset: groundOffset(ORC, 2.0), scale: 2.0, minimapColor: 0xff8000,
   },
   goblin_grunt: {
-    health: STATS.goblin_grunt.health, deathPoints: STATS.goblin_grunt.deathPoints, character: GOBLIN_GRUNT.id, speed: 0.7, limp: 4,
+    health: STATS.goblin_grunt.health, deathPoints: STATS.goblin_grunt.deathPoints, character: GOBLIN_GRUNT.id, speed: 0.525,
     radius: { x: 9, y: 9 }, yOffset: groundOffset(GOBLIN_GRUNT), scale: GOBLIN_GRUNT.scale, minimapColor: 0xff4040,
   },
   goblin_rogue: {
-    health: STATS.goblin_rogue.health, deathPoints: STATS.goblin_rogue.deathPoints, character: GOBLIN_ROGUE.id, speed: 0.85, limp: 5,
+    health: STATS.goblin_rogue.health, deathPoints: STATS.goblin_rogue.deathPoints, character: GOBLIN_ROGUE.id, speed: 0.68,
     radius: { x: 9, y: 9 }, yOffset: groundOffset(GOBLIN_ROGUE), scale: GOBLIN_ROGUE.scale, minimapColor: 0xff4040,
   },
   goblin_warrior: {
-    health: STATS.goblin_warrior.health, deathPoints: STATS.goblin_warrior.deathPoints, character: GOBLIN_WARRIOR.id, speed: 0.55, limp: 3,
+    health: STATS.goblin_warrior.health, deathPoints: STATS.goblin_warrior.deathPoints, character: GOBLIN_WARRIOR.id, speed: 0.367,
     radius: { x: 11, y: 11 }, yOffset: groundOffset(GOBLIN_WARRIOR), scale: GOBLIN_WARRIOR.scale, minimapColor: 0xff6020,
   },
   ghost_wizard: {
-    health: STATS.ghost_wizard.health, deathPoints: STATS.ghost_wizard.deathPoints, character: GHOST_WIZARD.id, speed: 0.75, limp: 0,
+    health: STATS.ghost_wizard.health, deathPoints: STATS.ghost_wizard.deathPoints, character: GHOST_WIZARD.id, speed: 0.75,
     radius: { x: 9, y: 9 }, yOffset: groundOffset(GHOST_WIZARD), scale: GHOST_WIZARD.scale, minimapColor: 0xb040ff,
   },
   evil_wizard: {
-    health: STATS.evil_wizard.health, deathPoints: STATS.evil_wizard.deathPoints, character: EVIL_WIZARD.id, speed: 0.5, limp: 3,
+    health: STATS.evil_wizard.health, deathPoints: STATS.evil_wizard.deathPoints, character: EVIL_WIZARD.id, speed: 0.333,
     radius: { x: 11, y: 11 }, yOffset: groundOffset(EVIL_WIZARD), scale: EVIL_WIZARD.scale, minimapColor: 0xff2060,
   },
   shade: {
-    health: STATS.shade.health, deathPoints: STATS.shade.deathPoints, character: SHADE.id, speed: 0.8, limp: 0,
+    health: STATS.shade.health, deathPoints: STATS.shade.deathPoints, character: SHADE.id, speed: 0.8,
     radius: { x: 9, y: 9 }, yOffset: groundOffset(SHADE), scale: SHADE.scale, minimapColor: 0x40c0b0,
   },
   grick: {
-    health: STATS.grick.health, deathPoints: STATS.grick.deathPoints, character: GRICK.id, speed: 0.55, limp: 3,
+    health: STATS.grick.health, deathPoints: STATS.grick.deathPoints, character: GRICK.id, speed: 0.367,
     radius: { x: 10, y: 9 }, yOffset: groundOffset(GRICK), scale: GRICK.scale, minimapColor: 0xff70a0,
   },
 } as const satisfies Record<MobType, MobConfig>;
@@ -106,9 +106,18 @@ export function createMobAI(): MobAI {
   };
 }
 
+/** An enemy spellcaster's spells (MONSTERS' `caster`), cast at the party's level, each with its own recovery. */
+export function casterOf(type: MobType): Pick<Entity, 'mobCaster'> {
+  const caster = MONSTERS[type].caster;
+  if (!caster) return {};
+  return { mobCaster: { level: difficulty.partyLevel, ability: caster.ability, spells: [...caster.spells], recovery: caster.spells.map(() => 0) } };
+}
+
 export function createMob(_level: Level, type: MobType, x: number, y: number): Entity {
   const cfg: MobConfig = MOB_CONFIGS[type];
   const def = characterDef(cfg.character);
+  // Tougher the deeper the party goes and the more heroes there are (game/Difficulty.ts).
+  const health = Math.round(cfg.health * enemyHealthScale());
 
   return world.add({
     position: { x, y },
@@ -118,7 +127,7 @@ export function createMob(_level: Level, type: MobType, x: number, y: number): E
     physicsSlide: true,
     team: Team.Neutral,
     mobType: type,
-    health: { current: cfg.health, max: cfg.health },
+    health: { current: health, max: health },
     // Above the head: feet → sprite centre (yOffset) → top of the head, plus a small gap.
     healthBarOffset: -(cfg.yOffset + headAboveCenter(def, cfg.scale) + HEALTH_BAR_GAP),
     hurtTime: 0,
@@ -131,10 +140,10 @@ export function createMob(_level: Level, type: MobType, x: number, y: number): E
     facing: Facing.South,
     aimVector: { x: 0, y: 1 },
     walkTime: 0,
-    limp: cfg.limp,
     bump: { x: 0, y: 0 },
     chasing: false,
     ai: createMobAI(),
+    ...casterOf(type),
     ...characterComponents(cfg.character, cfg.scale),
     // The kind's own scale may differ from the character's, so the lift comes from the table.
     yOffset: cfg.yOffset,

@@ -6,7 +6,7 @@ import { ARROW_STATS, ATTACK_PERIOD } from '../entities/WeaponStats';
 import { ATTACK_RECOVERY } from '../characters/StateTriggers';
 import { characterSheet, weaponInHand } from '../rules/CharacterSheet';
 import { weaponRule } from '../rules/Equipment';
-import { metresToPx } from '../rules/Scale';
+import { feetToPx } from '../rules/Scale';
 import type { ShotReach } from '../entities/ProjectileFactory';
 import { world } from '../world';
 import { attackTempo } from './SwordSystem';
@@ -30,7 +30,7 @@ function canShoot(player: Player): boolean {
 /** How far the weapon in hand shoots, in pixels of the map (none for a weapon the table gives no range). */
 function reachOf(player: Player): ShotReach | undefined {
   const distance = weaponRule(weaponInHand(player.equipped ?? {}) ?? undefined)?.rule.distance;
-  return distance ? { normal: metresToPx(distance[0]), long: metresToPx(distance[1]) } : undefined;
+  return distance ? { normal: feetToPx(distance[0]), long: feetToPx(distance[1]) } : undefined;
 }
 
 /** Shots in one volley: one per attack the hero makes (Extra Attack), but a loading weapon fires once whatever. */

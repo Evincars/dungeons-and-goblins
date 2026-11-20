@@ -129,7 +129,7 @@
       { "id": "improved_abjuration", "name": "Improved Abjuration", "level": 10, "kind": "passive", "worked": true, "needs": "abjuration",
         "description": "After each short rest your Arcane Ward grows by your wizard level (up to twice your wizard level)." },
       { "id": "minor_conjuration", "name": "Minor Conjuration: Create Water", "level": 2, "kind": "active", "worked": true, "cooldown": 60, "needs": "conjuration",
-        "description": "Conjure water where you aim, up to 30 feet away: it puts out fire there and leaves a puddle on the floor for good. A spell that deals thunder damage over the puddle charges it with lightning, and from then on it deals 1d4 lightning damage every 6 seconds to everyone standing in it, friend or foe. Recovers in 60 seconds." },
+        "description": "Conjure water where you aim, up to 30 feet away: it puts out fire there and leaves a puddle on the floor for good. A spell that deals thunder or lightning damage over the puddle (a bolt of lightning flying across it too) charges it with lightning, and from then on it deals 1d4 lightning damage every 6 seconds to everyone standing in it, friend or foe. Recovers in 60 seconds." },
       { "id": "benign_transposition", "name": "Benign Transposition", "level": 6, "kind": "active", "worked": true, "cooldown": 60, "needs": "conjuration",
         "description": "Teleport up to 30 feet to the spot you aim at, or swap places with an ally standing there. It recovers in 60 seconds." },
       { "id": "focused_conjuration", "name": "Focused Conjuration", "level": 10, "kind": "passive", "worked": true, "needs": "conjuration",

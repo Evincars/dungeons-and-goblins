@@ -7,8 +7,6 @@ import { CHASE_SPEED_FACTOR, PIT_LOOKAHEAD, WALK_SPEED, WANDER_TURN_TICKS } from
 /** Unit steps for each Facing: north, east, south, west. */
 const FACING_STEPS = [[0, -1], [1, 0], [0, 1], [-1, 0]] as const;
 const FACINGS = [Facing.North, Facing.East, Facing.South, Facing.West] as const;
-/** Walk cycles are this many ticks long; a limp skips one cycle in `limp`. */
-const LIMP_CYCLE = 12;
 
 /** Whether a pit lies just ahead of the mob in direction (dx, dy). */
 function pitAhead(level: Level, mob: Mob, dx: number, dy: number): boolean {
@@ -49,13 +47,6 @@ export function walkTowards(_level: Level, mob: Mob, dx: number, dy: number): bo
 function stroll(level: Level, mob: Mob, dx: number, dy: number): boolean {
   if (pitAhead(level, mob, dx, dy)) return false;
   return walkTowards(level, mob, dx, dy);
-}
-
-/** Catacomb Snatch's limp: the mob skips movement on part of its walk cycle, so mobs read as slow and lurching. */
-export function limping(mob: Mob): boolean {
-  mob.walkTime = (mob.walkTime ?? 0) + 1;
-  const limp = mob.limp ?? 0;
-  return limp > 0 && Math.floor(mob.walkTime / LIMP_CYCLE) % limp === 0;
 }
 
 /** A random direction without a pit ahead, other than the current one; the current one if none is clear. */

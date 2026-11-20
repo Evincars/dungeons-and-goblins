@@ -45,6 +45,14 @@ export const BUFF_IDS = ['blade_ward', 'shield', 'mage_armor', 'false_life', 'st
 export type BuffId = (typeof BUFF_IDS)[number];
 const isBuff = (v: unknown): v is BuffId => BUFF_IDS.some((b) => b === v);
 
+/**
+ * The shape of a burst (src/rules/SpellArea.ts): a sphere round the point it goes off at, a cube (a square on the map) centred
+ * there, or a cone from the caster's hands towards the aim.
+ */
+export const SPELL_AREAS = ['sphere', 'cube', 'cone'] as const;
+export type SpellArea = (typeof SPELL_AREAS)[number];
+const isArea = (v: unknown): v is SpellArea => SPELL_AREAS.some((a) => a === v);
+
 /** Every damage type, weapons' too: a cloud of daggers slashes, a swarm of insects pierces. */
 export const SPELL_DAMAGE_TYPES = DAMAGE_TYPES;
 export type SpellDamageType = DamageType;
@@ -67,6 +75,8 @@ export type SpellDef = {
   save: StatName | null;
   range: number;
   radius: number;
+  /** The shape of the area a burst strikes. */
+  area: SpellArea;
   /** A buff spell's effect; how long a buff or zone lasts (ticks; 0: until a long rest). */
   buff: BuffId | null;
   durationTicks: number;
@@ -96,6 +106,7 @@ function readSpell(id: SpellId, raw: unknown): SpellDef {
   const effect = Array.isArray(raw.effect) ? raw.effect : [];
   ensure(isShape(effect[0]) && isColour(effect[1]), `Unknown effect for spell ${id}`, { id });
   ensure(raw.save === undefined || isStatName(raw.save), `Unknown saving throw for spell ${id}`, { id });
+  ensure(raw.area === undefined || isArea(raw.area), `Unknown area for spell ${id}`, { id });
   return {
     id,
     kind: isKind(raw.kind) ? raw.kind : 'bolt',
@@ -107,6 +118,7 @@ function readSpell(id: SpellId, raw: unknown): SpellDef {
     save: isStatName(raw.save) ? raw.save : raw.kind === 'zone' ? null : 'dexterity',
     range: num(raw.range, 0),
     radius: num(raw.radius, 0),
+    area: isArea(raw.area) ? raw.area : 'sphere',
     buff: isBuff(raw.buff) ? raw.buff : null,
     durationTicks: Math.round(num(raw.seconds, 0) * TICKS_PER_SECOND),
     concentration: raw.concentration === true,

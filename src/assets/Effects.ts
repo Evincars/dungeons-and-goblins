@@ -22,6 +22,8 @@ export const EFFECT_SHAPES = {
   petal_cross: [16, 769, 8],
   ring_pulse: [16, 776, 8],
   cloud_burst: [16, 777, 8],
+  // A cone of flame bursting from the hands (Burning Hands' icon; the spell itself plays as particles, render/VfxPlayer.ts).
+  fire_cone: [24, 1176, 9],
   spark_scatter: [16, 778, 8],
   orb_charge: [16, 779, 8],
   triangle_shard: [16, 786, 8],

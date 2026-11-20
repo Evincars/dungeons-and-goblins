@@ -1,5 +1,6 @@
 import { q } from '../world';
 import type { LevelTheme } from '../level/Theme';
+import { LEVEL_THEMES } from '../level/Theme';
 import type { Entity, InventoryItem, Player } from '../world';
 import { ARMORS, HAND_WEAPONS, SHIELDS, freshCopy } from '../entities/ItemCatalog';
 import { WEAPON_BASES } from '../rules/WeaponTable';
@@ -84,6 +85,17 @@ export function startRun(): void {
 }
 
 /**
+ * A saved game is taken up (game/SaveGame.ts): the run stands at the save's depth, in its kind of dungeon, on the level
+ * of its seed. The heroes' progress lives on in the saved world, not in what is carried.
+ */
+export function resumeRun(depth: number, theme: LevelTheme, seed: number): void {
+  startRun();
+  run.depth = depth;
+  run.theme = theme;
+  run.nextSeed = seed;
+}
+
+/**
  * The console's /dungeon: this level is built again as `theme` (and the levels after it), at the same depth; every
  * hero keeps what they have, as they would going deeper.
  */
@@ -114,6 +126,22 @@ function carryOf(player: Player): Carry {
  */
 function revivedCarry(player: Player): Carry {
   return { ...carryOf(player), stats: { ...structuredClone(player.playerStats), gold: 0 }, inventory: [], equipped: {}, health: player.health.max };
+}
+
+/** The heroes' level carried into the next level (their mean, rounded; 1 at the start of a run). */
+export function carriedPartyLevel(): number {
+  if (carried.size === 0) return 1;
+  let sum = 0;
+  for (const carry of carried.values()) sum += carry.stats.level;
+  return Math.max(1, Math.round(sum / carried.size));
+}
+
+/**
+ * What the next level is built as: the run starts in the catacombs, and every level after the first is any kind of dungeon
+ * at random (the catacombs, either castle, the mines).
+ */
+export function nextTheme(): LevelTheme {
+  return LEVEL_THEMES[Math.floor(Math.random() * LEVEL_THEMES.length)];
 }
 
 /** The exit was taken: the next level lies one deeper, and everyone's progress comes along (the fallen come back). */

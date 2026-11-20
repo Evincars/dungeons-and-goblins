@@ -1,0 +1,15 @@
+{
+  "app": "vfx-editor",
+  "kind": "project",
+  "version": 1,
+  "id": "dungeons-and-goblins",
+  "name": "Dungeons & Goblins",
+  "settings": {
+    "effectDataPath": ".",
+    "outputPath": "../public/vfx",
+    "assetRootPath": ".",
+    "allowExternalOutput": true
+  },
+  "createdAt": "2026-11-19T00:00:00.000Z",
+  "updatedAt": "2026-11-19T00:00:00.000Z"
+}

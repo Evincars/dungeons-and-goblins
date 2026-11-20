@@ -7,6 +7,7 @@ import { text } from '../core/texts';
 import { THEME } from './Theme';
 import { PixelLabel } from './PixelText';
 import { HudDialog } from './HudDialog';
+import { isInventoryOpen, setInventoryOpen } from '../systems/InventorySystem';
 import { MinimapView } from './MinimapView';
 import { QuickBar } from './QuickBar';
 import { COMBAT_LOG_SPAN } from './CombatLogPanel';
@@ -197,8 +198,12 @@ export class HudPanel {
     this.container.addChild(button);
   }
 
-  /** The map button shows the explored dungeon, rest opens its drop-down; the others, for now, a placeholder. */
+  /** The character button opens and shuts the inventory (as Tab does), rest opens its drop-down, the map shows the explored dungeon. */
   private open(def: ButtonDef): void {
+    if (def.id === 'character') {
+      this.toggleInventory();
+      return;
+    }
     if (def.id === 'rest') {
       this.restMenu.toggle(localPlayer());
       return;
@@ -207,14 +212,18 @@ export class HudPanel {
       this.openLevel();
       return;
     }
-    if (def.id !== 'map') {
-      this.dialog.show(def.title, text('hud.dialog.placeholder'));
-      return;
-    }
     if (!this.levelShown) return;
     this.minimap.draw(this.levelShown);
     this.mapRefresh = MAP_REFRESH_TICKS;
     this.dialog.show(def.title, this.minimap.view, this.minimap.width, this.minimap.height);
+  }
+
+  /** Opens or shuts this screen's inventory (a fallen hero carries nothing: theirs stays shut). */
+  private toggleInventory(): void {
+    const player = localPlayer();
+    if (!player || player.health.current <= 0) return;
+    this.dialog.hide();
+    setInventoryOpen(!isInventoryOpen());
   }
 
   /** The level bubble: what the hero can decide at their level. */

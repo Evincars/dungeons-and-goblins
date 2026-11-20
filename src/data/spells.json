@@ -1,5 +1,5 @@
 {
-  "$comment": "Spells (D&D 5e SRD), cast from the quick bar: each of its keys (Q R T 1-5 X C, Shift for the second row) casts its square, right click the one last picked. There are no spell slots: each spell has a recovery (seconds) before it can be cast again, and a short rest recovers them all. level: the spell's own level (0: cantrip), which sets how long it takes to recover: about 0.75-2 s for a cantrip, 4-10 s for level 1, longer for each level after. Which hero learns a spell, and at what hero level, is in the class's progression (src/data/classes.json). kind: bolt (a projectile; a spell attack, d20 + proficiency + casting ability, against AC), missiles (count darts that always hit), burst (everyone within radius px of the point aimed at, within range px of the caster, or of the caster when range is 0, rolls a save against the spell DC: full damage on a failure, half on a success), heal (the caster, dice + casting ability; with a radius, every hero within it). damage: dice notation; damageType: fire, cold, lightning, force, necrotic, radiant, thunder, acid, psychic. effect: [shape, colour] from src/assets/Effects.ts, played where it strikes (and as its icon); effectScale sizes it. buff: lasts on the caster (buff: blade_ward or stoneskin resist weapons' damage, shield +5 AC, mage_armor AC 13 + DEX until a long rest, false_life temporary hit points of its dice; seconds: how long, 0 until a long rest). zone: stays where it is cast (on the caster when range is 0, following them) for seconds, striking everyone in its radius at once and every 6 seconds after (a save for half when it has one). water: a puddle of radius px where aimed (a thunder spell charges it). concentration: held by concentration, one spell at a time; damage may break it (a Constitution save). drain: the share of a bolt's damage its caster heals.",
+  "$comment": "Spells (D&D 5e SRD), cast from the quick bar: each of its keys (Q R T 1-5 X C, Shift for the second row) casts its square, right click the one last picked. There are no spell slots: each spell has a recovery (seconds) before it can be cast again, and a short rest recovers them all. level: the spell's own level (0: cantrip), which sets how long it takes to recover: about 0.75-2 s for a cantrip, 4-10 s for level 1, longer for each level after. Which hero learns a spell, and at what hero level, is in the class's progression (src/data/classes.json). kind: bolt (a projectile; a spell attack, d20 + proficiency + casting ability, against AC), missiles (count darts that always hit), burst (everyone within radius px of the point aimed at, within range px of the caster, or of the caster when range is 0, rolls a save against the spell DC: full damage on a failure, half on a success; area: sphere (the default: within radius px of that point), cube (a square of radius px each way from it) or cone (from the caster towards the aim, range + radius px long and as wide at its end as it is long, src/rules/SpellArea.ts)), heal (the caster, dice + casting ability; with a radius, every hero within it). damage: dice notation; damageType: fire, cold, lightning, force, necrotic, radiant, thunder, acid, psychic. effect: [shape, colour] from src/assets/Effects.ts, played where it strikes (and as its icon); effectScale sizes it. buff: lasts on the caster (buff: blade_ward or stoneskin resist weapons' damage, shield +5 AC, mage_armor AC 13 + DEX until a long rest, false_life temporary hit points of its dice; seconds: how long, 0 until a long rest). zone: stays where it is cast (on the caster when range is 0, following them) for seconds, striking everyone in its radius at once and every 6 seconds after (a save for half when it has one). water: a puddle of radius px where aimed (a thunder or lightning spell charges it, a lightning bolt flying over it too). concentration: held by concentration, one spell at a time; damage may break it (a Constitution save). drain: the share of a bolt's damage its caster heals.",
   "fire_bolt": {
     "kind": "bolt", "level": 0, "damage": "1d10", "damageType": "fire", "recovery": 0.75,
     "effect": ["flame_lick", "coral"], "effectScale": 0.8
@@ -33,11 +33,11 @@
     "effect": ["spark_scatter", "violet"], "effectScale": 0.6
   },
   "burning_hands": {
-    "kind": "burst", "level": 1, "damage": "3d6", "damageType": "fire", "save": "dexterity", "range": 56, "radius": 40, "recovery": 6,
-    "effect": ["cloud_burst", "coral"], "effectScale": 1.4
+    "kind": "burst", "area": "cone", "level": 1, "damage": "3d6", "damageType": "fire", "save": "dexterity", "range": 56, "radius": 40, "recovery": 6,
+    "effect": ["fire_cone", "coral"], "effectScale": 2
   },
   "thunderwave": {
-    "kind": "burst", "level": 1, "damage": "2d8", "damageType": "thunder", "save": "constitution", "range": 0, "radius": 48, "recovery": 6,
+    "kind": "burst", "area": "cube", "level": 1, "damage": "2d8", "damageType": "thunder", "save": "constitution", "range": 0, "radius": 48, "recovery": 6,
     "effect": ["ring_ripple", "white"], "effectScale": 1.6
   },
   "guiding_bolt": {
@@ -113,7 +113,7 @@
     "effect": ["diamond_shatter", "white"], "effectScale": 1.3
   },
   "conjure_barrage": {
-    "kind": "burst", "level": 3, "damage": "3d8", "damageType": "force", "save": "dexterity", "range": 56, "radius": 48, "recovery": 14,
+    "kind": "burst", "area": "cone", "level": 3, "damage": "3d8", "damageType": "force", "save": "dexterity", "range": 56, "radius": 48, "recovery": 14,
     "effect": ["blade_streak", "white"], "effectScale": 1.5
   },
   "fireball": {
@@ -137,7 +137,7 @@
     "effect": ["shard_tumble", "azure"], "effectScale": 2
   },
   "cone_of_cold": {
-    "kind": "burst", "level": 5, "damage": "8d8", "damageType": "cold", "save": "constitution", "range": 64, "radius": 64, "recovery": 24,
+    "kind": "burst", "area": "cone", "level": 5, "damage": "8d8", "damageType": "cold", "save": "constitution", "range": 64, "radius": 64, "recovery": 24,
     "effect": ["cone_spray", "azure"], "effectScale": 2
   },
   "flame_strike": {

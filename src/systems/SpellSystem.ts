@@ -1,5 +1,7 @@
-import { world, q, isActivePlayer, isPlayer, isTarget, QUICK_SLOTS } from '../world';
+import { world, q, isActivePlayer, isPlayer, isTarget, QUICK_SLOTS, Team } from '../world';
 import type { Entity, Player, SpellEffect } from '../world';
+import type { DamageType } from '../rules/DamageTypes';
+import { hurtPlayer } from './CombatSystem';
 import type { Level } from '../level/Level';
 import { bonusSwing, earnBonusAttack, hitMob } from './SwordSystem';
 import { bonusShot, holdsBow } from './ArrowSystem';
@@ -13,7 +15,7 @@ import { heroClass, spellLevelFor } from '../rules/Classes';
 import { bindingFeatureId, featureCooldown, featureOn, featureOfClass, hasClassFeature } from '../rules/ClassFeatures';
 import { switchFeat, usedFeature } from './FeatureSystem';
 import { foreseeHit, foreseenSave, grimHarvest, savedDamage, sculptAt, spellCast, spellDamageBonus, splitEnchantment } from './SchoolSystem';
-import { castBuff, castWater, castZone, electrify } from './LastingSpells';
+import { castBuff, castWater, castZone, chargesWater, electrify } from './LastingSpells';
 import { FEATS, bindingFeatId } from '../rules/Feats';
 import { passiveFeats } from '../rules/Build';
 import { useFeat } from './FeatActions';
@@ -30,6 +32,9 @@ import type { Dice } from '../rules/Dice';
 import { spawnFx } from '../entities/FxFactory';
 import { AIM_HEIGHT, createSpellBolt } from '../entities/ProjectileFactory';
 import { playEffect } from '../assets/Effects';
+import { areaBounds, areaCentre, coneLength, inArea } from '../rules/SpellArea';
+import { playVfx } from '../render/VfxPlayer';
+import { SPELL_VFX } from '../render/SpellVfx';
 import { SPELL_STATS } from '../entities/WeaponStats';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 import { sound } from '../audio/SoundPlayer';
@@ -61,6 +66,10 @@ const DART_GAP_TICKS = 5;
 const FEEDBACK_TICKS = 30;
 const victims: Entity[] = [];
 const aimed = { x: 0, y: 0 };
+const facing = { x: 0, y: 1 };
+const bounds = { x: 0, y: 0, r: 0 };
+/** A cone leaves the caster's hands this far above their feet. */
+const CONE_HANDS = 12;
 
 /** Where a projectile ends: the spell's effect (and a caster's own burst art) where it struck; an arrow glints. */
 function burst(bolt: Bolt, struck: boolean): void {
@@ -70,7 +79,10 @@ function burst(bolt: Bolt, struck: boolean): void {
   if (arrow && struck) sound.playSound('arrow_hit', p.x, p.y);
   if (spell) sound.playSound(SPELL_IMPACTS[SPELLS[spell].damageType], p.x, p.y);
   if (art) spawnFx(p.x, p.y, art.sheet, art.count, art.count * art.frameTime, { first: art.first, scale: art.scale, yOffset: AIM_HEIGHT });
-  if (impact) playEffect(impact.shape, impact.colour, p.x, p.y, AIM_HEIGHT, impact.scale);
+  // A spell with particles of its own strikes in them (render/SpellVfx.ts), every other in its library effect.
+  const particles = spell ? SPELL_VFX[spell]?.impact : undefined;
+  if (particles) playVfx(particles, p.x, p.y, AIM_HEIGHT);
+  else if (impact) playEffect(impact.shape, impact.colour, p.x, p.y, AIM_HEIGHT, impact.scale);
   // An evoker's spell leaves its Sculpt Spells bubble where it landed.
   if (spell && bolt.projectile.owner !== undefined) sculptAt(world.entity(bolt.projectile.owner), spell, p.x, p.y, SPELLS[spell].radius);
   world.addComponent(bolt, 'removed', true);
@@ -210,7 +222,7 @@ function startCast(caster: Player, level: Level): void {
   caster.castCooldown = SPELL_STATS.cooldown;
 }
 
-const impactOf = (def: SpellDef): SpellEffect => ({ shape: def.effect.shape, colour: def.effect.colour, scale: def.effect.scale });
+export const impactOf = (def: SpellDef): SpellEffect => ({ shape: def.effect.shape, colour: def.effect.colour, scale: def.effect.scale });
 
 /** Eldritch Blast with Agonizing Blast adds the casting ability to its damage; every other bolt rolls its dice. */
 function boltDamage(caster: Player, def: SpellDef, sheet: CharacterSheet): Dice {
@@ -243,17 +255,6 @@ function castMissiles(caster: Player, def: SpellDef, dirX: number, dirY: number)
   }
 }
 
-/** Where a burst goes off: on the caster, or at the point aimed at, no further than the spell reaches. */
-function burstCentre(caster: Player, def: SpellDef, targetX: number, targetY: number): { x: number; y: number } {
-  const { x, y } = caster.position;
-  const dx = targetX - x;
-  const dy = targetY - y;
-  const dist = Math.hypot(dx, dy);
-  if (def.range <= 0 || dist === 0) return { x, y };
-  const reach = Math.min(dist, def.range);
-  return { x: x + (dx / dist) * reach, y: y + (dy / dist) * reach };
-}
-
 /**
  * One foe caught in a burst saves against the spell DC (a diviner's Portent die may make it fail): a failure takes all the
  * damage, a success half (a cantrip's nothing, but half with Potent Cantrip).
@@ -273,20 +274,47 @@ function burstHits(caster: Player, def: SpellDef, foe: Entity, dc: number): void
   splitEnchantment(caster, foe, def.id, damage);
 }
 
-/** A burst: the effect where it goes off, and a save for every foe within its radius. */
-function castBurst(caster: Player, def: SpellDef, targetX: number, targetY: number): void {
-  const centre = burstCentre(caster, def, targetX, targetY);
-  playEffect(def.effect.shape, def.effect.colour, centre.x, centre.y, 0, def.effect.scale);
+/**
+ * A burst's art: its particles where possible (render/SpellVfx.ts; played on every screen, render/VfxPlayer.ts) — a cone's
+ * from the caster's hands towards its tip, any other's where it goes off — else its library effect there (a cone's at its
+ * middle).
+ */
+export function playBurstArt(caster: { position: { x: number; y: number } }, def: SpellDef, centre: { x: number; y: number }): void {
+  const { shape, colour, scale } = def.effect;
+  const { x, y } = caster.position;
+  const vfx = SPELL_VFX[def.id]?.burst;
+  if (vfx && def.area === 'cone') {
+    const length = coneLength(def);
+    playVfx(vfx, x, y, CONE_HANDS, (centre.x - x) / length, (centre.y - y) / length);
+    return;
+  }
+  if (vfx) {
+    playVfx(vfx, centre.x, centre.y);
+    return;
+  }
+  const at = def.area === 'cone' ? { x: (x + centre.x) / 2, y: (y + centre.y) / 2 } : centre;
+  playEffect(shape, colour, at.x, at.y, 0, scale);
+}
+
+/** A burst: the effect where it goes off, and a save for every foe its area catches. */
+function castBurst(caster: Player, def: SpellDef, targetX: number, targetY: number, dirX: number, dirY: number): void {
+  facing.x = dirX;
+  facing.y = dirY;
+  aimed.x = targetX;
+  aimed.y = targetY;
+  const centre = areaCentre(def, caster.position, aimed, { x: 0, y: 0 }, facing);
+  playBurstArt(caster, def, centre);
   // A burst round the caster is all in its casting sound; one thrown further off goes off where it lands.
   if (def.range > 0) sound.playSound(SPELL_IMPACTS[def.damageType], centre.x, centre.y);
   const dc = spellcastingFor(characterSheet(caster), def.id).dc;
-  for (const foe of nearby(centre.x, centre.y, def.radius + MAX_MOB_RADIUS, Sense.mob, victims)) {
+  const near = areaBounds(def, caster.position, centre, bounds);
+  for (const foe of nearby(near.x, near.y, near.r + MAX_MOB_RADIUS, Sense.mob, victims)) {
     if (!isTarget(foe) || foe.health.current <= 0) continue;
-    if (Math.hypot(foe.position.x - centre.x, foe.position.y - centre.y) > def.radius + Math.max(foe.radius.x, foe.radius.y)) continue;
+    if (!inArea(def, caster.position, centre, foe.position.x, foe.position.y, Math.max(foe.radius.x, foe.radius.y))) continue;
     burstHits(caster, def, foe, dc);
   }
-  // Thunder charges the water it reaches with lightning.
-  if (def.damageType === 'thunder') electrify(centre.x, centre.y, def.radius);
+  // Thunder and lightning charge the water they reach.
+  if (chargesWater(def.damageType)) electrify(centre.x, centre.y, def.radius);
   sculptAt(caster, def.id, centre.x, centre.y, def.radius);
 }
 
@@ -338,7 +366,7 @@ function release(caster: Player, cast: NonNullable<Entity['casting']>): void {
   if (def.kind === 'buff' && !castBuff(caster, def)) return;
   if (def.kind === 'bolt') castBolt(caster, def, cast.dirX, cast.dirY);
   else if (def.kind === 'missiles') castMissiles(caster, def, cast.dirX, cast.dirY);
-  else if (def.kind === 'burst') castBurst(caster, def, targetX, targetY);
+  else if (def.kind === 'burst') castBurst(caster, def, targetX, targetY, cast.dirX, cast.dirY);
   else if (def.kind === 'zone') castZone(caster, def, cast.level ?? base.level, targetX, targetY);
   else if (def.kind === 'water') castWater(caster, def, targetX, targetY);
   else castHeal(caster, def);
@@ -437,12 +465,51 @@ function flyBolt(level: Level, bolt: Bolt): void {
   const pos = bolt.position;
   pos.x += bolt.velocity.x;
   pos.y += bolt.velocity.y;
+  // A lightning bolt (or a thunderous one) charges the water it flies over.
+  const spell = bolt.projectile.spell;
+  if (spell && chargesWater(SPELLS[spell].damageType)) electrify(pos.x, pos.y, 0);
   if (--bolt.projectile.life <= 0 || level.blocksPoint(pos.x, pos.y)) {
     burst(bolt, false);
     return;
   }
+  // An enemy's shot or spell strikes the heroes; the heroes' strike their foes.
+  if (bolt.projectile.team === Team.Mob) {
+    const hero = heroVictim(bolt);
+    if (hero) burst(bolt, strikeHero(bolt, hero));
+    return;
+  }
   const victim = boltVictim(bolt);
   if (victim) burst(bolt, strikeWith(bolt, victim));
+}
+
+/** The first hero, on their feet, whose body an enemy's shot touches. */
+function heroVictim(bolt: Bolt): Player | null {
+  const pos = bolt.position;
+  for (const hero of q.players) {
+    if (!isActivePlayer(hero) || !hero.radius) continue;
+    const near = Math.abs(hero.position.x - pos.x) <= hero.radius.x + SPELL_STATS.reachX
+      && Math.abs(hero.position.y - pos.y) <= hero.radius.y + SPELL_STATS.reachY;
+    if (near) return hero;
+  }
+  return null;
+}
+
+/**
+ * An enemy's arrow or spell meets a hero: a dart always hits; anything else is rolled against their Armor Class (past the
+ * bow's normal range with disadvantage), as the heroes' own shots are. What gets through hurts by its kind.
+ */
+function strikeHero(bolt: Bolt, hero: Player): boolean {
+  const p = bolt.projectile;
+  const shooter = p.owner === undefined ? undefined : world.entity(p.owner);
+  const type: DamageType = p.spell ? SPELLS[p.spell].damageType : 'piercing';
+  if (p.autoHit) {
+    hurtPlayer(hero, shooter ?? bolt, Math.max(MIN_HIT_DAMAGE, rollDice(p.attack.damage, false, rollDie, 0)), type);
+    return true;
+  }
+  const attack = beyondNormalRange(p) ? withDisadvantage(p.attack) : p.attack;
+  const outcome = strike(hero, attack, shooter, p.spell);
+  if (outcome.hit) hurtPlayer(hero, shooter ?? bolt, outcome.damage, type);
+  return outcome.hit;
 }
 
 /** Casting (right mouse / R) toward the crosshair, and flying spell bolts and arrows. */

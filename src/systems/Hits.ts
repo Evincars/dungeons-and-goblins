@@ -25,6 +25,9 @@ export function hitMob(mob: Entity, attacker: Entity, damage: number, evenIfFlin
   mob.hurtTime = MOB_HURT_TICKS;
   mob.attackTime = 0;
   mob.freezeTime = MOB_FREEZE_TICKS;
+  // The hero who dealt it is credited with what it took (for the level's summary).
+  const credited = mob.lastHitBy === undefined ? undefined : world.entity(mob.lastHitBy);
+  if (credited?.playerStats) credited.playerStats.damageDealt += Math.min(damage, h.current);
   h.current = Math.max(0, h.current - damage);
   // A blow breaks a charm (Hypnotic Gaze, an illusion's hold).
   if (mob.status) mob.status.charmed = 0;

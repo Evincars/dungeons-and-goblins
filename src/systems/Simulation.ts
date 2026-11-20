@@ -5,6 +5,7 @@ import { updateInput } from './InputSystem';
 import { updateTargeting, resolveUses } from './TargetSystem';
 import { updateSpells } from './SpellSystem';
 import { updateAI } from './AISystem';
+import { updateEnemyRanged } from './EnemyRangedSystem';
 import { updateMovement } from './MovementSystem';
 import { updateTrails } from './TrailSystem';
 import { updateCombatTimers, updateContactDamage } from './CombatSystem';
@@ -18,6 +19,7 @@ import { updateDoors } from './DoorSystem';
 import { updateExit } from './ExitSystem';
 import { updateTraps } from './TrapSystem';
 import { updateMist } from './MistSystem';
+import { updateVfx } from './VfxSystem';
 import { updateAimGuide } from './AimGuideSystem';
 import { updateShop } from './ShopSystem';
 import { animateTraders } from './TraderSystem';
@@ -83,6 +85,7 @@ export const SIMULATION: readonly System[] = [
   ({ level }) => updateInventory(level),
   () => updateWeaponSwap(),
   ({ level, tick }) => updateAI(level, tick),
+  ({ level }) => updateEnemyRanged(level),
   ({ level }) => updateSummons(level),
   () => updateDecoys(),
   () => updateInitiative(),
@@ -141,6 +144,7 @@ export const PRESENTATION: readonly System[] = [
   ({ gameLayer }) => updateMarker(gameLayer),
   ({ overLayer }) => updateAimGuide(overLayer),
   ({ gameLayer, tick }) => updateMist(gameLayer, tick),
+  ({ gameLayer }) => updateVfx(gameLayer),
   () => updateMusic(),
   ({ level }) => updateAmbience(level),
 ];

@@ -19,6 +19,7 @@ import type { AreaShape, Point } from '../rules/SpellArea';
 import { bindingFeatureId } from '../rules/ClassFeatures';
 import { FEATURE_AREAS } from './SchoolSystem';
 import { SPELL_STATS } from '../entities/WeaponStats';
+import { AIM_HEIGHT } from '../entities/ProjectileFactory';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { PixelLabel } from '../ui/PixelText';
 
@@ -43,8 +44,6 @@ const CAUGHT_ALPHA = 0.55;
 const DOT_STEP = 7;
 const DOT_RADIUS = 0.8;
 const END_RADIUS = 2.5;
-/** The line leaves the hero this far above their feet (where a spell or arrow leaves their hands). */
-const HAND_HEIGHT = 12;
 /** The mark under an enemy the area would catch: an ellipse this wide and tall. */
 const CAUGHT_RX = 8;
 const CAUGHT_RY = 3;
@@ -210,9 +209,12 @@ export function updateAimGuide(gameLayer: Container): void {
     guideArea(g, text, player, a.area, a.landsWhere === 'target');
     return;
   }
-  const { x, y } = player.position;
+  // A shot leaves from hand height and flies at the crosshair (the hero's aim is taken from there, MovementSystem.ts), so
+  // its line runs from the hands through the crosshair.
+  const x = player.position.x;
+  const y = player.position.y - AIM_HEIGHT;
   const dist = Math.hypot(aim.x - x, aim.y - y);
   if (dist <= 0) return;
-  drawLine(g, x, y - HAND_HEIGHT, (aim.x - x) / dist, (aim.y - y) / dist, a);
+  drawLine(g, x, y, (aim.x - x) / dist, (aim.y - y) / dist, a);
   showDistance(text, aim.x, aim.y, dist, colourFor(dist, a));
 }

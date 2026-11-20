@@ -28,7 +28,10 @@ export const VFX_EFFECTS = [
   'ray-of-sickness-cast', 'ray-of-sickness-flight', 'ray-of-sickness-impact',
   'magic-missile-cast', 'magic-missile-flight', 'magic-missile-impact',
   'burning-hands', 'acid-splash', 'poison-spray', 'ice-knife', 'thunderwave',
-  'blade-ward', 'false-life', 'mage-armor', 'shield',
+  'blade-ward', 'blade-ward-aura', 'false-life', 'mage-armor', 'shield', 'shield-aura',
+  'melfs-acid-arrow-cast', 'melfs-acid-arrow-flight', 'melfs-acid-arrow-impact',
+  'scorching-ray-cast', 'scorching-ray-flight', 'scorching-ray-impact',
+  'shatter', 'cloud-of-daggers', 'prayer-of-healing',
 ] as const;
 export type VfxEffectId = (typeof VFX_EFFECTS)[number];
 

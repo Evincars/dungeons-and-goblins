@@ -67,6 +67,12 @@ export function buffsOf(hero: Player): Buffs {
   return buffs;
 }
 
+/** A buff without particles of its own: the library's halo round the caster, and its effect. */
+function showBuffArt(caster: Player, def: SpellDef, id: number | undefined): void {
+  if (id !== undefined) playAura(BUFF_AURA, id, caster.position.x, caster.position.y);
+  playEffect(def.effect.shape, def.effect.colour, caster.position.x, caster.position.y, AIM_HEIGHT, def.effect.scale);
+}
+
 /** A buff's particles rise round the caster's body from this far above their feet. */
 const BODY_MIDDLE = 16;
 
@@ -80,11 +86,11 @@ export function castBuff(caster: Player, def: SpellDef): boolean {
     return false;
   }
   const id = world.id(caster);
-  if (id !== undefined) playAura(BUFF_AURA, id, caster.position.x, caster.position.y);
-  // Its particles round the body where it has them (render/SpellVfx.ts), else its library effect.
+  // Its particles round the body where it has them (render/SpellVfx.ts; a lasting aura follows from its buff), else the
+  // library's halo and effect.
   const aura = SPELL_VFX[def.id]?.aura;
   if (aura) playVfx(aura, caster.position.x, caster.position.y, BODY_MIDDLE);
-  else playEffect(def.effect.shape, def.effect.colour, caster.position.x, caster.position.y, AIM_HEIGHT, def.effect.scale);
+  else showBuffArt(caster, def, id);
   if (def.concentration) concentrate(caster, def.id, -1);
   const buffs = buffsOf(caster);
   if (def.buff === 'blade_ward') buffs.bladeWard = def.durationTicks;
@@ -217,7 +223,9 @@ function updateZone(zone: Zone): void {
     zone.position.y = caster.position.y;
   }
   const art = SPELLS[z.spell].effect;
-  if (z.ticks % ZONE_SHOW_TICKS === 0) playEffect(art.shape, art.colour, zone.position.x, zone.position.y, 0, art.scale);
+  // A zone with particles of its own shows in them for as long as it lasts (systems/VfxSystem.ts); any other now and then.
+  const shown = SPELL_VFX[z.spell]?.zone !== undefined;
+  if (!shown && z.ticks % ZONE_SHOW_TICKS === 0) playEffect(art.shape, art.colour, zone.position.x, zone.position.y, 0, art.scale);
   if (--z.pulse > 0) return;
   z.pulse = TURN_TICKS;
   pulseZone(zone, caster);

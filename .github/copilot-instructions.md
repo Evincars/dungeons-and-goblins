@@ -295,11 +295,14 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   styles), and where a wall juts out past another's face it ends in its edge strip all the way up its face
   (`shallowerFace`) and on up to the wall's north edge (`seamW`/`seamE`). Wall torches and campfires throw sparks from their flames, now and then an ember dropping to the
   floor (`sparks`, `systems/VfxSystem.ts`: the NixieFX effects `vfx/torch-sparks.json` and `campfire-embers.json`, one unit 16 px
-  with y up, played at the root's origin, moved on a tick at a time). The wizard's cantrips and 1st-level spells
+  with y up, played at the root's origin, moved on a tick at a time). The wizard's cantrips, 1st- and 2nd-level spells
   play particles their whole course (`render/SpellVfx.ts`, `SPELL_VFX`): a flare in the hands as a flying spell leaves them,
   the projectile itself as particles (no sprite, no caster's bolt art: every screen follows the projectiles it has, guests'
   from the host's state), its impact where it ends, an area spell's burst over the whole of its area (Burning Hands' flames
-  from the hands), an aura round the caster of a buff; each spell its own look, after its description and Baldur's Gate.
+  from the hands), a buff's flash round the caster as it is cast (no library halo with it) — Blade Ward and Shield keep an aura round the hero
+  while they last (`BUFF_AURAS`), Mage Armour shows only as it is cast —, a zone's particles over it while it lasts (Cloud of
+  Daggers), a healing spell's light round each hero mended (Prayer of Healing); each spell its own look, after its description
+  and Baldur's Gate.
   One-shots are asked for with `playVfx` (`render/VfxPlayer.ts`): the co-op host sends each guest only a short `vfx` signal
   (which effect, where, which way) and every screen renders it itself. A spell without particles plays its library effect.
   The library's circle of spawn lies flat to a 2-D view: turn it into the screen's plane (`SCREEN_PLANE`, the script). Campfires stand on a ring of cobbles
@@ -396,7 +399,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   and the light overlay are scaled, the camera follows the hero over the smaller stretch of world in view.
 - While the hero aims, a faint guide (`systems/AimGuideSystem.ts`, drawn over the light and fog, `overLayer`) shows where
   it goes, for the spell being cast or whose quick-bar key is held, else the bow or crossbow in hand: a shot that flies
-  straight (a bolt, darts, an arrow) is a dotted straight line from the hands the way the hero aims, as far as it flies (where
+  straight (a bolt, darts, an arrow) is a dotted straight line from the hands (AIM_HEIGHT, where shots leave) through the crosshair, as far as it flies (where
   it goes off if it strikes nothing), grey, amber past a bow's normal range (disadvantage); a spell with an area shows only
   that area — a circle, a square (cube) or a cone from the hands — where it will go off (aimed past its reach, as far that
   way as it reaches), a mark under each enemy it would catch, and how far off it is, in feet. A quick-bar square recovering shows its time left over its shade (tenths under 10 s). A class feature bg3.wiki

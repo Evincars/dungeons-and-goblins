@@ -32,7 +32,7 @@ const SCREEN_PLANE = [90, 0, 0];
 /**
  * One emitter. o: max particles, rate (a second), duration and loop (a one-shot emits for `duration` s), where they are born
  * (`box` [w, h] of the area, or `ring` radius with `filled` for a disc), life [min, max] s, velocity `vmin`/`vmax` (units/s,
- * per axis), `radial` (units/s out from the origin, negative in), gravity, drag, size [start, end] (units), colours (a
+ * per axis), `radial` (units/s out from the origin, negative in), `orbit` (radians/s round it), gravity, drag, size [start, end] (units), colours (a
  * gradient over life), `round` soft dots or crisp squares, `blend`, `floor` (units below the origin where they land).
  */
 function emitter(id, o) {
@@ -42,7 +42,7 @@ function emitter(id, o) {
   e.maxParticles = o.max;
   e.duration = o.duration ?? 1;
   e.loop = o.loop ?? true;
-  Object.assign(e.modules, { velocity: true, color: true, size: true, noise: false, collision: !!o.floor, velocityOverLifetime: !!o.radial });
+  Object.assign(e.modules, { velocity: true, color: true, size: true, noise: false, collision: !!o.floor, velocityOverLifetime: !!(o.radial || o.orbit) });
   e.spawn.rate = o.rate;
   e.spawn.rateValue = constant(o.rate, 0, 3000);
   e.spawn.shape = o.ring ? 'circle' : 'box';
@@ -65,6 +65,8 @@ function emitter(id, o) {
   e.forces.drag = o.drag ?? 0;
   e.forces.dragValue = constant(o.drag ?? 0, 0, 10);
   if (o.radial) e.advanced.velocityOverLifetime.radial = constant(o.radial, -32, 32);
+  // Circling the origin in the screen's plane (radians a second; the turned circle's own axis is y).
+  if (o.orbit) e.advanced.velocityOverLifetime.orbital.y = constant(o.orbit, -32, 32);
   e.render.blend = o.blend ?? 'additive';
   e.billboard.shape = o.round ? 'circle' : 'square';
   e.billboard.softness = o.round ? 0.6 : 0;
@@ -285,25 +287,100 @@ effect('thunderwave', 1.4, [
 ]);
 
 // ── Spells that last on the caster: round their body ─────────────────────────
+// A buff flashes up once as it is cast; Blade Ward and Shield keep an aura round the body while they last (the loops,
+// `-aura`); Mage Armour (until a long rest) and False Life show only as they are cast.
 
-// Blade Ward: silver glints circling the body.
-effect('blade-ward', 1.6, [
-  emitter('glints', once(0.45, { max: 40, rate: 80, ring: 1.1, life: [0.5, 0.8], vmin: [-0.3, 0.3], vmax: [0.3, 1], size: [0.16, 0.04], colors: C.silver })),
+// Blade Ward: blades of silver light flung out round the body, then glints circling it while it lasts.
+effect('blade-ward', 1.2, [
+  emitter('blades', once(0.06, { max: 40, rate: 700, ring: 0.5, life: [0.3, 0.45], radial: 4, orbit: 4, size: [0.2, 0.05], colors: C.silver })),
+  emitter('flash', once(0.05, { max: 6, rate: 120, life: [0.12, 0.2], size: [1.6, 0.5], colors: C.silver, round: true })),
 ]);
-// False Life: dark green motes of borrowed life rising into the body.
+effect('blade-ward-aura', 1, [
+  emitter('glints', { max: 40, rate: 32, ring: 1.2, life: [0.7, 1.1], orbit: 3, size: [0.14, 0.03], colors: C.silver }),
+  emitter('sheen', { max: 16, rate: 12, ring: 1, filled: true, life: [0.5, 0.8], vmin: [0, 0.2], vmax: [0, 0.5], size: [0.5, 0.8], colors: gradient([[0, [0.85, 0.9, 1]], [1, [0.6, 0.65, 0.8]]], [[0, 0], [0.4, 0.18], [1, 0]]), round: true }),
+]);
+// Shield: a ring of force flashing up round the body, a faint shimmer of it staying while it lasts.
+effect('shield', 1, [
+  emitter('ring', once(0.06, { max: 70, rate: 1200, ring: 1.4, life: [0.3, 0.5], orbit: -2, size: [0.2, 0.05], colors: C.arcane })),
+  emitter('flash', once(0.05, { max: 6, rate: 120, life: [0.15, 0.25], size: [2, 0.7], colors: C.arcane, round: true })),
+]);
+effect('shield-aura', 1, [
+  emitter('shimmer', { max: 40, rate: 40, ring: 1.4, life: [0.3, 0.5], orbit: -1.5, size: [0.12, 0.03], colors: C.arcane }),
+  emitter('glow', { max: 10, rate: 8, ring: 1.3, life: [0.5, 0.8], size: [0.6, 0.9], colors: gradient([[0, [0.5, 0.7, 1]], [1, [0.3, 0.45, 1]]], [[0, 0], [0.4, 0.2], [1, 0]]), round: true }),
+]);
+// Mage Armour (until a long rest): a dome of force closes round the body once — a ring drawn in, a shimmer over it, motes
+// rising — and nothing after.
+effect('mage-armor', 1.8, [
+  emitter('ring', once(0.06, { max: 60, rate: 1000, ring: 2, life: [0.35, 0.5], radial: -3.5, size: [0.2, 0.06], colors: C.arcane })),
+  emitter('dome', once(0.12, { max: 24, rate: 200, ring: 1.3, filled: true, life: [0.4, 0.7], size: [0.6, 0.9], colors: gradient([[0, [0.7, 0.85, 1]], [1, [0.35, 0.5, 1]]], [[0, 0], [0.3, 0.35], [1, 0]]), round: true })),
+  emitter('motes', once(0.45, { max: 40, rate: 80, box: [1.4, 1.8], life: [0.5, 0.9], vmin: [-0.3, 0.8], vmax: [0.3, 2], drag: 0.8, size: [0.16, 0.04], colors: C.arcane })),
+]);
+// False Life: dark green motes of borrowed life drawn into the body.
 effect('false-life', 1.8, [
   emitter('motes', once(0.5, { max: 40, rate: 70, ring: 1.3, filled: true, life: [0.6, 0.9], radial: -1, vmin: [-0.2, 0.6], vmax: [0.2, 1.4], size: [0.22, 0.06], colors: C.life, round: true })),
   emitter('shade', once(0.3, { max: 10, rate: 30, box: [1, 1.4], life: [0.6, 0.9], vmin: [0, 0.3], vmax: [0, 0.8], size: [0.4, 0.2], colors: C.shadow, round: true, blend: 'alpha' })),
 ]);
-// Mage Armour: blue motes rising round the body, a shimmer settling on it.
-effect('mage-armor', 1.6, [
-  emitter('motes', once(0.45, { max: 40, rate: 80, box: [1.4, 1.8], life: [0.5, 0.9], vmin: [-0.3, 0.8], vmax: [0.3, 2], drag: 0.8, size: [0.16, 0.04], colors: C.arcane })),
-  emitter('ring', once(0.06, { max: 40, rate: 700, ring: 1.3, life: [0.3, 0.45], radial: -1.5, size: [0.14, 0.05], colors: C.arcane })),
+
+// ── 2nd-level spells ──────────────────────────────────────────────────────────
+
+const C2 = {
+  acidArrow: gradient([[0, [0.95, 1, 0.7]], [0.35, [0.5, 1, 0.3]], [1, [0.12, 0.5, 0.1]]]),
+  ray: gradient([[0, [1, 1, 0.9]], [0.3, [1, 0.75, 0.25]], [1, [0.9, 0.2, 0.05]]]),
+  shatter: gradient([[0, [1, 1, 1]], [0.4, [0.8, 0.85, 1]], [1, [0.45, 0.5, 0.85]]]),
+  steel: gradient([[0, [1, 1, 1]], [0.5, [0.75, 0.78, 0.85]], [1, [0.45, 0.48, 0.55]]], [[0, 1], [0.7, 0.85], [1, 0]]),
+  blood: gradient([[0, [0.9, 0.2, 0.15]], [1, [0.45, 0.05, 0.05]]], [[0, 0.9], [1, 0]]),
+  holy: gradient([[0, [1, 1, 0.9]], [0.4, [1, 0.9, 0.5]], [1, [0.9, 0.7, 0.3]]], [[0, 0.95], [0.6, 0.8], [1, 0]]),
+};
+
+// Melf's Acid Arrow: a shimmering green arrow of acid, dripping as it flies; it bursts in a spray of acid that keeps
+// hissing (its damage goes on).
+cast('melfs-acid-arrow', C2.acidArrow, { round: true });
+effect('melfs-acid-arrow-flight', 1, [
+  emitter('core', { max: 30, rate: 150, life: [0.05, 0.09], vmin: [-0.2, -0.2], vmax: [0.2, 0.2], size: [0.5, 0.2], colors: C2.acidArrow, round: true }),
+  emitter('streak', { max: 50, rate: 120, life: [0.15, 0.3], vmin: [-0.1, -0.1], vmax: [0.1, 0.1], size: [0.24, 0.05], colors: C2.acidArrow, round: true }),
+  emitter('drips', { max: 24, rate: 30, life: [0.4, 0.7], vmin: [-0.3, -0.2], vmax: [0.3, 0.2], gravity: 6, size: [0.14, 0.06], colors: C.acid, round: true }),
 ]);
-// Shield: a ring of force flashing up round the body.
-effect('shield', 1, [
-  emitter('ring', once(0.06, { max: 60, rate: 1000, ring: 1.3, life: [0.25, 0.45], vmin: [-0.2, -0.2], vmax: [0.2, 0.2], size: [0.18, 0.05], colors: C.arcane })),
-  emitter('flash', once(0.05, { max: 6, rate: 120, life: [0.12, 0.2], size: [1.8, 0.6], colors: C.arcane, round: true })),
+effect('melfs-acid-arrow-impact', 2.4, [
+  emitter('flash', once(0.05, { max: 6, rate: 120, life: [0.12, 0.2], size: [1.3, 0.4], colors: C2.acidArrow, round: true })),
+  emitter('spray', once(0.08, { max: 40, rate: 500, box: [0.3, 0.3], life: [0.45, 0.8], vmin: [-3.5, 0.5], vmax: [3.5, 4.5], gravity: 7, drag: 0.4, size: [0.2, 0.08], colors: C.acid, round: true })),
+  emitter('hiss', once(1.4, { max: 30, rate: 22, ring: 0.8, filled: true, life: [0.4, 0.8], vmin: [-0.2, 0.4], vmax: [0.2, 1.2], size: [0.14, 0.22], colors: C.acid, round: true })),
+  emitter('fumes', once(1.2, { max: 14, rate: 10, ring: 0.7, filled: true, life: [0.8, 1.2], vmin: [-0.2, 0.4], vmax: [0.2, 1], size: [0.4, 0.8], colors: C.gas, round: true, blend: 'alpha' })),
+]);
+
+// Scorching Ray: three rays of fire, each a lingering line of flame behind a white-hot point; each strikes in a burst of
+// flame.
+cast('scorching-ray', C2.ray, { round: true, gravity: 1 });
+effect('scorching-ray-flight', 1, [
+  emitter('core', { max: 30, rate: 160, life: [0.04, 0.08], size: [0.45, 0.2], colors: C.fireCore, round: true }),
+  emitter('beam', { max: 120, rate: 180, life: [0.2, 0.4], vmin: [-0.15, -0.15], vmax: [0.15, 0.15], size: [0.26, 0.06], colors: C2.ray, round: true }),
+  emitter('embers', { max: 20, rate: 25, life: [0.3, 0.6], vmin: [-0.6, 0.2], vmax: [0.6, 1.2], gravity: 1, size: [0.1, 0.04], colors: C.ember }),
+]);
+effect('scorching-ray-impact', 1.2, [
+  emitter('flash', once(0.05, { max: 6, rate: 120, life: [0.1, 0.18], size: [1.1, 0.35], colors: C.fireCore, round: true })),
+  emitter('flames', once(0.07, { max: 36, rate: 500, box: [0.2, 0.2], life: [0.25, 0.5], vmin: [-3.5, -1.5], vmax: [3.5, 3.5], drag: 2.2, size: [0.4, 0.1], colors: C.flame, round: true })),
+  emitter('embers', once(0.07, { max: 16, rate: 220, life: [0.4, 0.7], vmin: [-3, 1], vmax: [3, 4], gravity: 6, size: [0.1, 0.04], colors: C.ember })),
+]);
+
+// Shatter (40 px round): a ringing burst — a wave of sound flung to its edge, crystalline shards bursting over all of it.
+effect('shatter', 1.6, [
+  emitter('flash', once(0.05, { max: 8, rate: 150, life: [0.12, 0.22], size: [2, 0.5], colors: C2.shatter, round: true })),
+  emitter('wave', once(0.05, { max: 90, rate: 1800, ring: 0.4, life: [0.3, 0.34], radial: 7, size: [0.24, 0.06], colors: C2.shatter })),
+  emitter('shards', once(0.1, { max: 70, rate: 700, ring: 2.5, filled: true, life: [0.35, 0.6], vmin: [-2.5, -1], vmax: [2.5, 3], gravity: 5, drag: 0.6, size: [0.2, 0.06], colors: C2.shatter })),
+  emitter('dust', once(0.15, { max: 20, rate: 140, ring: 2.3, filled: true, life: [0.6, 1], vmin: [-0.3, 0], vmax: [0.3, 0.6], drag: 0.6, size: [0.5, 0.9], colors: C.dust, round: true, blend: 'alpha' })),
+]);
+
+// Cloud of Daggers (28 px round, while it lasts): daggers of light whirling through it, glinting, a spatter of red now and then.
+effect('cloud-of-daggers', 1, [
+  emitter('daggers', { max: 90, rate: 80, ring: 1.75, filled: true, life: [0.5, 0.8], orbit: 5, vmin: [-0.4, -0.4], vmax: [0.4, 0.4], size: [0.28, 0.1], colors: C2.steel }),
+  emitter('glints', { max: 30, rate: 30, ring: 1.6, filled: true, life: [0.15, 0.3], orbit: 5, size: [0.3, 0.06], colors: C.silver }),
+  emitter('spatter', { max: 10, rate: 5, ring: 1.4, filled: true, life: [0.3, 0.5], vmin: [-1, 0], vmax: [1, 1.5], gravity: 5, size: [0.12, 0.05], colors: C2.blood, round: true, blend: 'alpha' }),
+]);
+
+// Prayer of Healing: warm golden light rising round each hero it mends, a ring of it at their feet.
+effect('prayer-of-healing', 1.8, [
+  emitter('ring', once(0.06, { max: 40, rate: 700, ring: 1.2, life: [0.4, 0.6], orbit: 2, size: [0.18, 0.05], colors: C2.holy })),
+  emitter('motes', once(0.5, { max: 40, rate: 80, ring: 1, filled: true, life: [0.6, 1], vmin: [-0.2, 1], vmax: [0.2, 2.4], drag: 0.6, size: [0.2, 0.05], colors: C2.holy, round: true })),
+  emitter('glow', once(0.1, { max: 8, rate: 80, life: [0.3, 0.5], size: [1.6, 0.6], colors: C2.holy, round: true })),
 ]);
 
 // Effects no longer made are dropped from the project.

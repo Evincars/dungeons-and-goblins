@@ -6665,6 +6665,36 @@ test('the wizard\'s cantrips and 1st-level spells play particles their whole cou
   world.clear();
 });
 
+test('a spell cast on oneself shows in particles alone (no halo of library art); Blade Ward and Shield keep an aura while they last; healing light rises round each hero mended', async () => {
+  const { BUFF_AURAS, SPELL_VFX } = await load('render/SpellVfx');
+  const { vfxEvents, takeQueuedVfx } = await load('render/VfxPlayer');
+  world.clear();
+  const sent = [];
+  vfxEvents.onPlay = (shot) => sent.push(shot.effect);
+  takeQueuedVfx([]);
+  const wizard = playerAt(3, 3, 'wizard');
+  wizard.playerStats.level = 5;
+  for (const spell of ['blade_ward', 'shield', 'mage_armor']) {
+    wizard.casting = { ticks: 0, dirX: 1, dirY: 0, released: false, spell, level: 1, targetX: 0, targetY: 0 };
+    for (let t = 0; t < 40; t++) updateSpells(arena(10, 8));
+  }
+  assert.deepEqual(sent, ['blade-ward', 'shield', 'mage-armor'], 'each flashes up once, in its own particles');
+  assert.equal(world.entities.filter((e) => e.fx).length, 0, 'and no library halo or effect is spawned with them');
+  assert.ok(wizard.buffs.bladeWard > 0 && wizard.buffs.shield > 0, 'their auras show while these last');
+  assert.deepEqual(Object.keys(BUFF_AURAS).sort(), ['bladeWard', 'shield'], 'Mage Armour, for a whole day, keeps none');
+  assert.equal(SPELL_VFX.cloud_of_daggers.zone, 'cloud-of-daggers');
+
+  sent.length = 0;
+  const cleric = playerAt(6, 3, 'cleric');
+  cleric.playerStats.level = 5;
+  wizard.health.current = 1;
+  cleric.casting = { ticks: 0, dirX: 1, dirY: 0, released: false, spell: 'prayer_of_healing', level: 2, targetX: 0, targetY: 0 };
+  for (let t = 0; t < 40; t++) updateSpells(arena(10, 8));
+  vfxEvents.onPlay = null;
+  assert.ok(sent.filter((e) => e === 'prayer-of-healing').length >= 2, 'healing light round every hero it mends');
+  world.clear();
+});
+
 test('a burst strikes its own shape: a sphere round where it lands, a cube as a square, a cone from the hands; aimed too far it goes off as far as it reaches', async () => {
   const { areaCentre, inArea, coneLength } = await load('rules/SpellArea');
   const { SPELLS } = await load('rules/Spells');

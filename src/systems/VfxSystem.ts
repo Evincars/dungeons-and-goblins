@@ -4,7 +4,8 @@ import type { Entity } from '../world';
 import { world } from '../world';
 import { TICKS_PER_SECOND } from '../rules/Spells';
 import { vfxEffect, vfxPoint, vfxRenderer } from '../render/Vfx';
-import { SPELL_VFX } from '../render/SpellVfx';
+import { AURA_BUFFS, BUFF_AURAS, SPELL_VFX } from '../render/SpellVfx';
+import type { VfxEffectId } from '../render/Vfx';
 import { takeQueuedVfx } from '../render/VfxPlayer';
 import type { VfxShot } from '../render/VfxPlayer';
 
@@ -12,7 +13,8 @@ import type { VfxShot } from '../render/VfxPlayer';
  * The particle effects on this screen (NixieFX, render/Vfx.ts): each torch's and campfire's sparks (`sparks`) playing at its
  * flame for as long as it stands, each flying spell's particles (render/SpellVfx.ts `flight`: the projectile itself and
  * what it sheds, which stays where it was shed and fades out after it is gone), and the one-shots asked for (render/VfxPlayer.ts: a spell's flames, a strike)
- * until they burn out.
+ * until they burn out, and what lasts: an aura round a hero while their Blade Ward or Shield holds, a zone's particles over it
+ * while it lasts (both drawn from the world's state, so a co-op guest shows them too).
  * Each effect's root is put where it plays and drawn among the entities by depth. They move on a tick at a time, so they
  * freeze with the game.
  */
@@ -31,6 +33,12 @@ const flying = world.with('projectile', 'position');
 const trails = new Map<Entity, { effect: PixiVfxEffectInstance; at: [number, number, number] }>();
 /** Trails whose projectile is gone: they shed no more, and go once their last sparks have faded. */
 const fading: PixiVfxEffectInstance[] = [];
+const zones = world.with('position', 'zone');
+const buffed = world.with('position', 'buffs');
+/** Effects that follow an entity while something about it holds (an aura, a zone), by the entity and then by what they show. */
+const following = new Map<Entity, Map<string, PixiVfxEffectInstance>>();
+/** A hero's aura is centred this far above their feet. */
+const BODY_MIDDLE = 16;
 const asked: VfxShot[] = [];
 
 /** Starts an effect with its root at (x, y), turned to face (dirX, dirY), drawn by depth `z` in the game layer. */
@@ -118,12 +126,73 @@ function followShots(gameLayer: Container): void {
   }
 }
 
+/** Lets an effect that followed something stop and fade out. */
+function letGo(effect: PixiVfxEffectInstance): void {
+  effect.stop();
+  fading.push(effect);
+}
+
+/** Effects following entities that are gone (or were left on another level) fade out. */
+function dropGoneFollowers(gameLayer: Container): void {
+  for (const [entity, mine] of following) {
+    if (world.id(entity) !== undefined && !entity.removed) continue;
+    for (const effect of mine.values()) letGo(effect);
+    following.delete(entity);
+  }
+  for (const mine of following.values()) dropLeftBehind(mine, gameLayer);
+}
+
+/** Forgets an entity's followers left on another level's layer (they went with it). */
+function dropLeftBehind(mine: Map<string, PixiVfxEffectInstance>, gameLayer: Container): void {
+  for (const [key, effect] of mine) if (effect.root.parent !== gameLayer) mine.delete(key);
+}
+
+/** While `holds`, `look` follows `entity` with its root at (x, y), drawn by depth z; once it does not, it fades out. */
+function follow(entity: Entity, key: string, look: VfxEffectId, holds: boolean, at: { x: number; y: number; z: number }, gameLayer: Container): void {
+  const mine = following.get(entity) ?? following.set(entity, new Map()).get(entity);
+  const effect = mine?.get(key);
+  if (!mine || !holds) {
+    if (effect) letGo(effect);
+    mine?.delete(key);
+    return;
+  }
+  const definition = effect ? undefined : vfxEffect(look);
+  const shown = effect ?? (definition ? start(definition, gameLayer, at.x, at.y, at.z) : undefined);
+  if (!shown) return;
+  mine.set(key, shown);
+  shown.root.position.set(at.x, at.y);
+  shown.root.zIndex = at.z;
+}
+
+/** Where a follower goes this tick (reused: written, then read at once). */
+const spot = { x: 0, y: 0, z: 0 };
+
+/** Each hero's lasting buffs keep their auras round them; each zone its particles over it. */
+function followLasting(gameLayer: Container): void {
+  for (const hero of buffed) {
+    spot.x = hero.position.x;
+    spot.y = hero.position.y - BODY_MIDDLE;
+    spot.z = hero.position.y + IN_FRONT;
+    for (const buff of AURA_BUFFS) follow(hero, buff, BUFF_AURAS[buff], (hero.buffs[buff] ?? 0) > 0 && !hero.removed, spot, gameLayer);
+  }
+  for (const zone of zones) {
+    const look = SPELL_VFX[zone.zone.spell]?.zone;
+    if (!look) continue;
+    spot.x = zone.position.x;
+    spot.y = zone.position.y;
+    spot.z = zone.position.y + IN_FRONT;
+    follow(zone, 'zone', look, !zone.removed, spot, gameLayer);
+  }
+}
+
 /** Once a tick: sparks for each new fire, trails behind flying spells, the one-shots asked for, and all of them moved on by a tick. */
 export function updateVfx(gameLayer: Container): void {
   dropStale(gameLayer);
   lightFires(gameLayer);
   letTrailsFade(gameLayer);
+  dropGoneFollowers(gameLayer);
   followShots(gameLayer);
+  followLasting(gameLayer);
   playShots(gameLayer);
-  if (loops.size || shots.length || trails.size || fading.length) vfxRenderer().update(TICK_SECONDS);
+  if (loops.size || shots.length || trails.size || fading.length || following.size) vfxRenderer().update(TICK_SECONDS);
 }

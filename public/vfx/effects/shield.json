@@ -17,14 +17,14 @@
   "targetProfile": "pixi-ui-2d",
   "sourceEffectFile": "shield.json",
   "sourceEffectId": "shield",
-  "sourceHash": "fnv1a32:d50e4aa3",
+  "sourceHash": "fnv1a32:78e65e88",
   "emitters": [
     {
       "id": "ring",
       "name": "ring",
       "enabled": true,
       "mode": "billboard",
-      "maxParticles": 60,
+      "maxParticles": 70,
       "duration": 0.06,
       "loop": false,
       "timeline": {
@@ -34,7 +34,7 @@
       },
       "modules": {
         "velocity": true,
-        "velocityOverLifetime": false,
+        "velocityOverLifetime": true,
         "limitVelocityOverLifetime": false,
         "inheritVelocity": false,
         "color": true,
@@ -56,30 +56,30 @@
         "customData": false
       },
       "spawn": {
-        "rate": 1000,
+        "rate": 1200,
         "rateValue": {
           "mode": "constant",
-          "value": 1000,
-          "min": 1000,
-          "max": 1000,
+          "value": 1200,
+          "min": 1200,
+          "max": 1200,
           "curve": [
             {
               "x": 0,
-              "y": 1000
+              "y": 1200
             },
             {
               "x": 1,
-              "y": 1000
+              "y": 1200
             }
           ],
           "curveB": [
             {
               "x": 0,
-              "y": 1000
+              "y": 1200
             },
             {
               "x": 1,
-              "y": 1000
+              "y": 1200
             }
           ]
         },
@@ -112,30 +112,30 @@
         },
         "bursts": [],
         "shape": "circle",
-        "radius": 1.3,
+        "radius": 1.4,
         "radiusValue": {
           "mode": "constant",
-          "value": 1.3,
-          "min": 1.3,
-          "max": 1.3,
+          "value": 1.4,
+          "min": 1.4,
+          "max": 1.4,
           "curve": [
             {
               "x": 0,
-              "y": 1.3
+              "y": 1.4
             },
             {
               "x": 1,
-              "y": 1.3
+              "y": 1.4
             }
           ],
           "curveB": [
             {
               "x": 0,
-              "y": 1.3
+              "y": 1.4
             },
             {
               "x": 1,
-              "y": 1.3
+              "y": 1.4
             }
           ]
         },
@@ -203,27 +203,27 @@
       "initializeParticle": {
         "lifetime": {
           "mode": "random",
-          "value": 0.25,
-          "min": 0.25,
-          "max": 0.45,
+          "value": 0.3,
+          "min": 0.3,
+          "max": 0.5,
           "curve": [
             {
               "x": 0,
-              "y": 0.25
+              "y": 0.3
             },
             {
               "x": 1,
-              "y": 0.25
+              "y": 0.3
             }
           ],
           "curveB": [
             {
               "x": 0,
-              "y": 0.25
+              "y": 0.3
             },
             {
               "x": 1,
-              "y": 0.25
+              "y": 0.3
             }
           ]
         },
@@ -680,13 +680,13 @@
         "velocity": {
           "mode": "vector",
           "min": [
-            -0.2,
-            -0.2,
+            0,
+            0,
             0
           ],
           "max": [
-            0.2,
-            0.2,
+            0,
+            0,
             0
           ],
           "speed": {
@@ -802,17 +802,17 @@
       },
       "billboard": {
         "shape": "square",
-        "sizeStart": 0.18,
+        "sizeStart": 0.2,
         "sizeEnd": 0.05,
         "sizeValue": {
           "mode": "curve",
-          "value": 0.18,
-          "min": 0.18,
-          "max": 0.18,
+          "value": 0.2,
+          "min": 0.2,
+          "max": 0.2,
           "curve": [
             {
               "x": 0,
-              "y": 0.18
+              "y": 0.2
             },
             {
               "x": 1,
@@ -822,7 +822,7 @@
           "curveB": [
             {
               "x": 0,
-              "y": 0.18
+              "y": 0.2
             },
             {
               "x": 1,
@@ -1128,27 +1128,27 @@
             },
             "y": {
               "mode": "constant",
-              "value": 0,
-              "min": 0,
-              "max": 0,
+              "value": -2,
+              "min": -2,
+              "max": -2,
               "curve": [
                 {
                   "x": 0,
-                  "y": 0
+                  "y": -2
                 },
                 {
                   "x": 1,
-                  "y": 0
+                  "y": -2
                 }
               ],
               "curveB": [
                 {
                   "x": 0,
-                  "y": 0
+                  "y": -2
                 },
                 {
                   "x": 1,
-                  "y": 0
+                  "y": -2
                 }
               ]
             },
@@ -2362,27 +2362,27 @@
       "initializeParticle": {
         "lifetime": {
           "mode": "random",
-          "value": 0.12,
-          "min": 0.12,
-          "max": 0.2,
+          "value": 0.15,
+          "min": 0.15,
+          "max": 0.25,
           "curve": [
             {
               "x": 0,
-              "y": 0.12
+              "y": 0.15
             },
             {
               "x": 1,
-              "y": 0.12
+              "y": 0.15
             }
           ],
           "curveB": [
             {
               "x": 0,
-              "y": 0.12
+              "y": 0.15
             },
             {
               "x": 1,
-              "y": 0.12
+              "y": 0.15
             }
           ]
         },
@@ -2961,13 +2961,13 @@
       },
       "billboard": {
         "shape": "circle",
-        "sizeStart": 1.8,
-        "sizeEnd": 0.6,
+        "sizeStart": 2,
+        "sizeEnd": 0.7,
         "sizeValue": {
           "mode": "curve",
-          "value": 1.8,
-          "min": 1.8,
-          "max": 1.8,
+          "value": 2,
+          "min": 2,
+          "max": 2,
           "curve": [
             {
               "x": 0,
@@ -2975,20 +2975,20 @@
             },
             {
               "x": 1,
-              "y": 0.3333333333333333
+              "y": 0.35
             }
           ],
           "curveB": [
             {
               "x": 0,
-              "y": 1.8
+              "y": 2
             },
             {
               "x": 1,
-              "y": 0.6
+              "y": 0.7
             }
           ],
-          "multiplier": 1.8
+          "multiplier": 2
         },
         "separateAxes": false,
         "sizeStartY": 0.28,

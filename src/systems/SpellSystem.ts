@@ -68,6 +68,8 @@ const victims: Entity[] = [];
 const aimed = { x: 0, y: 0 };
 const facing = { x: 0, y: 1 };
 const bounds = { x: 0, y: 0, r: 0 };
+/** A healing spell's light rises round a hero from this far above their feet (the ring of it about their waist). */
+const HEAL_LIFT = 8;
 /** A cone leaves the caster's hands this far above their feet. */
 const CONE_HANDS = 12;
 
@@ -351,7 +353,9 @@ function mendWith(caster: Player, hero: Player, def: SpellDef, amount: number): 
   const h = hero.health;
   const healed = Math.min(h.max - h.current, amount);
   h.current += healed;
-  playEffect(def.effect.shape, def.effect.colour, hero.position.x, hero.position.y, AIM_HEIGHT, def.effect.scale);
+  const light = SPELL_VFX[def.id]?.heal;
+  if (light) playVfx(light, hero.position.x, hero.position.y, HEAL_LIFT);
+  else playEffect(def.effect.shape, def.effect.colour, hero.position.x, hero.position.y, AIM_HEIGHT, def.effect.scale);
   logHeal(hero, healed);
   recordSpell(caster, def.id, 'heal', healed);
 }

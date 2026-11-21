@@ -15,6 +15,8 @@ import { rollDice, rollDie } from '../rules/Dice';
 import type { Dice } from '../rules/Dice';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
+import { inArea } from '../rules/SpellArea';
+import type { AreaShape, Point } from '../rules/SpellArea';
 import { AIM_HEIGHT } from '../entities/ProjectileFactory';
 import { playAura, playEffect } from '../assets/Effects';
 import type { Aura } from '../assets/Effects';
@@ -67,6 +69,12 @@ export function buffsOf(hero: Player): Buffs {
   return buffs;
 }
 
+/** A buff without particles of its own: the library's halo round the caster, and its effect. */
+function showBuffArt(caster: Player, def: SpellDef, id: number | undefined): void {
+  if (id !== undefined) playAura(BUFF_AURA, id, caster.position.x, caster.position.y);
+  playEffect(def.effect.shape, def.effect.colour, caster.position.x, caster.position.y, AIM_HEIGHT, def.effect.scale);
+}
+
 /** A buff's particles rise round the caster's body from this far above their feet. */
 const BODY_MIDDLE = 16;
 
@@ -80,11 +88,11 @@ export function castBuff(caster: Player, def: SpellDef): boolean {
     return false;
   }
   const id = world.id(caster);
-  if (id !== undefined) playAura(BUFF_AURA, id, caster.position.x, caster.position.y);
-  // Its particles round the body where it has them (render/SpellVfx.ts), else its library effect.
+  // Its particles round the body where it has them (render/SpellVfx.ts; a lasting aura follows from its buff), else the
+  // library's halo and effect.
   const aura = SPELL_VFX[def.id]?.aura;
   if (aura) playVfx(aura, caster.position.x, caster.position.y, BODY_MIDDLE);
-  else playEffect(def.effect.shape, def.effect.colour, caster.position.x, caster.position.y, AIM_HEIGHT, def.effect.scale);
+  else showBuffArt(caster, def, id);
   if (def.concentration) concentrate(caster, def.id, -1);
   const buffs = buffsOf(caster);
   if (def.buff === 'blade_ward') buffs.bladeWard = def.durationTicks;
@@ -217,7 +225,9 @@ function updateZone(zone: Zone): void {
     zone.position.y = caster.position.y;
   }
   const art = SPELLS[z.spell].effect;
-  if (z.ticks % ZONE_SHOW_TICKS === 0) playEffect(art.shape, art.colour, zone.position.x, zone.position.y, 0, art.scale);
+  // A zone with particles of its own shows in them for as long as it lasts (systems/VfxSystem.ts); any other now and then.
+  const shown = SPELL_VFX[z.spell]?.zone !== undefined;
+  if (!shown && z.ticks % ZONE_SHOW_TICKS === 0) playEffect(art.shape, art.colour, zone.position.x, zone.position.y, 0, art.scale);
   if (--z.pulse > 0) return;
   z.pulse = TURN_TICKS;
   pulseZone(zone, caster);
@@ -250,17 +260,54 @@ export function chargesWater(type: DamageType): boolean {
   return WATER_CHARGERS.has(type);
 }
 
-/**
- * A thunder or lightning spell went off over this circle (a bolt passing over water, a circle of 0): every puddle it reaches
- * is charged, for good — it shocks everyone standing in it at once and every round after.
- */
+/** Charges a puddle with lightning, for good: it shocks everyone standing in it at once and every round after. */
+function charge(puddle: Puddle): void {
+  if (puddle.surface.kind === 'shock') return;
+  // Its art follows (systems/SpriteSystem.ts showPuddles).
+  puddle.surface.kind = 'shock';
+  puddle.surface.pulse = 0;
+}
+
+/** A thunder or lightning bolt passed over this point (a circle of 0) or went off over this circle: the puddles it reaches are charged. */
 export function electrify(x: number, y: number, radius: number): void {
   for (const puddle of q.surfaces) {
-    if (puddle.surface.kind === 'shock' || Math.hypot(puddle.position.x - x, puddle.position.y - y) > radius + puddle.surface.radius) continue;
-    // Its art follows (systems/SpriteSystem.ts showPuddles).
-    puddle.surface.kind = 'shock';
-    puddle.surface.pulse = 0;
+    if (Math.hypot(puddle.position.x - x, puddle.position.y - y) <= radius + puddle.surface.radius) charge(puddle);
   }
+}
+
+/** The puddles the last thunder or lightning burst reached (electrifyArea fills it; never reallocated). */
+const reached: Puddle[] = [];
+
+/**
+ * A thunder or lightning burst cast from `from` went off at `centre` (its own shape: a sphere, a cube, a cone, Lightning
+ * Bolt's line): every puddle it reaches is charged, and conducts the spell itself to whoever stands in it (`conducted`).
+ * Returns how many it reached.
+ */
+export function electrifyArea(def: AreaShape, from: Point, centre: Point): number {
+  reached.length = 0;
+  for (const puddle of q.surfaces) {
+    if (!inArea(def, from, centre, puddle.position.x, puddle.position.y, puddle.surface.radius)) continue;
+    reached.push(puddle);
+    charge(puddle);
+  }
+  return reached.length;
+}
+
+/**
+ * Whether a body at (x, y) stands in the water the last burst reached (electrifyArea), so the spell reaches them through it
+ * wherever its own area ends: in any of its first `count` puddles (all of them unless asked).
+ */
+export function conducted(x: number, y: number, count = reached.length): boolean {
+  for (let i = 0; i < Math.min(count, reached.length); i++) {
+    const puddle = reached[i];
+    if (Math.hypot(x - puddle.position.x, y - puddle.position.y) <= puddle.surface.radius) return true;
+  }
+  return false;
+}
+
+/** The puddle the last burst reached at this index (for asking the spatial index who stands in it), or undefined. */
+export function reachedPuddle(index: number): Puddle | undefined {
+  return reached[index];
 }
 
 /** Whether a body stands in the puddle (its feet within the puddle's circle). */

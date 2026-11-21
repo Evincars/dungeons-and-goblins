@@ -5,21 +5,26 @@ import { characterDef, clipSheetKey } from '../characters/Characters';
 import type { BoltDef, CharacterDef } from '../characters/CharacterDef';
 import type { AttackProfile } from '../rules/Combat';
 import { ARROW_STATS, SPELL_STATS } from './WeaponStats';
+import { SPELL_VFX } from '../render/SpellVfx';
+import { vfxEffect } from '../render/Vfx';
 
 /** Height above the feet that the player aims from (also where spell bolts fly). */
 export const AIM_HEIGHT = 22;
 
 /**
  * A spell bolt leaving the caster at (x, y) along the unit direction (dx, dy); `owner` is the caster's entity
- * id. A caster with spell art of their own (`character`'s bolt: the warlock's fireball, the bard's light orb) flies
- * it, turned the way it goes, and bursts in its frames; anyone else casts the plain bolt.
+ * id. A spell with particles of its own flies as them alone (render/SpellVfx.ts); otherwise a caster with spell art of
+ * their own (`character`'s bolt: the warlock's fireball, the bard's light orb) flies it, turned the way it goes, and
+ * bursts in its frames; anyone else casts the plain bolt.
  */
 export function createSpellBolt(
   x: number, y: number, dx: number, dy: number, attack: AttackProfile, owner?: number, character?: string, carries: SpellCarry = {},
 ): Entity {
-  const bolt = character ? characterDef(character).bolt : undefined;
+  // A spell that flies as particles of its own (render/SpellVfx.ts) has no sprite and no burst art: its particles are all of it.
+  const particles = flightParticles(carries.spell);
+  const bolt = character && !particles ? characterDef(character).bolt : undefined;
   const def = character ? characterDef(character) : undefined;
-  const flight: Partial<Entity> = bolt && def ? boltArt(def, bolt, dx, dy) : { visual: { sheet: 'spell_bolt' } };
+  const flight: Partial<Entity> = particles ? {} : bolt && def ? boltArt(def, bolt, dx, dy) : { visual: { sheet: 'spell_bolt' } };
   return world.add({
     position: { x: x + dx * SPELL_STATS.boltSpawnOffset, y: y + dy * SPELL_STATS.boltSpawnOffset },
     velocity: { x: dx * SPELL_STATS.boltSpeed, y: dy * SPELL_STATS.boltSpeed },
@@ -29,6 +34,12 @@ export function createSpellBolt(
     yOffset: AIM_HEIGHT,
     glow: { radius: SPELL_STATS.boltGlow },
   });
+}
+
+/** Whether a spell flies as particles (its flight effect loaded); otherwise its caster's bolt art, or the plain bolt, flies. */
+function flightParticles(spell: SpellId | undefined): boolean {
+  const look = spell ? SPELL_VFX[spell]?.flight : undefined;
+  return !!look && vfxEffect(look) !== undefined;
 }
 
 /**

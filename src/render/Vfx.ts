@@ -8,7 +8,7 @@ import { assetUrl } from '../assets/assetUrl';
 
 /**
  * Particle effects made with NixieFX (https://nixiefx.com): authored in its editor as the project in `vfx/` (open the
- * folder at nixiefx.com/editor, or `npx nixie-fx effect create --project vfx …`), compiled by `npm run vfx:export` into
+ * folder at nixiefx.com/editor; scripts/vfx-effects.mjs builds them all, `npm run vfx:effects`), compiled by `npm run vfx:export` into
  * `public/vfx` (a manifest and one JSON file per effect), loaded here once with the art and played by one shared renderer.
  * An effect's units are VFX_PIXELS_PER_UNIT pixels with y up, as the editor shows them, and it plays at its own origin: whoever
  * plays it puts the instance's root where it goes off (and turns it the way it faces). Effects are only looks: every screen
@@ -18,10 +18,24 @@ import { assetUrl } from '../assets/assetUrl';
 
 /** The effects the game plays: the exported bundle must hold every one of them. */
 export const VFX_EFFECTS = [
-  'torch-sparks', 'campfire-embers', 'burning-hands',
-  'trail-fire', 'trail-frost', 'trail-necrotic', 'trail-lightning', 'trail-acid', 'trail-poison', 'trail-force',
-  'impact-fire', 'impact-frost', 'impact-necrotic', 'impact-lightning', 'impact-acid', 'impact-poison', 'impact-force',
-  'acid-splash', 'poison-spray', 'ice-knife', 'thunderwave', 'blade-ward', 'false-life', 'mage-armor', 'shield',
+  'torch-sparks', 'campfire-embers',
+  'fire-bolt-cast', 'fire-bolt-flight', 'fire-bolt-impact',
+  'ray-of-frost-cast', 'ray-of-frost-flight', 'ray-of-frost-impact',
+  'chill-touch-cast', 'chill-touch-flight', 'chill-touch-impact',
+  'shocking-grasp-cast', 'shocking-grasp-flight', 'shocking-grasp-impact',
+  'witch-bolt-cast', 'witch-bolt-flight', 'witch-bolt-impact',
+  'chromatic-orb-cast', 'chromatic-orb-flight', 'chromatic-orb-impact',
+  'ray-of-sickness-cast', 'ray-of-sickness-flight', 'ray-of-sickness-impact',
+  'magic-missile-cast', 'magic-missile-flight', 'magic-missile-impact',
+  'burning-hands', 'acid-splash', 'poison-spray', 'ice-knife', 'thunderwave',
+  'blade-ward', 'blade-ward-aura', 'false-life', 'mage-armor', 'shield', 'shield-aura',
+  'melfs-acid-arrow-cast', 'melfs-acid-arrow-flight', 'melfs-acid-arrow-impact',
+  'scorching-ray-cast', 'scorching-ray-flight', 'scorching-ray-impact',
+  'shatter', 'cloud-of-daggers', 'prayer-of-healing',
+  'fireball-cast', 'fireball', 'lightning-bolt', 'vampiric-touch-cast', 'vampiric-touch-flight', 'vampiric-touch-impact',
+  'necrotic-cast', 'psychic-cast', 'blight', 'ice-storm', 'phantasmal-killer', 'stoneskin', 'stoneskin-aura',
+  'cloudkill', 'cone-of-cold', 'chain-lightning', 'chain-lightning-strike', 'circle-of-death',
+  'disintegrate-cast', 'disintegrate-flight', 'disintegrate-impact', 'freezing-sphere', 'sunbeam-cast', 'sunbeam',
 ] as const;
 export type VfxEffectId = (typeof VFX_EFFECTS)[number];
 

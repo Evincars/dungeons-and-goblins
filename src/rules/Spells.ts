@@ -47,9 +47,9 @@ const isBuff = (v: unknown): v is BuffId => BUFF_IDS.some((b) => b === v);
 
 /**
  * The shape of a burst (src/rules/SpellArea.ts): a sphere round the point it goes off at, a cube (a square on the map) centred
- * there, or a cone from the caster's hands towards the aim.
+ * there, a cone from the caster's hands towards the aim, or a line from them (Lightning Bolt: `range` long, `radius` each side).
  */
-export const SPELL_AREAS = ['sphere', 'cube', 'cone'] as const;
+export const SPELL_AREAS = ['sphere', 'cube', 'cone', 'line'] as const;
 export type SpellArea = (typeof SPELL_AREAS)[number];
 const isArea = (v: unknown): v is SpellArea => SPELL_AREAS.some((a) => a === v);
 

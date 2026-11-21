@@ -14,11 +14,12 @@ import type { QuickBinding } from '../rules/Spellbook';
 import { weaponRule } from '../rules/Equipment';
 import { weaponInHand } from '../rules/CharacterSheet';
 import { feetToPx, pxToFeet } from '../rules/Scale';
-import { areaBounds, areaCentre, coneCorners, inArea } from '../rules/SpellArea';
+import { areaBounds, areaCentre, coneCorners, fromHands, inArea, lineCorners } from '../rules/SpellArea';
 import type { AreaShape, Point } from '../rules/SpellArea';
 import { bindingFeatureId } from '../rules/ClassFeatures';
 import { FEATURE_AREAS } from './SchoolSystem';
 import { SPELL_STATS } from '../entities/WeaponStats';
+import { AIM_HEIGHT } from '../entities/ProjectileFactory';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { PixelLabel } from '../ui/PixelText';
 
@@ -26,7 +27,7 @@ import { PixelLabel } from '../ui/PixelText';
  * Where a shot will go, shown faintly while the hero aims. A bolt, darts or an arrow fly straight: a dotted line from the
  * hero's hands the way they aim, as far as the shot flies (it goes off there if it strikes nothing on the way) — grey, and
  * amber past a bow's normal range, where shots roll with disadvantage. A spell with an area shows only that area where it
- * will go off — a circle, a square (a cube) or a cone from the hands — at the crosshair, or as far towards it as it reaches,
+ * will go off — a circle, a square (a cube), or a cone or a line from the hands — at the crosshair, or as far towards it as it reaches,
  * a faint mark under each enemy it would catch, and how far off it is, in feet. A spell's guide shows while its quick-bar key
  * is held (let go, it casts) or while it is cast; a bow's or crossbow's while it is in hand. Drawn on this screen only.
  */
@@ -43,8 +44,6 @@ const CAUGHT_ALPHA = 0.55;
 const DOT_STEP = 7;
 const DOT_RADIUS = 0.8;
 const END_RADIUS = 2.5;
-/** The line leaves the hero this far above their feet (where a spell or arrow leaves their hands). */
-const HAND_HEIGHT = 12;
 /** The mark under an enemy the area would catch: an ellipse this wide and tall. */
 const CAUGHT_RX = 8;
 const CAUGHT_RY = 3;
@@ -68,6 +67,7 @@ const aim = { x: 0, y: 0 };
 const centre: Point = { x: 0, y: 0 };
 const bounds = { x: 0, y: 0, r: 0 };
 const corners: [Point, Point, Point] = [{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }];
+const lineEnds: [Point, Point, Point, Point] = [{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }];
 const caught: Entity[] = [];
 
 /** The spell a binding casts, at the level it is cast, if it is one that is aimed (a bolt, darts, an area). */
@@ -78,9 +78,9 @@ function aimedSpell(player: Player, binding: QuickBinding): SpellDef | null {
   return def.kind === 'heal' && def.radius <= 0 ? null : def;
 }
 
-/** An area, thrown (to the crosshair, a cone towards it) or round the caster. */
+/** An area, thrown (to the crosshair, a cone or a line towards it) or round the caster. */
 function areaAim(area: AreaShape): Aim {
-  const thrown = area.range > 0 || area.area === 'cone';
+  const thrown = area.range > 0 || fromHands(area);
   return { reach: area.range, normal: area.range, radius: area.radius, landsWhere: thrown ? 'target' : 'caster', area };
 }
 
@@ -153,11 +153,14 @@ function drawLine(g: Graphics, x0: number, y0: number, ux: number, uy: number, a
   g.circle(x0 + ux * a.reach, y0 + uy * a.reach, END_RADIUS).stroke({ color: end, alpha: RING_ALPHA * 2, width: 1 });
 }
 
-/** A spell's area as it will go off: a circle, a square (a cube) or a cone from the caster's hands. */
+/** A spell's area as it will go off: a circle, a square (a cube), or a cone or a line from the caster's hands. */
 function drawShape(g: Graphics, def: AreaShape, from: Point, at: Point): void {
   if (def.area === 'cube') g.rect(at.x - def.radius, at.y - def.radius, def.radius * 2, def.radius * 2);
   else if (def.area === 'sphere') g.circle(at.x, at.y, def.radius);
-  else {
+  else if (def.area === 'line') {
+    const [a, b, c, d] = lineCorners(def, from, at, lineEnds);
+    g.poly([a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y]);
+  } else {
     const [a, b, c] = coneCorners(def, from, at, corners);
     g.poly([a.x, a.y, b.x, b.y, c.x, c.y]);
   }
@@ -210,9 +213,12 @@ export function updateAimGuide(gameLayer: Container): void {
     guideArea(g, text, player, a.area, a.landsWhere === 'target');
     return;
   }
-  const { x, y } = player.position;
+  // A shot leaves from hand height and flies at the crosshair (the hero's aim is taken from there, MovementSystem.ts), so
+  // its line runs from the hands through the crosshair.
+  const x = player.position.x;
+  const y = player.position.y - AIM_HEIGHT;
   const dist = Math.hypot(aim.x - x, aim.y - y);
   if (dist <= 0) return;
-  drawLine(g, x, y - HAND_HEIGHT, (aim.x - x) / dist, (aim.y - y) / dist, a);
+  drawLine(g, x, y, (aim.x - x) / dist, (aim.y - y) / dist, a);
   showDistance(text, aim.x, aim.y, dist, colourFor(dist, a));
 }

@@ -11,7 +11,7 @@ import type { SpellDef } from '../rules/Spells';
 import { castDef } from '../rules/Spellbook';
 import { diceRange, rollDice, rollDie } from '../rules/Dice';
 import { feetToPx } from '../rules/Scale';
-import { areaCentre, inArea } from '../rules/SpellArea';
+import { areaCentre, areaReach, inArea } from '../rules/SpellArea';
 import type { Point } from '../rules/SpellArea';
 import { MIN_HIT_DAMAGE } from '../rules/Combat';
 import { createArrow, createSpellBolt } from '../entities/ProjectileFactory';
@@ -20,8 +20,8 @@ import { sound } from '../audio/SoundPlayer';
 import { MOB_CRIES, SPELL_SOUNDS } from '../audio/SoundBank';
 import { heroSavingThrow } from './FeatureSystem';
 import { hurtPlayer } from './CombatSystem';
-import { impactOf, playBurstArt } from './SpellSystem';
-import { chargesWater, electrify } from './LastingSpells';
+import { impactOf, playBurstArt, playCastArt, playStrikeArt } from './SpellSystem';
+import { chargesWater, conducted, electrifyArea } from './LastingSpells';
 
 /**
  * Enemies that fight from afar: goblins with a bow or crossbow, and the spellcasters (the red ghost a sorcerer, the evil
@@ -122,7 +122,7 @@ function shoot(level: Level, mob: Shooter): boolean {
 /** How far a spell reaches from its caster: a bolt as far as it flies, a burst its range plus its breadth. */
 function spellReach(def: SpellDef): number {
   if (def.kind === 'bolt' || def.kind === 'missiles') return SPELL_STATS.boltSpeed * SPELL_STATS.boltLife;
-  return def.range + def.radius;
+  return areaReach(def);
 }
 
 /** The heroes on their feet a burst cast from the enemy, going off at `centre`, would catch. */
@@ -193,12 +193,23 @@ function bestSpell(mob: Shooter, caster: Caster, hero: Player): { index: number;
   return bestDef ? { index: best, def: bestDef } : null;
 }
 
-/** A burst on the heroes: each in it saves against the caster's DC, taking half on a success (none, from a cantrip). */
+/** Whether a burst from the enemy going off at `centre` reaches this hero: in its area, or in water it charged (`wet`). */
+function burstReaches(mob: Shooter, def: SpellDef, centre: Point, hero: Player, wet: boolean): boolean {
+  if (!isActivePlayer(hero)) return false;
+  const { x, y } = hero.position;
+  return inArea(def, mob.position, centre, x, y) || (wet && conducted(x, y));
+}
+
+/**
+ * A burst on the heroes: each in it saves against the caster's DC, taking half on a success (none, from a cantrip). Thunder
+ * and lightning charge the water they reach, and the water conducts them to every hero standing in it.
+ */
 function burstOnHeroes(mob: Shooter, def: SpellDef, centre: Point, dc: number): void {
   playBurstArt(mob, def, centre);
-  if (chargesWater(def.damageType)) electrify(centre.x, centre.y, def.radius);
+  const wet = chargesWater(def.damageType) && electrifyArea(def, mob.position, centre) > 0;
   for (const hero of q.players) {
-    if (!isActivePlayer(hero) || !inArea(def, mob.position, centre, hero.position.x, hero.position.y)) continue;
+    if (!burstReaches(mob, def, centre, hero, wet)) continue;
+    playStrikeArt(def, hero.position.x, hero.position.y);
     const saved = heroSavingThrow(hero, def.save ?? 'dexterity', dc, rollDie, mob);
     const rolled = Math.max(MIN_HIT_DAMAGE, rollDice(def.damage, false, rollDie, 0));
     const damage = saved ? (def.level === 0 ? 0 : Math.floor(rolled / 2)) : rolled;
@@ -235,6 +246,7 @@ function release(mob: Shooter, def: SpellDef, dir: typeof aim, hero: Player, att
     burstOnHeroes(mob, def, burstCentre(mob, def, hero), dc);
     return;
   }
+  playCastArt(mob, def, dir.x, dir.y);
   const darts = def.kind === 'missiles' ? def.count : 1;
   for (let i = 0; i < darts; i++) {
     createSpellBolt(mob.position.x, mob.position.y, dir.x, dir.y, attack, world.id(mob), mob.character?.def,

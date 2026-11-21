@@ -58,7 +58,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 | 2-D spatial queries (R-tree) | **rbush** | `src/ai/perception/spatial.ts` |
 | Peer-to-peer networking | **PeerJS** (WebRTC) | `src/network/CoopSession.ts` |
 | Sound effects, music and ambience (loading, sprites, pitch, pan, fades, streaming) | **Howler** | `src/audio/` |
-| Particle effects (sparks, embers, bursts) | **NixieFX** (`nixie-fx`): authored in its editor as the project in `vfx/`, exported by `npm run vfx:export` to `public/vfx`, played by one `PixiVfxRenderer` | `src/render/Vfx.ts` |
+| Particle effects (sparks, embers, spells) | **NixieFX** (`nixie-fx`): the editor project `vfx/`, every effect built by `scripts/vfx-effects.mjs` (`npm run vfx:effects`; tune the numbers there, a run writes over edits made in the editor), exported by `npm run vfx:export` to `public/vfx` (restart a running dev server after), played by one `PixiVfxRenderer` | `src/render/Vfx.ts` |
 
 - Never write your own A*, Dijkstra, heap, spatial hash, vector or bounding-box class.
 - **Yuka first for graphs and pathfinding.** Add another graph library only for an algorithm Yuka
@@ -143,7 +143,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   ability, `spellcaster`: their spells are the heroes' own from `spells.json`, cast at the party's level, so a change to a
   spell changes it for both); how hard a level is (more and tougher enemies the deeper it lies and in direct proportion
   to the heroes playing, which kinds turn up at which depth) in `src/game/Difficulty.ts`;
-  castable spells (dice, recovery, save, area and its shape — sphere, cube or cone, `rules/SpellArea.ts`, shared by the heroes, the enemies and the aim guide — effect; a buff, zone or puddle's duration and concentration) in
+  castable spells (dice, recovery, save, area and its shape — sphere, cube, cone or line (Lightning Bolt), `rules/SpellArea.ts`, shared by the heroes, the enemies and the aim guide — effect; a buff, zone or puddle's duration and concentration) in
   `src/data/spells.json`; every spell of Baldur's Gate 3 the game knows (name, level, school, the classes that learn it,
   the Eldritch Knight's, its BG3 text and icon) in `src/data/spell-list.json`, made by `scripts/bg3-spells.mjs` from the BG3
   wiki (it matches spells to the icons `scripts/spell-icons.sh` pixelates in `public/spells-icons` into
@@ -293,12 +293,18 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   styles), and where a wall juts out past another's face it ends in its edge strip all the way up its face
   (`shallowerFace`) and on up to the wall's north edge (`seamW`/`seamE`). Wall torches and campfires throw sparks from their flames, now and then an ember dropping to the
   floor (`sparks`, `systems/VfxSystem.ts`: the NixieFX effects `vfx/torch-sparks.json` and `campfire-embers.json`, one unit 16 px
-  with y up, played at the root's origin, moved on a tick at a time). The wizard's cantrips and 1st-level spells
-  play particles (`render/SpellVfx.ts`, `SPELL_VFX`; the effects are made by the NixieFX project in `vfx/`): a trail behind a
-  flying spell (every screen follows the projectiles it has, guests' from the host's state) and an impact where it ends, a
-  burst where an area spell goes off (Burning Hands' flames from the hands), an aura round the caster of a buff. One-shots are
-  asked for with `playVfx` (`render/VfxPlayer.ts`): the co-op host sends each guest only a short `vfx` signal (which effect,
-  where, which way) and every screen renders it itself. A spell without particles plays its library effect. Campfires stand on a ring of cobbles
+  with y up, played at the root's origin, moved on a tick at a time). The wizard's spells, cantrips to the 6th level,
+  play particles their whole course (`render/SpellVfx.ts`, `SPELL_VFX`): a flare in the hands as a flying spell leaves them,
+  the projectile itself as particles (no sprite, no caster's bolt art: every screen follows the projectiles it has, guests'
+  from the host's state), its impact where it ends, an area spell's burst over the whole of its area (a cone's or a line's
+  from the hands — Burning Hands, Cone of Cold, Lightning Bolt —, one thrown at a point after a flare in the hands; Chain
+  Lightning's bolt from above on each body it catches, `strike`), a buff's flash round the caster as it is cast (no library halo with it) — Blade Ward, Shield and Stoneskin keep an aura round the hero
+  while they last (`BUFF_AURAS`), Mage Armour shows only as it is cast —, a zone's particles over it while it lasts (Cloud of
+  Daggers, Cloudkill), a healing spell's light round each hero mended (Prayer of Healing); each spell its own look, after its description
+  and Baldur's Gate.
+  One-shots are asked for with `playVfx` (`render/VfxPlayer.ts`): the co-op host sends each guest only a short `vfx` signal
+  (which effect, where, which way) and every screen renders it itself. A spell without particles plays its library effect.
+  The library's circle of spawn lies flat to a 2-D view: turn it into the screen's plane (`SCREEN_PLANE`, the script). Campfires stand on a ring of cobbles
   (`campfire_floor`, built at load in `assets/AssetLoader.ts`). Coffins and sarcophagi are searched like
   other stashes and may hold gear (`TOMB_GEAR_CHANCE`, `entities/LootFactory.ts`). A spike trap in a
   corridor (`spikeTrap`, `systems/TrapSystem.ts`) bites the first hero to step on it, told over their head and in the
@@ -316,8 +322,10 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `ui/CombatLogPanel.ts`; `recordEvent` also writes rests, healing, kills, levels and level-panel choices, `LOG_EVENTS` in `world.ts`), and spends a won initiative's first strike as advantage (`systems/InitiativeSystem.ts`).
   Spells (`Spells.ts`, from `src/data/spells.json`: bolt, missiles, burst with a save, heal; buff, zone and water last, in
   `systems/LastingSpells.ts`: buffs on the caster (`buffs`: Blade Ward, Shield, Mage Armour, Stoneskin; False Life's temporary
-  hit points), zones that strike every 6 s (`zone`, `q.zones`), puddles a thunder or lightning spell charges (a lightning bolt flying over them too) (`surface`, `q.surfaces`),
-  and one spell held by `concentration` that a failed Constitution save on being hurt ends; what lasts until a long rest also
+  hit points), zones that strike every 6 s (`zone`, `q.zones`), puddles a thunder or lightning spell charges (a lightning bolt flying over them too) and that conduct the burst that
+  charged them to everyone standing in them (`electrifyArea`, `conducted`) (`surface`, `q.surfaces`),
+  and one spell held by `concentration` that a failed Constitution save on every hurt ends (DC 10 or half the damage,
+  whichever is higher, `keepConcentration`); what lasts until a long rest also
   ends on a fall, `endUntilRest`) have no slots but a
   recovery each (`spellbook.recovery`), sit on the quick bar (two rows of ten: Q R T 1–5 X C cast the first row's squares — held, the key shows the spell's aim guide, let go, it casts —
   Shift with them the second, whose squares hold the active class features until bound; `playerInput.spellSlot`) and are cast by
@@ -392,7 +400,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   and the light overlay are scaled, the camera follows the hero over the smaller stretch of world in view.
 - While the hero aims, a faint guide (`systems/AimGuideSystem.ts`, drawn over the light and fog, `overLayer`) shows where
   it goes, for the spell being cast or whose quick-bar key is held, else the bow or crossbow in hand: a shot that flies
-  straight (a bolt, darts, an arrow) is a dotted straight line from the hands the way the hero aims, as far as it flies (where
+  straight (a bolt, darts, an arrow) is a dotted straight line from the hands (AIM_HEIGHT, where shots leave) through the crosshair, as far as it flies (where
   it goes off if it strikes nothing), grey, amber past a bow's normal range (disadvantage); a spell with an area shows only
   that area — a circle, a square (cube) or a cone from the hands — where it will go off (aimed past its reach, as far that
   way as it reaches), a mark under each enemy it would catch, and how far off it is, in feet. A quick-bar square recovering shows its time left over its shade (tenths under 10 s). A class feature bg3.wiki

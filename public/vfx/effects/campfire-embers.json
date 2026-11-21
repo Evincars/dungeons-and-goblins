@@ -17,11 +17,11 @@
   "targetProfile": "pixi-ui-2d",
   "sourceEffectFile": "campfire-embers.json",
   "sourceEffectId": "campfire-embers",
-  "sourceHash": "fnv1a32:b44c614e",
+  "sourceHash": "fnv1a32:5abadde7",
   "emitters": [
     {
       "id": "sparks",
-      "name": "Sparks",
+      "name": "sparks",
       "enabled": true,
       "mode": "billboard",
       "maxParticles": 40,
@@ -2180,7 +2180,7 @@
     },
     {
       "id": "embers",
-      "name": "Popping embers",
+      "name": "embers",
       "enabled": true,
       "mode": "billboard",
       "maxParticles": 6,

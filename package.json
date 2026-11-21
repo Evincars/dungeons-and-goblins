@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit",
     "lint:style": "node scripts/check-style.mjs",
     "rules:sync": "node scripts/sync-rules.mjs",
+    "vfx:effects": "node scripts/vfx-effects.mjs",
     "vfx:validate": "nixie-fx validate vfx",
     "vfx:export": "nixie-fx export vfx",
     "check": "npm run typecheck && npm run lint:style && node scripts/sync-rules.mjs --check && npm test",

@@ -6,7 +6,7 @@
   "name": "Poison Spray",
   "timeline": {
     "frameRate": 30,
-    "duration": 1.6,
+    "duration": 2,
     "loop": {
       "enabled": false,
       "start": 0.27599999999999997,
@@ -17,15 +17,15 @@
   "targetProfile": "pixi-ui-2d",
   "sourceEffectFile": "poison-spray.json",
   "sourceEffectId": "poison-spray",
-  "sourceHash": "fnv1a32:50bb3b1b",
+  "sourceHash": "fnv1a32:a0448a2b",
   "emitters": [
     {
       "id": "gas",
-      "name": "Gas",
+      "name": "gas",
       "enabled": true,
       "mode": "billboard",
-      "maxParticles": 30,
-      "duration": 0.1,
+      "maxParticles": 36,
+      "duration": 0.15,
       "loop": false,
       "timeline": {
         "start": 0,
@@ -56,30 +56,30 @@
         "customData": false
       },
       "spawn": {
-        "rate": 300,
+        "rate": 240,
         "rateValue": {
           "mode": "constant",
-          "value": 300,
-          "min": 300,
-          "max": 300,
+          "value": 240,
+          "min": 240,
+          "max": 240,
           "curve": [
             {
               "x": 0,
-              "y": 300
+              "y": 240
             },
             {
               "x": 1,
-              "y": 300
+              "y": 240
             }
           ],
           "curveB": [
             {
               "x": 0,
-              "y": 300
+              "y": 240
             },
             {
               "x": 1,
-              "y": 300
+              "y": 240
             }
           ]
         },
@@ -111,37 +111,37 @@
           ]
         },
         "bursts": [],
-        "shape": "box",
-        "radius": 0,
+        "shape": "circle",
+        "radius": 1.5,
         "radiusValue": {
           "mode": "constant",
-          "value": 0,
-          "min": 0,
-          "max": 0,
+          "value": 1.5,
+          "min": 1.5,
+          "max": 1.5,
           "curve": [
             {
               "x": 0,
-              "y": 0
+              "y": 1.5
             },
             {
               "x": 1,
-              "y": 0
+              "y": 1.5
             }
           ],
           "curveB": [
             {
               "x": 0,
-              "y": 0
+              "y": 1.5
             },
             {
               "x": 1,
-              "y": 0
+              "y": 1.5
             }
           ]
         },
         "box": [
-          0.6,
-          0.4,
+          0,
+          0,
           0
         ],
         "angle": 25,
@@ -185,7 +185,7 @@
           0
         ],
         "rotation": [
-          0,
+          90,
           0,
           0
         ],
@@ -203,27 +203,27 @@
       "initializeParticle": {
         "lifetime": {
           "mode": "random",
-          "value": 0.6,
-          "min": 0.6,
-          "max": 1.1,
+          "value": 0.9,
+          "min": 0.9,
+          "max": 1.4,
           "curve": [
             {
               "x": 0,
-              "y": 0.6
+              "y": 0.9
             },
             {
               "x": 1,
-              "y": 0.6
+              "y": 0.9
             }
           ],
           "curveB": [
             {
               "x": 0,
-              "y": 0.6
+              "y": 0.9
             },
             {
               "x": 1,
-              "y": 0.6
+              "y": 0.9
             }
           ]
         },
@@ -680,13 +680,13 @@
         "velocity": {
           "mode": "vector",
           "min": [
-            -4,
-            -3,
+            -0.4,
+            -0.3,
             0
           ],
           "max": [
-            4,
-            3.5,
+            0.4,
+            0.5,
             0
           ],
           "speed": {
@@ -745,36 +745,36 @@
             }
           ]
         },
-        "drag": 0.7,
+        "drag": 0.6,
         "dragValue": {
           "mode": "constant",
-          "value": 0.7,
-          "min": 0.7,
-          "max": 0.7,
+          "value": 0.6,
+          "min": 0.6,
+          "max": 0.6,
           "curve": [
             {
               "x": 0,
-              "y": 0.7
+              "y": 0.6
             },
             {
               "x": 1,
-              "y": 0.7
+              "y": 0.6
             }
           ],
           "curveB": [
             {
               "x": 0,
-              "y": 0.7
+              "y": 0.6
             },
             {
               "x": 1,
-              "y": 0.7
+              "y": 0.6
             }
           ]
         }
       },
       "render": {
-        "blend": "additive",
+        "blend": "alpha",
         "shading": "unlit",
         "softParticles": {
           "enabled": false,
@@ -802,17 +802,17 @@
       },
       "billboard": {
         "shape": "circle",
-        "sizeStart": 0.45,
-        "sizeEnd": 1,
+        "sizeStart": 0.6,
+        "sizeEnd": 1.1,
         "sizeValue": {
           "mode": "curve",
-          "value": 0.45,
-          "min": 0.45,
-          "max": 0.45,
+          "value": 0.6,
+          "min": 0.6,
+          "max": 0.6,
           "curve": [
             {
               "x": 0,
-              "y": 0.45
+              "y": 0.5454545454545454
             },
             {
               "x": 1,
@@ -822,13 +822,14 @@
           "curveB": [
             {
               "x": 0,
-              "y": 0.45
+              "y": 0.6
             },
             {
               "x": 1,
-              "y": 1
+              "y": 1.1
             }
-          ]
+          ],
+          "multiplier": 1.1
         },
         "separateAxes": false,
         "sizeStartY": 0.28,
@@ -961,15 +962,15 @@
       },
       "color": {
         "start": [
-          0.75,
-          0.95,
-          0.45,
-          0.8
+          0.55,
+          0.8,
+          0.25,
+          0
         ],
         "end": [
-          0.2,
-          0.32,
-          0.05,
+          0.3,
+          0.45,
+          0.12,
           0
         ],
         "gradient": {
@@ -978,36 +979,28 @@
             {
               "position": 0,
               "color": [
-                0.75,
-                0.95,
-                0.45
-              ]
-            },
-            {
-              "position": 0.5,
-              "color": [
-                0.45,
-                0.7,
-                0.15
+                0.55,
+                0.8,
+                0.25
               ]
             },
             {
               "position": 1,
               "color": [
-                0.2,
-                0.32,
-                0.05
+                0.3,
+                0.45,
+                0.12
               ]
             }
           ],
           "alphaStops": [
             {
               "position": 0,
-              "alpha": 0.8
+              "alpha": 0
             },
             {
-              "position": 0.6,
-              "alpha": 0.6
+              "position": 0.25,
+              "alpha": 0.5
             },
             {
               "position": 1,
@@ -2180,11 +2173,11 @@
     },
     {
       "id": "motes",
-      "name": "Motes",
+      "name": "motes",
       "enabled": true,
       "mode": "billboard",
-      "maxParticles": 20,
-      "duration": 0.08,
+      "maxParticles": 30,
+      "duration": 0.4,
       "loop": false,
       "timeline": {
         "start": 0,
@@ -2215,30 +2208,30 @@
         "customData": false
       },
       "spawn": {
-        "rate": 250,
+        "rate": 75,
         "rateValue": {
           "mode": "constant",
-          "value": 250,
-          "min": 250,
-          "max": 250,
+          "value": 75,
+          "min": 75,
+          "max": 75,
           "curve": [
             {
               "x": 0,
-              "y": 250
+              "y": 75
             },
             {
               "x": 1,
-              "y": 250
+              "y": 75
             }
           ],
           "curveB": [
             {
               "x": 0,
-              "y": 250
+              "y": 75
             },
             {
               "x": 1,
-              "y": 250
+              "y": 75
             }
           ]
         },
@@ -2270,37 +2263,37 @@
           ]
         },
         "bursts": [],
-        "shape": "box",
-        "radius": 0,
+        "shape": "circle",
+        "radius": 1.5,
         "radiusValue": {
           "mode": "constant",
-          "value": 0,
-          "min": 0,
-          "max": 0,
+          "value": 1.5,
+          "min": 1.5,
+          "max": 1.5,
           "curve": [
             {
               "x": 0,
-              "y": 0
+              "y": 1.5
             },
             {
               "x": 1,
-              "y": 0
+              "y": 1.5
             }
           ],
           "curveB": [
             {
               "x": 0,
-              "y": 0
+              "y": 1.5
             },
             {
               "x": 1,
-              "y": 0
+              "y": 1.5
             }
           ]
         },
         "box": [
-          0.8,
-          0.5,
+          0,
+          0,
           0
         ],
         "angle": 25,
@@ -2344,7 +2337,7 @@
           0
         ],
         "rotation": [
-          0,
+          90,
           0,
           0
         ],
@@ -2839,13 +2832,13 @@
         "velocity": {
           "mode": "vector",
           "min": [
-            -3,
-            -1.5,
+            -0.4,
+            -0.2,
             0
           ],
           "max": [
-            3,
-            3,
+            0.4,
+            0.8,
             0
           ],
           "speed": {
@@ -2904,30 +2897,30 @@
             }
           ]
         },
-        "drag": 0.8,
+        "drag": 0.5,
         "dragValue": {
           "mode": "constant",
-          "value": 0.8,
-          "min": 0.8,
-          "max": 0.8,
+          "value": 0.5,
+          "min": 0.5,
+          "max": 0.5,
           "curve": [
             {
               "x": 0,
-              "y": 0.8
+              "y": 0.5
             },
             {
               "x": 1,
-              "y": 0.8
+              "y": 0.5
             }
           ],
           "curveB": [
             {
               "x": 0,
-              "y": 0.8
+              "y": 0.5
             },
             {
               "x": 1,
-              "y": 0.8
+              "y": 0.5
             }
           ]
         }
@@ -3120,15 +3113,15 @@
       },
       "color": {
         "start": [
-          0.75,
           0.95,
-          0.45,
-          0.8
+          1,
+          0.55,
+          0.9
         ],
         "end": [
-          0.2,
-          0.32,
-          0.05,
+          0.3,
+          0.42,
+          0.08,
           0
         ],
         "gradient": {
@@ -3137,36 +3130,36 @@
             {
               "position": 0,
               "color": [
-                0.75,
                 0.95,
-                0.45
+                1,
+                0.55
               ]
             },
             {
-              "position": 0.5,
+              "position": 0.4,
               "color": [
-                0.45,
-                0.7,
-                0.15
+                0.65,
+                0.85,
+                0.2
               ]
             },
             {
               "position": 1,
               "color": [
-                0.2,
-                0.32,
-                0.05
+                0.3,
+                0.42,
+                0.08
               ]
             }
           ],
           "alphaStops": [
             {
               "position": 0,
-              "alpha": 0.8
+              "alpha": 0.9
             },
             {
               "position": 0.6,
-              "alpha": 0.6
+              "alpha": 0.7
             },
             {
               "position": 1,

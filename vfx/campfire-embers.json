@@ -18,7 +18,7 @@
   "emitters": [
     {
       "id": "sparks",
-      "name": "Sparks",
+      "name": "sparks",
       "enabled": true,
       "mode": "billboard",
       "maxParticles": 40,
@@ -2301,7 +2301,7 @@
     },
     {
       "id": "embers",
-      "name": "Popping embers",
+      "name": "embers",
       "enabled": true,
       "mode": "billboard",
       "maxParticles": 6,

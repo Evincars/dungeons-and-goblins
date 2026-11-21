@@ -32,6 +32,10 @@ export const VFX_EFFECTS = [
   'melfs-acid-arrow-cast', 'melfs-acid-arrow-flight', 'melfs-acid-arrow-impact',
   'scorching-ray-cast', 'scorching-ray-flight', 'scorching-ray-impact',
   'shatter', 'cloud-of-daggers', 'prayer-of-healing',
+  'fireball-cast', 'fireball', 'lightning-bolt', 'vampiric-touch-cast', 'vampiric-touch-flight', 'vampiric-touch-impact',
+  'necrotic-cast', 'psychic-cast', 'blight', 'ice-storm', 'phantasmal-killer', 'stoneskin', 'stoneskin-aura',
+  'cloudkill', 'cone-of-cold', 'chain-lightning', 'chain-lightning-strike', 'circle-of-death',
+  'disintegrate-cast', 'disintegrate-flight', 'disintegrate-impact', 'freezing-sphere', 'sunbeam-cast', 'sunbeam',
 ] as const;
 export type VfxEffectId = (typeof VFX_EFFECTS)[number];
 

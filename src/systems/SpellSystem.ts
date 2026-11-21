@@ -15,7 +15,7 @@ import { heroClass, spellLevelFor } from '../rules/Classes';
 import { bindingFeatureId, featureCooldown, featureOn, featureOfClass, hasClassFeature } from '../rules/ClassFeatures';
 import { switchFeat, usedFeature } from './FeatureSystem';
 import { foreseeHit, foreseenSave, grimHarvest, savedDamage, sculptAt, spellCast, spellDamageBonus, splitEnchantment } from './SchoolSystem';
-import { castBuff, castWater, castZone, chargesWater, electrify } from './LastingSpells';
+import { castBuff, castWater, castZone, chargesWater, conducted, electrify, electrifyArea, reachedPuddle } from './LastingSpells';
 import { FEATS, bindingFeatId } from '../rules/Feats';
 import { passiveFeats } from '../rules/Build';
 import { useFeat } from './FeatActions';
@@ -32,7 +32,7 @@ import type { Dice } from '../rules/Dice';
 import { spawnFx } from '../entities/FxFactory';
 import { AIM_HEIGHT, createSpellBolt } from '../entities/ProjectileFactory';
 import { playEffect } from '../assets/Effects';
-import { areaBounds, areaCentre, coneLength, inArea } from '../rules/SpellArea';
+import { areaBounds, areaCentre, fromHands, handsLength, inArea } from '../rules/SpellArea';
 import { playVfx } from '../render/VfxPlayer';
 import { SPELL_VFX } from '../render/SpellVfx';
 import { SPELL_STATS } from '../entities/WeaponStats';
@@ -278,24 +278,32 @@ function burstHits(caster: Player, def: SpellDef, foe: Entity, dc: number): void
 
 /**
  * A burst's art: its particles where possible (render/SpellVfx.ts; played on every screen, render/VfxPlayer.ts) — a cone's
- * from the caster's hands towards its tip, any other's where it goes off — else its library effect there (a cone's at its
- * middle).
+ * or a line's from the caster's hands towards its far end, any other's where it goes off, after its flare in the hands
+ * when it has one — else its library effect there (a cone's or a line's at its middle).
  */
 export function playBurstArt(caster: { position: { x: number; y: number } }, def: SpellDef, centre: { x: number; y: number }): void {
   const { shape, colour, scale } = def.effect;
   const { x, y } = caster.position;
   const vfx = SPELL_VFX[def.id]?.burst;
-  if (vfx && def.area === 'cone') {
-    const length = coneLength(def);
+  if (vfx && fromHands(def)) {
+    const length = handsLength(def);
     playVfx(vfx, x, y, CONE_HANDS, (centre.x - x) / length, (centre.y - y) / length);
     return;
   }
   if (vfx) {
+    const dist = Math.hypot(centre.x - x, centre.y - y);
+    if (dist > 0) playCastArt(caster, def, (centre.x - x) / dist, (centre.y - y) / dist);
     playVfx(vfx, centre.x, centre.y);
     return;
   }
-  const at = def.area === 'cone' ? { x: (x + centre.x) / 2, y: (y + centre.y) / 2 } : centre;
+  const at = fromHands(def) ? { x: (x + centre.x) / 2, y: (y + centre.y) / 2 } : centre;
   playEffect(shape, colour, at.x, at.y, 0, scale);
+}
+
+/** A burst's particles on each body it strikes (Chain Lightning's bolt from above), played on every screen. */
+export function playStrikeArt(def: SpellDef, x: number, y: number): void {
+  const look = SPELL_VFX[def.id]?.strike;
+  if (look) playVfx(look, x, y);
 }
 
 /** The flare in the caster's hands as a flying spell leaves them (its particles, render/SpellVfx.ts), turned the way it goes. */
@@ -306,7 +314,50 @@ export function playCastArt(caster: { position: { x: number; y: number } }, def:
   playVfx(look, caster.position.x + dirX * hands, caster.position.y + dirY * hands, AIM_HEIGHT, dirX, dirY);
 }
 
-/** A burst: the effect where it goes off, and a save for every foe its area catches. */
+/** Whether a foe is caught by a burst cast from the caster going off at `centre`: its body anywhere in the area. */
+function caughtBy(caster: Player, def: SpellDef, centre: { x: number; y: number }, foe: Entity): boolean {
+  if (!isTarget(foe) || foe.health.current <= 0) return false;
+  return inArea(def, caster.position, centre, foe.position.x, foe.position.y, Math.max(foe.radius.x, foe.radius.y));
+}
+
+/**
+ * The foes the water conducts a thunder or lightning burst to (electrifyArea reached `puddles` of it): each standing in one
+ * outside the area itself saves as if caught, once however many of the puddles they stand in.
+ */
+function conductToFoes(caster: Player, def: SpellDef, centre: { x: number; y: number }, puddles: number, dc: number): void {
+  for (let i = 0; i < puddles; i++) conductThrough(caster, def, centre, i, dc);
+}
+
+/** The foes the `index`th puddle a burst reached conducts it to. */
+function conductThrough(caster: Player, def: SpellDef, centre: { x: number; y: number }, index: number, dc: number): void {
+  const puddle = reachedPuddle(index);
+  if (!puddle) return;
+  for (const foe of nearby(puddle.position.x, puddle.position.y, puddle.surface.radius + MAX_MOB_RADIUS, Sense.mob, victims)) {
+    if (conductsTo(caster, def, centre, foe, index)) strikeOne(caster, def, foe, dc);
+  }
+}
+
+/**
+ * Whether the water conducts the burst to this foe through the `index`th puddle it reached: they stand in it, in none before
+ * it, and the area itself has not caught them already.
+ */
+function conductsTo(caster: Player, def: SpellDef, centre: { x: number; y: number }, foe: Entity, index: number): boolean {
+  if (!isTarget(foe) || foe.health.current <= 0) return false;
+  const { x, y } = foe.position;
+  const inThisOne = conducted(x, y, index + 1) && !conducted(x, y, index);
+  return inThisOne && !caughtBy(caster, def, centre, foe);
+}
+
+/** One foe a burst catches: its particles on them (Chain Lightning's), then their save. */
+function strikeOne(caster: Player, def: SpellDef, foe: Entity, dc: number): void {
+  if (foe.position) playStrikeArt(def, foe.position.x, foe.position.y);
+  burstHits(caster, def, foe, dc);
+}
+
+/**
+ * A burst: the effect where it goes off, and a save for every foe its area catches. Thunder and lightning charge the water
+ * they reach, and the water conducts them to every foe standing in it.
+ */
 function castBurst(caster: Player, def: SpellDef, targetX: number, targetY: number, dirX: number, dirY: number): void {
   facing.x = dirX;
   facing.y = dirY;
@@ -319,12 +370,9 @@ function castBurst(caster: Player, def: SpellDef, targetX: number, targetY: numb
   const dc = spellcastingFor(characterSheet(caster), def.id).dc;
   const near = areaBounds(def, caster.position, centre, bounds);
   for (const foe of nearby(near.x, near.y, near.r + MAX_MOB_RADIUS, Sense.mob, victims)) {
-    if (!isTarget(foe) || foe.health.current <= 0) continue;
-    if (!inArea(def, caster.position, centre, foe.position.x, foe.position.y, Math.max(foe.radius.x, foe.radius.y))) continue;
-    burstHits(caster, def, foe, dc);
+    if (caughtBy(caster, def, centre, foe)) strikeOne(caster, def, foe, dc);
   }
-  // Thunder and lightning charge the water they reach.
-  if (chargesWater(def.damageType)) electrify(centre.x, centre.y, def.radius);
+  if (chargesWater(def.damageType)) conductToFoes(caster, def, centre, electrifyArea(def, caster.position, centre), dc);
   sculptAt(caster, def.id, centre.x, centre.y, def.radius);
 }
 

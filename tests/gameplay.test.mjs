@@ -5702,6 +5702,90 @@ test('lightning charges water too, a bolt of it flying across a puddle; the aim 
   assert.equal(puddle.surface.kind, 'shock', 'the lightning bolt charged the water it flew over');
 });
 
+test('Lightning Bolt is a line from the hands; the water it reaches conducts it to every foe standing in it, as Chain Lightning\'s bolt strikes each foe it catches', async () => {
+  const { areaCentre, inArea } = await load('rules/SpellArea');
+  const { vfxEvents, takeQueuedVfx } = await load('render/VfxPlayer');
+  const bolt = SPELLS.lightning_bolt;
+  assert.equal(bolt.area, 'line');
+  const from = { x: 0, y: 0 };
+  const end = areaCentre(bolt, from, { x: 10, y: 0 }, { x: 0, y: 0 });
+  assert.deepEqual(end, { x: bolt.range, y: 0 }, 'it always runs its whole length the way it is aimed');
+  assert.ok(inArea(bolt, from, end, bolt.range - 2, bolt.radius - 1), 'all along it, as wide at its end as at the hands');
+  assert.ok(!inArea(bolt, from, end, bolt.range / 2, bolt.radius + 4) && !inArea(bolt, from, end, -8, 0), 'nothing beside it or behind the caster');
+
+  const level = arena(30, 10);
+  const wizard = wizardOf('evocation', 5, 2, 4);
+  const { x, y } = wizard.position;
+  wizard.aimWorld.x = x + 300;
+  wizard.aimWorld.y = y;
+  const goblin = (dx, dy) => {
+    const mob = mobAt(level, 'goblin', 10, 2);
+    mob.position.x = x + dx;
+    mob.position.y = y + dy;
+    mob.health.max = mob.health.current = 500;
+    return mob;
+  };
+  const inLine = goblin(100, 0);
+  const inWater = goblin(140, 44);
+  const aside = goblin(60, 60);
+  LastingSpells.createPuddle(wizard, x + 140, y + 30, 28);
+  const [puddle] = world.with('surface');
+  const sent = [];
+  vfxEvents.onPlay = (shot) => sent.push(shot.effect);
+  takeQueuedVfx([]);
+  useDieRoller(() => 1);
+  assert.equal(bindSpell(wizard, 0, 'lightning_bolt', 3), true);
+  cast(level, wizard);
+  vfxEvents.onPlay = null;
+  useDieRoller(SURE_HIT);
+  assert.equal(puddle.surface.kind, 'shock', 'the bolt charged the water it crossed');
+  assert.ok(inLine.health.current < 500, 'the goblin in the line is struck');
+  assert.ok(inWater.health.current < 500, 'the goblin in the water beside it too: the water conducts it');
+  assert.equal(aside.health.current, 500, 'one standing dry beside it is not');
+  assert.deepEqual(sent, ['lightning-bolt'], 'one stroke of particles from the hands');
+
+  // Chain Lightning: a bolt from above on each foe it catches.
+  world.clear();
+  const level2 = arena(30, 10);
+  const mage = wizardOf('evocation', 12, 2, 4);
+  const near = mobAt(level2, 'goblin', 8, 4);
+  const other = mobAt(level2, 'goblin', 9, 4);
+  for (const mob of [near, other]) mob.health.max = mob.health.current = 500;
+  mage.aimWorld.x = near.position.x;
+  mage.aimWorld.y = near.position.y;
+  sent.length = 0;
+  vfxEvents.onPlay = (shot) => sent.push(shot.effect);
+  assert.equal(bindSpell(mage, 0, 'chain_lightning', 6), true);
+  cast(level2, mage);
+  vfxEvents.onPlay = null;
+  assert.deepEqual(sent.filter((e) => e === 'chain-lightning-strike').length, 2, 'a strike on each of the two goblins');
+  assert.ok(sent.includes('shocking-grasp-cast') && sent.includes('chain-lightning'), 'after its flare in the hands and its burst where aimed');
+  world.clear();
+});
+
+test('a hero hurt while concentrating keeps the spell with a Constitution save against DC 10 or half the damage, whichever is higher', () => {
+  arena(10, 6);
+  const wizard = wizardOf('evocation', 9);
+  wizard.health.max = wizard.health.current = 300;
+  const bonus = sheetOf(wizard).saves.constitution.bonus;
+  // Every d20 comes up so that the save totals 12.
+  useDieRoller((sides) => (sides === 20 ? 12 - bonus : 1));
+  const hold = () => world.addComponent(wizard, 'concentration', { spell: 'cloud_of_daggers', zone: -1 });
+  hold();
+  hurtPlayer(wizard, wizard, 4, 'slashing');
+  assert.equal(wizard.concentration?.spell, 'cloud_of_daggers', '4 damage: DC 10, a 12 keeps it');
+  hurtPlayer(wizard, wizard, 25, 'slashing');
+  assert.equal(wizard.concentration?.spell, 'cloud_of_daggers', '25 damage: DC 12 (half, rounded down), a 12 still keeps it');
+  hurtPlayer(wizard, wizard, 26, 'slashing');
+  assert.equal(wizard.concentration, undefined, '26 damage: DC 13, a 12 loses it');
+  hold();
+  useDieRoller((sides) => (sides === 20 ? 9 - bonus : 1));
+  hurtPlayer(wizard, wizard, 2, 'slashing');
+  assert.equal(wizard.concentration, undefined, 'even a scratch asks for DC 10: a 9 loses it');
+  useDieRoller(SURE_HIT);
+  world.clear();
+});
+
 test('Bladesong spends a charge and gathers Bladesong Charges for its Climax, which strikes and heals and ends the song', () => {
   const level = arena(14, 6);
   const singer = wizardOf('bladesinging', 3);
@@ -6681,7 +6765,7 @@ test('a spell cast on oneself shows in particles alone (no halo of library art);
   assert.deepEqual(sent, ['blade-ward', 'shield', 'mage-armor'], 'each flashes up once, in its own particles');
   assert.equal(world.entities.filter((e) => e.fx).length, 0, 'and no library halo or effect is spawned with them');
   assert.ok(wizard.buffs.bladeWard > 0 && wizard.buffs.shield > 0, 'their auras show while these last');
-  assert.deepEqual(Object.keys(BUFF_AURAS).sort(), ['bladeWard', 'shield'], 'Mage Armour, for a whole day, keeps none');
+  assert.deepEqual(Object.keys(BUFF_AURAS).sort(), ['bladeWard', 'shield', 'stoneskin'], 'Mage Armour, for a whole day, keeps none; Stoneskin, for a minute, does');
   assert.equal(SPELL_VFX.cloud_of_daggers.zone, 'cloud-of-daggers');
 
   sent.length = 0;

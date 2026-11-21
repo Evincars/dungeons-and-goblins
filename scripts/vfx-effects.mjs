@@ -33,7 +33,9 @@ const SCREEN_PLANE = [90, 0, 0];
  * One emitter. o: max particles, rate (a second), duration and loop (a one-shot emits for `duration` s), where they are born
  * (`box` [w, h] of the area, or `ring` radius with `filled` for a disc), life [min, max] s, velocity `vmin`/`vmax` (units/s,
  * per axis), `radial` (units/s out from the origin, negative in), `orbit` (radians/s round it), gravity, drag, size [start, end] (units), colours (a
- * gradient over life), `round` soft dots or crisp squares, `blend`, `floor` (units below the origin where they land).
+ * gradient over life), `round` soft dots or crisp squares, `blend`, `floor` (units below the origin where they land), `at`
+ * [x, y] (units: the spawn's middle, off the origin — a line along +x, a beam from above) and `start` (s: a delay before it
+ * emits, so one effect can play in steps).
  */
 function emitter(id, o) {
   const e = structuredClone(base.emitters[0]);
@@ -54,6 +56,8 @@ function emitter(id, o) {
     e.spawn.rotation = SCREEN_PLANE;
   }
   e.spawn.simulationSpace = 'world';
+  if (o.at) e.spawn.position = [...o.at, 0];
+  e.timeline.start = o.start ?? 0;
   const init = e.initializeParticle;
   init.lifetime = random(...o.life, 0.02, 30);
   init.size = random(0.7, 1.2, 0, 4);
@@ -381,6 +385,172 @@ effect('prayer-of-healing', 1.8, [
   emitter('ring', once(0.06, { max: 40, rate: 700, ring: 1.2, life: [0.4, 0.6], orbit: 2, size: [0.18, 0.05], colors: C2.holy })),
   emitter('motes', once(0.5, { max: 40, rate: 80, ring: 1, filled: true, life: [0.6, 1], vmin: [-0.2, 1], vmax: [0.2, 2.4], drag: 0.6, size: [0.2, 0.05], colors: C2.holy, round: true })),
   emitter('glow', once(0.1, { max: 8, rate: 80, life: [0.3, 0.5], size: [1.6, 0.6], colors: C2.holy, round: true })),
+]);
+
+// ── 3rd- to 6th-level spells ──────────────────────────────────────────────────
+// Sizes follow src/data/spells.json (16 px a unit): keep them in step when an area changes there.
+
+const C3 = {
+  blast: gradient([[0, [1, 1, 0.85]], [0.2, [1, 0.85, 0.35]], [0.5, [1, 0.45, 0.1]], [1, [0.55, 0.1, 0.04]]], [[0, 1], [0.5, 0.85], [1, 0]]),
+  soot: gradient([[0, [0.3, 0.2, 0.15]], [1, [0.1, 0.08, 0.07]]], [[0, 0], [0.2, 0.55], [1, 0]]),
+  bolt: gradient([[0, [1, 1, 1]], [0.25, [0.8, 0.95, 1]], [0.7, [0.45, 0.7, 1]], [1, [0.3, 0.4, 1]]], [[0, 1], [0.6, 0.9], [1, 0]]),
+  boltGlow: gradient([[0, [0.6, 0.8, 1]], [1, [0.3, 0.45, 1]]], [[0, 0.5], [1, 0]]),
+  crimson: gradient([[0, [1, 0.6, 0.6]], [0.35, [0.85, 0.12, 0.18]], [1, [0.3, 0.02, 0.06]]], [[0, 0.95], [0.6, 0.8], [1, 0]]),
+  necrotic: gradient([[0, [0.8, 1, 0.7]], [0.35, [0.45, 0.6, 0.25]], [1, [0.15, 0.12, 0.1]]], [[0, 0.9], [0.6, 0.7], [1, 0]]),
+  rot: gradient([[0, [0.2, 0.25, 0.12]], [1, [0.05, 0.06, 0.04]]], [[0, 0], [0.25, 0.6], [1, 0]]),
+  ash: gradient([[0, [0.55, 0.5, 0.4]], [1, [0.3, 0.27, 0.22]]], [[0, 0.8], [0.7, 0.6], [1, 0]]),
+  psychic: gradient([[0, [1, 0.9, 1]], [0.35, [0.85, 0.45, 0.95]], [1, [0.35, 0.1, 0.5]]], [[0, 0.9], [0.6, 0.75], [1, 0]]),
+  dread: gradient([[0, [0.18, 0.05, 0.25]], [1, [0.05, 0.02, 0.08]]], [[0, 0], [0.3, 0.6], [1, 0]]),
+  hail: gradient([[0, [1, 1, 1]], [1, [0.75, 0.9, 1]]], [[0, 0.95], [0.8, 0.9], [1, 0]]),
+  stone: gradient([[0, [0.85, 0.8, 0.7]], [0.5, [0.62, 0.56, 0.47]], [1, [0.38, 0.34, 0.3]]], [[0, 1], [0.7, 0.9], [1, 0]]),
+  poison: gradient([[0, [0.75, 0.85, 0.3]], [1, [0.4, 0.5, 0.12]]], [[0, 0], [0.25, 0.42], [1, 0]]),
+  deathRing: gradient([[0, [0.85, 0.95, 0.85]], [0.3, [0.45, 0.85, 0.55]], [1, [0.2, 0.15, 0.35]]], [[0, 1], [0.6, 0.8], [1, 0]]),
+  ruin: gradient([[0, [0.85, 1, 0.6]], [0.4, [0.4, 1, 0.3]], [1, [0.1, 0.6, 0.1]]]),
+  sun: gradient([[0, [1, 1, 0.95]], [0.4, [1, 0.95, 0.6]], [1, [1, 0.75, 0.25]]], [[0, 0.9], [0.6, 0.75], [1, 0]]),
+  sunGlow: gradient([[0, [1, 0.95, 0.7]], [1, [1, 0.8, 0.4]]], [[0, 0], [0.3, 0.3], [1, 0]]),
+};
+
+// Fireball (56 px round): a bright streak leaves the hands; where it lands it blooms — a white-hot flash, a ball of fire
+// swelling out to its edge, flames over all of it, embers flung and a pall of soot rising.
+effect('fireball-cast', 1, [
+  emitter('glow', once(0.1, { max: 12, rate: 120, box: [0.3, 0.3], life: [0.15, 0.3], vmin: [0, -0.2], vmax: [1, 0.2], drag: 2, size: [1, 0.3], colors: C.fireCore, round: true })),
+  emitter('streak', once(0.12, { max: 30, rate: 250, box: [0.2, 0.2], life: [0.15, 0.3], vmin: [8, -0.4], vmax: [14, 0.4], drag: 1, size: [0.3, 0.06], colors: C.flame, round: true })),
+]);
+effect('fireball', 2.4, [
+  emitter('flash', once(0.06, { max: 8, rate: 140, life: [0.15, 0.25], size: [4, 1.2], colors: C.fireCore, round: true })),
+  emitter('ball', once(0.08, { max: 140, rate: 1800, ring: 0.5, filled: true, life: [0.3, 0.42], radial: 8, size: [0.9, 0.3], colors: C3.blast, round: true })),
+  emitter('flames', once(0.25, { max: 160, rate: 640, ring: 3.4, filled: true, life: [0.35, 0.7], vmin: [-0.4, 0.4], vmax: [0.4, 1.8], drag: 0.8, size: [0.6, 0.15], colors: C.flame, round: true })),
+  emitter('embers', once(0.1, { max: 60, rate: 600, ring: 0.8, filled: true, life: [0.6, 1.1], vmin: [-7, -2], vmax: [7, 8], gravity: 7, drag: 0.4, size: [0.14, 0.05], colors: C.ember })),
+  emitter('soot', once(0.3, { max: 30, rate: 100, ring: 3, filled: true, life: [1, 1.6], vmin: [-0.4, 0.6], vmax: [0.4, 1.6], drag: 0.5, size: [0.8, 1.6], colors: C3.soot, round: true, blend: 'alpha', start: 0.12 })),
+]);
+
+// Lightning Bolt (a line 192 px long and 10 px each side, from the hands along +x): a stroke of lightning the whole length,
+// flickering twice, a glow along it and sparks jumping off it.
+effect('lightning-bolt', 1.2, [
+  emitter('stroke', once(0.1, { max: 320, rate: 3000, box: [12, 0.3], at: [6, 0], life: [0.08, 0.16], vmin: [-0.4, -0.6], vmax: [0.4, 0.6], size: [0.3, 0.1], colors: C3.bolt })),
+  emitter('flicker', once(0.08, { max: 240, rate: 3000, box: [12, 0.45], at: [6, 0], life: [0.06, 0.12], vmin: [-0.4, -0.8], vmax: [0.4, 0.8], size: [0.24, 0.08], colors: C3.bolt, start: 0.18 })),
+  emitter('glow', once(0.08, { max: 40, rate: 500, box: [12, 0.2], at: [6, 0], life: [0.2, 0.35], size: [1.4, 0.6], colors: C3.boltGlow, round: true })),
+  emitter('sparks', once(0.25, { max: 80, rate: 320, box: [12, 0.4], at: [6, 0], life: [0.12, 0.3], vmin: [-4, -5], vmax: [4, 5], drag: 2, size: [0.12, 0.04], colors: C.lightning })),
+]);
+
+// Vampiric Touch: a dark crimson grasp, shadow trailing; on its victim it draws their blood out in a spiral of red motes.
+cast('vampiric-touch', C3.crimson, { round: true });
+effect('vampiric-touch-flight', 1, [
+  emitter('core', { max: 30, rate: 120, life: [0.06, 0.12], vmin: [-0.3, -0.3], vmax: [0.3, 0.3], size: [0.6, 0.3], colors: C3.crimson, round: true }),
+  emitter('wisps', { max: 40, rate: 45, box: [0.3, 0.3], life: [0.4, 0.7], vmin: [-0.9, -0.9], vmax: [0.9, 0.9], drag: 1.2, size: [0.3, 0.1], colors: C3.crimson, round: true }),
+  emitter('shade', { max: 16, rate: 22, box: [0.2, 0.2], life: [0.4, 0.6], vmin: [-0.4, -0.4], vmax: [0.4, 0.4], drag: 1, size: [0.35, 0.1], colors: C.shadow, round: true, blend: 'alpha' }),
+]);
+effect('vampiric-touch-impact', 1.8, [
+  emitter('flash', once(0.05, { max: 6, rate: 120, life: [0.12, 0.2], size: [1.2, 0.4], colors: C3.crimson, round: true })),
+  emitter('drain', once(0.4, { max: 50, rate: 140, ring: 1.4, life: [0.4, 0.6], radial: -2.6, orbit: 3, size: [0.2, 0.06], colors: C3.crimson, round: true })),
+  emitter('blood', once(0.1, { max: 14, rate: 140, box: [0.4, 0.4], life: [0.3, 0.5], vmin: [-1.5, 0.5], vmax: [1.5, 2.5], gravity: 6, size: [0.12, 0.05], colors: C2.blood, round: true, blend: 'alpha' })),
+]);
+
+// The flare of a necrotic spell (Blight, Circle of Death) and of a psychic one (Phantasmal Killer) in the hands.
+cast('necrotic', C3.necrotic, { round: true });
+cast('psychic', C3.psychic, { round: true });
+
+// Blight (24 px round): life drained out of whatever stands there — sickly motes drawn in, spiralling, rot seeping up, dry ash
+// falling.
+effect('blight', 2, [
+  emitter('glow', once(0.3, { max: 10, rate: 35, life: [0.3, 0.5], size: [1.6, 0.8], colors: C3.necrotic, round: true, start: 0.25 })),
+  emitter('drain', once(0.45, { max: 90, rate: 220, ring: 1.7, life: [0.4, 0.6], radial: -2.8, orbit: 2.5, size: [0.3, 0.08], colors: C3.necrotic, round: true })),
+  emitter('rot', once(0.3, { max: 16, rate: 60, ring: 1.3, filled: true, life: [0.8, 1.3], vmin: [-0.2, 0.3], vmax: [0.2, 0.9], drag: 0.6, size: [0.5, 1], colors: C3.rot, round: true, blend: 'alpha' })),
+  emitter('ash', once(0.5, { max: 40, rate: 80, ring: 1.4, filled: true, life: [0.7, 1.1], vmin: [-0.4, -0.2], vmax: [0.4, 0.6], gravity: 1.2, drag: 0.5, size: [0.16, 0.1], colors: C3.ash, blend: 'alpha', start: 0.2 })),
+]);
+
+// Ice Storm (56 px round): hail hammers down over all of it, shattering where it lands, cold mist settling.
+effect('ice-storm', 2.4, [
+  emitter('hail', once(0.8, { max: 160, rate: 200, box: [6.4, 1], at: [0, 6], life: [0.3, 0.55], vmin: [-1, -20], vmax: [1, -15], size: [0.22, 0.16], colors: C3.hail })),
+  emitter('shatter', once(0.8, { max: 140, rate: 170, ring: 3.4, filled: true, life: [0.15, 0.3], vmin: [-2.5, 0.2], vmax: [2.5, 2.5], gravity: 6, drag: 1, size: [0.14, 0.04], colors: C.frost, start: 0.3 })),
+  emitter('mist', once(0.6, { max: 30, rate: 50, ring: 3.3, filled: true, life: [0.9, 1.4], vmin: [-0.3, -0.1], vmax: [0.3, 0.4], drag: 0.8, size: [0.9, 1.6], colors: C.frostMist, round: true, blend: 'alpha', start: 0.3 })),
+]);
+
+// Phantasmal Killer (20 px round): a nightmare closing on its victim — violet wisps spiralling in, dread welling up, a last
+// flare of terror.
+effect('phantasmal-killer', 2, [
+  emitter('wisps', once(0.6, { max: 60, rate: 110, ring: 1.5, life: [0.5, 0.8], radial: -1.8, orbit: -3.5, size: [0.3, 0.06], colors: C3.psychic, round: true })),
+  emitter('dread', once(0.4, { max: 16, rate: 45, ring: 1, filled: true, life: [0.8, 1.2], vmin: [-0.2, 0.2], vmax: [0.2, 0.8], drag: 0.6, size: [0.6, 1.1], colors: C3.dread, round: true, blend: 'alpha' })),
+  emitter('terror', once(0.06, { max: 8, rate: 140, life: [0.2, 0.35], size: [1.8, 0.4], colors: C3.psychic, round: true, start: 0.55 })),
+]);
+
+// Stoneskin (while it lasts): flakes of stone drawn onto the body, dust shaken off; then flecks of stone glinting on it.
+effect('stoneskin', 1.6, [
+  emitter('flakes', once(0.3, { max: 50, rate: 170, ring: 2, life: [0.35, 0.5], radial: -4, size: [0.2, 0.14], colors: C3.stone, blend: 'alpha' })),
+  emitter('dust', once(0.2, { max: 14, rate: 70, ring: 1, filled: true, life: [0.6, 0.9], vmin: [-0.4, 0], vmax: [0.4, 0.5], drag: 0.8, size: [0.5, 0.9], colors: C.dust, round: true, blend: 'alpha', start: 0.25 })),
+]);
+effect('stoneskin-aura', 1, [
+  emitter('flecks', { max: 36, rate: 22, box: [1.2, 1.8], life: [0.5, 0.9], vmin: [-0.05, -0.2], vmax: [0.05, -0.05], size: [0.14, 0.1], colors: C3.stone, blend: 'alpha' }),
+]);
+
+// Cloudkill (64 px round, while it lasts): a heavy yellow-green fog rolling over all of it, sickly motes drifting in it.
+effect('cloudkill', 1, [
+  emitter('fog', { max: 70, rate: 32, ring: 3.8, filled: true, life: [1.6, 2.4], vmin: [-0.3, -0.15], vmax: [0.3, 0.25], drag: 0.3, size: [1.4, 2.2], colors: C3.poison, round: true, blend: 'alpha' }),
+  emitter('motes', { max: 40, rate: 20, ring: 3.6, filled: true, life: [0.9, 1.5], vmin: [-0.3, 0], vmax: [0.3, 0.5], size: [0.12, 0.04], colors: C.sick }),
+]);
+
+// Cone of Cold (from the hands along +x, 128 px long): a blast of freezing air fanning out the whole length, ice crystals
+// flung along it, a cold mist lingering after.
+effect('cone-of-cold', 1.8, [
+  emitter('blast', once(0.35, { max: 200, rate: 420, box: [0.15, 0.15], life: [0.35, 0.6], vmin: [20, -12], vmax: [32, 12], drag: 1.1, size: [0.25, 0.7], colors: C.frost, round: true })),
+  emitter('crystals', once(0.3, { max: 60, rate: 140, box: [0.1, 0.1], life: [0.45, 0.7], vmin: [18, -12], vmax: [30, 12], drag: 1.2, size: [0.14, 0.04], colors: C.frostCore })),
+  emitter('mist', once(0.3, { max: 24, rate: 60, box: [5, 4], at: [5, 0], life: [0.8, 1.2], vmin: [-0.2, -0.1], vmax: [0.4, 0.3], drag: 0.8, size: [0.8, 1.5], colors: C.frostMist, round: true, blend: 'alpha', start: 0.2 })),
+]);
+
+// Chain Lightning (64 px round): a crackling burst where it is aimed, arcs leaping out to the edge; a bolt from above on
+// each foe it catches (`-strike`).
+effect('chain-lightning', 1.2, [
+  emitter('flash', once(0.05, { max: 8, rate: 140, life: [0.1, 0.2], size: [2.4, 0.6], colors: C.lightning, round: true })),
+  emitter('arcs', once(0.2, { max: 260, rate: 1300, ring: 0.3, life: [0.15, 0.28], radial: 15, size: [0.24, 0.08], colors: C3.bolt })),
+  emitter('glow', once(0.1, { max: 20, rate: 200, ring: 1.5, filled: true, life: [0.2, 0.35], size: [1.4, 0.6], colors: C3.boltGlow, round: true })),
+  emitter('crackle', once(0.35, { max: 70, rate: 200, ring: 3.8, filled: true, life: [0.05, 0.12], vmin: [-3, -3], vmax: [3, 3], size: [0.14, 0.05], colors: C.lightning })),
+]);
+effect('chain-lightning-strike', 1, [
+  emitter('bolt', once(0.05, { max: 90, rate: 1800, box: [0.25, 5], at: [0, 2.5], life: [0.08, 0.15], vmin: [-0.8, -0.3], vmax: [0.8, 0.3], size: [0.26, 0.1], colors: C3.bolt })),
+  emitter('flash', once(0.05, { max: 6, rate: 120, life: [0.1, 0.18], size: [1.4, 0.4], colors: C.lightning, round: true, at: [0, 1] })),
+  emitter('sparks', once(0.08, { max: 30, rate: 400, box: [0.4, 0.2], life: [0.12, 0.28], vmin: [-6, -1], vmax: [6, 6], gravity: 4, drag: 2, size: [0.12, 0.04], colors: C.lightning })),
+]);
+
+// Circle of Death (96 px round): a sphere of negative energy swelling out from its middle to its edge, dark shade welling up
+// over all of it, wisps of the life it takes rising.
+effect('circle-of-death', 2.4, [
+  emitter('flash', once(0.06, { max: 8, rate: 140, life: [0.15, 0.28], size: [3, 0.8], colors: C3.deathRing, round: true })),
+  emitter('wave', once(0.08, { max: 200, rate: 2600, ring: 0.6, life: [0.42, 0.48], radial: 13, size: [0.3, 0.1], colors: C3.deathRing })),
+  emitter('shade', once(0.4, { max: 60, rate: 150, ring: 5.6, filled: true, life: [0.8, 1.3], vmin: [-0.2, 0.2], vmax: [0.2, 0.8], drag: 0.6, size: [0.9, 1.6], colors: C3.rot, round: true, blend: 'alpha', start: 0.15 })),
+  emitter('wisps', once(0.6, { max: 70, rate: 120, ring: 5.6, filled: true, life: [0.6, 1], vmin: [-0.2, 0.8], vmax: [0.2, 2], drag: 0.5, size: [0.18, 0.05], colors: C3.necrotic, round: true, start: 0.2 })),
+]);
+
+// Disintegrate: a thin green ray; whatever it strikes crumbles — a green flash, its dust lifted away in fine motes.
+cast('disintegrate', C3.ruin);
+effect('disintegrate-flight', 1, [
+  emitter('core', { max: 30, rate: 170, life: [0.04, 0.08], size: [0.35, 0.15], colors: C3.ruin, round: true }),
+  emitter('beam', { max: 140, rate: 200, life: [0.25, 0.45], vmin: [-0.08, -0.08], vmax: [0.08, 0.08], size: [0.2, 0.05], colors: C3.ruin, round: true }),
+  emitter('motes', { max: 20, rate: 25, life: [0.3, 0.6], vmin: [-0.4, -0.4], vmax: [0.4, 0.4], size: [0.1, 0.03], colors: C3.ruin }),
+]);
+effect('disintegrate-impact', 2, [
+  emitter('flash', once(0.05, { max: 6, rate: 120, life: [0.12, 0.22], size: [1.6, 0.4], colors: C3.ruin, round: true })),
+  emitter('crumble', once(0.5, { max: 60, rate: 130, box: [1, 1.6], life: [0.7, 1.1], vmin: [-0.4, 0.6], vmax: [0.4, 1.8], drag: 0.6, size: [0.14, 0.04], colors: C3.ruin })),
+  emitter('dust', once(0.4, { max: 24, rate: 60, box: [1, 1.4], life: [0.9, 1.4], vmin: [-0.4, 0.3], vmax: [0.4, 1], drag: 0.6, size: [0.5, 1], colors: C.dust, round: true, blend: 'alpha' })),
+]);
+
+// Otiluke's Freezing Sphere (60 px round): the frigid globe bursts — a white flash, shards of ice flung to its edge, a ring of
+// frost there, freezing mist over all of it and snow drifting down.
+effect('freezing-sphere', 2.4, [
+  emitter('flash', once(0.06, { max: 8, rate: 140, life: [0.15, 0.25], size: [3.4, 1], colors: C.frostCore, round: true })),
+  emitter('shards', once(0.08, { max: 120, rate: 1500, ring: 0.4, life: [0.35, 0.42], radial: 9, size: [0.24, 0.08], colors: C.frost })),
+  emitter('rime', once(0.1, { max: 80, rate: 800, ring: 3.7, life: [0.5, 0.8], vmin: [-0.2, -0.2], vmax: [0.2, 0.3], size: [0.2, 0.08], colors: C.frostCore, start: 0.3 })),
+  emitter('mist', once(0.3, { max: 40, rate: 130, ring: 3.5, filled: true, life: [1, 1.5], vmin: [-0.3, -0.1], vmax: [0.3, 0.4], drag: 0.8, size: [0.9, 1.6], colors: C.frostMist, round: true, blend: 'alpha', start: 0.15 })),
+  emitter('snow', once(0.8, { max: 60, rate: 70, box: [7, 1], at: [0, 3], life: [1, 1.5], vmin: [-0.3, -1.6], vmax: [0.3, -0.8], size: [0.12, 0.08], colors: C3.hail, round: true, start: 0.2 })),
+]);
+
+// Sunbeam (40 px round): a beam of sunlight down from above onto it, motes of light sinking in the beam, a disc of light on
+// the floor and sparks of it rising.
+cast('sunbeam', C3.sun, { round: true });
+effect('sunbeam', 2, [
+  emitter('beam', once(0.6, { max: 140, rate: 220, box: [2.4, 9], at: [0, 4.5], life: [0.35, 0.6], vmin: [-0.1, -6], vmax: [0.1, -3], size: [0.3, 0.1], colors: C3.sun, round: true })),
+  emitter('shaft', once(0.6, { max: 20, rate: 30, box: [2, 8], at: [0, 4], life: [0.4, 0.7], size: [1.6, 1.2], colors: C3.sunGlow, round: true })),
+  emitter('disc', once(0.5, { max: 40, rate: 80, ring: 2.4, filled: true, life: [0.4, 0.7], size: [0.9, 0.5], colors: C3.sunGlow, round: true })),
+  emitter('sparks', once(0.6, { max: 50, rate: 90, ring: 2.4, filled: true, life: [0.5, 0.9], vmin: [-0.3, 0.8], vmax: [0.3, 2.2], drag: 0.5, size: [0.14, 0.04], colors: C3.sun })),
 ]);
 
 // Effects no longer made are dropped from the project.

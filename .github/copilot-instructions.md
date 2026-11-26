@@ -454,7 +454,10 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   buttons — the sword opens and shuts the inventory as Tab does —, `HudDialog`, `MinimapView`, `QuickBar`, `RestMenu`, `PartyBanner`, `LootRollPanel`), `PopupMenu`, `HeroPicker`,
   `ConsoleView`, combat log, the inventory (`InventoryOverlay`: three tabs over the gear panel — Character, Skills and Quick bar
   (`ui/QuickBarPage.ts`: the squares shown, the presets with Load, Save and Clear, a second press confirming one that would
-  lose something) —, drawn as forged iron round a dark opening, not cut from the art; the bag filtered, searched as typed — the letters of a name in order,
+  lose something) —, drawn as gothic forged iron round a dark opening (a pinnacle on each cut corner, a crown of spikes over a blood-red gem, an
+  engraved groove ending in curls, fangs in the opening's corners, a faint pointed arch with a quatrefoil inside;
+  `tabFrameTexture`, made once), not cut from the art; a tab opened rises, its lantern fading up and its gem flaring, the
+  one closed sinks (`placeTab`: only sprite positions and alphas each update); the bag filtered, searched as typed — the letters of a name in order,
   `core/fuzzy.ts`, matched ones lit in the tooltip — and sorted by price, weight or training, `game/BagView.ts`, without moving a
   thing; a right-click menu to equip — a weapon in the primary hand or the off-hand — take off, drop, compare or send; a click
   marks an item, Ctrl+click marks a second and the two are compared side by side, the second's AC, damage and weight marked

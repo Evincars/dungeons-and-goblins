@@ -65,15 +65,57 @@ const IRON_OUTLINE = 0x04050a;
  * cut off on the slant. In design pixels: the band's width and how much of each top corner is cut. It is drawn TAB_RES
  * times finer than the design, so its edges stay sharp scaled up to the screen.
  */
-const TAB_BAND = 4;
+const TAB_BAND = 5;
 const TAB_CHAMFER = 7;
 const TAB_RES = 4;
 const TAB_INSIDE = 0x030409;
-/** The band's iron: lit faintly from above, darkening down to the panels; a worn highlight along its top, rivets at its upper corners. */
-const TAB_IRON_TOP = 0x2b2f38;
-const TAB_IRON_FOOT = 0x111318;
-const TAB_HIGHLIGHT = 0x5d6673;
+/** The band's iron: lit faintly from above, darkening down to the panels; a worn highlight along its top, rivets down its sides. */
+const TAB_IRON_TOP = 0x3a3f4a;
+const TAB_IRON_FOOT = 0x15171d;
+const TAB_HIGHLIGHT = 0x7a8492;
 const TAB_RIVET = 0x6b7480;
+/**
+ * The tab's dressing, in design pixels: a crown of three spikes on its top with a blood-red gem set in the band under them,
+ * a gothic pinnacle standing on each cut corner, a groove engraved along the band ending in curls, a fang
+ * jutting into each upper corner of the opening and, inside it, a faint pointed arch with a quatrefoil under its point
+ * and rivets at its feet. The spikes reach past the tab's edges by this much room.
+ */
+const TAB_ROOM = { side: 6, top: 11 };
+/** The crown: the middle spike's height and half-width, the side spikes' height, half-width and distance from the middle. */
+const CROWN = { tall: 10, wide: 2.6, short: 6, narrow: 1.8, apart: 5.5 };
+/**
+ * A corner's pinnacle, a gothic spire on the middle of each cut corner: its spire's height and half-width, its crockets'
+ * height (leaning out from it) and how far out they stand, and the knob of its finial.
+ */
+const PINNACLE = { tall: 10, wide: 1.7, crocket: 5, out: 2.8, knob: 1 };
+/**
+ * The pointed arch inside the opening: how far in from the band it stands, where its legs end and where they spring
+ * (shares of the tab's height), and how faint it is; under its point, a quatrefoil of this radius, its lobes this big.
+ */
+const ARCH_INSET = 2.5;
+const ARCH_FOOT = 0.62;
+const ARCH_SPRING = 0.42;
+const ARCH_ALPHA = 0.7;
+const QUATREFOIL = { r: 1.4, lobe: 1.2 };
+/**
+ * How the arch's sides bend: they leave the legs upright for this share of the rise, reach in towards the point from this
+ * share of the half-width, and come into the point from this far below it, so the two meet at a sharp angle.
+ */
+const ARCH_BEND = { leg: 0.55, reach: 0.3, drop: 3.5 };
+/** The spike iron: dark at the root, pale and worn at the point. */
+const SPIKE_ROOT = 0x23262e;
+const SPIKE_TIP = 0x9aa0aa;
+/** The gem: its half-size, its fire at the middle and its dark rim; the curls' radius and the fangs' reach. */
+const GEM_R = 2.5;
+const GEM_FIRE = 0xff6a40;
+const GEM_DARK = 0x5a0808;
+const CURL_R = 1.2;
+const FANG = 3.4;
+/** Engraved lines: the groove's dark and the lit lip beside it, and how thick each is. */
+const GROOVE_ALPHA = 0.75;
+const GROOVE_LIP_ALPHA = 0.45;
+const GROOVE_W = 0.4;
+const OUTLINE_W = 0.5;
 /**
  * The tabs stand behind the panels, their feet tucked under the panels' top edge: the others sink this many design
  * pixels further in, the open one stands out its whole height (no gap ever opens under a tab). The open one is lit from
@@ -88,6 +130,18 @@ const TAB_GLOW_WAVES_MS = [1700, 610];
 const TAB_GLOW_SIDE_FADE = 0.3;
 const TAB_IDLE_ALPHA = 0.5;
 const TAB_HOVER_IDLE_ALPHA = 0.8;
+/**
+ * Opening a tab: it rises out of the panels and its lantern fades up over this long (the one closing sinks and fades as
+ * long), while its gem flares, swelling and fading out over TAB_FLARE_MS; open, the gem glows faintly with the lantern.
+ * All of it is a few numbers set on sprites each update: nothing is drawn again.
+ */
+const TAB_RISE_MS = 180;
+const TAB_FLARE_MS = 450;
+const TAB_FLARE_SCALE = { from: 0.35, to: 1.4 };
+const TAB_GEM_GLOW = 0.35;
+/** The flare's size in design pixels at scale 1, and the longest step one update may take (a stalled frame does not jump). */
+const TAB_FLARE_SIZE = 22;
+const TAB_MAX_STEP_MS = 50;
 /** The mouse button that opens an item's menu. */
 const RIGHT_BUTTON = 2;
 /** Two items compared stand side by side, this far apart. */
@@ -223,7 +277,14 @@ const FIELDS: readonly FieldDef[] = [
   { caption: text('sheet.dmg.short'), accent: THEME.damage, value: (s) => formatDamage(s.attack.damage, s.attack.extra, true), topic: damageTopic },
 ];
 /** A tab: what stands out of the panels and slides (its frame, glow and title), its page, and where it stands open. */
-type Tab = { stand: Container; frame: Sprite; glow: Sprite; label: PixelLabel; page: Container; hovered: boolean; rect: Rect };
+/**
+ * A tab: what stands out of the panels and slides (its frame, glow, the gem's flare and its title), its page, where it
+ * stands open, and how far it has risen (0: sunk in behind the panels, 1: standing open) and when it last opened.
+ */
+type Tab = {
+  stand: Container; frame: Sprite; glow: Sprite; flare: Sprite; label: PixelLabel; page: Container; hovered: boolean; rect: Rect;
+  lift: number; openedAt: number;
+};
 
 
 const css = (color: number): string => `#${color.toString(16).padStart(6, '0')}`;
@@ -241,61 +302,248 @@ function tabPath(ctx: CanvasRenderingContext2D, w: number, h: number, cut: numbe
 }
 
 /**
- * A tab's frame (made once for its size): a black outline, a band of dark iron lit faintly from above and darkening
- * towards the panels, a worn highlight along its top and its slanted corners, a rivet at each upper corner, and the dark
- * opening inside, open down to its foot.
+ * A tab's frame (made once for its size), drawn in design pixels on a canvas TAB_RES times finer with TAB_ROOM round it
+ * for what juts out: the corner pinnacles behind it; a black outline and a band of dark iron lit faintly from above, darkening towards
+ * the panels, with a worn highlight along its top; the dark opening, open down to its foot, with a fang in each upper
+ * corner and the faint arch inside; the engraved groove and its curls, rivets down the sides, and the crown with its gem.
  */
 const tabFrames = new Map<string, Texture>();
-function tabFrameTexture(designW: number, designH: number): Texture {
-  const key = `${designW}x${designH}`;
+function tabFrameTexture(w: number, h: number): Texture {
+  const key = `${w}x${h}`;
   const made = tabFrames.get(key);
   if (made) return made;
-  const r = TAB_RES;
-  const w = Math.round(designW * r);
-  const h = Math.round(designH * r);
-  const ctx = context2d(createCanvas(w, h));
-  const cut = TAB_CHAMFER * r;
-  const band = TAB_BAND * r;
+  const canvas = createCanvas(Math.round((w + 2 * TAB_ROOM.side) * TAB_RES), Math.round((h + TAB_ROOM.top) * TAB_RES));
+  const ctx = context2d(canvas);
+  ctx.scale(TAB_RES, TAB_RES);
+  ctx.translate(TAB_ROOM.side, TAB_ROOM.top);
+  drawPinnacles(ctx, w);
+  drawTabBand(ctx, w, h);
+  drawTabOpening(ctx, w, h);
+  drawArch(ctx, w, h);
+  drawEngraving(ctx, w, h);
+  drawCrown(ctx, w / 2);
+  const texture = Texture.from(canvas);
+  tabFrames.set(key, texture);
+  return texture;
+}
+
+/** The outline and the iron band, and the worn highlight where the light falls on its top and cut corners. */
+function drawTabBand(ctx: CanvasRenderingContext2D, w: number, h: number): void {
   ctx.fillStyle = css(IRON_OUTLINE);
-  tabPath(ctx, w, h, cut, 0);
+  tabPath(ctx, w, h, TAB_CHAMFER, 0);
   ctx.fill();
   const iron = ctx.createLinearGradient(0, 0, 0, h);
   iron.addColorStop(0, css(TAB_IRON_TOP));
   iron.addColorStop(1, css(TAB_IRON_FOOT));
   ctx.fillStyle = iron;
-  tabPath(ctx, w, h, cut, r);
+  tabPath(ctx, w, h, TAB_CHAMFER, 1);
   ctx.fill();
-  // The worn edge along the top and the slanted corners, where the light falls.
   ctx.strokeStyle = css(TAB_HIGHLIGHT);
-  ctx.lineWidth = r * 0.75;
+  ctx.lineWidth = 0.35;
   ctx.beginPath();
-  ctx.moveTo(r * 1.5, cut + r);
-  ctx.lineTo(cut + r, r * 1.5);
-  ctx.lineTo(w - cut - r, r * 1.5);
-  ctx.lineTo(w - r * 1.5, cut + r);
+  ctx.moveTo(1.5, TAB_CHAMFER + 1);
+  ctx.lineTo(TAB_CHAMFER + 1, 1.5);
+  ctx.lineTo(w - TAB_CHAMFER - 1, 1.5);
+  ctx.lineTo(w - 1.5, TAB_CHAMFER + 1);
   ctx.stroke();
-  // The opening, with a black lip round it.
+}
+
+/** The dark opening with a black lip, and a fang of iron jutting into each of its upper corners. */
+function drawTabOpening(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+  const cut = TAB_CHAMFER - 1;
   ctx.fillStyle = css(IRON_OUTLINE);
-  tabPath(ctx, w, h + r, cut - r, band - r);
+  tabPath(ctx, w, h + 1, cut, TAB_BAND - 1);
   ctx.fill();
   ctx.fillStyle = css(TAB_INSIDE);
-  tabPath(ctx, w, h + r, cut - r, band);
+  tabPath(ctx, w, h + 1, cut, TAB_BAND);
   ctx.fill();
-  for (const x of [band + cut * 0.15, w - band - cut * 0.15]) drawRivet(ctx, x, band / 2 + cut * 0.55, r);
-  const texture = Texture.from(ctx.canvas);
-  tabFrames.set(key, texture);
-  return texture;
+  // The fang stands on the middle of the opening's cut corner, pointing in along the diagonal.
+  for (const side of [1, -1]) {
+    const x0 = side > 0 ? 0 : w;
+    const base = { x: x0 + side * (TAB_BAND + cut * 0.25), y: TAB_BAND + cut * 0.55 };
+    const base2 = { x: x0 + side * (TAB_BAND + cut * 0.55), y: TAB_BAND + cut * 0.25 };
+    const tip = { x: (base.x + base2.x) / 2 + side * FANG * Math.SQRT1_2, y: (base.y + base2.y) / 2 + FANG * Math.SQRT1_2 };
+    drawSpike(ctx, [base, tip, base2], tip);
+  }
+}
+
+/**
+ * A gothic pinnacle on the middle of each cut corner: a slender spire straight up, a crocket leaning out on either side
+ * of its foot, and a knob for a finial on its point.
+ */
+function drawPinnacles(ctx: CanvasRenderingContext2D, w: number): void {
+  const mid = TAB_CHAMFER / 2;
+  for (const x of [mid, w - mid]) {
+    const foot = mid + 0.8;
+    for (const side of [-1, 1]) {
+      const root = x + side * PINNACLE.wide;
+      const tip = { x: root + side * PINNACLE.out, y: foot - PINNACLE.crocket };
+      drawSpike(ctx, [{ x: root - PINNACLE.wide * 0.7, y: foot }, tip, { x: root + PINNACLE.wide * 0.7, y: foot }], tip);
+    }
+    const tip = { x, y: mid - PINNACLE.tall };
+    drawSpike(ctx, [{ x: x - PINNACLE.wide, y: foot }, tip, { x: x + PINNACLE.wide, y: foot }], tip);
+    ctx.fillStyle = css(SPIKE_TIP);
+    ctx.strokeStyle = css(IRON_OUTLINE);
+    ctx.lineWidth = OUTLINE_W * 0.6;
+    ctx.beginPath();
+    ctx.arc(x, tip.y + PINNACLE.knob * 1.6, PINNACLE.knob, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+}
+
+/**
+ * Inside the opening, faint so the title reads over it: a pointed gothic arch engraved in pale iron, its legs rising
+ * from rivets at their feet and curving in to meet in a point under the gem, a quatrefoil of tracery under the point.
+ */
+function drawArch(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+  const left = TAB_BAND + ARCH_INSET;
+  const right = w - left;
+  const foot = h * ARCH_FOOT;
+  const spring = h * ARCH_SPRING;
+  const point = { x: w / 2, y: TAB_BAND + ARCH_INSET * 0.6 };
+  ctx.globalAlpha = ARCH_ALPHA;
+  ctx.strokeStyle = css(TAB_HIGHLIGHT);
+  ctx.lineWidth = 0.35;
+  ctx.beginPath();
+  ctx.moveTo(left, foot);
+  ctx.lineTo(left, spring);
+  // Each side bends in from upright to meet the other at an angle: the point of a gothic arch.
+  ctx.bezierCurveTo(left, point.y + (spring - point.y) * ARCH_BEND.leg, point.x - (point.x - left) * ARCH_BEND.reach, point.y + ARCH_BEND.drop, point.x, point.y);
+  ctx.bezierCurveTo(point.x + (right - point.x) * ARCH_BEND.reach, point.y + ARCH_BEND.drop, right, point.y + (spring - point.y) * ARCH_BEND.leg, right, spring);
+  ctx.lineTo(right, foot);
+  ctx.stroke();
+  drawQuatrefoil(ctx, point.x, point.y + QUATREFOIL.r + QUATREFOIL.lobe + 2.5);
+  ctx.globalAlpha = 1;
+  drawRivet(ctx, left, foot);
+  drawRivet(ctx, right, foot);
+}
+
+/** Four lobes round a point, the tracery of a gothic window, with an ember-red heart. */
+function drawQuatrefoil(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+  ctx.beginPath();
+  for (let i = 0; i < 4; i++) {
+    const angle = (i * Math.PI) / 2;
+    const cx = x + Math.cos(angle) * QUATREFOIL.r;
+    const cy = y + Math.sin(angle) * QUATREFOIL.r;
+    ctx.moveTo(cx + QUATREFOIL.lobe, cy);
+    ctx.arc(cx, cy, QUATREFOIL.lobe, 0, Math.PI * 2);
+  }
+  ctx.stroke();
+  ctx.fillStyle = css(GEM_FIRE);
+  ctx.beginPath();
+  ctx.arc(x, y, QUATREFOIL.lobe * 0.45, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/** Three spikes on the top's middle, the middle one tallest, and the gem set in the band under them. */
+function drawCrown(ctx: CanvasRenderingContext2D, cx: number): void {
+  for (const side of [-1, 1]) {
+    const x = cx + side * CROWN.apart;
+    const tip = { x: x + side * 0.6, y: -CROWN.short };
+    drawSpike(ctx, [{ x: x - CROWN.narrow, y: 0.6 }, tip, { x: x + CROWN.narrow, y: 0.6 }], tip);
+  }
+  const tip = { x: cx, y: -CROWN.tall };
+  drawSpike(ctx, [{ x: cx - CROWN.wide, y: 0.6 }, tip, { x: cx + CROWN.wide, y: 0.6 }], tip);
+  drawGem(ctx, cx, TAB_BAND / 2);
+}
+
+/** A spike of iron: the polygon given, filled from its root to its pale tip, outlined, its left edge lit. */
+function drawSpike(ctx: CanvasRenderingContext2D, points: readonly { x: number; y: number }[], tip: { x: number; y: number }): void {
+  ctx.beginPath();
+  points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+  ctx.closePath();
+  const root = { x: (points[0].x + points[points.length - 1].x) / 2, y: (points[0].y + points[points.length - 1].y) / 2 };
+  fillSpike(ctx, root, tip);
+  ctx.strokeStyle = css(TAB_HIGHLIGHT);
+  ctx.lineWidth = 0.25;
+  ctx.beginPath();
+  ctx.moveTo(points[0].x + (tip.x - points[0].x) * 0.15, points[0].y + (tip.y - points[0].y) * 0.15);
+  ctx.lineTo(tip.x + (points[0].x - tip.x) * 0.15, tip.y + (points[0].y - tip.y) * 0.15);
+  ctx.stroke();
+}
+
+/** Fills and outlines the current path as iron, dark at `root` and pale towards `tip`. */
+function fillSpike(ctx: CanvasRenderingContext2D, root: { x: number; y: number }, tip: { x: number; y: number }): void {
+  const iron = ctx.createLinearGradient(root.x, root.y, tip.x, tip.y);
+  iron.addColorStop(0, css(SPIKE_ROOT));
+  iron.addColorStop(1, css(SPIKE_TIP));
+  ctx.fillStyle = iron;
+  ctx.fill();
+  ctx.strokeStyle = css(IRON_OUTLINE);
+  ctx.lineWidth = OUTLINE_W;
+  ctx.stroke();
+}
+
+/** A blood-red gem cut as a diamond: fire in its middle, dark at its rim, a spark of light on its upper left. */
+function drawGem(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+  ctx.beginPath();
+  ctx.moveTo(x, y - GEM_R);
+  ctx.lineTo(x + GEM_R, y);
+  ctx.lineTo(x, y + GEM_R);
+  ctx.lineTo(x - GEM_R, y);
+  ctx.closePath();
+  const fire = ctx.createRadialGradient(x, y, 0, x, y, GEM_R);
+  fire.addColorStop(0, css(GEM_FIRE));
+  fire.addColorStop(1, css(GEM_DARK));
+  ctx.fillStyle = fire;
+  ctx.fill();
+  ctx.strokeStyle = css(IRON_OUTLINE);
+  ctx.lineWidth = OUTLINE_W;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255, 230, 220, 0.85)';
+  ctx.fillRect(x - GEM_R * 0.45, y - GEM_R * 0.45, 0.35, 0.35);
+}
+
+/**
+ * A groove engraved along the band (its dark line and the lit lip under it): along the top, broken for the gem and ending
+ * in a curl before each cut corner, and down each side; a rivet on each side below the corner.
+ */
+function drawEngraving(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+  const y = TAB_BAND * 0.55;
+  const x = TAB_BAND * 0.5;
+  const left = TAB_CHAMFER + 1.5;
+  const gap = GEM_R + 1.5;
+  const cx = w / 2;
+  const lines: [number, number, number, number][] = [
+    [left + CURL_R, y, cx - gap, y], [cx + gap, y, w - left - CURL_R, y],
+    [x, TAB_CHAMFER + 4, x, h - 2], [w - x, TAB_CHAMFER + 4, w - x, h - 2],
+  ];
+  for (const [x1, y1, x2, y2] of lines) engrave(ctx, x1, y1, x2, y2);
+  for (const side of [1, -1]) {
+    ctx.beginPath();
+    ctx.arc(side > 0 ? left : w - left, y - CURL_R * 0.2, CURL_R, side > 0 ? 0.1 * Math.PI : 0.9 * Math.PI, side > 0 ? 1.8 * Math.PI : -0.8 * Math.PI, side < 0);
+    ctx.strokeStyle = `rgba(4, 5, 10, ${GROOVE_ALPHA})`;
+    ctx.lineWidth = GROOVE_W;
+    ctx.stroke();
+  }
+  for (const rx of [x, w - x]) drawRivet(ctx, rx, TAB_CHAMFER + 2.2);
+}
+
+/** One engraved line: the dark groove and the light catching its lower lip. */
+function engrave(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number): void {
+  ctx.lineWidth = GROOVE_W;
+  ctx.strokeStyle = `rgba(4, 5, 10, ${GROOVE_ALPHA})`;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.strokeStyle = `rgba(93, 102, 115, ${GROOVE_LIP_ALPHA})`;
+  ctx.beginPath();
+  ctx.moveTo(x1 + 0.35, y1 + 0.35);
+  ctx.lineTo(x2 + 0.35, y2 + 0.35);
+  ctx.stroke();
 }
 
 /** A rivet head on the band: a dark dot with a pale spot on its upper left. */
-function drawRivet(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+function drawRivet(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   ctx.fillStyle = css(IRON_OUTLINE);
   ctx.beginPath();
-  ctx.arc(x, y, r * 1.1, 0, Math.PI * 2);
+  ctx.arc(x, y, 1.1, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = css(TAB_RIVET);
   ctx.beginPath();
-  ctx.arc(x - r * 0.25, y - r * 0.25, r * 0.6, 0, Math.PI * 2);
+  ctx.arc(x - 0.25, y - 0.25, 0.6, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -326,6 +574,23 @@ function tabGlowTexture(): Texture {
   ctx.fillRect(0, 0, size, size);
   tabGlow = Texture.from(canvas);
   return tabGlow;
+}
+
+/** The gem's flare (made once): a soft red-orange light, white-hot at its middle. */
+const FLARE_TEXTURE_SIZE = 32;
+let flareTexture: Texture | null = null;
+function gemFlareTexture(): Texture {
+  if (flareTexture) return flareTexture;
+  const size = FLARE_TEXTURE_SIZE;
+  const ctx = context2d(createCanvas(size, size));
+  const light = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  light.addColorStop(0, 'rgba(255, 230, 200, 1)');
+  light.addColorStop(0.25, `rgba(${TAB_GLOW_COLOR}, 0.8)`);
+  light.addColorStop(1, `rgba(${TAB_GLOW_COLOR}, 0)`);
+  ctx.fillStyle = light;
+  ctx.fillRect(0, 0, size, size);
+  flareTexture = Texture.from(ctx.canvas);
+  return flareTexture;
 }
 
 /** The aura behind untrained gear: a soft red glow, strongest in the middle (made once). */
@@ -424,7 +689,9 @@ export class InventoryOverlay {
   private comparing = false;
   private readonly ghost = new Sprite();
   private readonly tabs: Tab[] = [];
-  private activeTab = 0;
+  private activeTab = -1;
+  /** When the tabs were last moved on (performance.now()), so they move by the time passed. */
+  private tabsAt = 0;
   private cell = 0;
   /** The last press, to spot a double-click. */
   private lastPress: { place: ItemPlace; at: number } | null = null;
@@ -554,7 +821,7 @@ export class InventoryOverlay {
     this.quickBarPage = new QuickBarPage(designRect(GEAR_AREA));
     barPage.addChild(this.quickBarPage.view);
     [gearPage, skillsPage, barPage].forEach((page, i) => this.addTab(designRect(TABS[i]), TAB_TITLES[i], page));
-    this.showTab(CHARACTER_TAB);
+    this.showTab(CHARACTER_TAB, true);
     this.ghost.anchor.set(0.5);
     this.ghost.alpha = GHOST_ALPHA;
     this.ghost.visible = false;
@@ -571,20 +838,28 @@ export class InventoryOverlay {
     stand.position.set(tab.x, tab.y);
     const frame = new Sprite(tabFrameTexture(tab.w, tab.h));
     frame.scale.set(1 / TAB_RES);
+    // Its horns and spikes reach past the tab's edges.
+    frame.position.set(-TAB_ROOM.side, -TAB_ROOM.top);
     // The glow fills the tab's dark opening: the lantern below lights it and the title from underneath.
     const glow = new Sprite(tabGlowTexture());
     glow.position.set(TAB_BAND, TAB_BAND);
     glow.width = tab.w - 2 * TAB_BAND;
     glow.height = tab.h - TAB_BAND;
     glow.blendMode = 'add';
+    // The gem's flare, over the frame where the gem sits in the band.
+    const flare = new Sprite(gemFlareTexture());
+    flare.anchor.set(0.5);
+    flare.position.set(tab.w / 2, TAB_BAND / 2);
+    flare.blendMode = 'add';
+    flare.alpha = 0;
     const label = new PixelLabel(title, { color: THEME.buttonText, align: 'center', shadow: true });
     label.position.set(Math.round(tab.w / 2), Math.round((TAB_BAND + tab.h) / 2 - GLYPH_H / 2));
-    stand.addChild(frame, glow, label);
+    stand.addChild(frame, glow, flare, label);
     const hit = new Container();
     hit.eventMode = 'static';
     hit.cursor = 'pointer';
     hit.hitArea = new Rectangle(tab.x, tab.y, tab.w, tab.h);
-    const entry: Tab = { stand, frame, glow, label, page, hovered: false, rect: tab };
+    const entry: Tab = { stand, frame, glow, flare, label, page, hovered: false, rect: tab, lift: 0, openedAt: -Infinity };
     const index = this.tabs.length;
     hit.on('pointerover', () => this.hoverTab(entry, true));
     hit.on('pointerout', () => this.hoverTab(entry, false));
@@ -601,38 +876,67 @@ export class InventoryOverlay {
     this.drawTab(tab);
   }
 
-  /** Opens a tab: its page shows, the others hide, and every tab redraws its look. */
-  private showTab(index: number): void {
+  /**
+   * Opens a tab: its page shows, the others hide. Pressed, it rises and its gem flares (animateTabs); `snap` sets every
+   * tab where it belongs at once (the screen being built).
+   */
+  private showTab(index: number, snap = false): void {
+    const opened = index !== this.activeTab;
     this.activeTab = index;
     this.infoTip.hide();
     this.spells?.closeChoice();
     this.tabs.forEach((tab, i) => {
       tab.page.visible = i === index;
+      if (snap) tab.lift = i === index ? 1 : 0;
       this.drawTab(tab);
     });
+    const tab = this.tabs[index];
+    if (tab && opened && !snap) tab.openedAt = performance.now();
+    this.placeTabs(0);
+  }
+
+  /** The title's colour: bright when open or under the pointer. */
+  private drawTab(tab: Tab): void {
+    const active = this.tabs[this.activeTab] === tab;
+    tab.label.fill = active || tab.hovered ? THEME.buttonHover : THEME.buttonText;
+    this.placeTab(tab, 0, performance.now(), 0);
+  }
+
+  /** Every update while the screen is up: the tabs rise and sink towards where they belong, the open one's lantern flickers. */
+  private animateTabs(): void {
+    const now = performance.now();
+    const step = Math.min(TAB_MAX_STEP_MS, now - (this.tabsAt || now));
+    this.tabsAt = now;
+    this.placeTabs(step);
+  }
+
+  private placeTabs(step: number): void {
+    const now = performance.now();
+    const wave = TAB_GLOW_WAVES_MS.reduce((sum, period) => sum + Math.sin((now / period) * Math.PI * 2), 0) / TAB_GLOW_WAVES_MS.length;
+    const lantern = TAB_GLOW_ALPHA.low + (TAB_GLOW_ALPHA.high - TAB_GLOW_ALPHA.low) * (wave + 1) / 2;
+    for (const tab of this.tabs) this.placeTab(tab, step, now, lantern);
   }
 
   /**
-   * The open tab stands out of the panels at full strength, lit from below; the others sink further in behind them,
-   * dimmed (less so under the pointer).
+   * One tab `step` ms on: risen as far as it has got (eased), its frame and title as strong, its lantern as bright as its
+   * rise times the flicker, its gem flaring just after it opened, else glowing faintly while open.
    */
-  private drawTab(tab: Tab): void {
-    const active = this.tabs[this.activeTab] === tab;
-    const alpha = active ? 1 : tab.hovered ? TAB_HOVER_IDLE_ALPHA : TAB_IDLE_ALPHA;
-    tab.stand.y = tab.rect.y + (active ? 0 : TAB_SINK);
+  private placeTab(tab: Tab, step: number, now: number, lantern: number): void {
+    const target = this.tabs[this.activeTab] === tab ? 1 : 0;
+    const move = step / TAB_RISE_MS;
+    tab.lift = target > tab.lift ? Math.min(target, tab.lift + move) : Math.max(target, tab.lift - move);
+    const eased = tab.lift * tab.lift * (3 - 2 * tab.lift);
+    const idle = tab.hovered ? TAB_HOVER_IDLE_ALPHA : TAB_IDLE_ALPHA;
+    const alpha = idle + (1 - idle) * eased;
+    tab.stand.y = tab.rect.y + (1 - eased) * TAB_SINK;
     tab.frame.alpha = alpha;
     tab.label.alpha = alpha;
-    tab.label.fill = active || tab.hovered ? THEME.buttonHover : THEME.buttonText;
-    tab.glow.visible = active;
-  }
-
-  /** The lantern under the open tab flickers. */
-  private animateTabs(): void {
-    const tab = this.tabs[this.activeTab];
-    if (!tab) return;
-    const now = performance.now();
-    const wave = TAB_GLOW_WAVES_MS.reduce((sum, period) => sum + Math.sin((now / period) * Math.PI * 2), 0) / TAB_GLOW_WAVES_MS.length;
-    tab.glow.alpha = TAB_GLOW_ALPHA.low + (TAB_GLOW_ALPHA.high - TAB_GLOW_ALPHA.low) * (wave + 1) / 2;
+    tab.glow.visible = eased > 0;
+    tab.glow.alpha = lantern * eased;
+    const t = (now - tab.openedAt) / TAB_FLARE_MS;
+    const flaring = t >= 0 && t < 1;
+    tab.flare.alpha = flaring ? 1 - t : TAB_GEM_GLOW * lantern * eased;
+    tab.flare.scale.set((flaring ? TAB_FLARE_SCALE.from + (TAB_FLARE_SCALE.to - TAB_FLARE_SCALE.from) * t : TAB_FLARE_SCALE.from) * TAB_FLARE_SIZE / FLARE_TEXTURE_SIZE);
   }
 
   /**

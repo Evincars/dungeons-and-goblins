@@ -3,6 +3,7 @@ import type { FederatedPointerEvent, FederatedWheelEvent } from 'pixi.js';
 import { EQUIP_SLOTS, localPlayer, q } from '../world';
 import type { BagSquare, EquipSlot, InventoryItem, ItemType, Player } from '../world';
 import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
+import { QUICK_BAR_HEIGHT } from './QuickBar';
 import { getTexture } from '../assets/Textures';
 import { lazyTexture, onArtLoaded } from '../assets/LazyArt';
 import { ItemTooltip } from './ItemTooltip';
@@ -367,7 +368,8 @@ export class InventoryOverlay {
 
   constructor() {
     this.container.visible = false;
-    this.container.addChild(new Graphics().rect(0, 0, GAME_WIDTH, GAME_HEIGHT).fill({ color: THEME.backdrop, alpha: DIM_ALPHA }), this.root);
+    // The game dims under it, all but the quick bar's strip at the foot.
+    this.container.addChild(new Graphics().rect(0, 0, GAME_WIDTH, GAME_HEIGHT - QUICK_BAR_HEIGHT).fill({ color: THEME.backdrop, alpha: DIM_ALPHA }), this.root);
     this.build();
     this.fitToScreen();
     this.listen();
@@ -837,11 +839,15 @@ export class InventoryOverlay {
     return square;
   }
 
-  /** Scales the whole overlay to the largest size that fits the screen with a margin, centred. */
+  /**
+   * Scales the whole overlay to the largest size that fits the screen with a margin, centred across and set at the top, so
+   * the quick bar at the foot stays in sight under it (a spell is bound to it from here).
+   */
   private fitToScreen(): void {
-    const scale = Math.min((GAME_WIDTH - 2 * SCREEN_MARGIN) / DESIGN_W, (GAME_HEIGHT - 2 * SCREEN_MARGIN) / DESIGN_H);
+    const tall = GAME_HEIGHT - SCREEN_MARGIN - QUICK_BAR_HEIGHT;
+    const scale = Math.min((GAME_WIDTH - 2 * SCREEN_MARGIN) / DESIGN_W, tall / DESIGN_H);
     this.root.scale.set(scale);
-    this.root.position.set(Math.round((GAME_WIDTH - DESIGN_W * scale) / 2), Math.round((GAME_HEIGHT - DESIGN_H * scale) / 2));
+    this.root.position.set(Math.round((GAME_WIDTH - DESIGN_W * scale) / 2), SCREEN_MARGIN);
     this.top.scale.copyFrom(this.root.scale);
     this.top.position.copyFrom(this.root.position);
   }

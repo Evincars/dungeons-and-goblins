@@ -337,7 +337,11 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   is bound and goes off (`castable`; a heal with a `radius` mends every hero within it). Damage reaching a hero carries its
   type (`hurtPlayer`): resistances halve it and immunities take it all (`rules/Resistances.ts`, listed in the Armor Class
   tooltip, `sheet.defences`). Tooltips with
-  more to tell show it while Alt is held (`ui/InfoTooltip.ts`). Class features (`rules/ClassFeatures.ts`) fill the Skills tab above the cantrips: a worked passive is on from its
+  more to tell show it while Alt is held (`ui/InfoTooltip.ts`; a long text with no `more` of its own is cut short by itself),
+  laid out as Baldur's Gate's: the title, a quiet `subtitle` (what kind of thing), a large `headline` ("3~18 Damage" over
+  "3d6 Acid", each damage type in its colour), the text with its dice, saves and distances lit (`ui/TipText.ts`), and
+  short facts in framed `chips` ("60 ft", "DEX save"; never pixels). The inventory stands at the top of the screen, clear
+  of the quick bar's strip (`QUICK_BAR_HEIGHT`); the HUD's buttons say what they are under the pointer. Class features (`rules/ClassFeatures.ts`) fill the Skills tab above the cantrips: a worked passive is on from its
   level and a click switches it off and on (`featuresOff`, the `toggle_feature` command; `featureOn` is what effects ask, and the
   HUD's top left shows the ones on, `ui/PassiveHud.ts`: icons only, stacked down a column, what is the hero's for good
   (passives, Passive Feats, the ward, a Battle Master's dice) at the top and what comes and goes (boosts, buffs, concentration)

@@ -3008,24 +3008,37 @@ test('a guest\'s synced spellbook is checked: bound spells must be real', () => 
   assert.throws(() => validateNetState(tampered(Array(21).fill(null))), ValidationError, 'only twenty squares');
 });
 
-test('a spell tooltip is short (kind, range, attack, the start of its text); "More info" holds the whole text and numbers', async () => {
+test('a spell tooltip reads at a glance as in Baldur\'s Gate: kind, damage in large, dice in the colour of their type, range and attack as short chips; Alt holds the whole text', async () => {
   const { shortText, spellTopic } = await load('ui/SpellTopics');
+  const { DAMAGE_COLORS, markRuns } = await load('ui/TipText');
   const sickness = Spellbook.CATALOG.ray_of_sickness;
   const base = spellTopic(sickness, 1, 3);
   const upgraded = spellTopic(sickness, 2, 3);
   assert.ok(base.body.startsWith('A ray of sickening greenish energy') && base.body.endsWith('...'), 'the start of the text, cut short');
   assert.ok(base.body.length <= 110);
-  assert.deepEqual(base.detail.slice(0, 2), ['Level 1 Necromancy', 'Range: 60 ft (576 px)']);
+  assert.equal(base.subtitle, 'Level 1 Necromancy spell');
+  assert.equal(base.headline.text, '2~16 Damage', '2d8 poison');
+  assert.deepEqual(base.headline.under.map((run) => run.text), ['2d8', 'Poison']);
+  assert.equal(base.headline.under[1].color, DAMAGE_COLORS.poison, 'the type in its own colour');
+  const chips = base.chips.map((chip) => chip.text);
+  assert.deepEqual(chips, ['60 ft', 'Spell attack', '5s recovery'], 'range in feet only, no pixels; the attack short');
+  assert.ok(!JSON.stringify(base).includes('px'), 'nothing in pixels');
   assert.ok(base.more.body.includes('A ray of sickening greenish energy') && base.more.body.includes('2nd level or higher'), 'the whole text and its higher levels');
-  assert.ok(base.more.detail.includes('Range: 60 ft (576 px)') && base.more.detail.includes('Cooldown: 5.0s'), 'range in feet and px, five seconds');
+  assert.ok(base.more.detail.includes('Attack: ranged spell attack'));
   assert.ok(upgraded.detail.includes('Cast at level 2'));
-  assert.ok(upgraded.more.detail.includes('Cooldown: 7.5s'), 'a higher level recovers more slowly');
+  assert.equal(upgraded.headline.text, '3~24 Damage', 'a higher level rolls more');
+  assert.ok(upgraded.chips.some((chip) => chip.text === '7.5s recovery'), 'and recovers more slowly');
   const blast = Spellbook.CATALOG.eldritch_blast;
-  assert.ok(spellTopic(blast, 0, 1).detail.includes('Attack: ranged spell attack, 1d10 force'));
-  assert.ok(spellTopic(blast, 0, 5).detail.includes('Attack: ranged spell attack, 2d10 force'), 'twice the dice at level 5');
-  assert.ok(spellTopic(blast, 0, 5).more.detail.includes('Damage: 2d10 force'));
-  assert.ok(spellTopic(Spellbook.CATALOG.burning_hands, 1, 1).detail.includes('Attack: Dexterity saving throw, 3d6 fire'));
-  assert.ok(spellTopic(Spellbook.CATALOG.magic_missile, 1, 1).detail.some((line) => line.startsWith('Attack: always hits')));
+  assert.equal(spellTopic(blast, 0, 1).headline.text, '1~10 Damage');
+  assert.equal(spellTopic(blast, 0, 5).headline.text, '2~20 Damage', 'twice the dice at level 5');
+  const hands = spellTopic(Spellbook.CATALOG.burning_hands, 1, 1);
+  assert.ok(hands.chips.some((chip) => chip.text === 'DEX save'), 'a save by its ability\'s short name');
+  assert.equal(hands.subtitle, 'Level 1 Evocation spell');
+  assert.ok(spellTopic(Spellbook.CATALOG.magic_missile, 1, 1).chips.some((chip) => chip.text === 'Always hits'));
+  assert.equal(spellTopic(Spellbook.CATALOG.cure_wounds, 1, 1).headline.text.endsWith('Healing'), true);
+  const runs = markRuns('takes 3d6 fire damage on a failed Dexterity saving throw within 10 feet', 0xffffff);
+  assert.deepEqual(runs.filter((run) => run.color !== 0xffffff).map((run) => run.text), ['3d6 fire damage', 'Dexterity saving throw', '10 feet'], 'dice, saves and distances lit in the text');
+  assert.equal(runs.find((run) => run.text === '3d6 fire damage').color, DAMAGE_COLORS.fire);
   assert.equal(shortText('A short one.'), 'A short one.', 'a short text stays whole');
   assert.equal(shortText('one two three four', 12), 'one two...', 'cut at a word');
 });
@@ -6803,4 +6816,16 @@ test('a burst strikes its own shape: a sphere round where it lands, a cube as a 
   assert.ok(inArea(hands, caster, out, coneLength(hands) - 2, coneLength(hands) * 0.4), 'wide at its far end');
   assert.ok(!inArea(hands, caster, out, 10, 20), 'narrow at the hands');
   assert.ok(!inArea(hands, caster, out, -20, 0), 'nothing behind the caster');
+});
+
+test('the level panel tells every kind of pick by its colour and names it first in the tooltip, so a cantrip is seen without pointing at each', async () => {
+  const { PICK_KIND_COLORS, PICK_KIND_NAMES, withKind } = await load('ui/LevelChoices');
+  const { text } = await load('core/texts');
+  const kinds = ['cantrip', 'spell', 'weapon', 'element'];
+  assert.deepEqual(Object.keys(PICK_KIND_COLORS).sort(), [...kinds].sort());
+  assert.equal(new Set(Object.values(PICK_KIND_COLORS)).size, kinds.length, 'each kind its own colour');
+  for (const kind of kinds) assert.notEqual(text(PICK_KIND_NAMES[kind]), PICK_KIND_NAMES[kind], `${kind} has a name`);
+  const topic = withKind({ title: 'Fire Bolt', body: '…', detail: ['Evocation cantrip'] }, 'cantrip');
+  assert.deepEqual(topic.detail[0], { text: 'Cantrip', color: PICK_KIND_COLORS.cantrip }, 'the kind comes first, in its colour');
+  assert.equal(topic.detail[1], 'Evocation cantrip', 'the rest follows');
 });

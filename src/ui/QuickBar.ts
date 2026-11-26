@@ -32,6 +32,8 @@ import { THEME } from './Theme';
 const SLOT = 22;
 const SLOT_GAP = 3;
 const MARGIN = 8;
+/** The strip of the screen's foot the bar takes at its largest: what panels laid over the game keep clear, so it stays in sight. */
+export const QUICK_BAR_HEIGHT = SLOT + 2 * MARGIN;
 const SLOT_FILL_ALPHA = 0.55;
 const SLOT_EDGE = 0xb4a488;
 const SLOT_EDGE_ALPHA = 0.6;
@@ -331,6 +333,8 @@ export class QuickBar {
     for (let i = 0; i < this.slots.length; i++) this.updateSlot(this.slots[i], this.slotAt(i), player);
     this.updateBinding();
     this.updateTip(player);
+    // Alt held or let go: the tooltip shows its whole story or its short one.
+    this.tip.refresh();
   }
 
   /** Shift held or let go: the squares show the other row, their key tags saying so ("sQ"). */

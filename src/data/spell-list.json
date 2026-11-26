@@ -26,7 +26,7 @@
         "Death Domain"
       ],
       "book": "toll_the_dead",
-      "text": "1~12 Damage",
+      "text": "1-12 Damage",
       "img": "spells-icons/Toll-of-the-Dead-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "bursting_sinew": {
@@ -41,7 +41,7 @@
       "knight": false,
       "subclasses": [],
       "book": null,
-      "text": "1~10 Damage",
+      "text": "1-10 Damage",
       "img": "spells-icons/Bursting-Sinew-level-1-BG3-spell-1_pixelart.png"
     },
     "shadow_blade": {
@@ -60,7 +60,7 @@
         "Eldritch Knight"
       ],
       "book": "shadow_blade",
-      "text": "Weave a shadowy shortsword in your hand that deals 2~16 Psychic damage .",
+      "text": "Weave a shadowy shortsword in your hand that deals 2-16 Psychic damage .",
       "img": "spells-icons/Shadow_Blade_Icon_pixelart.png"
     },
     "acid_splash": {
@@ -77,7 +77,7 @@
         "Eldritch Knight"
       ],
       "book": "acid_splash",
-      "text": "1~6 Damage 1d6 Acid",
+      "text": "1-6 Damage 1d6 Acid",
       "img": "spells-icons/Acid-Splash-Level-1-Spell-Baldurs-Gate-3-1_pixelart.png"
     },
     "blade_ward": {
@@ -117,7 +117,7 @@
         "Eldritch Knight"
       ],
       "book": "chill_touch",
-      "text": "1~8 Damage 1d8 Necrotic",
+      "text": "1-8 Damage 1d8 Necrotic",
       "img": "spells-icons/Bone-Chill-Level-1-Spell-Baldurs-Gate-3_pixelart.png"
     },
     "dancing_lights": {
@@ -150,7 +150,7 @@
       "knight": false,
       "subclasses": [],
       "book": "eldritch_blast",
-      "text": "1~10 Damage 1d10 Force",
+      "text": "1-10 Damage 1d10 Force",
       "img": "spells-icons/Eldtrich-Blast-spell-Cantrip-Baldurs-Gate-3_pixelart.png"
     },
     "fire_bolt": {
@@ -167,7 +167,7 @@
         "Eldritch Knight"
       ],
       "book": "fire_bolt",
-      "text": "1~10 Damage 1d10 Fire",
+      "text": "1-10 Damage 1d10 Fire",
       "img": "spells-icons/Firebolt-spell-Cantrip-Baldurs-Gate-3_pixelart.png"
     },
     "friends": {
@@ -285,7 +285,7 @@
         "Eldritch Knight"
       ],
       "book": "poison_spray",
-      "text": "1~12 Damage 1d12 Poison",
+      "text": "1-12 Damage 1d12 Poison",
       "img": "spells-icons/Poison-Spray-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "produce_flame": {
@@ -299,7 +299,7 @@
       "knight": false,
       "subclasses": [],
       "book": "produce_flame",
-      "text": "A flickering flame appears in your hand. It sheds bright light in a 9m radius and deals 1~8 Fire damage when thrown. Throwing the flame immediately after you conjure it does not cost an action. Extinguishing or throwing it on subsequent turns costs an action",
+      "text": "A flickering flame appears in your hand. It sheds bright light in a 9m radius and deals 1-8 Fire damage when thrown. Throwing the flame immediately after you conjure it does not cost an action. Extinguishing or throwing it on subsequent turns costs an action",
       "img": "spells-icons/Produce-Flame-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "ray_of_frost": {
@@ -316,7 +316,7 @@
         "Eldritch Knight"
       ],
       "book": "ray_of_frost",
-      "text": "1~8 Damage 1d8 Cold",
+      "text": "1-8 Damage 1d8 Cold",
       "img": "spells-icons/Ray-of-Frost-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "resistance": {
@@ -345,7 +345,7 @@
       "knight": false,
       "subclasses": [],
       "book": "sacred_flame",
-      "text": "1~8 Damage 1d8 Radiant Conjure a flame-like radiance that deals 1d8 Radiant. 18m DEX Save",
+      "text": "1-8 Damage 1d8 Radiant Conjure a flame-like radiance that deals 1d8 Radiant. 18m DEX Save",
       "img": "spells-icons/Sacred-Flame-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "shillelagh": {
@@ -376,7 +376,7 @@
         "Eldritch Knight"
       ],
       "book": "shocking_grasp",
-      "text": "1~8 Damage 1d8 Lightning",
+      "text": "1-8 Damage 1d8 Lightning",
       "img": "spells-icons/Shocking-grasp-spell-BG3_pixelart.png"
     },
     "thaumaturgy": {
@@ -445,7 +445,7 @@
         "College of Valour"
       ],
       "book": "vicious_mockery",
-      "text": "1~4 Damage 1d4 Psychic",
+      "text": "1-4 Damage 1d4 Psychic",
       "img": "spells-icons/Vicious-Mockery-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "animal_friendship": {
@@ -494,7 +494,7 @@
       "knight": false,
       "subclasses": [],
       "book": "arms_of_hadar",
-      "text": "2~12 Damage 2d6 Necrotic Call forth tendrils of dark energy that prevent targets from taking reactions. 1 Turn 9m 3m STR Save",
+      "text": "2-12 Damage 2d6 Necrotic Call forth tendrils of dark energy that prevent targets from taking reactions. 1 Turn 9m 3m STR Save",
       "img": "spells-icons/Arms-of-Hadar-Level-1-Spell_pixelart.png"
     },
     "bane": {
@@ -550,7 +550,7 @@
         "Arcane Trickster"
       ],
       "book": "burning_hands",
-      "text": "3~18 Damage 3d6 Fire Each flammable targets is thi with 3∼18 Fire damage . On Save: Targets still take half damage. 5m DEX Save",
+      "text": "3-18 Damage 3d6 Fire Each flammable targets is thi with 3-18 Fire damage . On Save: Targets still take half damage. 5m DEX Save",
       "img": "spells-icons/Burning-Hands-level-1-spell-Baldurs-Gate-3_pixelart.png"
     },
     "charm_person": {
@@ -671,7 +671,7 @@
         "Life Domain"
       ],
       "book": "cure_wounds",
-      "text": "3~8 Healing 1d8+2 Heal a creature you can touch. No effect on undead or constructs. Melee",
+      "text": "3-8 Healing 1d8+2 Heal a creature you can touch. No effect on undead or constructs. Melee",
       "img": "spells-icons/Cure-Wounds-Level-1-Spell-BG3_pixelart.png"
     },
     "disguise_self": {
@@ -706,7 +706,7 @@
         "The Great Old One"
       ],
       "book": "dissonant_whispers",
-      "text": "3~18 Damage 3d6 Psychic Whisper a discordant melody to a creature and Frighten it. 2 turns On Save: Target still takes half damage 18m WIS Save",
+      "text": "3-18 Damage 3d6 Psychic Whisper a discordant melody to a creature and Frighten it. 2 turns On Save: Target still takes half damage 18m WIS Save",
       "img": "spells-icons/Dissonant-Whispers-Bg3-spell_pixelart.png"
     },
     "divine_favor": {
@@ -722,7 +722,7 @@
         "War Domain"
       ],
       "book": "divine_favor",
-      "text": "Your weapon attacks deal an additional 1∼4 Radiant Damage . 3 Turns Concentration",
+      "text": "Your weapon attacks deal an additional 1-4 Radiant Damage . 3 Turns Concentration",
       "img": "spells-icons/Divine-favour-Level-1-Spell-Baldurs-Gate-3_pixelart.png"
     },
     "ensnaring_strike": {
@@ -870,7 +870,7 @@
       "knight": false,
       "subclasses": [],
       "book": "goodberry",
-      "text": "4~16 Healing 4d4 Conjure four magical berries into your or a companion's inventory. Creatures who eat a berry regain 1~4 hit points . Berries disappear after a Long Rest . Until Long Rest Melee",
+      "text": "4-16 Healing 4d4 Conjure four magical berries into your or a companion's inventory. Creatures who eat a berry regain 1-4 hit points . Berries disappear after a Long Rest . Until Long Rest Melee",
       "img": "spells-icons/Goodberry_pixelart.png"
     },
     "grease": {
@@ -903,7 +903,7 @@
         "College of Lore"
       ],
       "book": "guiding_bolt",
-      "text": "2~18 Damage 4d6 Radiant Call forth a beam of light that grants Advantage on the next Attack Roll against the target. 2 Turns. 18m/60ft",
+      "text": "2-18 Damage 4d6 Radiant Call forth a beam of light that grants Advantage on the next Attack Roll against the target. 2 Turns. 18m/60ft",
       "img": "spells-icons/Guiding-Bolt-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "hail_of_thorns": {
@@ -917,7 +917,7 @@
       "knight": false,
       "subclasses": [],
       "book": "hail_of_thorns",
-      "text": "+1d10 Piercing The thorns deal Weapon Damage to the target and then explode. The explosion deals an additional 1~10 Piercing damage to the target and surrounding creatures. On Miss: Thorns still explode. On Save: Targets still take half damage from the explosion. 18m DEX Save",
+      "text": "+1d10 Piercing The thorns deal Weapon Damage to the target and then explode. The explosion deals an additional 1-10 Piercing damage to the target and surrounding creatures. On Miss: Thorns still explode. On Save: Targets still take half damage from the explosion. 18m DEX Save",
       "img": "spells-icons/Hail-of-thorns-BG3-spell_pixelart.png"
     },
     "healing_word": {
@@ -933,7 +933,7 @@
       "knight": false,
       "subclasses": [],
       "book": "healing_word",
-      "text": "1~4 Healing 1d4 Heal a creature you can see. No effect on undead and constructs. 18m",
+      "text": "1-4 Healing 1d4 Heal a creature you can see. No effect on undead and constructs. 18m",
       "img": "spells-icons/Healing-Word-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "hellish_rebuke": {
@@ -950,7 +950,7 @@
         "College of Lore"
       ],
       "book": "hellish_rebuke",
-      "text": "2~20 Damage 2d10 Fire (Delayed) The next time you take damage, you use your reaction to surround your attacker in hellish flames. On Save: Target still takes half damage. DEX Save",
+      "text": "2-20 Damage 2d10 Fire (Delayed) The next time you take damage, you use your reaction to surround your attacker in hellish flames. On Save: Target still takes half damage. DEX Save",
       "img": "spells-icons/Hellish-Rebuke_pixelart.png"
     },
     "heroism": {
@@ -982,7 +982,7 @@
         "College of Lore"
       ],
       "book": "hex",
-      "text": "1~6 Damage 1d6 Necrotic (Conditional) Curse a creature so it takes additional damage whenever you attack it and to inflict Disadvantage on Ability Checks with an Ability of your choosing. If the target dies before the spell ends. you can Hex a new creature without expending a spell slot . 18m Concentration",
+      "text": "1-6 Damage 1d6 Necrotic (Conditional) Curse a creature so it takes additional damage whenever you attack it and to inflict Disadvantage on Ability Checks with an Ability of your choosing. If the target dies before the spell ends. you can Hex a new creature without expending a spell slot . 18m Concentration",
       "img": "spells-icons/Hex-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "hunters_mark": {
@@ -998,7 +998,7 @@
         "Oath of Vengeance"
       ],
       "book": "hunters_mark",
-      "text": "1~6 Damage 1d6 Slashing Mark a creature as your quarry to deal an additional 1d6 Slashing Damage whenever you hit it with a weapon attacks. If the target dies before the spell ends, you can mark a new creature without expanding a Spell Slot. Until Long Rest 18m Concentration",
+      "text": "1-6 Damage 1d6 Slashing Mark a creature as your quarry to deal an additional 1d6 Slashing Damage whenever you hit it with a weapon attacks. If the target dies before the spell ends, you can mark a new creature without expanding a Spell Slot. Until Long Rest 18m Concentration",
       "img": "spells-icons/Hunters-Mark-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "ice_knife": {
@@ -1017,7 +1017,7 @@
         "College of Lore"
       ],
       "book": "ice_knife",
-      "text": "1~10(target) / 2~12(area) 1d10 Piercing +2d6 Cold Throw a shard of ice that deals 1∼10 Piercing damage . It explodes and deals 2-12 Cold damage to anyone nearby. It leaves an ice surface. On Miss: The shard of ice still explodes. 2m 18m DEX Save",
+      "text": "1-10(target) / 2-12(area) 1d10 Piercing +2d6 Cold Throw a shard of ice that deals 1-10 Piercing damage . It explodes and deals 2-12 Cold damage to anyone nearby. It leaves an ice surface. On Miss: The shard of ice still explodes. 2m 18m DEX Save",
       "img": "spells-icons/Ice-Knife-spell-BG3_pixelart.png"
     },
     "inflict_wounds": {
@@ -1033,7 +1033,7 @@
         "Oathbreaker"
       ],
       "book": "inflict_wounds",
-      "text": "3~30 Damage 3d10 Necrotic Putrfy a creature with the nectrotic energy filling your hands. Melee",
+      "text": "3-30 Damage 3d10 Necrotic Putrfy a creature with the nectrotic energy filling your hands. Melee",
       "img": "spells-icons/Inflict-Wounds-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "jump": {
@@ -1107,7 +1107,7 @@
         "Arcane Trickster"
       ],
       "book": "magic_missile",
-      "text": "6~15 Damage 3d4+3 Force Shoot 3 magical darts, each dealing 2∼5 Force damage. They always hit their target. 18m",
+      "text": "6-15 Damage 3d4+3 Force Shoot 3 magical darts, each dealing 2-5 Force damage. They always hit their target. 18m",
       "img": "spells-icons/Magic-Missile-Spell-BG3_pixelart.png"
     },
     "protection_from_evil_and_good": {
@@ -1145,7 +1145,7 @@
         "Eldritch Knight"
       ],
       "book": "ray_of_sickness",
-      "text": "2~16 Damage 2d8 Poison Possibly Poisons the target. 2 Turns 18m CON Save",
+      "text": "2-16 Damage 2d8 Poison Possibly Poisons the target. 2 Turns 18m CON Save",
       "img": "spells-icons/Ray-of-Sickness-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "sanctuary": {
@@ -1175,7 +1175,7 @@
       "knight": false,
       "subclasses": [],
       "book": "searing_smite",
-      "text": "+1d6 Fire Deal an extra 1~6 Fire Damage and set your target on fire: it takes 1~6 Fire damage every turn. 10 Turns Melee Concentration",
+      "text": "+1d6 Fire Deal an extra 1-6 Fire Damage and set your target on fire: it takes 1-6 Fire damage every turn. 10 Turns Melee Concentration",
       "img": "spells-icons/Searing-Smite-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "shield": {
@@ -1299,7 +1299,7 @@
         "Arcane Trickster"
       ],
       "book": "thunderwave",
-      "text": "2~16 Damage 2d8 Thunder Release a wave of thunderous force that pushes away all creatures and objects. 5m CON Save",
+      "text": "2-16 Damage 2d8 Thunder Release a wave of thunderous force that pushes away all creatures and objects. 5m CON Save",
       "img": "spells-icons/Thunderwave-spell-BG3_pixelart.png"
     },
     "wrathful_smite": {
@@ -1332,7 +1332,7 @@
         "Arcane Trickster"
       ],
       "book": "witch_bolt",
-      "text": "1~12 Damage 1d12 Lightning Link yourself to a target with a bolt of lightning. Deal an additional 1∼12 Lightning Damage each turn by activating it. 10 Turns 18m Concentration",
+      "text": "1-12 Damage 1d12 Lightning Link yourself to a target with a bolt of lightning. Deal an additional 1-12 Lightning Damage each turn by activating it. 10 Turns 18m Concentration",
       "img": "spells-icons/Witch-Bolt-Spell-BG3_pixelart.png"
     },
     "aid": {
@@ -1459,7 +1459,7 @@
       "knight": false,
       "subclasses": [],
       "book": "cloud_of_daggers",
-      "text": "4~16 Damage 4d4 Slashing Conjure a cloud ofspinning daggers that attack anyone inside. 10 turns Range: 18m Concentration",
+      "text": "4-16 Damage 4d4 Slashing Conjure a cloud ofspinning daggers that attack anyone inside. 10 turns Range: 18m Concentration",
       "img": "spells-icons/Cloud-of-Daggers-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "crown_of_madness": {
@@ -1592,7 +1592,7 @@
       "knight": false,
       "subclasses": [],
       "book": "flaming_sphere",
-      "text": "2~12 Damage 2d6 Fire Summon a flaming sphere that damages nearby enemies and objects. The sphere sheds bright light in a 6m radius, and dim light for an additional 6m. 10 turns 18m 2m DEX Save Concentration",
+      "text": "2-12 Damage 2d6 Fire Summon a flaming sphere that damages nearby enemies and objects. The sphere sheds bright light in a 6m radius, and dim light for an additional 6m. 10 turns 18m 2m DEX Save Concentration",
       "img": "spells-icons/Flaming-Sphere-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "gust_of_wind": {
@@ -1623,7 +1623,7 @@
       "knight": false,
       "subclasses": [],
       "book": "heat_metal",
-      "text": "2~16 Damage 2d8 Fire Cause a metal weapon or armour to glow red-hot and force the creature touching it to let go or receive Disadvantage on Attack Rolls and Ability Checks. If the creature is only wearing metal armour, it always rcccivcs Disadvantage. If the creature is still touching the metal, you can use a bonus action on subsequent turns to deal another 2d8 Fire damage and force the creature to let go or receive Disadvantage. 10 turns",
+      "text": "2-16 Damage 2d8 Fire Cause a metal weapon or armour to glow red-hot and force the creature touching it to let go or receive Disadvantage on Attack Rolls and Ability Checks. If the creature is only wearing metal armour, it always rcccivcs Disadvantage. If the creature is still touching the metal, you can use a bonus action on subsequent turns to deal another 2d8 Fire damage and force the creature to let go or receive Disadvantage. 10 turns",
       "img": "spells-icons/Heat-Metal-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "hold_person": {
@@ -1726,7 +1726,7 @@
       "knight": false,
       "subclasses": [],
       "book": "melfs_acid_arrow",
-      "text": "4~16 + 2~8(Delayed) 4d4 Acid + 2d4 Acid (Delayed) Shoot a green arrow that covers the target and the ground with acid. Deals 4d4 Acid damage immediately and 2d4 Acid damage at the end of the target's turn. 1 turn On Missing: Target still takes half the initial damage. 18m",
+      "text": "4-16 + 2-8(Delayed) 4d4 Acid + 2d4 Acid (Delayed) Shoot a green arrow that covers the target and the ground with acid. Deals 4d4 Acid damage immediately and 2d4 Acid damage at the end of the target's turn. 1 turn On Missing: Target still takes half the initial damage. 18m",
       "img": "spells-icons/Melfs-Acid-Arrow-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "mirror_image": {
@@ -1779,7 +1779,7 @@
         "Oath of the Ancients"
       ],
       "book": "moonbeam",
-      "text": "2~20 Damage 2d10 Radiant Call down a silvery beam ofpale light that damages any creature that enters the beam or starts its turn in the light. You can use an action to move the beam 18m. 10 turns 18m 1m CON Save Concentration",
+      "text": "2-20 Damage 2d10 Radiant Call down a silvery beam ofpale light that damages any creature that enters the beam or starts its turn in the light. You can use an action to move the beam 18m. 10 turns 18m 1m CON Save Concentration",
       "img": "spells-icons/Moonbeam-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "pass_without_trace": {
@@ -1812,7 +1812,7 @@
         "The Great Old One"
       ],
       "book": "phantasmal_force",
-      "text": "1~6 Damage 1d6 Phychic Deal damage to a creature each turn. The type of damage changes to the last type the creature suffered. 10 turns",
+      "text": "1-6 Damage 1d6 Phychic Deal damage to a creature each turn. The type of damage changes to the last type the creature suffered. 10 turns",
       "img": "spells-icons/Phantasmal-Force-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "prayer_of_healing": {
@@ -1826,7 +1826,7 @@
       "knight": false,
       "subclasses": [],
       "book": "prayer_of_healing",
-      "text": "2~16 Healing 2d8 Heal all allies you can see. 9m 9m",
+      "text": "2-16 Healing 2d8 Heal all allies you can see. 9m 9m",
       "img": "spells-icons/Prayer-of-Healing-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "protection_from_poison": {
@@ -1893,7 +1893,7 @@
         "The Fiend"
       ],
       "book": "scorching_ray",
-      "text": "6~48 Damage 6 d6 Fire Hur1 3 rays offire. Each ray deals 2∼12 Fire damage . 18m",
+      "text": "6-48 Damage 6 d6 Fire Hur1 3 rays offire. Each ray deals 2-12 Fire damage . 18m",
       "img": "spells-icons/Scorching-Ray-Baldurs-Gate-3-Spell_pixelart.png"
     },
     "shatter": {
@@ -1910,7 +1910,7 @@
       "knight": false,
       "subclasses": [],
       "book": "shatter",
-      "text": "3~24 Damage 3d8 Thunder Damage all nearby creatures and objects. Creatures made of inorganic material such as stone have Disadvantage on their Saving Throw . On Save: Targets still take half damage. Range: 18m CON Save",
+      "text": "3-24 Damage 3d8 Thunder Damage all nearby creatures and objects. Creatures made of inorganic material such as stone have Disadvantage on their Saving Throw . On Save: Targets still take half damage. Range: 18m CON Save",
       "img": "spells-icons/Shatter-Baldurs-Gate-3-Spell_pixelart.png"
     },
     "silence": {
@@ -1943,7 +1943,7 @@
       "knight": false,
       "subclasses": [],
       "book": "spike_growth",
-      "text": "2~8 Damage 2d4 Piercing Shape a piece of ground into hard spikes. Movement is halved. A creature walking on the spikes takes 2-8 Piercing damage for every 1.5m it moves.",
+      "text": "2-8 Damage 2d4 Piercing Shape a piece of ground into hard spikes. Movement is halved. A creature walking on the spikes takes 2-8 Piercing damage for every 1.5m it moves.",
       "img": "spells-icons/Spike-Growth-Baldurs-Gate-3-Spell_pixelart.png"
     },
     "web": {
@@ -2134,7 +2134,7 @@
       "knight": false,
       "subclasses": [],
       "book": "crusaders_mantle",
-      "text": "Radiate a holy power that emboldens nearby allies. Thei weapon attacks deal an additional 1∼4 Radiant damage . 10 Turns Concentration",
+      "text": "Radiate a holy power that emboldens nearby allies. Thei weapon attacks deal an additional 1-4 Radiant damage . 10 Turns Concentration",
       "img": "spells-icons/Crusaders-Mantle-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "daylight": {
@@ -2325,7 +2325,7 @@
       "knight": false,
       "subclasses": [],
       "book": "lightning_arrow",
-      "text": "6~48 Damage 4d8+2d8 Lightning After the arrow hits, smaller bolts snake out from the target toward nearby creatures.",
+      "text": "6-48 Damage 4d8+2d8 Lightning After the arrow hits, smaller bolts snake out from the target toward nearby creatures.",
       "img": "spells-icons/Lightning-Arrow-Baldurs-Gate-3-Spell_pixelart.png"
     },
     "lightning_bolt": {
@@ -2512,7 +2512,7 @@
       "knight": false,
       "subclasses": [],
       "book": "vampiric_touch",
-      "text": "3~18 3d6 Necrotic Touch an enemy to syphon their life force. You regain half as many hit points as hit points as the damage they take. For 10 turns, you can use Vampiric Touch again without expending an additional spell slot. 10 Turns Melee Concentration",
+      "text": "3-18 3d6 Necrotic Touch an enemy to syphon their life force. You regain half as many hit points as hit points as the damage they take. For 10 turns, you can use Vampiric Touch again without expending an additional spell slot. 10 Turns Melee Concentration",
       "img": "spells-icons/Vampiric-Touch-Baldurs-Gate-3-Spell_pixelart.png"
     },
     "warden_of_vitality": {
@@ -2561,7 +2561,7 @@
       "knight": false,
       "subclasses": [],
       "book": "blight",
-      "text": "8~64 8d8 Necrotic Plants are more susceptible to this spell: they roll with Disadvantage , and still take half of all the damage if they succeed the roll.",
+      "text": "8-64 8d8 Necrotic Plants are more susceptible to this spell: they roll with Disadvantage , and still take half of all the damage if they succeed the roll.",
       "img": "spells-icons/Blight-Baldurs-Gate-3-Spell_pixelart.png"
     },
     "confusion": {
@@ -2670,7 +2670,7 @@
       "knight": false,
       "subclasses": [],
       "book": "evards_black_tentacles",
-      "text": "3~18 Damage 3d6 Bludgeoning Tentacles sprout from the ground, turning the area into Difficult Terrain , attacking and Smothering creatures within.",
+      "text": "3-18 Damage 3d6 Bludgeoning Tentacles sprout from the ground, turning the area into Difficult Terrain , attacking and Smothering creatures within.",
       "img": "spells-icons/Edvards-Black-Tentacles-Baldurs-Gate-3-Spell_pixelart.png"
     },
     "fire_shield": {
@@ -2869,7 +2869,7 @@
       "knight": false,
       "subclasses": [],
       "book": "cloudkill",
-      "text": "5d8 Poison Craft a large cloud that inflicts 5∼40 Poison damage per turn. You can reposition the cloud every turn. 1 Turn 18m WIS Save Concentration",
+      "text": "5d8 Poison Craft a large cloud that inflicts 5-40 Poison damage per turn. You can reposition the cloud every turn. 1 Turn 18m WIS Save Concentration",
       "img": "spells-icons/Cloudkill-Baldurs-Gate-3-Spell_pixelart.png"
     },
     "cone_of_cold": {
@@ -3147,7 +3147,7 @@
       "knight": false,
       "subclasses": [],
       "book": "chain_lightning",
-      "text": "10~80 Damage 10d8 Lightning Strike an enemy with lightning. Three more bolts will leap from the target, electrifying as many as three other enemies within 18m. On Save: Targets still take half damage. 18m DEX Save",
+      "text": "10-80 Damage 10d8 Lightning Strike an enemy with lightning. Three more bolts will leap from the target, electrifying as many as three other enemies within 18m. On Save: Targets still take half damage. 18m DEX Save",
       "img": "spells-icons/Chain-Lightning-Spell-Baldurs-Gate-3_pixelart.png"
     },
     "circle_of_death": {
@@ -3194,7 +3194,7 @@
       "knight": false,
       "subclasses": [],
       "book": "disintegrate",
-      "text": "46~100 Damage 10d6 + 40 Force Shoot a thin green ray from your finger. If the 50∼100 Force damage reduces the target to 0 hit points , it disintegrates into a crumbly ash. 9m DEX Save",
+      "text": "46-100 Damage 10d6 + 40 Force Shoot a thin green ray from your finger. If the 50-100 Force damage reduces the target to 0 hit points , it disintegrates into a crumbly ash. 9m DEX Save",
       "img": "spells-icons/Disintegrate-Baldurs-Gate-3-Spell_pixelart.png"
     },
     "eyebite": {
@@ -3299,7 +3299,7 @@
       "knight": false,
       "subclasses": [],
       "book": "otilukes_freezing_sphere",
-      "text": "10~60 Damage 10d6 Cold Create a ball of churning ice that can be lauched instantly to generete a frosty explosion or store for later use. Melee CON Save",
+      "text": "10-60 Damage 10d6 Cold Create a ball of churning ice that can be lauched instantly to generete a frosty explosion or store for later use. Melee CON Save",
       "img": "spells-icons/Otilukes-Freezing-Sphere-Launch_pixelart.png"
     },
     "ottos_irresistible_dance": {
@@ -3358,7 +3358,7 @@
       "knight": false,
       "subclasses": [],
       "book": "wall_of_ice",
-      "text": "10d6 Cold +10d6 Cold (Conditional) Raise a wall of solid ice that deals 10∼60 Cold Damage to anyone standing in its way. When the ice is broken, it leaves behind a cloud of frigid air that deals 10∼60 Cold damage per turn to creatures within. 18m DEX Save Concentration",
+      "text": "10d6 Cold +10d6 Cold (Conditional) Raise a wall of solid ice that deals 10-60 Cold Damage to anyone standing in its way. When the ice is broken, it leaves behind a cloud of frigid air that deals 10-60 Cold damage per turn to creatures within. 18m DEX Save Concentration",
       "img": "spells-icons/Wall-of-Ice-Baldurs-Gate-3-Spells_pixelart.png"
     },
     "wall_of_thorns": {

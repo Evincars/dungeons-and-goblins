@@ -53,7 +53,7 @@ const ICON_NAMES = {
 const ENTITIES = { '&amp;': '&', '&#39;': "'", '&#039;': "'", '&quot;': '"', '&nbsp;': ' ', '&lt;': '<', '&gt;': '>' };
 /** The game's pixel font has only Latin-1: curly quotes and dashes become their plain look-alikes. */
 const plain = (html) => html.replace(/<[^>]+>/g, ' ').replace(/&#?\w+;/g, (m) => ENTITIES[m] ?? m)
-  .replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, '-').replace(/\s+/g, ' ').trim();
+  .replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, '-').replace(/(\d)\s*[~∼]\s*(\d)/g, '$1-$2').replace(/\s+/g, ' ').trim();
 const idOf = (name) => IDS[name] ?? name.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 const levelOf = (cell) => (/cantrip/i.test(cell) ? 0 : Number(cell.match(/\d+/)?.[0]));
 /** A name to compare icons by: lower case, no apostrophes, words split by single spaces. */

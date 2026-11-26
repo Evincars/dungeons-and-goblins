@@ -18,6 +18,7 @@ import type { HeroClassId } from '../rules/Classes';
 import { isFiniteNumber, isRecord } from '../core/guards';
 import { isItemBase, isMagicBonus } from '../rules/Equipment';
 import { isCatalogSpell, knightListed, MAX_SPELL_LEVEL, UNBOUND } from '../rules/Spellbook';
+import type { QuickBinding } from '../rules/Spellbook';
 import { bindingFeatureId, isFeatureId } from '../rules/ClassFeatures';
 import { bindingFeatId } from '../rules/Feats';
 
@@ -77,6 +78,8 @@ export type GuestCommand =
   | { kind: 'bind_spell'; slot: number; spell: string; level: number }
   /** Empty a quick-bar square (a right click on it). */
   | { kind: 'unbind_spell'; slot: number }
+  /** Put a saved preset on the quick bar: what every square of both rows holds (null: the class's own); in a safe room only. */
+  | { kind: 'load_bindings'; bound: (QuickBinding | null)[] }
   /** Switch a passive class feature off or on. */
   | { kind: 'toggle_feature'; feature: string }
   /** In the exit room, once its button is pressed: on to the next level, or end the run. */
@@ -211,6 +214,12 @@ export function validBinding(spell: unknown, level: unknown): boolean {
   return named && Number.isInteger(level) && Number(level) >= 0 && Number(level) <= MAX_SPELL_LEVEL;
 }
 
+/** A whole quick bar a guest sent: a square for each of both rows, each empty (null) or a binding there may be. */
+function validBindings(bound: unknown): boolean {
+  if (!Array.isArray(bound) || bound.length !== QUICK_SLOTS) return false;
+  return bound.every((b) => b === null || (isRecord(b) && validBinding(b.spell, b.level)));
+}
+
 /** The most maneuvers or spells a hero picks at once. */
 const MAX_PICK_BATCH = 8;
 
@@ -239,6 +248,7 @@ export function validCommand(value: unknown): value is GuestCommand {
   if (value.kind === 'toggle_feature') return isFeatureId(value.feature);
   if (value.kind === 'depart') return isDepartChoice(value.choice);
   if (value.kind === 'unbind_spell') return Number.isInteger(value.slot) && Number(value.slot) >= 0 && Number(value.slot) < QUICK_SLOTS;
+  if (value.kind === 'load_bindings') return validBindings(value.bound);
   if (value.kind === 'bind_spell') return validBinding(value.spell, value.level) && Number.isInteger(value.slot) && Number(value.slot) >= 0 && Number(value.slot) < QUICK_SLOTS;
   if (value.kind !== 'loadout' || !Array.isArray(value.inventory) || value.inventory.length > MAX_ITEMS) return false;
   return value.inventory.every(isBagSquare) && validEquipped(value.equipped);

@@ -1,6 +1,7 @@
 import { Game } from './game/Game';
-import { ensure, errorMessage, installGlobalErrorHandlers, report } from './core/errors';
+import { ensure, errorMessage, installGlobalErrorHandlers, report, reportRejection } from './core/errors';
 import { hideLoadingScreen } from './ui/LoadingScreen';
+import { loadQuickBarProfile } from './game/profile/QuickBarProfile';
 
 /** An error and every `cause` behind it, innermost last, each with its stack. */
 function describe(err: unknown): string {
@@ -20,6 +21,8 @@ function showFatal(err: unknown): void {
 
 async function main(): Promise<void> {
   installGlobalErrorHandlers();
+  // The player's quick bar presets and size: read in the background, the bar shows its defaults until they arrive.
+  reportRejection(loadQuickBarProfile(), 'Quick bar profile did not load', 'profile');
   const canvas = document.querySelector<HTMLCanvasElement>('#game');
   ensure(canvas, 'The page has no #game canvas');
   await new Game().init(canvas);

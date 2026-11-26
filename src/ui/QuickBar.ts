@@ -5,7 +5,8 @@ import { GAME_HEIGHT, GAME_WIDTH } from '../render/Camera';
 import { frameTexture } from '../render/Sheets';
 import { lazyTexture, requestArt } from '../assets/LazyArt';
 import { EFFECT_COLOURS, EFFECT_SHAPES, effectSheetKey } from '../assets/Effects';
-import { chooseQuickSlot, chosenQuickSlot, claimPointer, quickRow } from '../systems/InputSystem';
+import { chooseQuickSlot, chosenQuickSlot, claimPointer, quickRow, setQuickSquaresShown } from '../systems/InputSystem';
+import { shownSquares } from '../game/profile/QuickBarProfile';
 import { codeLabel, QUICK_KEYS } from '../game/Settings';
 import { isInventoryOpen } from '../systems/InventorySystem';
 import { heroClass, spellLevelFor } from '../rules/Classes';
@@ -32,6 +33,8 @@ import { THEME } from './Theme';
 const SLOT = 22;
 const SLOT_GAP = 3;
 const MARGIN = 8;
+/** The strip of the screen's foot the bar takes at its largest: what panels laid over the game keep clear, so it stays in sight. */
+export const QUICK_BAR_HEIGHT = SLOT + 2 * MARGIN;
 const SLOT_FILL_ALPHA = 0.55;
 const SLOT_EDGE = 0xb4a488;
 const SLOT_EDGE_ALPHA = 0.6;
@@ -113,8 +116,13 @@ function featureOfBinding(binding: QuickBinding | null, castWith: Player['heroCl
   return (id && featureOfClass(heroClass(castWith).dndClass, id)) || null;
 }
 
+/** The icon a binding shows (a spell's own, or its class feature's), if it has one. */
+export function bindingIconKey(binding: QuickBinding, castWith: Player['heroClass']): string | null {
+  return spellIconKey(binding.spell) ?? featureOfBinding(binding, castWith)?.icon ?? null;
+}
+
 /** What a binding is called (a spell's or a feature's name). */
-function bindingName(binding: QuickBinding, castWith: Player['heroClass']): string {
+export function bindingName(binding: QuickBinding, castWith: Player['heroClass']): string {
   const feat = bindingFeatId(binding.spell);
   if (feat) return featName(feat);
   return featureOfBinding(binding, castWith)?.name ?? CATALOG[binding.spell]?.name ?? binding.spell;
@@ -156,8 +164,13 @@ export class QuickBar {
   private readonly slots: SlotView[] = [];
   /** The row shown (0, or 1 while Shift is held), so the key tags are rewritten only when it changes. */
   private shownRow = -1;
-  private readonly left: number;
+  /** Where the squares shown start, and the stretch of the bottom edge they may use. */
+  private left = 0;
+  private readonly freeLeft: number;
+  private readonly freeRight: number;
   private readonly scale: number;
+  /** How many squares are shown (the player's choice for their class, game/profile/QuickBarProfile.ts). */
+  private shownCount = QUICK_ROW;
   private readonly tip = new InfoTooltip();
   private readonly prompt = new PixelLabel('', { color: THEME.title, align: 'center', outline: true });
   private hovered = -1;
@@ -174,21 +187,37 @@ export class QuickBar {
   constructor(freeLeft = 0, freeRight = GAME_WIDTH) {
     this.view.eventMode = 'passive';
     this.row.eventMode = 'passive';
-    const full = QUICK_ROW * SLOT + (QUICK_ROW - 1) * SLOT_GAP;
-    this.scale = Math.min(1, (freeRight - freeLeft) / full);
-    const width = full * this.scale;
-    this.left = Math.round(Math.min(Math.max(freeLeft, (GAME_WIDTH - width) / 2), freeRight - width));
+    this.freeLeft = freeLeft;
+    this.freeRight = freeRight;
+    // Scaled for the whole row, so the squares keep one size however many are shown.
+    this.scale = Math.min(1, (freeRight - freeLeft) / this.rowWidth(QUICK_ROW));
     this.row.scale.set(this.scale);
-    this.row.position.set(this.left, this.top);
     for (let i = 0; i < QUICK_ROW; i++) this.addSlot(i);
-    this.prompt.position.set(Math.round(this.left + width / 2), this.top - PROMPT_GAP);
     this.prompt.visible = false;
+    this.placeRow(QUICK_ROW);
     this.view.addChild(this.row, this.prompt, this.tip.view);
   }
 
   /** The squares' top edge on screen. */
   private get top(): number {
     return Math.round(GAME_HEIGHT - MARGIN - SLOT * this.scale);
+  }
+
+  /** The width of `count` squares, before scaling. */
+  private rowWidth(count: number): number {
+    return count * SLOT + (count - 1) * SLOT_GAP;
+  }
+
+  /** Shows the first `count` squares, in the middle of the screen when they fit there; the keys past them do nothing. */
+  private placeRow(count: number): void {
+    this.shownCount = count;
+    const width = this.rowWidth(count) * this.scale;
+    this.left = Math.round(Math.min(Math.max(this.freeLeft, (GAME_WIDTH - width) / 2), this.freeRight - width));
+    this.row.position.set(this.left, this.top);
+    this.prompt.position.set(Math.round(this.left + width / 2), this.top - PROMPT_GAP);
+    this.slots.forEach((view, i) => { view.square.visible = i < count; });
+    if (this.hovered >= count) this.hovered = -1;
+    setQuickSquaresShown(count);
   }
 
   /** A square's left edge within the row. */
@@ -262,7 +291,7 @@ export class QuickBar {
     const spell = binding ? CATALOG[binding.spell] : null;
     // Its icon if it has one (a spell's, castable yet or not, or a class feature's), else the effect of a castable spell,
     // else its initials.
-    const iconKey = binding ? spellIconKey(binding.spell) ?? featureOfBinding(binding, castWith)?.icon ?? null : null;
+    const iconKey = binding ? bindingIconKey(binding, castWith) : null;
     const pictured = !!iconKey || (!!binding && isSpellId(binding.spell));
     view.icon.visible = pictured;
     if (binding && iconKey) showSpellIcon(view, binding.spell, iconKey);
@@ -327,10 +356,14 @@ export class QuickBar {
   update(player: Player | undefined): void {
     this.player = player;
     if (!player) return;
+    const count = shownSquares(player.heroClass);
+    if (count !== this.shownCount) this.placeRow(count);
     this.updateRow();
-    for (let i = 0; i < this.slots.length; i++) this.updateSlot(this.slots[i], this.slotAt(i), player);
+    for (let i = 0; i < count; i++) this.updateSlot(this.slots[i], this.slotAt(i), player);
     this.updateBinding();
     this.updateTip(player);
+    // Alt held or let go: the tooltip shows its whole story or its short one.
+    this.tip.refresh();
   }
 
   /** Shift held or let go: the squares show the other row, their key tags saying so ("sQ"). */
@@ -342,11 +375,11 @@ export class QuickBar {
     this.slots.forEach((view, i) => { view.keyTag.text = mark + codeLabel(QUICK_KEYS[i]); });
   }
 
-  /** While a spell waits for a square the squares breathe and a line says what to do; the inventory coming back ends the wait. */
+  /** While a spell waits for a square the squares breathe and a line says what to do; the inventory shutting ends the wait. */
   private updateBinding(): void {
+    if (pendingBinding() && !isInventoryOpen()) cancelBinding();
     const waiting = pendingBinding();
-    if (waiting && isInventoryOpen()) cancelBinding();
-    this.prompt.visible = !!waiting && !isInventoryOpen();
+    this.prompt.visible = !!waiting;
     if (!waiting) {
       this.breath = 0;
       for (const view of this.slots) view.square.scale.set(1);

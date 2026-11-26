@@ -1,6 +1,13 @@
-import type { TipTopic } from './InfoTooltip';
+import { shortText } from './InfoTooltip';
+import type { TipDetail, TipHeadline, TipTopic } from './InfoTooltip';
+import { DAMAGE_COLORS, HEAL_COLOR, RANGE_COLOR, SAVE_COLOR } from './TipText';
+import type { TipRun } from './TipText';
+import { THEME } from './Theme';
 import { text } from '../core/texts';
-import { formatDamage } from '../rules/Dice';
+import { isStatName } from '../world';
+import type { StatName } from '../world';
+import { statShort } from '../entities/Items';
+import { diceRange, formatDamage } from '../rules/Dice';
 import { damageTypeName, featDescription, featName } from '../rules/Names';
 import { FEATS } from '../rules/Feats';
 import type { FeatId } from '../rules/Feats';
@@ -11,109 +18,128 @@ import type { FeatureDef } from '../rules/ClassFeatures';
 import type { CatalogSpell } from '../rules/Spellbook';
 
 /**
- * How a spell reads on a tooltip: short — its name, what kind of spell it is, how far it reaches, how it attacks and
- * the start of its text — with "More info" opening the whole text and every number for the level it is cast at.
+ * How a spell reads on a tooltip, as Baldur's Gate lays it out: its name, what kind of spell it is, what it does at a
+ * glance in large ("3-18 Damage", and "3d6 Acid" in the colour of acid), the start of its text with its dice, saves and
+ * distances lit, and its range, attack and recovery in short framed chips ("60 ft", "DEX save"). Alt shows the whole text
+ * and every number for the level it is cast at.
  */
 
-/** The tooltip's text is cut to about this many characters (at a word), ending in "...". */
-const SHORT_TEXT_CHARS = 110;
-const ELLIPSIS = '...';
 /** How the lists' texts name what a spell asks of its target. */
 const MELEE_ATTACK = /melee spell attack/i;
 const RANGED_ATTACK = /ranged spell attack/i;
 const SAVING_THROW = /(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) saving throw/;
+/** The chips' colours: reach in blue, the attack in gold, concentration in violet, recovery in steel. */
+const REACH_CHIP = RANGE_COLOR;
+const ATTACK_CHIP = SAVE_COLOR;
+const CONCENTRATION_CHIP = 0xc39bff;
+const RECOVERY_CHIP = THEME.muted;
+/** The headline's figure, and a spell the game does not cast yet. */
+const HEADLINE_COLOR = THEME.text;
+const NOT_IN_GAME = 0xe8c66a;
 
-/** "1d10 force", or "3d8 acid / cold / fire" where the caster picks the type. */
-function damageLine(spell: CatalogSpell, dice: string): string {
-  const types = spell.effect?.damageTypes ?? [];
-  return text('spell.tip.damage', { dice, type: types.map(damageTypeName).join(' / ') });
-}
+export { shortText };
 
-function rangeLine(spell: CatalogSpell): string {
-  const { feet, px } = spell.range;
-  const range = feet === null || px === null || feet === 0 ? spell.range.text : text('spell.tip.range_px', { feet, px });
-  return text('spell.tip.range', { range });
-}
-
-/** The start of a text, cut at a word to about `max` characters and ended with "..." (a short one whole). */
-export function shortText(full: string, max = SHORT_TEXT_CHARS): string {
-  const flat = full.replace(/\s+/g, ' ').trim();
-  if (flat.length <= max) return flat;
-  const cut = flat.slice(0, max - ELLIPSIS.length);
-  const word = cut.lastIndexOf(' ');
-  return `${(word > 0 ? cut.slice(0, word) : cut).replace(/[\s,.;:]+$/, '')}${ELLIPSIS}`;
-}
-
-/** What kind of spell: "Evocation cantrip", "Level 1 Evocation". */
+/** "Conjuration cantrip", "Level 1 Evocation spell". */
 function kindLine(spell: CatalogSpell): string {
   return spell.level === 0 ? text('spell.tip.cantrip', { school: spell.school }) : text('spell.tip.level', { level: spell.level, school: spell.school });
+}
+
+/** The ability a save names, from its full name in a spell's text ("Dexterity"). */
+function statNamed(name: string): StatName | null {
+  const stat = name.toLowerCase();
+  return isStatName(stat) ? stat : null;
+}
+
+/** An attack, the short way and the long: a chip ("DEX save") and a line of the details ("Dexterity saving throw"). */
+type Attack = { chip: string; line: string };
+
+const attack = (key: AttackKind): Attack => ({ chip: text(`spell.chip.${key}` as const), line: text(`spell.attack.${key}` as const) });
+type AttackKind = 'ranged' | 'melee' | 'auto' | 'heal' | 'self' | 'none';
+
+function saveAttack(stat: StatName): Attack {
+  return { chip: text('spell.chip.save', { ability: statShort(stat) }), line: text('spell.attack.save', { ability: text(`stat.${stat}.name` as const) }) };
 }
 
 /**
  * How a spell the game casts reaches its target: a bolt rolls to hit, darts always land, a burst (or a zone with a save) is
  * saved against, a heal mends, a buff works on the caster, a puddle needs no roll.
  */
-function castAttack(spell: CatalogSpell): string | null {
+function castAttack(spell: CatalogSpell): Attack | null {
   if (!isSpellId(spell.id)) return null;
   const def = SPELLS[spell.id];
-  if (def.kind === 'bolt') return text('spell.attack.ranged');
-  if (def.kind === 'missiles') return text('spell.attack.auto');
-  if (def.kind === 'heal') return text('spell.attack.heal');
-  if (def.kind === 'buff') return text('spell.attack.self');
-  if (def.kind === 'water') return text('spell.attack.none');
-  if (!def.save) return text('spell.attack.auto');
-  return text('spell.attack.save', { ability: text(`stat.${def.save}.name`) });
+  if (def.kind === 'bolt') return attack('ranged');
+  if (def.kind === 'missiles') return attack('auto');
+  if (def.kind === 'heal') return attack('heal');
+  if (def.kind === 'buff') return attack('self');
+  if (def.kind === 'water') return attack('none');
+  return def.save ? saveAttack(def.save) : attack('auto');
 }
 
 /** How a spell reaches its target, as the game casts it or else as its text says. */
-function attackKind(spell: CatalogSpell): string {
+function attackOf(spell: CatalogSpell): Attack {
   const cast = castAttack(spell);
   if (cast) return cast;
-  if (spell.effect?.kind === 'heal') return text('spell.attack.heal');
-  if (MELEE_ATTACK.test(spell.description)) return text('spell.attack.melee');
-  if (RANGED_ATTACK.test(spell.description)) return text('spell.attack.ranged');
+  if (spell.effect?.kind === 'heal') return attack('heal');
+  if (MELEE_ATTACK.test(spell.description)) return attack('melee');
+  if (RANGED_ATTACK.test(spell.description)) return attack('ranged');
   const save = SAVING_THROW.exec(spell.description);
-  return save ? text('spell.attack.save', { ability: save[1] }) : text('spell.attack.none');
+  const stat = save ? statNamed(save[1]) : null;
+  return stat ? saveAttack(stat) : attack('none');
 }
 
-/** "Attack: ranged spell attack, 1d10 fire": how it reaches its target, and what it rolls at this cast level. */
-function attackLine(spell: CatalogSpell, castLevel: number, heroLevel: number): string {
-  const attack = attackKind(spell);
+/** How far it reaches: "60 ft", or what the list says where it is no distance ("Self", "Touch"). */
+function reach(spell: CatalogSpell): string {
+  const { feet } = spell.range;
+  return feet === null || feet === 0 ? spell.range.text : text('spell.tip.feet', { feet });
+}
+
+const capitalised = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);
+
+/** "3-18 Damage" over "3d6 Acid" (each type in its colour), or "2-8 Healing" over "1d8": what it rolls at this cast level. */
+function headline(spell: CatalogSpell, castLevel: number, heroLevel: number): TipHeadline | undefined {
   const rolled = spellStats(spell, castLevel, heroLevel).dice;
-  if (!rolled) return text('spell.tip.attack', { attack });
-  const dice = formatDamage(rolled.roll, rolled.extra);
-  const types = spell.effect?.kind === 'heal' ? '' : (spell.effect?.damageTypes ?? []).map(damageTypeName).join(' / ');
-  return text('spell.tip.attack_dice', { attack, dice: types ? `${dice} ${types}` : dice });
+  if (!rolled) return undefined;
+  const range = diceRange(rolled.roll);
+  const extra = rolled.extra ? diceRange(rolled.extra) : { min: 0, max: 0 };
+  const values = { min: range.min + extra.min, max: range.max + extra.max };
+  const heal = spell.effect?.kind === 'heal';
+  const under: TipRun[] = [{ text: formatDamage(rolled.roll, rolled.extra), color: heal ? HEAL_COLOR : HEADLINE_COLOR }];
+  if (!heal) (spell.effect?.damageTypes ?? []).forEach((type, i) => under.push({ text: (i ? '/ ' : '') + capitalised(damageTypeName(type)), color: DAMAGE_COLORS[type] }));
+  return { text: text(heal ? 'spell.tip.headline_heal' : 'spell.tip.headline_damage', values), color: heal ? HEAL_COLOR : HEADLINE_COLOR, under };
 }
 
-/** The numbers under the description: what the spell is, what it does at this cast level, how far, how long to recover. */
-function detailLines(spell: CatalogSpell, castLevel: number, heroLevel: number, learntAt?: number): string[] {
-  const stats = spellStats(spell, castLevel, heroLevel);
-  const lines = [kindLine(spell), text('spell.tip.attack', { attack: attackKind(spell) })];
+/** The chips at the foot: how far, how it attacks, whether it is held by concentration, how long it recovers. */
+function chips(spell: CatalogSpell, castLevel: number, heroLevel: number): TipRun[] {
+  const out: TipRun[] = [{ text: reach(spell), color: REACH_CHIP }, { text: attackOf(spell).chip, color: ATTACK_CHIP }];
+  if (spell.concentration) out.push({ text: text('spell.chip.concentration'), color: CONCENTRATION_CHIP });
+  if (spell.castable) out.push({ text: text('spell.chip.recovery', { seconds: seconds(spellStats(spell, castLevel, heroLevel).cooldown) }), color: RECOVERY_CHIP });
+  return out;
+}
+
+/** What is worth a word under the chips: a higher cast level, a level still to reach, a spell not in the game yet. */
+function notes(spell: CatalogSpell, castLevel: number, heroLevel: number, learntAt?: number): TipDetail[] {
+  const lines: TipDetail[] = [];
   if (castLevel > spell.level) lines.push(text('spell.tip.cast_at', { level: castLevel }));
-  if (stats.dice) {
-    const dice = formatDamage(stats.dice.roll, stats.dice.extra);
-    lines.push(spell.effect?.kind === 'heal' ? text('spell.tip.heal', { dice }) : damageLine(spell, dice));
-  }
-  lines.push(rangeLine(spell), text('spell.tip.cooldown', { seconds: stats.cooldown.toFixed(1) }));
-  lines.push(text('spell.tip.casting', { time: spell.castingTime }), text('spell.tip.duration', { duration: spell.duration }));
   if (learntAt !== undefined && learntAt > heroLevel) lines.push(text('spell.tip.learnt_at', { level: learntAt }));
+  if (!spell.castable) lines.push({ text: text('spell.tip.not_in_game'), color: NOT_IN_GAME });
   return lines;
 }
 
 /**
- * The tooltip of a spell cast at `castLevel` by a hero of `heroLevel`, kept short: its kind, reach and attack, and the
- * start of its text; `more` holds the whole text and every number for that level.
+ * The tooltip of a spell cast at `castLevel` by a hero of `heroLevel`, kept short: its kind, what it rolls, the start of its
+ * text and its chips; `more` (Alt) holds the whole text, its higher levels, and its attack, casting time and duration in full.
  */
 export function spellTopic(spell: CatalogSpell, castLevel: number, heroLevel: number, learntAt?: number): TipTopic {
-  const higher = spell.higherLevels ? `\n${text('spell.tip.higher', { text: spell.higherLevels })}` : '';
   const icon = spellIconKey(spell.id) ?? undefined;
-  const more: TipTopic = { title: spell.name, body: spell.description + higher, detail: detailLines(spell, castLevel, heroLevel, learntAt), icon };
-  const detail = [kindLine(spell), rangeLine(spell), attackLine(spell, castLevel, heroLevel)];
-  if (castLevel > spell.level) detail.push(text('spell.tip.cast_at', { level: castLevel }));
-  if (learntAt !== undefined && learntAt > heroLevel) detail.push(text('spell.tip.learnt_at', { level: learntAt }));
-  if (!spell.castable) detail.push(text('spell.tip.not_in_game'));
-  return { title: spell.name, body: shortText(spell.description), detail, more, icon };
+  const shared = { title: spell.name, subtitle: kindLine(spell), headline: headline(spell, castLevel, heroLevel), chips: chips(spell, castLevel, heroLevel), icon };
+  const higher = spell.higherLevels ? `\n${text('spell.tip.higher', { text: spell.higherLevels })}` : '';
+  const full = [
+    text('spell.tip.attack', { attack: attackOf(spell).line }),
+    text('spell.tip.casting', { time: spell.castingTime }),
+    text('spell.tip.duration', { duration: spell.duration }),
+  ];
+  const more: TipTopic = { ...shared, body: spell.description + higher, detail: [...full, ...notes(spell, castLevel, heroLevel, learntAt)] };
+  return { ...shared, body: shortText(spell.description), detail: notes(spell, castLevel, heroLevel, learntAt), more };
 }
 
 /** "from -> to" when a number changes with the cast level, else null. */
@@ -153,24 +179,32 @@ function recoveryLine(feature: FeatureDef, heroLevel: number): string | null {
   return wait > 0 ? text('feature.tip.active', { seconds: seconds(wait) }) : text('feature.tip.active_now');
 }
 
-/** The tooltip of a class feature at the hero's level: what it is, when it came, and what a click does with it. */
+/** What kind of feature: an active one used from the quick bar, a passive one, or a rule of the class. */
+const FEATURE_KINDS = { active: 'feature.tip.kind_active', passive: 'feature.tip.kind_passive', info: 'feature.tip.kind_info' } as const;
+
+/**
+ * The tooltip of a class feature at the hero's level: what kind it is and when it came, what it does (a long text cut
+ * short, Alt showing all of it), and what a click does with it.
+ */
 export function featureTopic(feature: FeatureDef, switchedOff: boolean, heroLevel: number): TipTopic {
-  const detail = [text('feature.tip.level', { level: feature.level })];
+  const detail: string[] = [];
   const uses = featureUses(feature, heroLevel);
   if (feature.kind === 'passive' && feature.worked) detail.push(text(switchedOff ? 'feature.tip.passive_off' : 'feature.tip.passive_on'));
   else if (feature.kind === 'active') detail.push(recoveryLine(feature, heroLevel) ?? '');
   else if (feature.kind === 'info') detail.push(text('feature.tip.info'));
   if (uses > 1 && !feature.charges) detail.push(text('feature.tip.uses', { uses }));
-  if (feature.kind !== 'info' && !feature.worked) detail.push(text('feature.tip.unworked'));
-  return { title: feature.name, body: feature.description, detail, wide: true, icon: feature.icon ?? undefined };
+  const unworked = feature.kind !== 'info' && !feature.worked;
+  const subtitle = `${text(FEATURE_KINDS[feature.kind])} - ${text('feature.tip.level', { level: feature.level })}`;
+  const lines: TipDetail[] = unworked ? [...detail, { text: text('feature.tip.unworked'), color: NOT_IN_GAME }] : detail;
+  return { title: feature.name, subtitle, body: feature.description, detail: lines, wide: true, icon: feature.icon ?? undefined };
 }
 
 /** A Passive Feat in the Skills tab or on the quick bar: what it does, and how it is used (and whether it is on). */
 export function featTopic(feat: FeatId, on: boolean): TipTopic {
-  const detail = [text('feat.tip.passive')];
+  const detail: string[] = [];
   const kind = FEATS[feat].passive;
   if (kind === 'toggle') detail.push(text(on ? 'feat.tip.toggle_on' : 'feat.tip.toggle_off'));
   else if (kind === 'active') detail.push(text('feat.tip.active', { seconds: FEATS[feat].cooldown }));
   else detail.push(text('feat.tip.auto'));
-  return { title: featName(feat), body: featDescription(feat), detail, wide: true };
+  return { title: featName(feat), subtitle: text('feat.tip.passive'), body: featDescription(feat), detail, wide: true };
 }

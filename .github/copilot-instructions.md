@@ -329,17 +329,21 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   and one spell held by `concentration` that a failed Constitution save on every hurt ends (DC 10 or half the damage,
   whichever is higher, `keepConcentration`); what lasts until a long rest also
   ends on a fall, `endUntilRest`) have no slots but a
-  recovery each (`spellbook.recovery`), sit on the quick bar (two rows of ten: Q R T 1–5 X C cast the first row's squares — held, the key shows the spell's aim guide, let go, it casts —
+  recovery each (`spellbook.recovery`), sit on the quick bar (two rows of ten at most — the player picks how many squares show, for each hero class, and Shift's row shows as many; the keys past them do nothing —: Q R T 1–5 X C cast the first row's squares — held, the key shows the spell's aim guide, let go, it casts —
   Shift with them the second, whose squares hold the active class features until bound; `playerInput.spellSlot`) and are cast by
   `systems/SpellSystem.ts` with effects from the library (`assets/Effects.ts`). `Spellbook.ts` reads the whole list: a class opens
   spell levels as the tabletop does, a cantrip's dice grow at hero levels 5/11/17, and a spell cast above its own level
-  (the Skills tab of the inventory offers a box per level, `ui/SpellsPanel.ts`) rolls more and recovers more slowly. A click binds it
+  (the Skills tab of the inventory offers a box per level, `ui/SpellsPanel.ts`) rolls more and recovers more slowly. A click (the inventory stays open, shaded, the quick bar brought in front of it, `HudPanel.front`) binds it
   to a quick-bar square (`game/SpellBinding.ts`, `spellbook.bound`, the `bind_spell` command), and a right click on a square empties
   it (`UNBOUND`, the `unbind_spell` command; nothing comes back in its place); only a spell with its numbers in `spells.json`
   is bound and goes off (`castable`; a heal with a `radius` mends every hero within it). Damage reaching a hero carries its
   type (`hurtPlayer`): resistances halve it and immunities take it all (`rules/Resistances.ts`, listed in the Armor Class
   tooltip, `sheet.defences`). Tooltips with
-  more to tell show it while Alt is held (`ui/InfoTooltip.ts`). Class features (`rules/ClassFeatures.ts`) fill the Skills tab above the cantrips: a worked passive is on from its
+  more to tell show it while Alt is held (`ui/InfoTooltip.ts`; a long text with no `more` of its own is cut short by itself),
+  laid out as Baldur's Gate's: the title, a quiet `subtitle` (what kind of thing), a large `headline` ("3-18 Damage" over
+  "3d6 Acid", each damage type in its colour), the text with its dice, saves and distances lit (`ui/TipText.ts`), and
+  short facts in framed `chips` ("60 ft", "DEX save"; never pixels). The inventory stands at the top of the screen, clear
+  of the quick bar's strip (`QUICK_BAR_HEIGHT`); the HUD's buttons say what they are under the pointer. Class features (`rules/ClassFeatures.ts`) fill the Skills tab above the cantrips: a worked passive is on from its
   level and a click switches it off and on (`featuresOff`, the `toggle_feature` command; `featureOn` is what effects ask, and the
   HUD's top left shows the ones on, `ui/PassiveHud.ts`: icons only, stacked down a column, what is the hero's for good
   (passives, Passive Feats, the ward, a Battle Master's dice) at the top and what comes and goes (boosts, buffs, concentration)
@@ -417,13 +421,17 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   damage dealt, natural 20s and 1s on this level (`playerStats.damageDealt`, `critHits`, `critMisses`). The training dummy
   stands still until struck, then plays one of its three hit rows (a heavy blow spins it, `systems/DummySystem.ts`);
   Burning Hands is a cone of flame particles from the caster's hands towards the aim (`vfx/burning-hands.json`, played by
-  `playBurstArt` in `systems/SpellSystem.ts`). The combat log lies under the HUD, so tooltips and dialogs open over it.
+  `playBurstArt` in `systems/SpellSystem.ts`). The combat log lies under the HUD, so tooltips and dialogs open over it; its header's − and + step it through `LOG_SIZES` (kept as `settings.combatLogSize`), and an entry too long for it wraps under itself, set in.
 - Enemies walk on steadily (no limp: `MOB_CONFIGS` speeds are their steady pace), and one whose place in the ring round its
   target lies further round walks round to it on a wider ring (`RING_WALK_ROUND`, `ai/execution/pursuit.ts`) rather than
   pressing into the target's body. An enemy knocked back hard by a blow may be driven over a pit's or chasm's edge, and falls (`MovementSystem.ts`
   `KNOCKED_OVER_SPEED`); walking, enemies keep out of holes. A spike trap springs under feet two pixels inside its tile.
 - `src/core/` — cross-cutting: `errors/`, `log/`, `geometry.ts`, `guards.ts`, `debugHooks.ts`, `compression.ts` (gzip with a size limit).
-- `src/game/` — game loop, `SceneManager`, persisted settings, player actions (item gifts too), the party's votes
+- `src/game/` — game loop, `SceneManager`, persisted settings, the player's own preferences kept between games
+  (`game/profile/ProfileStore.ts`: the abstract `ProfileStore` of JSON documents, `LocalProfileStore` in localStorage beside
+  the saves by default — to keep them elsewhere (Firebase), extend it and call `useProfileStore` at start-up —;
+  `QuickBarProfile.ts`: for each hero class how many quick-bar squares show and three presets of the whole bar, loaded with
+  `loadBindings` (the `load_bindings` command) in a safe room only, a square it cannot bind any more left empty), player actions (item gifts too), the party's votes
   (`Party.ts`: one synced `party` entity; rests and the lever ask through it, and act once everyone agrees), death
   (`Fallen.ts`: a hero who dies or falls into a pit stays down until the party goes deeper, leaving their gear and gold
   on the floor; the fallen get no share of experience or gold and no say in votes or loot rolls; the run is over when
@@ -444,7 +452,12 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   (`Run.ts` `nextTheme`). `src/scenes/` — title, settings,
   key bindings, character select, co-op lobby, the load screen and the level itself. `src/ui/` — buttons, HUD (health bar, round
   buttons — the sword opens and shuts the inventory as Tab does —, `HudDialog`, `MinimapView`, `QuickBar`, `RestMenu`, `PartyBanner`, `LootRollPanel`), `PopupMenu`, `HeroPicker`,
-  `ConsoleView`, combat log, the inventory (`InventoryOverlay`: the bag filtered, searched as typed — the letters of a name in order,
+  `ConsoleView`, combat log, the inventory (`InventoryOverlay`: three tabs over the gear panel — Character, Skills and Quick bar
+  (`ui/QuickBarPage.ts`: the squares shown, the presets with Load, Save and Clear, a second press confirming one that would
+  lose something) —, drawn as gothic forged iron round a dark opening (a pinnacle on each cut corner, a crown of spikes over a blood-red gem, an
+  engraved groove ending in curls, fangs in the opening's corners, a faint pointed arch with a quatrefoil inside;
+  `tabFrameTexture`, made once), not cut from the art; a tab opened rises, its lantern fading up and its gem flaring, the
+  one closed sinks (`placeTab`: only sprite positions and alphas each update); the bag filtered, searched as typed — the letters of a name in order,
   `core/fuzzy.ts`, matched ones lit in the tooltip — and sorted by price, weight or training, `game/BagView.ts`, without moving a
   thing; a right-click menu to equip — a weapon in the primary hand or the off-hand — take off, drop, compare or send; a click
   marks an item, Ctrl+click marks a second and the two are compared side by side, the second's AC, damage and weight marked

@@ -36,7 +36,8 @@ const setDown = (hero, item) => hero.inventory.push(structuredClone(item)) && Pl
 const { attempt, ensure, ValidationError } = await load('core/errors/index');
 const { invitePeer, inviteLink, validInput, validCommand, validRoster, validStart } = await load('network/protocol');
 const { captureWorld, validateNetState, WorldReplica } = await load('network/WorldSync');
-const { sameItems, handleGuestCommand, playerInSlot } = await load('game/PlayerActions');
+const PlayerActionsModule = await load('game/PlayerActions');
+const { sameItems, handleGuestCommand, playerInSlot } = PlayerActionsModule;
 const { buildDungeon } = await load('level/DungeonGenerator');
 const { createShopNpc, createTorch, SHOP_ITEMS } = await load('entities/DungeonFactory');
 const { cleanName } = await load('game/Settings');
@@ -3008,29 +3009,42 @@ test('a guest\'s synced spellbook is checked: bound spells must be real', () => 
   assert.throws(() => validateNetState(tampered(Array(21).fill(null))), ValidationError, 'only twenty squares');
 });
 
-test('a spell tooltip is short (kind, range, attack, the start of its text); "More info" holds the whole text and numbers', async () => {
+test('a spell tooltip reads at a glance as in Baldur\'s Gate: kind, damage in large, dice in the colour of their type, range and attack as short chips; Alt holds the whole text', async () => {
   const { shortText, spellTopic } = await load('ui/SpellTopics');
+  const { DAMAGE_COLORS, markRuns } = await load('ui/TipText');
   const sickness = Spellbook.CATALOG.ray_of_sickness;
   const base = spellTopic(sickness, 1, 3);
   const upgraded = spellTopic(sickness, 2, 3);
   assert.ok(base.body.startsWith('A ray of sickening greenish energy') && base.body.endsWith('...'), 'the start of the text, cut short');
   assert.ok(base.body.length <= 110);
-  assert.deepEqual(base.detail.slice(0, 2), ['Level 1 Necromancy', 'Range: 60 ft (576 px)']);
+  assert.equal(base.subtitle, 'Level 1 Necromancy spell');
+  assert.equal(base.headline.text, '2-16 Damage', '2d8 poison');
+  assert.deepEqual(base.headline.under.map((run) => run.text), ['2d8', 'Poison']);
+  assert.equal(base.headline.under[1].color, DAMAGE_COLORS.poison, 'the type in its own colour');
+  const chips = base.chips.map((chip) => chip.text);
+  assert.deepEqual(chips, ['60 ft', 'Spell attack', '5s recovery'], 'range in feet only, no pixels; the attack short');
+  assert.ok(!JSON.stringify(base).includes('px'), 'nothing in pixels');
   assert.ok(base.more.body.includes('A ray of sickening greenish energy') && base.more.body.includes('2nd level or higher'), 'the whole text and its higher levels');
-  assert.ok(base.more.detail.includes('Range: 60 ft (576 px)') && base.more.detail.includes('Cooldown: 5.0s'), 'range in feet and px, five seconds');
+  assert.ok(base.more.detail.includes('Attack: ranged spell attack'));
   assert.ok(upgraded.detail.includes('Cast at level 2'));
-  assert.ok(upgraded.more.detail.includes('Cooldown: 7.5s'), 'a higher level recovers more slowly');
+  assert.equal(upgraded.headline.text, '3-24 Damage', 'a higher level rolls more');
+  assert.ok(upgraded.chips.some((chip) => chip.text === '7.5s recovery'), 'and recovers more slowly');
   const blast = Spellbook.CATALOG.eldritch_blast;
-  assert.ok(spellTopic(blast, 0, 1).detail.includes('Attack: ranged spell attack, 1d10 force'));
-  assert.ok(spellTopic(blast, 0, 5).detail.includes('Attack: ranged spell attack, 2d10 force'), 'twice the dice at level 5');
-  assert.ok(spellTopic(blast, 0, 5).more.detail.includes('Damage: 2d10 force'));
-  assert.ok(spellTopic(Spellbook.CATALOG.burning_hands, 1, 1).detail.includes('Attack: Dexterity saving throw, 3d6 fire'));
-  assert.ok(spellTopic(Spellbook.CATALOG.magic_missile, 1, 1).detail.some((line) => line.startsWith('Attack: always hits')));
+  assert.equal(spellTopic(blast, 0, 1).headline.text, '1-10 Damage');
+  assert.equal(spellTopic(blast, 0, 5).headline.text, '2-20 Damage', 'twice the dice at level 5');
+  const hands = spellTopic(Spellbook.CATALOG.burning_hands, 1, 1);
+  assert.ok(hands.chips.some((chip) => chip.text === 'DEX save'), 'a save by its ability\'s short name');
+  assert.equal(hands.subtitle, 'Level 1 Evocation spell');
+  assert.ok(spellTopic(Spellbook.CATALOG.magic_missile, 1, 1).chips.some((chip) => chip.text === 'Always hits'));
+  assert.equal(spellTopic(Spellbook.CATALOG.cure_wounds, 1, 1).headline.text.endsWith('Healing'), true);
+  const runs = markRuns('takes 3d6 fire damage on a failed Dexterity saving throw within 10 feet', 0xffffff);
+  assert.deepEqual(runs.filter((run) => run.color !== 0xffffff).map((run) => run.text), ['3d6 fire damage', 'Dexterity saving throw', '10 feet'], 'dice, saves and distances lit in the text');
+  assert.equal(runs.find((run) => run.text === '3d6 fire damage').color, DAMAGE_COLORS.fire);
   assert.equal(shortText('A short one.'), 'A short one.', 'a short text stays whole');
   assert.equal(shortText('one two three four', 12), 'one two...', 'cut at a word');
 });
 
-test('binding a spell from the inventory: it shuts, a square is chosen, and it comes back where it was', async () => {
+test('binding a spell from the inventory: it stays open while a square is chosen', async () => {
   const Binding = await load('game/SpellBinding');
   const { isInventoryOpen, setInventoryOpen } = await load('systems/InventorySystem');
   const cleric = createPlayer(0, 0, 'cleric');
@@ -3038,17 +3052,89 @@ test('binding a spell from the inventory: it shuts, a square is chosen, and it c
   cleric.inSafeRoom = true;
   setInventoryOpen(true);
   Binding.beginBinding({ spell: 'cure_wounds', level: 2 });
-  assert.equal(isInventoryOpen(), false, 'the inventory shuts while a square is chosen');
+  assert.equal(isInventoryOpen(), true, 'the inventory stays open (the quick bar comes forward over it)');
   Binding.finishBinding(cleric, 4);
   assert.deepEqual(Spellbook.quickBinding(cleric, 4), { spell: 'cure_wounds', level: 2 });
   assert.equal(Binding.pendingBinding(), null);
-  assert.equal(isInventoryOpen(), true, 'and comes back');
+  assert.equal(isInventoryOpen(), true, 'and is still open after');
   Binding.beginBinding({ spell: 'cure_wounds', level: 1 });
   Binding.cancelBinding();
   assert.equal(Binding.pendingBinding(), null, 'giving up binds nothing');
   assert.deepEqual(Spellbook.quickBinding(cleric, 4), { spell: 'cure_wounds', level: 2 });
   assert.equal(isInventoryOpen(), true);
+  Binding.beginBinding({ spell: 'cure_wounds', level: 1 });
+  Binding.beginBinding({ spell: 'cure_wounds', level: 2 });
+  assert.deepEqual(Binding.pendingBinding(), { spell: 'cure_wounds', level: 2 }, 'a spell picked while another waits takes its place');
+  Binding.cancelBinding();
   setInventoryOpen(false);
+});
+
+test('quick bar presets: saved per class, loaded only in a safe room, the stored profile checked', async () => {
+  const Profile = await load('game/profile/QuickBarProfile');
+  const Store = await load('game/profile/ProfileStore');
+  const { loadBindings } = await load('game/PlayerActions');
+  const { QUICK_SLOTS } = await load('world');
+  Store.useProfileStore(new Store.MemoryProfileStore());
+  Profile.resetQuickBarProfile();
+  const cleric = createPlayer(0, 0, 'cleric');
+  cleric.playerStats.level = 3;
+  cleric.inSafeRoom = true;
+  assert.equal(Profile.shownSquares('cleric'), 10, 'the whole bar shows until the player says otherwise');
+  Profile.setShownSquares('cleric', 4);
+  Profile.setShownSquares('fighter', 0);
+  assert.equal(Profile.shownSquares('cleric'), 4);
+  assert.equal(Profile.shownSquares('fighter'), 1, 'at least one square shows');
+  handleBind(cleric, 4, 'cure_wounds', 2);
+  Profile.storePreset('cleric', 0, Profile.snapshotBar(cleric), 1000);
+  const [saved] = Profile.barPresets('cleric');
+  assert.deepEqual(saved.bound[4], { spell: 'cure_wounds', level: 2 });
+  assert.equal(saved.bound.length, QUICK_SLOTS, 'both rows are kept');
+  assert.ok(Profile.presetInUse(saved, cleric), 'the bar is that preset');
+  handleBind(cleric, 4, 'cure_wounds', 1);
+  assert.equal(Profile.presetInUse(saved, cleric), false, 'bound otherwise, it is not');
+
+  cleric.inSafeRoom = false;
+  assert.equal(loadBindings(cleric, saved.bound), false, 'presets load only in a safe room');
+  cleric.inSafeRoom = true;
+  const withUnknown = saved.bound.map((b, i) => (i === 6 ? { spell: 'fireball', level: 3 } : b));
+  assert.ok(loadBindings(cleric, withUnknown));
+  assert.deepEqual(Spellbook.quickBinding(cleric, 4), { spell: 'cure_wounds', level: 2 }, 'the preset is back on the bar');
+  assert.equal(Spellbook.quickBinding(cleric, 6), null, 'a spell the hero may not bind stays empty');
+  assert.ok(Profile.presetInUse(saved, cleric) === false && cleric.spellbook.bound[0] === null, 'a square the preset left to the class gets its own');
+
+  // The profile round-trips through the store; a damaged one keeps what is valid and drops the rest.
+  Profile.resetQuickBarProfile();
+  await Profile.loadQuickBarProfile();
+  assert.equal(Profile.shownSquares('cleric'), 4, 'read back from the store');
+  assert.equal(Profile.barPresets('cleric')[0].savedAt, 1000);
+  const read = Profile.readProfile({ cleric: { shown: 99, presets: [{ bound: [1, 2], savedAt: 1 }, null, 'x'] }, orc: { shown: 3 } });
+  assert.equal(read.cleric.shown, 10, 'clamped to the bar');
+  assert.deepEqual(read.cleric.presets, [null, null, null], 'a damaged preset is dropped');
+  assert.equal(read.orc, undefined, 'only hero classes');
+  Profile.clearPreset('cleric', 0);
+  assert.equal(Profile.barPresets('cleric')[0], null);
+
+  const bound = Array.from({ length: QUICK_SLOTS }, () => null);
+  assert.ok(validCommand({ kind: 'load_bindings', bound }), 'a whole bar passes the network checks');
+  assert.equal(validCommand({ kind: 'load_bindings', bound: bound.slice(1) }), false, 'a bar of the wrong length does not');
+  assert.equal(validCommand({ kind: 'load_bindings', bound: [{ spell: 7, level: 0 }, ...bound.slice(1)] }), false);
+  Store.useProfileStore(new Store.LocalProfileStore());
+  Profile.resetQuickBarProfile();
+});
+
+/** Binds a spell the way the inventory does for a player alone. */
+function handleBind(player, slot, spell, level) {
+  assert.ok(PlayerActionsModule.bindSpell(player, slot, spell, level), `${spell} at level ${level} binds`);
+}
+
+test('the combat log wraps a long entry under itself, set in', async () => {
+  const { wrapEntry } = await load('ui/CombatLogPanel');
+  const rows = wrapEntry({ text: 'Evincars rolls a natural twenty and strikes the goblin chieftain for a great deal of damage', color: 1 }, 80);
+  assert.ok(rows.length > 1, 'too long for one row');
+  assert.equal(rows[0].indent, false);
+  assert.ok(rows.slice(1).every((row) => row.indent), 'the rows after the first are set in');
+  assert.equal(rows.map((row) => row.text).join(' '), 'Evincars rolls a natural twenty and strikes the goblin chieftain for a great deal of damage', 'no word is lost');
+  assert.equal(wrapEntry({ text: 'Short', color: 1 }, 80).length, 1);
 });
 
 // ── Class features ───────────────────────────────────────────────────────────
@@ -6803,4 +6889,16 @@ test('a burst strikes its own shape: a sphere round where it lands, a cube as a 
   assert.ok(inArea(hands, caster, out, coneLength(hands) - 2, coneLength(hands) * 0.4), 'wide at its far end');
   assert.ok(!inArea(hands, caster, out, 10, 20), 'narrow at the hands');
   assert.ok(!inArea(hands, caster, out, -20, 0), 'nothing behind the caster');
+});
+
+test('the level panel tells every kind of pick by its colour and names it first in the tooltip, so a cantrip is seen without pointing at each', async () => {
+  const { PICK_KIND_COLORS, PICK_KIND_NAMES, withKind } = await load('ui/LevelChoices');
+  const { text } = await load('core/texts');
+  const kinds = ['cantrip', 'spell', 'weapon', 'element'];
+  assert.deepEqual(Object.keys(PICK_KIND_COLORS).sort(), [...kinds].sort());
+  assert.equal(new Set(Object.values(PICK_KIND_COLORS)).size, kinds.length, 'each kind its own colour');
+  for (const kind of kinds) assert.notEqual(text(PICK_KIND_NAMES[kind]), PICK_KIND_NAMES[kind], `${kind} has a name`);
+  const topic = withKind({ title: 'Fire Bolt', body: '…', detail: ['Evocation cantrip'] }, 'cantrip');
+  assert.deepEqual(topic.detail[0], { text: 'Cantrip', color: PICK_KIND_COLORS.cantrip }, 'the kind comes first, in its colour');
+  assert.equal(topic.detail[1], 'Evocation cantrip', 'the rest follows');
 });

@@ -103,9 +103,19 @@ export function quickRow(): number {
   return !captured && shiftHeld() ? 1 : 0;
 }
 
+/** How many of the quick bar's squares are shown (game/profile/QuickBarProfile.ts): the keys past them do nothing. */
+let quickSquaresShown = QUICK_ROW;
+
+/** The bar shows this many squares now; a square picked past them goes back to the first. */
+export function setQuickSquaresShown(count: number): void {
+  quickSquaresShown = count;
+  if (chosenSlot % QUICK_ROW >= count) chosenSlot = 0;
+}
+
 /** A quick-bar key that went down this tick picks its square (with Shift, the one in the second row) and is held. */
 function holdQuickKey(): void {
-  for (let i = 0; i < QUICK_KEYS.length; i++) {
+  const usable = Math.min(QUICK_KEYS.length, quickSquaresShown);
+  for (let i = 0; i < usable; i++) {
     if (!pressed.has(QUICK_KEYS[i])) continue;
     heldCode = QUICK_KEYS[i];
     heldSlot = i + quickRow() * QUICK_ROW;

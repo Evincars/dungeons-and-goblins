@@ -4,7 +4,7 @@ import type { Entity } from '../world';
 import { world } from '../world';
 import { TICKS_PER_SECOND } from '../rules/Spells';
 import { vfxEffect, vfxPoint, vfxRenderer } from '../render/Vfx';
-import { AURA_BUFFS, BUFF_AURAS, SPELL_VFX } from '../render/SpellVfx';
+import { AURA_BUFFS, BUFF_AURAS, FLASK_FLIGHT, SPELL_VFX } from '../render/SpellVfx';
 import type { VfxEffectId } from '../render/Vfx';
 import { takeQueuedVfx } from '../render/VfxPlayer';
 import type { VfxShot } from '../render/VfxPlayer';
@@ -185,6 +185,47 @@ function followLasting(gameLayer: Container): void {
   }
 }
 
+const burningSurfaces = world.with('position', 'surface');
+const burningBodies = world.with('position', 'burning');
+const wisps = world.with('position', 'wisp');
+const flasks = world.with('position', 'thrown');
+/** A wisp of Dancing Lights hovers this far above the floor (px). */
+const WISP_HEIGHT = 18;
+
+/**
+ * What burns and glows for as long as it lasts: fire on the floor its flames, a body on fire the flames on it, each light of
+ * Dancing Lights its glimmer, each flask in the air its trail.
+ */
+function followFires(gameLayer: Container): void {
+  for (const patch of burningSurfaces) {
+    spot.x = patch.position.x;
+    spot.y = patch.position.y;
+    spot.z = patch.position.y + IN_FRONT;
+    follow(patch, 'fire', 'fire-surface', patch.surface.kind === 'fire' && !patch.removed, spot, gameLayer);
+  }
+  for (const body of burningBodies) {
+    spot.x = body.position.x;
+    spot.y = body.position.y - BODY_MIDDLE;
+    spot.z = body.position.y + IN_FRONT;
+    follow(body, 'burning', 'burning', !body.removed && (body.health?.current ?? 0) > 0, spot, gameLayer);
+  }
+}
+
+function followLights(gameLayer: Container): void {
+  for (const wisp of wisps) {
+    spot.x = wisp.position.x;
+    spot.y = wisp.position.y - (wisp.yOffset ?? WISP_HEIGHT);
+    spot.z = wisp.position.y + IN_FRONT;
+    follow(wisp, 'wisp', 'dancing-light', !wisp.removed, spot, gameLayer);
+  }
+  for (const flask of flasks) {
+    spot.x = flask.position.x;
+    spot.y = flask.position.y - (flask.yOffset ?? 0);
+    spot.z = flask.position.y + IN_FRONT;
+    follow(flask, 'flask', FLASK_FLIGHT[flask.thrown.item], !flask.removed, spot, gameLayer);
+  }
+}
+
 /** Once a tick: sparks for each new fire, trails behind flying spells, the one-shots asked for, and all of them moved on by a tick. */
 export function updateVfx(gameLayer: Container): void {
   dropStale(gameLayer);
@@ -193,6 +234,8 @@ export function updateVfx(gameLayer: Container): void {
   dropGoneFollowers(gameLayer);
   followShots(gameLayer);
   followLasting(gameLayer);
+  followFires(gameLayer);
+  followLights(gameLayer);
   playShots(gameLayer);
   if (loops.size || shots.length || trails.size || fading.length || following.size) vfxRenderer().update(TICK_SECONDS);
 }

@@ -15,6 +15,7 @@ import { bladesongImpeded, schoolBonuses } from '../rules/Schools';
 import { singing } from './SchoolSystem';
 import { FEATS } from '../rules/Feats';
 import { BASE_SPEED_FT } from '../rules/CharacterSheet';
+import { isDown, terrainPace } from './Surfaces';
 import { athleteSpeedFactor } from './FeatureSystem';
 
 type Point = { x: number; y: number };
@@ -160,9 +161,11 @@ function moveBody(level: Level, entity: Body): void {
     if (bump) bump.x = bump.y = 0;
     return;
   }
-  const frozen = (entity.freezeTime ?? 0) > 0;
-  const xa = (frozen ? 0 : velocity.x) + (bump?.x ?? 0);
-  const ya = (frozen ? 0 : velocity.y) + (bump?.y ?? 0);
+  // Flinching or down (slipped, prone) it does not walk; in grease it walks at half its pace (systems/Surfaces.ts).
+  const frozen = (entity.freezeTime ?? 0) > 0 || isDown(entity);
+  const pace = frozen ? 0 : terrainPace(position.x, position.y);
+  const xa = velocity.x * pace + (bump?.x ?? 0);
+  const ya = velocity.y * pace + (bump?.y ?? 0);
   const fromX = position.x;
   const fromY = position.y;
   const knocked = knockedBack(entity);

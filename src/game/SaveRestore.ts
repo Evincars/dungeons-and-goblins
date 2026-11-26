@@ -28,7 +28,7 @@ function idIn(made: Made, saved: number | undefined): number | undefined {
 const ownerIn = (made: Made, saved: number): number => idIn(made, saved) ?? -1;
 
 /** Sets or clears an optional id component through the world, so the queries over it stay right. */
-function setId(entity: Entity, key: 'spawnedBy' | 'lured', id: number | undefined): void {
+function setId(entity: Entity, key: 'spawnedBy' | 'lured' | 'entranced', id: number | undefined): void {
   if (id === undefined) world.removeComponent(entity, key);
   else entity[key] = id;
 }
@@ -37,6 +37,7 @@ function setId(entity: Entity, key: 'spawnedBy' | 'lured', id: number | undefine
 function remapIds(entity: Entity, made: Made): void {
   if (entity.spawnedBy !== undefined) setId(entity, 'spawnedBy', idIn(made, entity.spawnedBy));
   if (entity.lured !== undefined) setId(entity, 'lured', idIn(made, entity.lured));
+  if (entity.entranced !== undefined) setId(entity, 'entranced', idIn(made, entity.entranced));
   if (entity.ai) {
     entity.ai.targetId = idIn(made, entity.ai.targetId);
     entity.ai.allyId = idIn(made, entity.ai.allyId);
@@ -54,6 +55,10 @@ function remapOwners(entity: Entity, made: Made): void {
   if (entity.zone) entity.zone.owner = ownerIn(made, entity.zone.owner);
   if (entity.surface) entity.surface.owner = ownerIn(made, entity.surface.owner);
   if (entity.summon) entity.summon.owner = ownerIn(made, entity.summon.owner);
+  if (entity.burning) entity.burning.by = ownerIn(made, entity.burning.by);
+  if (entity.thrown) entity.thrown.owner = ownerIn(made, entity.thrown.owner);
+  if (entity.dancingLights) entity.dancingLights.owner = ownerIn(made, entity.dancingLights.owner);
+  if (entity.wisp) entity.wisp.of = ownerIn(made, entity.wisp.of);
 }
 
 /** What the host keeps for itself and the save leaves out, made again. */

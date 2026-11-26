@@ -27,6 +27,7 @@ import { hurtPlayer } from './CombatSystem';
 import { hurtUndead } from './SummonSystem';
 import { logLine, logSaveDamage } from './RollLogSystem';
 import { recordSpell } from './CombatLogSystem';
+import { spreadSurface } from './Surfaces';
 
 /**
  * Spells that last after they are cast: buffs on the caster (Blade Ward, Shield, Mage Armour, Stoneskin; False Life's
@@ -99,6 +100,7 @@ export function castBuff(caster: Player, def: SpellDef): boolean {
   else if (def.buff === 'shield') buffs.shield = def.durationTicks;
   else if (def.buff === 'mage_armor') buffs.mageArmor = 1;
   else if (def.buff === 'stoneskin') buffs.stoneskin = def.durationTicks;
+  else if (def.buff === 'true_strike') buffs.trueStrike = def.durationTicks;
   else if (def.buff === 'false_life') caster.tempHealth = Math.max(caster.tempHealth ?? 0, rollDice(def.damage));
   return true;
 }
@@ -119,13 +121,17 @@ function runDownBuffs(hero: Player): void {
   buffs.bladeWard = tick(buffs.bladeWard);
   buffs.shield = tick(buffs.shield);
   buffs.stoneskin = tick(buffs.stoneskin);
+  if (buffs.trueStrike) buffs.trueStrike = tick(buffs.trueStrike);
   if (buffs.stoneskin === 0 && hero.concentration?.spell === 'stoneskin') world.removeComponent(hero, 'concentration');
 }
 
 // ── Concentration ─────────────────────────────────────────────────────────────
 
-/** The hero holds this spell (and its zone, -1 for none) by concentration: whatever they held before ends. */
-function concentrate(hero: Player, spell: SpellId, zone: number): void {
+/**
+ * The hero holds this spell by concentration (and what it made: a zone, Dancing Lights' anchor; -1 for none): whatever they
+ * held before ends.
+ */
+export function concentrate(hero: Player, spell: SpellId, zone: number): void {
   endConcentration(hero);
   world.addComponent(hero, 'concentration', { spell, zone });
 }
@@ -135,7 +141,8 @@ export function endConcentration(hero: Player): void {
   const held = hero.concentration;
   if (!held) return;
   const zone = held.zone >= 0 ? world.entity(held.zone) : undefined;
-  if (zone?.zone && !zone.removed) world.addComponent(zone, 'removed', true);
+  // What the spell made goes with it: a zone, or Dancing Lights (their wisps follow their anchor out, systems/DancingLights.ts).
+  if ((zone?.zone || zone?.dancingLights) && !zone.removed) world.addComponent(zone, 'removed', true);
   if (held.spell === 'stoneskin' && hero.buffs) hero.buffs.stoneskin = 0;
   world.removeComponent(hero, 'concentration');
 }
@@ -160,7 +167,7 @@ export function keepConcentration(hero: Player, damage: number): void {
 // ── Zones ─────────────────────────────────────────────────────────────────────
 
 /** The point aimed at, no further from the caster than `reach` (0: on the caster). */
-function aimedWithin(caster: Player, x: number, y: number, reach: number): { x: number; y: number } {
+export function aimedWithin(caster: Player, x: number, y: number, reach: number): { x: number; y: number } {
   const dx = x - caster.position.x;
   const dy = y - caster.position.y;
   const dist = Math.hypot(dx, dy);
@@ -194,7 +201,7 @@ function zoneStrikes(caster: Player, def: SpellDef, foe: Entity, dc: number): vo
     recordSpell(caster, def.id, 'auto', damage);
   }
   if (damage <= 0) return;
-  hitMob(foe, caster, damage, true);
+  hitMob(foe, caster, damage, true, def.damageType);
   splitEnchantment(caster, foe, def.id, damage);
 }
 
@@ -231,6 +238,18 @@ function updateZone(zone: Zone): void {
   if (--z.pulse > 0) return;
   z.pulse = TURN_TICKS;
   pulseZone(zone, caster);
+}
+
+// ── Grease ────────────────────────────────────────────────────────────────────
+
+/**
+ * Grease where the caster aims (within the spell's reach), for its duration: difficult terrain that asks a Dexterity save
+ * against the caster's spell DC of everyone in it now and whoever steps in (systems/Surfaces.ts).
+ */
+export function castGrease(caster: Player, def: SpellDef, targetX: number, targetY: number): void {
+  const at = aimedWithin(caster, targetX, targetY, def.range);
+  const dc = spellcastingFor(characterSheet(caster), def.id).dc;
+  spreadSurface('grease', at.x, at.y, def.radius, world.id(caster) ?? -1, def.durationTicks, dc);
 }
 
 // ── Water ─────────────────────────────────────────────────────────────────────

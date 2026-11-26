@@ -55,6 +55,8 @@ export type CatalogSpell = {
   knight: boolean;
   /** Cast in the game (src/data/spells.json); the others are listed, greyed out, until they are. */
   castable: boolean;
+  /** Kept (its text and rules) but left out of the Skills tab (Friends, Light, Mage Hand, Minor Illusion). */
+  hidden: boolean;
   ritual: boolean;
   castingTime: string;
   /** `feet` and `px` are null where the range is not a distance (sight, unlimited). */
@@ -79,8 +81,11 @@ export type CatalogSpell = {
   classes: Readonly<Partial<Record<string, number>>>;
 };
 
-/** A spell on the quick bar: which, and the level it is cast at. */
-export type QuickBinding = { spell: string; level: number };
+/**
+ * A spell on the quick bar: which, the level it is cast at, and (for a spell whose caster picks its kind of damage,
+ * Chromatic Orb) the damage type chosen when it was bound (rules/DamageChoice.ts).
+ */
+export type QuickBinding = { spell: string; level: number; damageType?: DamageType };
 
 /** What a square the player emptied (a right click on the quick bar) holds: nothing, not even the class's own spell for it. */
 export const UNBOUND = 'unbound';
@@ -159,6 +164,7 @@ function readSpell(id: string, entry: unknown): CatalogSpell {
     school: str(raw.school),
     knight: raw.knight === true,
     castable: isSpellId(id),
+    hidden: raw.hidden === true,
     ritual: rules?.ritual === true,
     castingTime: str(rules?.castingTime) || text('spell.tip.action'),
     range: { text: str(range.text), feet: typeof range.feet === 'number' ? range.feet : null, px: typeof range.px === 'number' ? range.px : null },
@@ -240,7 +246,7 @@ function classSpells(list: SpellList): CatalogSpell[][] {
   const cached = BY_CLASS.get(list);
   if (cached) return cached;
   const levels: CatalogSpell[][] = Array.from({ length: MAX_SPELL_LEVEL + 1 }, () => []);
-  for (const spell of Object.values(CATALOG)) if (learnLevel(list, spell) !== undefined) levels[spell.level].push(spell);
+  for (const spell of Object.values(CATALOG)) if (!spell.hidden && learnLevel(list, spell) !== undefined) levels[spell.level].push(spell);
   for (const spells of levels) spells.sort((a, b) => a.name.localeCompare(b.name));
   BY_CLASS.set(list, levels);
   return levels;

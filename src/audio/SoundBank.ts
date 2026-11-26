@@ -325,6 +325,10 @@ export const SPELL_SOUNDS = {
   spirit_guardians: 'cast_guiding_bolt',
   insect_plague: 'cast_chill_touch',
   create_or_destroy_water: 'cast_ray_of_frost',
+  bursting_sinew: 'cast_chill_touch',
+  dancing_lights: 'cast_guiding_bolt',
+  true_strike: 'cast_vicious_mockery',
+  grease: 'cast_chill_touch',
 } as const satisfies Record<SpellId, SfxName>;
 
 export const SPELL_IMPACTS = {

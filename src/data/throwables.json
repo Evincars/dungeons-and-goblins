@@ -1,0 +1,12 @@
+{
+  "$comment": "Flasks enemies carry and throw at the heroes (src/data/stats.json `throwables`; systems/ThrowSystem.ts), after the D&D 5e Player's Handbook and Baldur's Gate 3. rangeFeet: how far one is thrown. radiusFeet: how wide it splashes where it lands. save and dc: the saving throw everyone in the splash makes. damage and damageType: what the splash deals on a failed save (none on a success). burnSeconds: how long a body that failed burns, taking burnDamage each round (6 s; standing in water puts it out). surface: what it leaves on the floor (systems/Surfaces.ts), surfaceSeconds how long that lasts (0: for good) and surfaceDc the save it asks of whoever enters it (grease: DEX or fall prone). Fire sets grease alight.",
+  "alchemists_fire": {
+    "name": "Alchemist's Fire", "rangeFeet": 60, "radiusFeet": 5, "save": "dexterity", "dc": 10,
+    "damage": "1d4", "damageType": "fire", "burnSeconds": 18, "burnDamage": "1d4",
+    "surface": "fire", "surfaceSeconds": 18, "surfaceDc": 10
+  },
+  "grease_bottle": {
+    "name": "Grease Bottle", "rangeFeet": 60, "radiusFeet": 10, "save": "dexterity", "dc": 12,
+    "surface": "grease", "surfaceSeconds": 60, "surfaceDc": 12
+  }
+}

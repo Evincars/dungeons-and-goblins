@@ -50,6 +50,15 @@ const ICON_NAMES = {
   fireball: 'flaming sphere',
 };
 
+/** Spells the game keeps (their text and rules) but leaves out of the Skills tab: they have no part in play here. */
+const HIDDEN = new Set(['friends', 'light', 'mage_hand', 'minor_illusion']);
+/** The wiki's table gives some spells only their numbers: their description as Baldur's Gate tells it. */
+const TEXTS = {
+  bursting_sinew: 'Explode a fresh corpse, causing it to impale those around it: everyone within 10 feet of it makes a Dexterity '
+    + 'saving throw or takes 1d10 piercing damage. A corpse burnt by fire, acid or radiance cannot be used, and one used is left a '
+    + 'pile of viscera. 60 feet. The damage grows to 2d10 at level 5 and 3d10 at level 10.',
+};
+
 const ENTITIES = { '&amp;': '&', '&#39;': "'", '&#039;': "'", '&quot;': '"', '&nbsp;': ' ', '&lt;': '<', '&gt;': '>' };
 /** The game's pixel font has only Latin-1: curly quotes and dashes become their plain look-alikes. */
 const plain = (html) => html.replace(/<[^>]+>/g, ' ').replace(/&#?\w+;/g, (m) => ENTITIES[m] ?? m)
@@ -106,14 +115,16 @@ for (const row of rows(await page())) {
   spells[id] = {
     name: NAMES[row.name] ?? row.name, level: row.level, school: row.school, concentration: row.concentration,
     classes: classes.map((c) => c.toLowerCase()), knight: learners.includes('Eldritch Knight'), subclasses,
-    book: [BOOK[id], id].find((key) => key && key in book) ?? null, text: row.text, img,
+    book: [BOOK[id], id].find((key) => key && key in book) ?? null, text: TEXTS[id] ?? row.text, img,
+    ...(HIDDEN.has(id) ? { hidden: true } : {}),
   };
 }
 
 const comment = 'Every spell of Baldur\'s Gate 3 the game knows (made by scripts/bg3-spells.mjs from the BG3 wiki): its name, level '
   + '(0: cantrip), school, whether it needs concentration, the classes that learn it (at the hero level their slots of its level open, '
   + 'src/data/spellbook.json casterKinds), knight: on the Eldritch Knight\'s list, the subclasses that learn it, book: its entry in '
-  + 'src/data/spellbook.json (the D&D rules: range, dice, At Higher Levels), text: its in-game description, img: its icon under public/. '
+  + 'src/data/spellbook.json (the D&D rules: range, dice, At Higher Levels), text: its in-game description, img: its icon under public/, '
+  + 'hidden: kept (its text and rules) but left out of the Skills tab. '
   + 'Only the spells in src/data/spells.json can be cast yet; the others show greyed out as not in the game yet.';
 writeFileSync(OUT, `${JSON.stringify({ $comment: comment, spells }, null, 2)}\n`);
 console.log(`wrote ${Object.keys(spells).length} spells to src/data/spell-list.json`);

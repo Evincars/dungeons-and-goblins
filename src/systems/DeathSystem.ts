@@ -18,9 +18,10 @@ import { logLine } from './RollLogSystem';
 import { recordEvent } from './CombatLogSystem';
 import { text } from '../core/texts';
 import { isStanding, leaveBelongings, standingHeroes } from '../game/Fallen';
+import { FRESH_CORPSE_TICKS, layCorpse } from './Corpses';
 
-/** Ticks a dead mob stays on its last death frame before it is cleared away. */
-const CORPSE_LINGER = 60;
+/** Ticks a dead mob stays on its last death frame before it is cleared away: as long as its body is fresh (systems/Corpses.ts). */
+const CORPSE_LINGER = FRESH_CORPSE_TICKS;
 
 /** A destroyed nest is worth this many times its own death points in experience. */
 const NEST_XP_FACTOR = 3;
@@ -137,6 +138,7 @@ function killMob(entity: Entity): void {
     return;
   }
   world.addComponent(entity, 'respawnTicks', clipTicks + CORPSE_LINGER);
+  layCorpse(entity);
   entity.hurtTime = 0;
   entity.attackTime = 0;
 }

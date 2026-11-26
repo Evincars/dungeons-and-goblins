@@ -19,13 +19,18 @@ import { reportRejection } from '../core/errors';
 import { preparesSpells, requestToggleFeature } from '../game/PlayerActions';
 import type { TipTopic } from './InfoTooltip';
 import { PixelLabel } from './PixelText';
-import { castLevelTopic, featTopic, featureTopic, spellTopic } from './SpellTopics';
+import { castLevelTopic, damageChoiceTopic, featTopic, featureTopic, spellTopic } from './SpellTopics';
 import { archetypeName, featName } from '../rules/Names';
 import { FEATS, featBinding, featSpellIds } from '../rules/Feats';
 import type { FeatId } from '../rules/Feats';
 import { passiveFeats } from '../rules/Build';
 import { featureCharges } from '../systems/SchoolSystem';
 import { THEME } from './Theme';
+import { DAMAGE_COLORS } from './TipText';
+import { damageChoices } from '../rules/DamageChoice';
+import { DAMAGE_TYPES } from '../rules/DamageTypes';
+import type { DamageType } from '../rules/DamageTypes';
+import { damageTypeName } from '../rules/Names';
 
 type Rect = { x: number; y: number; w: number; h: number };
 /**
@@ -39,10 +44,13 @@ type Item = { spell?: CatalogSpell; feature?: FeatureDef; feat?: FeatId; locked?
 type Counter = { level: number; label: PixelLabel };
 /** The count of charges left on a feature used by charges (Bladesong), in its box's top right corner. */
 type ChargeTag = { feature: FeatureDef; label: PixelLabel };
-/** One level a clicked spell can be cast at, as a box. */
-type Option = { level: number; rect: Rectangle };
-/** The boxes that open under a clicked spell that can be cast at several levels: one box per level. */
-type Choice = { spell: CatalogSpell; options: Option[] };
+/** One level a clicked spell can be cast at, or one kind of damage it can deal (Chromatic Orb), as a box. */
+type Option = { level: number; damageType?: DamageType; rect: Rectangle };
+/**
+ * The boxes that open under a clicked spell: one per kind of damage when its caster picks one (rules/DamageChoice.ts), then
+ * one per level it can be cast at; `damageType`: the kind already picked, which the level boxes bind it with.
+ */
+type Choice = { spell: CatalogSpell; options: Option[]; box: Box; damageType?: DamageType };
 
 /** A spell's box and the gap between boxes; space round the list; the height of a heading and the space after a section. */
 const BOX = 20;
@@ -58,6 +66,11 @@ const BOX_FILL_ALPHA = 0.35;
 const BOX_EDGE = 0xb4a488;
 const BOX_EDGE_ALPHA = 0.55;
 const CHOICE_FILL_ALPHA = 0.94;
+/** A kind of damage's box is tinted this strongly in its colour, and named by this many letters of it ("ACI"). */
+const TYPE_TINT_ALPHA = 0.22;
+const TYPE_LETTERS = 3;
+/** Kinds of damage are told apart from levels (which run 0–9) by counting from here. */
+const DAMAGE_KEY_BASE = 100;
 const SCROLLBAR_W = 2;
 const SCROLLBAR_MIN_H = 8;
 const LIT_LABEL = 'lit';
@@ -332,6 +345,11 @@ export class SpellsPanel {
     return this.boxes.find((box) => box.rect.contains(x, contentY)) ?? null;
   }
 
+  /** What tells the boxes of a choice apart (a level, or a kind of damage's place in the list): which one is lit. */
+  private optionKey(option: Option): number {
+    return option.damageType ? DAMAGE_KEY_BASE + DAMAGE_TYPES.indexOf(option.damageType) : option.level;
+  }
+
   private optionAt(x: number, y: number): Option | null {
     return this.choice?.options.find((option) => option.rect.contains(x, y)) ?? null;
   }
@@ -340,7 +358,7 @@ export class SpellsPanel {
   hover(x: number, y: number): void {
     const option = this.optionAt(x, y);
     const box = option ? null : this.boxAt(x, y);
-    const level = option?.level ?? -1;
+    const level = option ? this.optionKey(option) : -1;
     if (box === this.hovered && level === this.hoveredLevel) return;
     this.hovered = box;
     this.hoveredLevel = level;
@@ -378,13 +396,30 @@ export class SpellsPanel {
     this.hintSafe = null;
   }
 
-  /** Starts binding the spell at this level, if a square can take it; else the hint says why not. */
-  private bind(spell: CatalogSpell, level: number): void {
+  /** Starts binding the spell at this level (with the kind of damage picked for it), if a square can take it; else the hint says why not. */
+  private bind(spell: CatalogSpell, level: number, damageType?: DamageType): void {
     if (this.player && !roomSomewhere(this.player, spell.id, level)) {
       this.refuse(bindKind({ spell: spell.id, level }));
       return;
     }
-    beginBinding({ spell: spell.id, level });
+    beginBinding(damageType ? { spell: spell.id, level, damageType } : { spell: spell.id, level });
+  }
+
+  /** The levels a spell can be bound at: a spell a feat taught only at its own. */
+  private levelsOf(box: Box, spell: CatalogSpell): readonly number[] {
+    return box.taught || !this.list ? [spell.level] : castLevels(this.list, this.heroLevel, spell);
+  }
+
+  /** A box of the open choice was pressed: a kind of damage goes on to the levels (or binds, with one level), a level binds. */
+  private pickOption(option: Option, choice: Choice): void {
+    this.closeChoice();
+    if (!option.damageType) {
+      this.bind(choice.spell, option.level, choice.damageType);
+      return;
+    }
+    const levels = this.levelsOf(choice.box, choice.spell);
+    if (levels.length === 1) this.bind(choice.spell, levels[0], option.damageType);
+    else this.openChoice(choice.box, levels, option.damageType);
   }
 
   /**
@@ -398,7 +433,8 @@ export class SpellsPanel {
     const first = choice.options[0].rect;
     const last = choice.options[choice.options.length - 1].rect;
     const clear = { x: first.x - GAP, y: first.y - GAP, w: last.x + last.width - first.x + 2 * GAP, h: first.height + 2 * GAP };
-    return { topic: castLevelTopic(choice.spell, option.level, this.heroLevel), clear };
+    const topic = option.damageType ? damageChoiceTopic(choice.spell, option.damageType) : castLevelTopic(choice.spell, option.level, this.heroLevel);
+    return { topic, clear };
   }
 
   /** What the pointer is over tells about itself: a spell box its base numbers, a feature its text (a level box has `levelTipAt`). */
@@ -416,9 +452,7 @@ export class SpellsPanel {
   press(x: number, y: number): boolean {
     const option = this.optionAt(x, y);
     if (option && this.choice) {
-      const spell = this.choice.spell;
-      this.closeChoice();
-      this.bind(spell, option.level);
+      this.pickOption(option, this.choice);
       return true;
     }
     const wasOpen = this.choice !== null;
@@ -431,6 +465,12 @@ export class SpellsPanel {
     if (box.feat) return this.pressFeat(box.feat);
     // Outside a safe room a spell can't be prepared: the hint at the top already says so.
     if (!box.spell || !this.preparing) return true;
+    // A spell whose caster picks its kind of damage (Chromatic Orb): the kinds first.
+    const types = damageChoices(box.spell.id);
+    if (types.length > 0) {
+      this.openTypeChoice(box, types);
+      return true;
+    }
     if (box.taught) {
       this.bind(box.spell, box.spell.level);
       return true;
@@ -527,18 +567,29 @@ export class SpellsPanel {
 
   // ── The level boxes ─────────────────────────────────────────────────────────
 
-  /** A box for each level the spell can be cast at, in a row under the spell's box (above it where there is no room). */
-  private openChoice(box: Box, levels: readonly number[]): void {
-    const w = levels.length * BOX + (levels.length - 1) * GAP + 2 * GAP;
+  /** A box for each level the spell can be cast at (bound with the kind of damage picked, if any). */
+  private openChoice(box: Box, levels: readonly number[], damageType?: DamageType): void {
+    this.openRow(box, levels.length, (i, rect) => ({ level: levels[i], rect }), damageType);
+  }
+
+  /** A box for each kind of damage the spell can deal, each in its colour. */
+  private openTypeChoice(box: Box, types: readonly DamageType[]): void {
+    const level = box.spell?.level ?? 0;
+    this.openRow(box, types.length, (i, rect) => ({ level, damageType: types[i], rect }));
+  }
+
+  /** `count` boxes in a row under the spell's box (above it where there is no room), made by `option`. */
+  private openRow(box: Box, count: number, option: (i: number, rect: Rectangle) => Option, damageType?: DamageType): void {
+    const w = count * BOX + (count - 1) * GAP + 2 * GAP;
     const h = BOX + 2 * GAP;
     const a = this.area;
     const boxTop = box.rect.y - this.scrollY;
     const left = Math.max(a.x, Math.min(box.rect.x - GAP, a.x + a.w - w));
     const below = boxTop + BOX + GAP;
     const top = below + h <= a.y + a.h ? below : Math.max(a.y, boxTop - h - GAP);
-    const options = levels.map((level, i) => ({ level, rect: new Rectangle(left + GAP + i * (BOX + GAP), top + GAP, BOX, BOX) }));
+    const options = Array.from({ length: count }, (_, i) => option(i, new Rectangle(left + GAP + i * (BOX + GAP), top + GAP, BOX, BOX)));
     if (!box.spell) return;
-    this.choice = { spell: box.spell, options };
+    this.choice = { spell: box.spell, options, box, ...(damageType ? { damageType } : {}) };
     this.hoveredLevel = -1;
     this.clearPopup();
     this.popup.addChild(new Graphics().rect(left, top, w, h).fill({ color: THEME.panel, alpha: CHOICE_FILL_ALPHA })
@@ -546,11 +597,15 @@ export class SpellsPanel {
     for (const option of options) this.addOption(option);
   }
 
+  /** A level box ("L2"), or a kind of damage's box: tinted in its colour, with the first letters of its name. */
   private addOption(option: Option): void {
     const r = option.rect;
     const g = new Graphics();
     this.drawBox(g, r);
-    const label = new PixelLabel(text('skills.cast_level', { level: option.level }), { color: THEME.buttonText, align: 'center', shadow: true });
+    const type = option.damageType;
+    if (type) g.rect(r.x + 1, r.y + 1, r.width - 2, r.height - 2).fill({ color: DAMAGE_COLORS[type], alpha: TYPE_TINT_ALPHA });
+    const caption = type ? damageTypeName(type).slice(0, TYPE_LETTERS).toUpperCase() : text('skills.cast_level', { level: option.level });
+    const label = new PixelLabel(caption, { color: type ? DAMAGE_COLORS[type] : THEME.buttonText, align: 'center', shadow: true });
     label.position.set(Math.round(r.x + r.width / 2), Math.round(r.y + (r.height - 8) / 2));
     this.popup.addChild(g, label);
   }
@@ -560,7 +615,7 @@ export class SpellsPanel {
     const choice = this.choice;
     if (!choice) return;
     for (const child of this.popup.children.filter((c) => c.label === LIT_LABEL)) child.destroy();
-    const lit = choice.options.find((option) => option.level === this.hoveredLevel);
+    const lit = choice.options.find((option) => this.optionKey(option) === this.hoveredLevel);
     if (!lit) return;
     const edge = new Graphics().rect(lit.rect.x, lit.rect.y, lit.rect.width, lit.rect.height).stroke({ color: THEME.title, width: 1, alignment: 1 });
     edge.label = LIT_LABEL;

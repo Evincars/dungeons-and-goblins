@@ -11,6 +11,7 @@ import type { ShotReach } from '../entities/ProjectileFactory';
 import { world } from '../world';
 import { attackTempo } from './SwordSystem';
 import { bladeAttack } from './SchoolSystem';
+import { notePressed } from './CloseQuarters';
 
 /**
  * Archery: a player fighting with a ranged weapon (bow, crossbow, sling, darts) shoots at the crosshair on
@@ -42,7 +43,8 @@ function volleySize(player: Player): number {
 /** Looses one arrow at the crosshair, `followedBy` more to follow it in the same volley. */
 function loose(player: Player, followedBy: number): void {
   const aim = player.aimVector ?? { x: 0, y: 1 };
-  createArrow(player.position.x, player.position.y, aim.x, aim.y, characterSheet(player).attack, world.id(player), reachOf(player));
+  const arrow = createArrow(player.position.x, player.position.y, aim.x, aim.y, characterSheet(player).attack, world.id(player), reachOf(player));
+  notePressed(arrow, player);
   player.volley = followedBy;
   // Hold the release pose for a moment (the attack clip plays while attackTime is above the recovery); half as long under Action Surge.
   player.attackTime = ATTACK_RECOVERY + Math.ceil(ARROW_STATS.drawTicks / attackTempo(player));

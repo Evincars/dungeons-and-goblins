@@ -1,5 +1,6 @@
 import type { SpellId } from '../rules/Spells';
 import type { VfxEffectId } from './Vfx';
+import type { ThrowableId } from '../rules/Throwables';
 
 /**
  * Which particle effects (vfx/, made by scripts/vfx-effects.mjs) carry a spell through its whole course — the wizard's
@@ -74,13 +75,23 @@ export const SPELL_VFX: Readonly<Partial<Record<SpellId, SpellVfx>>> = {
   disintegrate: bolt('disintegrate'),
   otilukes_freezing_sphere: { cast: 'ray-of-frost-cast', burst: 'freezing-sphere' },
   sunbeam: { cast: 'sunbeam-cast', burst: 'sunbeam' },
+  // Cantrips and spells of the dungeon's own (src/data/spells.json).
+  bursting_sinew: { cast: 'necrotic-cast', burst: 'bursting-sinew' },
+  true_strike: { aura: 'true-strike' },
+  grease: { burst: 'grease' },
 };
+
+/** The flasks' flight, a trail of particles behind them (systems/ThrowSystem.ts). */
+export const FLASK_FLIGHT = { alchemists_fire: 'alchemists-fire-flight', grease_bottle: 'grease-flight' } as const satisfies Readonly<Record<ThrowableId, VfxEffectId>>;
 
 /**
  * The buffs that keep an aura round the hero for as long as they last (`buffs` ticks left), drawn on every screen from the
- * hero's state: Blade Ward's circling glints, Shield's shimmer, Stoneskin's flecks of stone. Mage Armour, for a whole day,
+ * hero's state: Blade Ward's circling glints, Shield's shimmer, Stoneskin's flecks of stone, True Strike's golden runes
+ * round the eyes until the blow it guides. Mage Armour, for a whole day,
  * shows only as it is cast.
  */
-export const BUFF_AURAS = { bladeWard: 'blade-ward-aura', shield: 'shield-aura', stoneskin: 'stoneskin-aura' } as const satisfies Readonly<Record<string, VfxEffectId>>;
+export const BUFF_AURAS = {
+  bladeWard: 'blade-ward-aura', shield: 'shield-aura', stoneskin: 'stoneskin-aura', trueStrike: 'true-strike-aura',
+} as const satisfies Readonly<Record<string, VfxEffectId>>;
 export type AuraBuff = keyof typeof BUFF_AURAS;
-export const AURA_BUFFS: readonly AuraBuff[] = ['bladeWard', 'shield', 'stoneskin'];
+export const AURA_BUFFS: readonly AuraBuff[] = ['bladeWard', 'shield', 'stoneskin', 'trueStrike'];

@@ -24,10 +24,11 @@ import { text } from '../core/texts';
 import { InfoTooltip } from './InfoTooltip';
 import type { TipTopic } from './InfoTooltip';
 import { PixelLabel } from './PixelText';
-import { featTopic, featureTopic, spellTopic } from './SpellTopics';
+import { featTopic, featureTopic, spellTopic, withChosenDamage } from './SpellTopics';
 import { bindingFeatId } from '../rules/Feats';
-import { featName } from '../rules/Names';
+import { damageTypeName, featName } from '../rules/Names';
 import { THEME } from './Theme';
+import { DAMAGE_COLORS } from './TipText';
 
 /** The squares: this big, this far apart, this far up from the bottom edge (the bar shrinks when the screen is too narrow). */
 const SLOT = 22;
@@ -57,6 +58,8 @@ const BREATH_SWELL = 0.25;
 const PROMPT_GAP = 14;
 /** A square's charges count sits this far down from its top (in its top right corner). */
 const CHARGES_TAG_Y = 2;
+/** The corner that shows the kind of damage chosen for a spell (Chromatic Orb), this long on each side. */
+const TYPE_MARK = 7;
 /** A square of the second row names its key with this before it ("sQ": Shift and Q). */
 const SHIFT_MARK = 's';
 
@@ -72,6 +75,8 @@ type SlotView = {
   keyTag: PixelLabel;
   /** A feature used by charges (Bladesong): how many are left, top right. */
   chargesTag: PixelLabel;
+  /** The kind of damage chosen for the spell (Chromatic Orb): a corner of its colour, bottom left. */
+  typeMark: Graphics;
   charges: number | null;
   /** While it recovers, the time left, in its middle over the shade; and what that was last written for (`timeShown`). */
   timeTag: PixelLabel;
@@ -108,7 +113,7 @@ function showEffect(view: SlotView, def: SpellDef): void {
   reportRejection(requestArt(key).then(show), `Spell icon ${def.id} did not load`, 'render');
 }
 
-const bindingKey = (b: QuickBinding | null): string | null => (b ? `${b.spell}/${b.level}` : null);
+const bindingKey = (b: QuickBinding | null): string | null => (b ? `${b.spell}/${b.level}/${b.damageType ?? ''}` : null);
 
 /** The class feature a binding names, for a hero of this class. */
 function featureOfBinding(binding: QuickBinding | null, castWith: Player['heroClass']): FeatureDef | null {
@@ -144,8 +149,17 @@ function boundTopic(binding: QuickBinding, heroLevel: number, castWith: Player['
   const spell: CatalogSpell = CATALOG[binding.spell];
   const cls = heroClass(castWith);
   const learntAt = isSpellId(binding.spell) ? spellLevelFor(cls, binding.spell) : undefined;
-  const topic = spellTopic(spell, binding.level, heroLevel, learntAt);
+  const topic = withChosenType(spellTopic(spell, binding.level, heroLevel, learntAt), binding);
   return isSpellId(binding.spell) ? topic : { ...topic, detail: [...(topic.detail ?? []), text('hud.slot.not_worked')] };
+}
+
+/** A spell bound with a kind of damage chosen for it (Chromatic Orb) says which, in that kind's colour. */
+function withChosenType(topic: TipTopic, binding: QuickBinding): TipTopic {
+  const type = binding.damageType;
+  if (!type) return topic;
+  const line = { text: text('hud.slot.damage_type', { type: damageTypeName(type) }), color: DAMAGE_COLORS[type] };
+  const chosen = withChosenDamage(topic, type);
+  return { ...chosen, detail: [line, ...(chosen.detail ?? [])] };
 }
 
 /**
@@ -253,7 +267,8 @@ export class QuickBar {
     chargesTag.position.set(SLOT - 1, CHARGES_TAG_Y);
     const timeTag = new PixelLabel('', { color: THEME.title, align: 'center', outline: true });
     timeTag.position.set(SLOT / 2, SLOT / 2 - 4);
-    square.addChild(frame, mask, icon, initials, shade, levelTag, keyTag, chargesTag, timeTag);
+    const typeMark = new Graphics();
+    square.addChild(frame, mask, icon, initials, shade, typeMark, levelTag, keyTag, chargesTag, timeTag);
     square.eventMode = 'static';
     square.cursor = 'pointer';
     square.hitArea = new Rectangle(0, 0, SLOT, SLOT);
@@ -261,7 +276,7 @@ export class QuickBar {
     square.on('pointerout', () => { if (this.hovered === i) this.hovered = -1; claimPointer(square, false); setOverQuickSquare(false); });
     square.on('pointertap', () => this.pick(i));
     square.on('rightclick', () => this.unbind(i));
-    this.slots.push({ square, frame, icon, shade, initials, levelTag, keyTag, chargesTag, charges: null, timeTag, timeShown: 0, bound: null, active: false, locked: false, shadeH: -1 });
+    this.slots.push({ square, frame, icon, shade, initials, levelTag, keyTag, chargesTag, typeMark, charges: null, timeTag, timeShown: 0, bound: null, active: false, locked: false, shadeH: -1 });
     this.row.addChild(square);
     this.drawFrame(this.slots[i]);
   }
@@ -298,6 +313,9 @@ export class QuickBar {
     else if (binding && isSpellId(binding.spell)) showEffect(view, SPELLS[binding.spell]);
     view.initials.text = binding && !pictured ? bindingName(binding, castWith).slice(0, INITIALS).toUpperCase() : '';
     view.levelTag.text = binding && spell && binding.level > spell.level ? text('skills.cast_level', { level: binding.level }) : '';
+    view.typeMark.clear();
+    const type = binding?.damageType;
+    if (type) view.typeMark.poly([1, SLOT - 1 - TYPE_MARK, 1 + TYPE_MARK, SLOT - 1, 1, SLOT - 1]).fill({ color: DAMAGE_COLORS[type] });
   }
 
   /** One square for the player's spell in it: its picture, whether it is picked, learnt and recovering. */

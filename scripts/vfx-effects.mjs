@@ -553,6 +553,93 @@ effect('sunbeam', 2, [
   emitter('sparks', once(0.6, { max: 50, rate: 90, ring: 2.4, filled: true, life: [0.5, 0.9], vmin: [-0.3, 0.8], vmax: [0.3, 2.2], drag: 0.5, size: [0.14, 0.04], colors: C3.sun })),
 ]);
 
+// ── Flasks, grease and fire; the dungeon's own cantrips ──────────────────────
+// Sizes follow src/data/throwables.json and src/data/spells.json (16 px a unit): a flask's splash 48 px round (alchemist's
+// fire) or 96 px (grease); Grease and Bursting Sinew 44 px; fire on the floor about 44 px.
+
+const C4 = {
+  grease: gradient([[0, [0.75, 0.6, 0.3]], [0.5, [0.5, 0.38, 0.16]], [1, [0.3, 0.22, 0.08]]], [[0, 0.95], [0.7, 0.8], [1, 0]]),
+  sheen: gradient([[0, [1, 0.95, 0.75]], [1, [0.85, 0.75, 0.45]]], [[0, 0], [0.3, 0.7], [1, 0]]),
+  gore: gradient([[0, [0.85, 0.12, 0.1]], [0.5, [0.55, 0.04, 0.05]], [1, [0.3, 0.02, 0.03]]], [[0, 1], [0.7, 0.9], [1, 0]]),
+  bone: gradient([[0, [1, 0.97, 0.9]], [1, [0.75, 0.7, 0.6]]], [[0, 1], [0.7, 0.9], [1, 0]]),
+  rot: gradient([[0, [0.3, 0.05, 0.05]], [1, [0.12, 0.02, 0.03]]], [[0, 0], [0.25, 0.5], [1, 0]]),
+  gold: gradient([[0, [1, 1, 0.85]], [0.4, [1, 0.85, 0.4]], [1, [0.85, 0.55, 0.15]]]),
+  goldGlow: gradient([[0, [1, 0.9, 0.6]], [1, [1, 0.7, 0.25]]], [[0, 0], [0.3, 0.4], [1, 0]]),
+  wisp: gradient([[0, [1, 0.98, 0.85]], [0.5, [1, 0.85, 0.5]], [1, [1, 0.6, 0.2]]], [[0, 0.9], [0.6, 0.6], [1, 0]]),
+};
+
+// Alchemist's Fire: a flask of liquid fire tumbling through the air, flames licking off it and drops of fire falling; it
+// shatters in a splash of fire over the whole of its splash, glass glinting, embers and smoke.
+effect('alchemists-fire-flight', 1, [
+  emitter('core', { max: 20, rate: 90, life: [0.05, 0.1], size: [0.4, 0.2], colors: C.fireCore, round: true }),
+  emitter('flames', { max: 40, rate: 60, box: [0.15, 0.15], life: [0.2, 0.4], vmin: [-0.5, 0.4], vmax: [0.5, 1.2], drag: 1, size: [0.32, 0.08], colors: C.flame, round: true }),
+  emitter('drops', { max: 16, rate: 12, box: [0.1, 0.1], life: [0.3, 0.5], vmin: [-0.3, -0.5], vmax: [0.3, 0], gravity: 6, size: [0.12, 0.06], colors: C.hot, round: true }),
+]);
+effect('alchemists-fire', 2, [
+  emitter('flash', once(0.05, { max: 6, rate: 120, life: [0.12, 0.2], size: [2, 0.6], colors: C.fireCore, round: true })),
+  emitter('splash', once(0.1, { max: 80, rate: 800, ring: 1.2, filled: true, life: [0.35, 0.7], vmin: [-3, 0.5], vmax: [3, 4], gravity: 5, drag: 0.8, size: [0.42, 0.1], colors: C.flame, round: true })),
+  emitter('glass', once(0.06, { max: 20, rate: 300, box: [0.2, 0.2], life: [0.3, 0.5], vmin: [-5, 1], vmax: [5, 5], gravity: 9, size: [0.1, 0.05], colors: C.silver })),
+  emitter('embers', once(0.1, { max: 30, rate: 300, ring: 2.6, filled: true, life: [0.6, 1.1], vmin: [-1, 1], vmax: [1, 3], gravity: 3, drag: 0.4, size: [0.12, 0.05], colors: C.ember })),
+  emitter('smoke', once(0.2, { max: 14, rate: 70, ring: 2, filled: true, life: [0.8, 1.3], vmin: [-0.4, 0.6], vmax: [0.4, 1.4], drag: 0.6, size: [0.5, 1.1], colors: C.smoke, round: true, blend: 'alpha' })),
+]);
+// Fire on the floor (while it burns): tongues of flame rising all over it, sparks and a little smoke.
+effect('fire-surface', 1, [
+  emitter('flames', { max: 90, rate: 70, ring: 2.6, filled: true, life: [0.35, 0.7], vmin: [-0.2, 1], vmax: [0.2, 2.4], drag: 0.6, size: [0.5, 0.12], colors: C.flame, round: true }),
+  emitter('sparks', { max: 30, rate: 14, ring: 2.4, filled: true, life: [0.5, 1], vmin: [-0.5, 2], vmax: [0.5, 3.6], gravity: 0.6, drag: 0.4, size: [0.12, 0.04], colors: C.hot }),
+  emitter('smoke', { max: 12, rate: 5, ring: 2.2, filled: true, life: [1, 1.6], vmin: [-0.3, 0.8], vmax: [0.3, 1.6], drag: 0.5, size: [0.6, 1.2], colors: C.smoke, round: true, blend: 'alpha' }),
+]);
+// A body on fire: flames climbing it, embers flying off.
+effect('burning', 1, [
+  emitter('flames', { max: 40, rate: 40, box: [0.7, 1], life: [0.3, 0.55], vmin: [-0.3, 1], vmax: [0.3, 2.2], drag: 0.7, size: [0.4, 0.1], colors: C.flame, round: true }),
+  emitter('embers', { max: 12, rate: 6, box: [0.5, 0.8], life: [0.5, 0.9], vmin: [-0.8, 1.5], vmax: [0.8, 3], gravity: 1, size: [0.1, 0.04], colors: C.ember }),
+]);
+// Grease: a bottle of pale fat tumbling, oozing clumps; it bursts in a slick of brown grease spreading over its splash, a
+// sickly sheen on it. Grease set alight goes up in a whoosh of flame over all of it.
+effect('grease-flight', 1, [
+  emitter('blob', { max: 20, rate: 70, life: [0.06, 0.12], size: [0.38, 0.2], colors: C4.grease, round: true, blend: 'alpha' }),
+  emitter('drips', { max: 16, rate: 14, box: [0.1, 0.1], life: [0.3, 0.6], vmin: [-0.3, -0.4], vmax: [0.3, 0], gravity: 5, size: [0.14, 0.08], colors: C4.grease, round: true, blend: 'alpha' }),
+]);
+effect('grease-splash', 1.8, [
+  emitter('slick', once(0.12, { max: 60, rate: 500, ring: 0.6, life: [0.5, 0.8], radial: 6, drag: 2.5, size: [0.6, 0.9], colors: C4.grease, round: true, blend: 'alpha' })),
+  emitter('clumps', once(0.08, { max: 30, rate: 400, box: [0.3, 0.3], life: [0.4, 0.7], vmin: [-4, 1], vmax: [4, 4.5], gravity: 9, size: [0.24, 0.12], colors: C4.grease, round: true, blend: 'alpha', floor: 0.5 })),
+  emitter('sheen', once(0.5, { max: 24, rate: 50, ring: 3, filled: true, life: [0.4, 0.8], size: [0.16, 0.05], colors: C4.sheen })),
+]);
+effect('grease', 1.8, [
+  emitter('slick', once(0.12, { max: 50, rate: 420, ring: 0.5, life: [0.45, 0.7], radial: 5, drag: 2.5, size: [0.55, 0.85], colors: C4.grease, round: true, blend: 'alpha' })),
+  emitter('sheen', once(0.5, { max: 20, rate: 40, ring: 2.6, filled: true, life: [0.4, 0.8], size: [0.16, 0.05], colors: C4.sheen })),
+]);
+effect('grease-ignite', 1.8, [
+  emitter('flash', once(0.06, { max: 8, rate: 140, ring: 1.5, filled: true, life: [0.15, 0.25], size: [2.2, 0.8], colors: C.fireCore, round: true })),
+  emitter('whoosh', once(0.15, { max: 120, rate: 800, ring: 2.8, filled: true, life: [0.4, 0.8], vmin: [-0.4, 2], vmax: [0.4, 5], drag: 0.8, size: [0.6, 0.15], colors: C.flame, round: true })),
+  emitter('smoke', once(0.3, { max: 20, rate: 70, ring: 2.6, filled: true, life: [1, 1.6], vmin: [-0.4, 1], vmax: [0.4, 2], drag: 0.5, size: [0.7, 1.4], colors: C.smoke, round: true, blend: 'alpha' })),
+]);
+// Bursting Sinew: the corpse bursts — gore thrown out over the whole of it, splinters of bone flying, a dark mist hanging.
+effect('bursting-sinew', 1.8, [
+  emitter('gore', once(0.08, { max: 80, rate: 900, box: [0.4, 0.4], life: [0.35, 0.7], vmin: [-7, -3], vmax: [7, 6], gravity: 8, drag: 1.5, size: [0.26, 0.1], colors: C4.gore, round: true, blend: 'alpha', floor: 0.6 })),
+  emitter('bone', once(0.06, { max: 30, rate: 500, box: [0.3, 0.3], life: [0.3, 0.55], vmin: [-9, -2], vmax: [9, 7], gravity: 6, drag: 1, size: [0.16, 0.06], colors: C4.bone })),
+  emitter('mist', once(0.2, { max: 16, rate: 80, ring: 2.4, filled: true, life: [0.8, 1.3], vmin: [-0.3, 0.2], vmax: [0.3, 0.8], drag: 0.8, size: [0.7, 1.2], colors: C4.rot, round: true, blend: 'alpha' })),
+]);
+// Dancing Lights: a burst of golden motes as they are called up, then each light a warm orb of torchlight, motes drifting
+// off it.
+effect('dancing-lights-cast', 1.4, [
+  emitter('motes', once(0.12, { max: 50, rate: 400, ring: 0.4, life: [0.5, 0.9], radial: 3, orbit: 2, size: [0.18, 0.05], colors: C4.gold })),
+  emitter('glow', once(0.06, { max: 6, rate: 120, life: [0.25, 0.4], size: [2.2, 0.6], colors: C4.goldGlow, round: true })),
+]);
+effect('dancing-light', 1, [
+  emitter('orb', { max: 12, rate: 30, life: [0.2, 0.35], size: [0.55, 0.4], colors: C4.wisp, round: true }),
+  emitter('halo', { max: 6, rate: 8, life: [0.5, 0.8], size: [1.2, 1.4], colors: C4.goldGlow, round: true }),
+  emitter('motes', { max: 14, rate: 7, box: [0.3, 0.3], life: [0.5, 0.9], vmin: [-0.4, -0.2], vmax: [0.4, 0.6], drag: 0.5, size: [0.1, 0.03], colors: C4.gold }),
+]);
+// True Strike: golden runes of insight flaring round the eyes as it is cast (and again as the blow it guides is struck);
+// while it lasts, a faint ring of them circles the head.
+effect('true-strike', 1.2, [
+  emitter('runes', once(0.08, { max: 30, rate: 500, ring: 0.9, life: [0.35, 0.55], orbit: 3, radial: -1, size: [0.2, 0.05], colors: C4.gold })),
+  emitter('flash', once(0.05, { max: 6, rate: 120, life: [0.15, 0.25], size: [1.2, 0.4], colors: C4.goldGlow, round: true })),
+]);
+effect('true-strike-aura', 1, [
+  emitter('runes', { max: 20, rate: 14, ring: 0.8, at: [0, 0.8], life: [0.5, 0.8], orbit: 2.5, size: [0.12, 0.03], colors: C4.gold }),
+]);
+
 // Effects no longer made are dropped from the project.
 for (const file of readdirSync(OUT)) {
   if (file.endsWith('.json') && !written.has(file)) unlinkSync(new URL(file, OUT));

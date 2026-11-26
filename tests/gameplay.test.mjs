@@ -17,6 +17,7 @@ const { DungeonBuilder } = await load('level/generators/DungeonBuilder');
 const { DEFAULT_CONFIG } = await load('level/generators/DungeonConfig');
 const { createPlayer } = await load('entities/PlayerFactory');
 const { createMob } = await load('entities/MobFactory');
+const MonstersModule = await load('rules/Monsters');
 const { nearby, beginPerception, Sense } = await load('ai/perception/spatial');
 const { canSee, spotPlayer } = await load('ai/perception/sight');
 const { mobStepCosts, mobRoute } = await load('ai/perception/navigation');
@@ -91,8 +92,11 @@ function wallRect(level, x0, y0, x1, y1) {
 /** Facing enum for a unit heading: north, east, south, west. */
 const facingOf = ({ x, y }) => (Math.abs(x) > Math.abs(y) ? (x > 0 ? 1 : 3) : (y > 0 ? 2 : 0));
 
+/** An enemy standing on a tile, with the first melee weapon of its kind (no bow, no flask to throw: the same every run). */
 function mobAt(level, type, tx, ty, heading = { x: 1, y: 0 }) {
   const mob = createMob(level, type, centre(tx), centre(ty));
+  mob.mobWeapon = MonstersModule.MONSTERS[type].weapons[0];
+  world.removeComponent(mob, 'mobThrowable');
   mob.aimVector = { ...heading };
   mob.facing = facingOf(heading);
   return mob;
@@ -1375,7 +1379,7 @@ test('every blow is rolled and shown over the attacker: hits hurt, misses do not
   assert.deepEqual([player.rollLog.at(-1).text, player.rollLog.at(-1).tone], ['4 dmg', 'damage']);
 });
 
-test('a pack spreads round the player instead of piling up on one side, and every one of them strikes', async () => {
+test('a pack spreads round the player: three press in from every side and strike, the rest wait their turn a little way off', async () => {
   const { updateCombatTimers } = await load('systems/CombatSystem');
   const level = arena(16, 12);
   const player = playerAt(9, 6);
@@ -1388,9 +1392,25 @@ test('a pack spreads round the player instead of piling up on one side, and ever
     updateCombatTimers();
     updateContactDamage(level);
   }
-  pack.forEach((mob, i) => assert.ok(mob.rollLog?.length, `goblin ${i} got to strike`));
+  const { MELEE_SLOTS, WAIT_RADIUS } = C;
+  const struck = pack.filter((mob) => mob.rollLog?.length);
+  assert.equal(struck.length, MELEE_SLOTS, 'as many strike as there are places round the hero');
   const quarter = (m) => (((Math.round(Math.atan2(m.position.y - player.position.y, m.position.x - player.position.x) / (Math.PI / 2))) % 4) + 4) % 4;
-  assert.ok(new Set(pack.map(quarter)).size >= 3, 'they came at the player from three sides or more');
+  assert.ok(new Set(struck.map(quarter)).size >= 3, 'they came at the player from three sides');
+  const waiting = pack.filter((mob) => !mob.rollLog?.length);
+  for (const mob of waiting) {
+    const d = Math.hypot(mob.position.x - player.position.x, mob.position.y - player.position.y);
+    assert.ok(Math.abs(d - WAIT_RADIUS) < TILE_WIDTH, `a waiting goblin holds off round the fight (${Math.round(d)} px)`);
+  }
+  // One of those pressing in falls: a waiting one steps in to take its place.
+  world.remove(struck[0]);
+  for (let tick = 601; tick <= 900; tick++) {
+    tickWorld(level, tick);
+    for (const mob of pack) mob.ai.lastSeenTick = tick;
+    updateCombatTimers();
+    updateContactDamage(level);
+  }
+  assert.ok(waiting.some((mob) => mob.rollLog?.length), 'a waiting goblin stepped in and struck');
 });
 
 test('an enemy that touches the player rolls against their Armor Class, and the roll shows over its head', () => {
@@ -6140,12 +6160,12 @@ test('Magic Initiate and Spell Sniper teach the spells picked with them, bound a
   hero.playerStats.level = 4;
   const build = hero.build;
   const cleric = FeatPicks.pickOptions(FeatClasses.wizard, 'magic_initiate_cleric');
-  assert.deepEqual(FeatPicks.picksWanted('magic_initiate_cleric', cleric), { cantrip: 1, spell: 1, weapon: 0, element: 0 }, 'the one cleric cantrip the game casts yet');
+  assert.deepEqual(FeatPicks.picksWanted('magic_initiate_cleric', cleric), { cantrip: 2, spell: 1, weapon: 0, element: 0 }, 'the two cleric cantrips the game casts: Sacred Flame and Bursting Sinew');
   assert.ok(cleric.some((o) => o.id === 'guiding_bolt' && o.open));
   assert.ok(cleric.some((o) => o.id === 'bless' && !o.open), 'a spell not in the game yet is greyed out');
   assert.equal(FeatBuild.takeImprovement(FeatClasses.wizard, build, 4, { feat: 'magic_initiate_cleric' }), false, 'its picks are needed');
   assert.equal(FeatBuild.takeImprovement(FeatClasses.wizard, build, 4, { feat: 'magic_initiate_cleric', picks: ['fire_bolt', 'guiding_bolt'] }), false, 'from the cleric list only');
-  assert.equal(FeatBuild.takeImprovement(FeatClasses.wizard, build, 4, { feat: 'magic_initiate_cleric', picks: ['sacred_flame', 'guiding_bolt'] }), true);
+  assert.equal(FeatBuild.takeImprovement(FeatClasses.wizard, build, 4, { feat: 'magic_initiate_cleric', picks: ['sacred_flame', 'bursting_sinew', 'guiding_bolt'] }), true);
   const cantrips = ['fire_bolt', 'ray_of_frost', 'acid_splash', 'chill_touch', 'poison_spray', 'shocking_grasp'];
   const limit = Schools.bindLimit(4, 0);
   cantrips.slice(0, limit).forEach((spell, slot) => assert.equal(bindSpell(hero, slot, spell, 0), true));
@@ -6851,7 +6871,7 @@ test('a spell cast on oneself shows in particles alone (no halo of library art);
   assert.deepEqual(sent, ['blade-ward', 'shield', 'mage-armor'], 'each flashes up once, in its own particles');
   assert.equal(world.entities.filter((e) => e.fx).length, 0, 'and no library halo or effect is spawned with them');
   assert.ok(wizard.buffs.bladeWard > 0 && wizard.buffs.shield > 0, 'their auras show while these last');
-  assert.deepEqual(Object.keys(BUFF_AURAS).sort(), ['bladeWard', 'shield', 'stoneskin'], 'Mage Armour, for a whole day, keeps none; Stoneskin, for a minute, does');
+  assert.deepEqual(Object.keys(BUFF_AURAS).sort(), ['bladeWard', 'shield', 'stoneskin', 'trueStrike'], 'Mage Armour, for a whole day, keeps none; Stoneskin and True Strike, while they last, do');
   assert.equal(SPELL_VFX.cloud_of_daggers.zone, 'cloud-of-daggers');
 
   sent.length = 0;
@@ -6901,4 +6921,241 @@ test('the level panel tells every kind of pick by its colour and names it first 
   const topic = withKind({ title: 'Fire Bolt', body: '…', detail: ['Evocation cantrip'] }, 'cantrip');
   assert.deepEqual(topic.detail[0], { text: 'Cantrip', color: PICK_KIND_COLORS.cantrip }, 'the kind comes first, in its colour');
   assert.equal(topic.detail[1], 'Evocation cantrip', 'the rest follows');
+});
+
+// ── Close quarters, skirmishers, flasks, grease and fire, the dungeon's cantrips ───────────────────────────────────────────
+
+const CloseQuarters = await load('systems/CloseQuarters');
+const Surfaces = await load('systems/Surfaces');
+const Throw = await load('systems/ThrowSystem');
+const Corpses = await load('systems/Corpses');
+const Lights = await load('systems/DancingLights');
+const Lasting = await load('systems/LastingSpells');
+const { THROWABLES } = await load('rules/Throwables');
+/** Every d20 a 1 (every save fails), every other die its top face. */
+const SURE_FAIL = (sides) => (sides === 20 ? 1 : sides);
+
+test('a ranged attack with a hostile creature within 5 feet is at disadvantage; a melee spell attack is not', () => {
+  const level = arena(12, 8);
+  const archer = playerAt(4, 4);
+  const goblin = mobAt(level, 'goblin', 5, 4);
+  beginPerception();
+  assert.equal(CloseQuarters.pressedInMelee(archer), true, 'a goblin at arm\'s length presses the shooter');
+  assert.equal(CloseQuarters.pressedInMelee(archer, 'shocking_grasp'), false, 'a melee spell attack is made at arm\'s length anyway');
+  const shot = { life: 30, team: 0, attack: { attackBonus: 5, damage: { count: 1, sides: 8, bonus: 0 }, mode: 'normal' }, pressed: true };
+  assert.equal(CloseQuarters.shotAttack(shot).mode, 'disadvantage');
+  assert.equal(CloseQuarters.shotAttack({ ...shot, pressed: false }).mode, 'normal');
+  goblin.position.x = centre(9);
+  beginPerception();
+  assert.equal(CloseQuarters.pressedInMelee(archer), false, 'nobody near: a clean shot');
+  assert.equal(CloseQuarters.pressedInMelee(goblin), false);
+  archer.position.x = centre(8.6);
+  assert.equal(CloseQuarters.pressedInMelee(goblin), true, 'and an enemy archer is pressed by a hero beside it');
+});
+
+test('an enemy archer keeps its distance: it backs off from a hero who comes close, and holds to shoot from further off', async () => {
+  const { isBackingOff } = await load('ai/execution/skirmish');
+  const { engagementOf } = await load('ai/decision/engagement');
+  const level = arena(24, 10);
+  const hero = playerAt(10, 5);
+  hero.godMode = true;
+  const archer = mobAt(level, 'goblin', 11, 5);
+  archer.mobWeapon = 'shortbow';
+  engage(archer, hero, 0);
+  tickWorld(level, 1);
+  assert.equal(engagementOf(archer, 1), 'skirmish', 'a bow fights from afar');
+  assert.ok(isBackingOff(archer), 'too close to shoot well: it backs off');
+  for (let tick = 2; tick <= 240; tick++) {
+    tickWorld(level, tick);
+    archer.ai.lastSeenTick = tick;
+  }
+  const d = Math.hypot(archer.position.x - hero.position.x, archer.position.y - hero.position.y);
+  assert.ok(d >= C.SKIRMISH_MIN, `it got its distance (${Math.round(d)} px)`);
+  assert.equal(isBackingOff(archer), false, 'and holds there to shoot');
+});
+
+test('a waiting enemy goes for another hero with room round them rather than piling on one', () => {
+  const level = arena(30, 12);
+  const first = playerAt(6, 6);
+  const second = playerAt(17, 6);
+  first.godMode = second.godMode = true;
+  const pack = [[3, 5], [3, 6], [3, 7], [4, 6], [12, 6]].map(([x, y]) => mobAt(level, 'goblin_grunt', x, y));
+  for (const mob of pack) engage(mob, first, 0);
+  for (let tick = 1; tick <= C.RETARGET_TICKS * 3; tick++) {
+    tickWorld(level, tick);
+    for (const mob of pack) if (mob.ai.targetId === world.id(first)) mob.ai.lastSeenTick = tick;
+  }
+  assert.ok(pack.some((mob) => mob.ai.targetId === world.id(second)), 'one of those waiting turned to the second hero');
+  assert.ok(pack.filter((mob) => mob.ai.targetId === world.id(first)).length <= C.MELEE_SLOTS + 1);
+});
+
+test('Alchemist\'s Fire: the splash burns and sets alight whoever fails the save; the floor burns on; water puts a burning hero out', () => {
+  const level = arena(14, 8);
+  const hero = playerAt(8, 4);
+  const goblin = mobAt(level, 'goblin_grunt', 3, 4);
+  beginPerception();
+  useDieRoller(SURE_FAIL);
+  const before = hero.health.current;
+  Throw.land('alchemists_fire', hero.position.x, hero.position.y, world.id(goblin));
+  assert.ok(hero.health.current < before, 'the splash burned the hero');
+  assert.ok(hero.burning?.ticks > 0, 'and set them alight');
+  const fire = world.entities.find((e) => e.surface?.kind === 'fire');
+  assert.ok(fire && fire.glow, 'the floor burns, lighting the dark');
+  assert.equal(fire.surface.ticks, THROWABLES.alchemists_fire.surfaceTicks);
+  const hurt = hero.health.current;
+  hero.position.x = centre(12);
+  hero.burning.pulse = 1;
+  Surfaces.updateSurfaces();
+  assert.ok(hero.health.current < hurt, 'burning, they burn on');
+  Lasting.createPuddle(hero, hero.position.x, hero.position.y, 20);
+  Surfaces.updateSurfaces();
+  assert.equal(hero.burning, undefined, 'water puts it out');
+});
+
+test('a thrown flask flies in an arc to where it was thrown and bursts there', () => {
+  const level = arena(14, 8);
+  const goblin = mobAt(level, 'goblin_grunt', 3, 4);
+  goblin.mobThrowable = { item: 'grease_bottle', count: 1 };
+  Throw.throwFlask(goblin, THROWABLES.grease_bottle, centre(9), centre(4));
+  assert.equal(goblin.mobThrowable.count, 0, 'thrown: no flask left');
+  const flask = world.entities.find((e) => e.thrown);
+  let peak = 0;
+  for (let t = 0; t < flask.thrown.total; t++) {
+    Throw.updateThrows(level, 1);
+    peak = Math.max(peak, flask.yOffset);
+  }
+  assert.ok(peak > 20, 'it rose in an arc');
+  assert.ok(flask.removed, 'and burst where it landed');
+  assert.ok(world.entities.some((e) => e.surface?.kind === 'grease' && Math.abs(e.position.x - centre(9)) < 1), 'leaving grease there');
+});
+
+test('grease: half pace in it, a save or a fall on stepping in; fire sets it alight', () => {
+  const level = arena(14, 8);
+  const hero = playerAt(3, 4);
+  useDieRoller(SURE_FAIL);
+  const grease = Surfaces.spreadSurface('grease', centre(8), centre(4), 40, -1, 600, 12);
+  assert.equal(Surfaces.terrainPace(centre(8), centre(4)), 0.5, 'difficult terrain');
+  assert.equal(Surfaces.terrainPace(centre(3), centre(4)), 1);
+  Surfaces.updateSurfaces();
+  assert.equal(hero.knockedDown, undefined, 'outside it, nothing happens');
+  hero.position.x = centre(8);
+  beginPerception();
+  Surfaces.updateSurfaces();
+  assert.ok(hero.knockedDown > 0, 'stepping in, the hero failed the save and slipped');
+  assert.ok(Surfaces.isDown(hero));
+  for (let t = 0; t < Surfaces.SLIP_TICKS; t++) Surfaces.updateSurfaces();
+  assert.equal(hero.knockedDown, undefined, 'and is up again a moment later');
+  Surfaces.igniteGrease(centre(8), centre(4), 8, -1);
+  assert.equal(grease.surface.kind, 'fire', 'fire took the grease');
+  assert.ok(grease.glow, 'and it burns, lighting the dark');
+});
+
+test('the Grease spell lays grease where the caster aims, asking saves against the caster\'s spell DC', () => {
+  const wizard = playerAt(3, 4, 'wizard');
+  Lasting.castGrease(wizard, SPELLS.grease, centre(6), centre(4));
+  const grease = world.entities.find((e) => e.surface?.kind === 'grease');
+  assert.ok(grease, 'grease where aimed');
+  assert.equal(grease.surface.ticks, SPELLS.grease.durationTicks, 'for a minute');
+  assert.equal(grease.surface.dc, spellcastingFor(sheetOf(wizard), 'grease').dc);
+});
+
+test('Bursting Sinew bursts a fresh corpse among the foes near it; a corpse burnt by fire will not do', () => {
+  const level = arena(14, 8);
+  const cleric = casterAt(2, 4, 'cleric', 0);
+  boundOn(cleric, 0, 'bursting_sinew');
+  const body = mobAt(level, 'goblin_grunt', 6, 4);
+  body.health.current = 0;
+  Corpses.layCorpse(body);
+  const near = mobAt(level, 'orc', 6.6, 4);
+  world.addComponent(cleric, 'aimWorld', { x: body.position.x, y: body.position.y });
+  cleric.aimWorld.x = body.position.x;
+  useDieRoller(SURE_FAIL);
+  const before = near.health.current;
+  cast(level, cleric);
+  assert.ok(near.health.current < before, 'the orc beside it was impaled');
+  assert.ok(body.removed, 'the corpse is used up');
+  const burnt = mobAt(level, 'goblin_grunt', 6, 4);
+  burnt.lastDamageType = 'fire';
+  assert.equal(Corpses.fitCorpse(burnt), false, 'burnt to a husk');
+  assert.equal(Corpses.fitCorpse({ mobType: 'shade' }), false, 'a shadow leaves no body');
+  assert.equal(Corpses.fitCorpse({ mobType: 'orc', lastDamageType: 'slashing' }), true);
+});
+
+test('Dancing Lights: four lights round the caster, or sent off, where foes that fail a Wisdom save are drawn to them', () => {
+  const level = arena(20, 10);
+  const wizard = playerAt(3, 5, 'wizard');
+  Lights.castDancingLights(wizard, SPELLS.dancing_lights, wizard.position.x, wizard.position.y);
+  const wisps = () => world.entities.filter((e) => e.wisp && !e.removed);
+  assert.equal(wisps().length, 4, 'four lights');
+  assert.ok(wisps().every((w) => w.glow?.radius > 0), 'each sheds light');
+  const anchor = world.entities.find((e) => e.dancingLights);
+  assert.equal(anchor.dancingLights.orbit, true, 'aimed at the caster: they circle them');
+  assert.equal(wizard.concentration.spell, 'dancing_lights', 'held by concentration');
+  const goblin = mobAt(level, 'goblin_grunt', 12, 5);
+  beginPerception();
+  useDieRoller(SURE_FAIL);
+  Lights.castDancingLights(wizard, SPELLS.dancing_lights, centre(11), centre(5));
+  Lights.updateDancingLights(1);
+  Lights.updateDancingLights(2);
+  assert.ok(anchor.removed, 'the lights called before went out');
+  assert.equal(wisps().length, 4);
+  assert.ok(goblin.entranced !== undefined, 'the goblin failed its save and is drawn to them');
+  assert.equal(Lights.followLights(goblin), true, 'it drifts over to stare instead of thinking for itself');
+  Lasting.endConcentration(wizard);
+  Lights.updateDancingLights(3);
+  assert.equal(wisps().length, 0, 'concentration lost: the lights go out');
+  assert.equal(goblin.entranced, undefined, 'and the goblin comes to');
+});
+
+test('True Strike gives the next attack roll advantage, and is spent on it', () => {
+  const wizard = playerAt(3, 4, 'wizard');
+  Lasting.castBuff(wizard, SPELLS.true_strike);
+  assert.ok(wizard.buffs.trueStrike > 0);
+  const target = playerAt(4, 4);
+  const modes = [];
+  useDieRoller((sides) => { modes.push(sides); return sides === 20 ? 10 : 1; });
+  const outcome = Strike.strike(target, { attackBonus: 0, damage: { count: 1, sides: 4, bonus: 0 }, mode: 'normal' }, wizard);
+  assert.equal(modes.filter((s) => s === 20).length, 2, 'two d20s rolled: advantage');
+  assert.equal(wizard.buffs.trueStrike, 0, 'spent');
+  assert.ok(outcome);
+});
+
+test('Chromatic Orb: its kind of damage is chosen when it is bound, kept on the quick bar and cast with it', async () => {
+  const Choice = await load('rules/DamageChoice');
+  assert.deepEqual([...Choice.damageChoices('chromatic_orb')].sort(), ['acid', 'cold', 'fire', 'lightning', 'poison', 'thunder']);
+  assert.deepEqual([...Choice.damageChoices('fire_bolt')], [], 'a spell of one kind offers none');
+  const wizard = createPlayer(0, 0, 'wizard');
+  wizard.inSafeRoom = true;
+  assert.equal(bindSpell(wizard, 0, 'chromatic_orb', 1, 'fire'), true);
+  assert.deepEqual(Spellbook.quickBinding(wizard, 0), { spell: 'chromatic_orb', level: 1, damageType: 'fire' });
+  assert.equal(bindSpell(wizard, 1, 'chromatic_orb', 1, 'radiant'), false, 'not a kind it offers');
+  assert.equal(bindSpell(wizard, 1, 'fire_bolt', 0, 'cold'), false, 'nor on a spell without a choice');
+  assert.equal(Choice.withDamageType(SPELLS.chromatic_orb, 'cold').damageType, 'cold');
+  assert.equal(Choice.withDamageType(SPELLS.fire_bolt, 'cold').damageType, 'fire');
+  assert.ok(validCommand({ kind: 'bind_spell', slot: 0, spell: 'chromatic_orb', level: 1, damageType: 'thunder' }));
+  assert.equal(validCommand({ kind: 'bind_spell', slot: 0, spell: 'chromatic_orb', level: 1, damageType: 'holy' }), false);
+});
+
+test('monster defences are read from the SRD blocks and worked out, ready for play', async () => {
+  const R = await load('rules/Resistances');
+  assert.equal(R.monsterResponse('skeleton', 'bludgeoning', false), 'vulnerable');
+  assert.equal(R.monsterResponse('skeleton', 'poison', false), 'immune');
+  assert.equal(R.monsterResponse('shade', 'radiant', true), 'vulnerable');
+  assert.equal(R.monsterResponse('ghost_wizard', 'necrotic', true), 'immune');
+  assert.equal(R.monsterResponse('grick', 'slashing', false), 'resistant', 'a nonmagical blade');
+  assert.equal(R.monsterResponse('grick', 'slashing', true), 'normal', 'a magical one cuts true');
+  assert.equal(R.monsterResponse('orc', 'fire', false), 'normal');
+  assert.deepEqual([R.adjustDamage(9, 'immune'), R.adjustDamage(9, 'resistant'), R.adjustDamage(9, 'vulnerable'), R.adjustDamage(9, 'normal')], [0, 4, 18, 9]);
+  assert.equal(R.monsterDamageTaken('skeleton', 5, 'bludgeoning', false), 10);
+});
+
+test('Friends, Light, Mage Hand and Minor Illusion are kept but left out of the Skills tab; the new cantrips are cast', () => {
+  const hidden = ['friends', 'light', 'mage_hand', 'minor_illusion'];
+  for (const id of hidden) assert.ok(Spellbook.CATALOG[id].hidden, `${id} is kept`);
+  const listed = Spellbook.listedSpells('wizard', 12).flat().map((s) => s.id);
+  for (const id of hidden) assert.equal(listed.includes(id), false, `${id} is not listed`);
+  for (const id of ['bursting_sinew', 'dancing_lights', 'true_strike', 'grease']) {
+    assert.ok(listed.includes(id), `${id} is listed`);
+    assert.ok(Spellbook.CATALOG[id].castable, `${id} is cast`);
+  }
 });

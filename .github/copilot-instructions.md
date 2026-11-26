@@ -123,7 +123,9 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   made by `scripts/mine-sheets.py` into `public/caves2/mines-terrain.png` (keep the two in step)); the slanted wall pieces of the catacombs' and the castle's tilesets in `src/level/SlantTiles.ts`,
   made by `scripts/iso-sheets.py` into each tileset's `mainlevbuild-isometric.png` copy (keep the two in step); the Wizard's bind table, Bladesong's blades
   and the undead's stats in `src/rules/Schools.ts`, the school features' timings in `src/systems/SchoolSystem.ts`; enemy AI knobs (sight, squad sizes, flanking, trail
-  following) in `src/ai/constants.ts`; the D&D weapons in `src/data/weapons.json`
+  following, how many press in hand to hand at once and where the rest wait, the distance skirmishers keep) in `src/ai/constants.ts`;
+  the flasks enemies throw (Alchemist's Fire, the Grease Bottle: range, splash, save, damage, burning, what they leave on
+  the floor) in `src/data/throwables.json` (`rules/Throwables.ts`); the D&D weapons in `src/data/weapons.json`
   (every weapon of both D&D tables: damage, sort, properties, range in feet (every distance the game tells or reads is in feet, `rules/Scale.ts`), versatile dice, price, weight, and its pictures in
   `public/weapons`, one found weapon each, no two kinds sharing a picture) and the armour and robe in `src/data/armors.json` (AC, DEX
   cap, the STR needed to put it on at all, stealth, price, weight; a suit's picture a column of `public/armors.png`, whose first four
@@ -143,7 +145,9 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   school, Passive Feats and feat spells, then cantrips and each spell level; only `worked` feats are offered, `OFFERED_FEATS`); enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`
   (with which kinds carry a bow or crossbow and how often, `ranged`, and which cast spells as what class and with which
   ability, `spellcaster`: their spells are the heroes' own from `spells.json`, cast at the party's level, so a change to a
-  spell changes it for both); how hard a level is (more and tougher enemies the deeper it lies and in direct proportion
+  spell changes it for both; which carry a flask to throw and how often, `throwables`; and their SRD resistances,
+  immunities and vulnerabilities, `defences`, read by `rules/Resistances.ts` `monsterResponse` — prepared, not applied in
+  play yet: `hitMob` keeps the kind of the last blow, `lastDamageType`); how hard a level is (more and tougher enemies the deeper it lies and in direct proportion
   to the heroes playing, which kinds turn up at which depth) in `src/game/Difficulty.ts`;
   castable spells (dice, recovery, save, area and its shape — sphere, cube, cone or line (Lightning Bolt), `rules/SpellArea.ts`, shared by the heroes, the enemies and the aim guide — effect; a buff, zone or puddle's duration and concentration) in
   `src/data/spells.json`; every spell of Baldur's Gate 3 the game knows (name, level, school, the classes that learn it,
@@ -197,8 +201,12 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   whether to go deeper or end the run; deeper needs all of them, and whoever is outside then is left behind, dead. Its
   lever (`LeverSystem.ts`, `lever.exit`) drops the room's portcullis 5 s after one pull, for good (`DoorSystem.ts`, `door.exit`).
 - `src/ai/` — enemy AI: `perception/` (rbush index, sight, player trails) → `decision/` (Yuka
-  `StateMachine` states, squad tactics by Yuka `Think`, each squad member's place in a ring round its target,
-  `surround.ts`) → `execution/` (Yuka steering).
+  `StateMachine` states, squad tactics by Yuka `Think`, who in a squad presses in, waits or skirmishes, `engagement.ts`: only
+  `MELEE_SLOTS` (3) of a squad fight a hero hand to hand, the rest hold off at `WAIT_RADIUS` and step in as a place frees,
+  or turn to another hero they see with room round them; each one pressing in has its place in a ring round its target,
+  `surround.ts`) → `execution/` (Yuka steering; `skirmish.ts`: a bow, a crossbow or a caster keeps its target between
+  `SKIRMISH_MIN` and `SKIRMISH_MAX`, backing off from a hero who comes close, and stands to shoot between them; one waiting
+  holds off facing the fight).
 - `src/level/` — `Level` tiles, `TileGraph`/`TileSearch` (Yuka graph search), procedural generation
   (`generators/`: BSP rooms, some with a corner or two cut back into the wall, squared off or on the slant, each dressed by
   theme — crypt, storeroom or plain hall with a colonnade and floor grates — with brick or cobblestone walls,
@@ -413,6 +421,25 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   has no icon for shows another feature's of a like name, each borrowed icon shown by that feature alone
   (`scripts/feature-icons.py` `BORROWED`). The exit room has one campfire, in its middle, and a candelabra either side of
   its gate inside it (its lever beside the upper one).
+- A ranged attack (a bow, a crossbow, a ranged spell attack, the heroes' or the enemies') made with a hostile creature
+  within 5 feet is at disadvantage (`rules/CloseQuarters.ts`; `systems/CloseQuarters.ts` marks the projectile `pressed` as it
+  leaves the hands); a melee spell attack is not. A spell whose caster picks its kind of damage (Chromatic Orb) is bound with
+  the kind chosen in the Skills tab (a row of coloured boxes before the level boxes, `rules/DamageChoice.ts`), kept in the
+  binding (`damageType`, a coloured corner on its quick-bar square) and cast with it.
+- Enemies carry a flask now and then (`mobThrowable`) and throw it (`systems/ThrowSystem.ts`, an arc, `thrown`) at a hero
+  they see, from beyond arm's reach, where most heroes stand: Alchemist's Fire splashes fire (a DEX save, or the body takes
+  it and burns, `burning`, a round at a time until it burns out or stands in water) and leaves the floor burning; the Grease
+  Bottle leaves grease. Grease (the Grease spell too) is difficult terrain (half pace) and slick: a DEX save on appearing
+  and on stepping in, or the body slips prone (`knockedDown` for a hero, the foe's `status.prone`: it neither moves nor its
+  AI acts; blows at it within 5 feet have advantage, its own at disadvantage); fire takes grease (`igniteGrease`: fire spells,
+  fiery bolts, alchemist's fire) (`systems/Surfaces.ts`; the puddle art's frames 2 and 3, flames in particles).
+- A fallen foe's body lies there fresh for `FRESH_CORPSE_TICKS` (`systems/Corpses.ts`): Bursting Sinew (`kind: corpse`)
+  bursts the one nearest the aim — everyone near makes a DEX save or is impaled — unless fire, acid or radiance burnt it or
+  it was a specter's or a shadow's. Dancing Lights (`kind: lights`, `systems/DancingLights.ts`) are four glowing `wisp`s round
+  an anchor held by concentration, circling the caster when cast at them, else hovering where sent, where foes failing a
+  WIS save are drawn to them (`entranced`) until hurt or a hero comes close. True Strike is a buff (`buffs.trueStrike`) spent
+  on the next attack roll for advantage (`systems/Strike.ts`). Friends, Light, Mage Hand and Minor Illusion are kept in
+  `spell-list.json` (`hidden`) but left out of the Skills tab.
 - Enemies with a bow or crossbow and enemy spellcasters (`systems/EnemyRangedSystem.ts`) shoot and cast only at a hero
   in sight whose screen shows them (never from off-screen), stand to do it, lead a moving target and pick the spell that
   harms most (a burst by how many heroes it catches); their shots are the heroes' bolts and arrows on the enemies' side

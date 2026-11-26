@@ -12,6 +12,8 @@ import type { AttackProfile } from './rules/Combat';
 import type { Dice } from './rules/Dice';
 import type { SpellId } from './rules/Spells';
 import type { QuickBinding } from './rules/Spellbook';
+import type { ThrowableId } from './rules/Throwables';
+import type { DamageType } from './rules/DamageTypes';
 import type { EffectColour, EffectShape } from './assets/Effects';
 
 export const enum Team { Neutral = 0, Player = 1, Mob = 2 }
@@ -208,8 +210,12 @@ export function isTransmuterStone(value: unknown): value is TransmuterStone {
   return TRANSMUTER_STONES.some((stone) => stone === value);
 }
 
-/** What a puddle on the floor is (systems/LastingSpells.ts): water, or water a thunder spell has charged with lightning. */
-export const SURFACE_KINDS = ['water', 'shock'] as const;
+/**
+ * What covers a patch of floor (systems/LastingSpells.ts, systems/Surfaces.ts): water, water a thunder spell has charged with
+ * lightning, slick grease (the Grease spell, a thrown grease bottle: difficult terrain where feet slip), or fire (alchemist's
+ * fire, grease set alight: it burns whoever stands in it).
+ */
+export const SURFACE_KINDS = ['water', 'shock', 'grease', 'fire'] as const;
 export type SurfaceKind = (typeof SURFACE_KINDS)[number];
 
 export function isSurfaceKind(value: unknown): value is SurfaceKind {
@@ -217,7 +223,7 @@ export function isSurfaceKind(value: unknown): value is SurfaceKind {
 }
 
 /** The frame of the puddle art (assets/SpriteGen.ts genPuddleSheet) each kind of puddle shows. */
-export const PUDDLE_FRAMES = { water: 0, shock: 1 } as const satisfies Record<SurfaceKind, number>;
+export const PUDDLE_FRAMES = { water: 0, shock: 1, grease: 2, fire: 3 } as const satisfies Record<SurfaceKind, number>;
 
 /** Who controls a player character: the host, or one of up to three guests in a co-op room. */
 export const PLAYER_SLOTS = ['host', 'p2', 'p3', 'p4'] as const;
@@ -429,9 +435,10 @@ export type Entity = {
   charge?: { target: number; ticks: number };
   /**
    * Spells that last on a hero (systems/LastingSpells.ts), as ticks left (0: off): Blade Ward and Stoneskin (resistance to
-   * weapons' damage), Shield (+5 AC); Mage Armour is 1 while it lasts (until a long rest).
+   * weapons' damage), Shield (+5 AC), True Strike (advantage on the next attack roll); Mage Armour is 1 while it lasts (until a
+   * long rest).
    */
-  buffs?: { bladeWard: number; shield: number; mageArmor: number; stoneskin: number };
+  buffs?: { bladeWard: number; shield: number; mageArmor: number; stoneskin: number; trueStrike?: number };
   /** The spell a hero holds by concentration (one at a time; damage may break it), and the entity id of its zone (-1: none). */
   concentration?: { spell: SpellId; zone: number };
   /**
@@ -440,8 +447,43 @@ export type Entity = {
    * moves with its caster.
    */
   zone?: { spell: SpellId; owner: number; castLevel: number; ticks: number; pulse: number; follow: boolean };
-  /** A puddle on the floor (Create Water): water or charged water, how wide (px), its maker's entity id, and the ticks until it shocks again. */
-  surface?: { kind: SurfaceKind; radius: number; owner: number; pulse: number };
+  /**
+   * A patch of floor covered (Create Water, Grease, a thrown flask): what covers it, how wide (px), its maker's entity id, the
+   * ticks until it strikes again (charged water, fire), the ticks it lasts (left out: for good) and the DC of the save its
+   * grease asks (left out: the default).
+   */
+  surface?: { kind: SurfaceKind; radius: number; owner: number; pulse: number; ticks?: number; dc?: number };
+  /**
+   * Someone on fire (alchemist's fire, a fire surface): ticks left, ticks until the next round's burn, and who set them alight
+   * (their entity id). Standing in water puts it out (systems/Surfaces.ts).
+   */
+  burning?: { ticks: number; pulse: number; by: number };
+  /** A hero knocked off their feet (slipped on grease): ticks until they are up again; till then they neither move nor act. */
+  knockedDown?: number;
+  /** A flask an enemy carries to throw (src/data/throwables.json), and how many. */
+  mobThrowable?: { item: ThrowableId; count: number };
+  /**
+   * A flask in the air (systems/ThrowSystem.ts): what it is, its thrower's entity id and team, where it was thrown from and
+   * lands, the ticks it has flown and will fly; it bursts where it lands.
+   */
+  thrown?: { item: ThrowableId; owner: number; team: number; fromX: number; fromY: number; toX: number; toY: number; ticks: number; total: number };
+  /**
+   * Dancing Lights (systems/DancingLights.ts): the hovering lights' anchor — its caster's entity id, the ticks the spell
+   * lasts, whether the lights circle their caster (else they hover where they were sent), the caster's spell DC (foes nearby
+   * save against it or are drawn to the lights) and the ticks until they draw foes again.
+   */
+  dancingLights?: { owner: number; ticks: number; orbit: boolean; dc: number; pulse: number };
+  /** One of the four lights of Dancing Lights: its anchor's entity id and its place round it (0–3). */
+  wisp?: { of: number; index: number };
+  /** A foe drawn to Dancing Lights: the anchor's entity id; it drifts over to gaze at them until hurt, or a hero comes close. */
+  entranced?: number;
+  /**
+   * A fallen foe's body, fresh enough for Bursting Sinew: the ticks it stays fresh, and whether it may be used (not burnt to a
+   * husk by fire, acid or radiance).
+   */
+  corpse?: { fresh: number; fit: boolean };
+  /** The damage type of the last blow a foe took (whether its corpse is fit for Bursting Sinew; resistances, rules/Resistances.ts). */
+  lastDamageType?: DamageType;
   /**
    * An undead a necromancer raised (systems/SummonSystem.ts): its kind, its master's entity id, and its blow (to hit,
    * damage), Armor Class and the ticks until it may strike again.
@@ -533,7 +575,7 @@ export type Entity = {
 
   // --- spellcasting ---
   /** A spell being cast: its progress, the way it was aimed and the point it was aimed at, and which spell. */
-  casting?: { ticks: number; dirX: number; dirY: number; released: boolean; spell?: SpellId; level?: number; targetX?: number; targetY?: number };
+  casting?: { ticks: number; dirX: number; dirY: number; released: boolean; spell?: SpellId; level?: number; targetX?: number; targetY?: number; damageType?: DamageType };
   /**
    * Ticks until the spell on each quick-bar square can be cast again (0: ready), and what the player bound to
    * each square (a missing or empty entry: the class's own spell for that square, see rules/Spellbook.ts).
@@ -561,6 +603,10 @@ export type Entity = {
     castLevel?: number;
     /** A shot's `life` once it has flown past its weapon's normal range: below it, the shot rolls with disadvantage. */
     closeLife?: number;
+    /** Loosed with a hostile creature within 5 feet of the shooter (rules/CloseQuarters.ts): it rolls with disadvantage. */
+    pressed?: boolean;
+    /** The damage type the caster chose for it (Chromatic Orb), in place of its spell's own. */
+    damageType?: DamageType;
   };
 
   /** Point light this entity emits (spell bolts, …). */

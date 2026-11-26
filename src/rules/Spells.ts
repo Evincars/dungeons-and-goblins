@@ -25,6 +25,7 @@ export const SPELL_IDS = [
   'chain_lightning', 'circle_of_death', 'disintegrate', 'harm', 'heal', 'otilukes_freezing_sphere',
   'blade_ward', 'shield', 'mage_armor', 'false_life', 'stoneskin', 'arms_of_hadar', 'sunbeam', 'phantasmal_killer', 'vampiric_touch',
   'cloud_of_daggers', 'cloudkill', 'hunger_of_hadar', 'spirit_guardians', 'insect_plague', 'create_or_destroy_water',
+  'bursting_sinew', 'dancing_lights', 'true_strike', 'grease',
 ] as const;
 export type SpellId = (typeof SPELL_IDS)[number];
 
@@ -35,13 +36,18 @@ export function isSpellId(value: unknown): value is SpellId {
 /**
  * bolt: a projectile, rolled to hit. missiles: darts that always hit. burst: an area, saved against. heal: the caster (and,
  * with a radius, the heroes near). buff: something that lasts on the caster (systems/LastingSpells.ts). zone: an area that
- * strikes whoever is in it every round while it lasts. water: a puddle where the caster aims.
+ * strikes whoever is in it every round while it lasts. water: a puddle where the caster aims. corpse: a fresh corpse bursts
+ * (Bursting Sinew, systems/CorpseSpells.ts). lights: hovering lights that shed light and draw foes (Dancing Lights,
+ * systems/DancingLights.ts). surface: grease where the caster aims (Grease, systems/Surfaces.ts).
  */
-export const SPELL_KINDS = ['bolt', 'missiles', 'burst', 'heal', 'buff', 'zone', 'water'] as const;
+export const SPELL_KINDS = ['bolt', 'missiles', 'burst', 'heal', 'buff', 'zone', 'water', 'corpse', 'lights', 'surface'] as const;
 export type SpellKind = (typeof SPELL_KINDS)[number];
 
-/** What a buff spell does to its caster: resist weapons (Blade Ward, Stoneskin), +5 AC (Shield), AC 13 + DEX (Mage Armour), temporary hit points (False Life). */
-export const BUFF_IDS = ['blade_ward', 'shield', 'mage_armor', 'false_life', 'stoneskin'] as const;
+/**
+ * What a buff spell does to its caster: resist weapons (Blade Ward, Stoneskin), +5 AC (Shield), AC 13 + DEX (Mage Armour),
+ * temporary hit points (False Life), advantage on the next attack roll (True Strike).
+ */
+export const BUFF_IDS = ['blade_ward', 'shield', 'mage_armor', 'false_life', 'stoneskin', 'true_strike'] as const;
 export type BuffId = (typeof BUFF_IDS)[number];
 const isBuff = (v: unknown): v is BuffId => BUFF_IDS.some((b) => b === v);
 
@@ -186,4 +192,8 @@ export const SPELLS = {
   spirit_guardians: readSpell('spirit_guardians', spells.spirit_guardians),
   insect_plague: readSpell('insect_plague', spells.insect_plague),
   create_or_destroy_water: readSpell('create_or_destroy_water', spells.create_or_destroy_water),
+  bursting_sinew: readSpell('bursting_sinew', spells.bursting_sinew),
+  dancing_lights: readSpell('dancing_lights', spells.dancing_lights),
+  true_strike: readSpell('true_strike', spells.true_strike),
+  grease: readSpell('grease', spells.grease),
 } as const satisfies Record<SpellId, SpellDef>;

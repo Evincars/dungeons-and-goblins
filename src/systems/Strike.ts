@@ -11,6 +11,8 @@ import { afterBlow, evasiveBonus, prepareBlow } from './ManeuverSystem';
 import type { SpellId } from '../rules/Spells';
 import { sound } from '../audio/SoundPlayer';
 import { bleeds, spawnBlood } from '../entities/Blood';
+import { withinCloseQuarters } from '../rules/CloseQuarters';
+import { playVfx } from '../render/VfxPlayer';
 
 /**
  * Every blow in the game goes through here: the attack is rolled against the target's Armor Class, and the
@@ -29,6 +31,18 @@ export function armorClassOf(target: Entity): number {
   return UNARMORED_AC;
 }
 
+/** True Strike (systems/LastingSpells.ts): the hero's next attack roll has advantage, and uses it up. */
+function withTrueStrike(attack: AttackProfile, attacker: Entity | undefined): AttackProfile {
+  const buffs = attacker?.buffs;
+  if (!buffs || (buffs.trueStrike ?? 0) <= 0) return attack;
+  buffs.trueStrike = 0;
+  if (attacker?.position) playVfx('true-strike', attacker.position.x, attacker.position.y, TRUE_STRIKE_LIFT);
+  return { ...attack, mode: better(attack.mode) };
+}
+
+/** True Strike's flash as it is spent shows at the attacker's eyes, this far above their feet. */
+const TRUE_STRIKE_LIFT = 26;
+
 /**
  * The attack as rolled: whoever won the first strike (systems/InitiativeSystem.ts) uses it up on this one,
  * with advantage (which cancels a disadvantage instead).
@@ -41,6 +55,24 @@ function withFirstStrike(attack: AttackProfile, attacker: Entity | undefined): A
 }
 
 /**
+ * A hero who slipped and lies prone (systems/Surfaces.ts): their own attacks are at disadvantage; blows at them from within
+ * 5 feet at advantage, shots from further off at disadvantage. (A foe's prone is its marks', systems/ManeuverSystem.ts.)
+ */
+function withHeroDown(attack: AttackProfile, attacker: Entity | undefined, target: Entity): AttackProfile {
+  let mode = attack.mode;
+  if ((attacker?.knockedDown ?? 0) > 0) mode = worse(mode);
+  if ((target.knockedDown ?? 0) > 0 && attacker?.position && target.position) {
+    const close = withinCloseQuarters(attacker.position.x, attacker.position.y, target.position.x, target.position.y);
+    mode = close ? better(mode) : worse(mode);
+  }
+  return mode === attack.mode ? attack : { ...attack, mode };
+}
+
+/** One step towards disadvantage, or towards advantage (each cancels the other). */
+const worse = (mode: AttackProfile['mode']): AttackProfile['mode'] => (mode === 'advantage' ? 'normal' : 'disadvantage');
+const better = (mode: AttackProfile['mode']): AttackProfile['mode'] => (mode === 'disadvantage' ? 'normal' : 'advantage');
+
+/**
  * Rolls `attack` against `target`, showing the result over `logOn` (the attacker, or a projectile's shooter)
  * and writing it into the combat log. A blow that hurts a hero or a foe draws blood (entities/Blood.ts); a critical hit
  * is heard: blood and the crack of bone. A weapon blow (not a
@@ -48,7 +80,7 @@ function withFirstStrike(attack: AttackProfile, attacker: Entity | undefined): A
  */
 export function strike(target: Entity, attack: AttackProfile, logOn: Entity | undefined, spell?: SpellId): AttackOutcome {
   const prepared = spell ? attack : prepareBlow(attack, logOn, target);
-  const outcome = resolveAttack(withFirstStrike(prepared, logOn), armorClassOf(target));
+  const outcome = resolveAttack(withTrueStrike(withFirstStrike(withHeroDown(prepared, logOn, target), logOn), logOn), armorClassOf(target));
   if (!spell) afterBlow(logOn, target, outcome);
   if (outcome.critical && target.position) sound.playSound('critical', target.position.x, target.position.y);
   if (outcome.damage > 0 && bleeds(target)) spawnBlood(target);

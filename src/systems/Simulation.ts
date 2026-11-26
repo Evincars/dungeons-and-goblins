@@ -56,6 +56,10 @@ import { updateManeuvers } from './ManeuverSystem';
 import { updateFeatureTimers, updateSurvivor } from './FeatureSystem';
 import { updateSchools } from './SchoolSystem';
 import { updateLastingSpells } from './LastingSpells';
+import { updateSurfaces } from './Surfaces';
+import { updateCorpses } from './Corpses';
+import { updateDancingLights } from './DancingLights';
+import { updateThrows } from './ThrowSystem';
 import { updateSummons } from './SummonSystem';
 import { updateMusic } from './MusicSystem';
 import { updateAmbience } from './AmbienceSystem';
@@ -88,6 +92,7 @@ export const SIMULATION: readonly System[] = [
   ({ level }) => updateEnemyRanged(level),
   ({ level }) => updateSummons(level),
   () => updateDecoys(),
+  ({ level, tick }) => updateThrows(level, tick),
   () => updateInitiative(),
   () => updateArrows(),
   () => updateSword(),
@@ -126,6 +131,9 @@ export const SIMULATION: readonly System[] = [
   () => updateFeatureTimers(),
   () => updateSchools(),
   () => updateLastingSpells(),
+  () => updateSurfaces(),
+  () => updateCorpses(),
+  ({ tick }) => updateDancingLights(tick),
   (ctx) => { if (ctx.level.tilesDirty) ctx.rebuildTerrain(); },
 ];
 

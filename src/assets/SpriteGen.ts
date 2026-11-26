@@ -404,9 +404,16 @@ const PUDDLE_H = 32;
 const PUDDLE_FRAMES = [
   { deep: 'rgba(40,78,130,0.70)', rim: 'rgba(120,170,220,0.55)', glint: 'rgba(210,235,255,0.75)', sparks: 0 },
   { deep: 'rgba(70,120,210,0.78)', rim: 'rgba(170,215,255,0.80)', glint: 'rgba(255,255,255,0.95)', sparks: 9 },
+  // Grease: a slick of brown-amber fat, a sickly sheen on it.
+  { deep: 'rgba(92,70,28,0.72)', rim: 'rgba(150,120,52,0.55)', glint: 'rgba(235,215,150,0.70)', sparks: 0 },
+  // Fire: the floor scorched black, embers glowing in it (the flames themselves are particles, systems/VfxSystem.ts).
+  { deep: 'rgba(28,14,8,0.80)', rim: 'rgba(120,40,10,0.55)', glint: 'rgba(255,150,60,0.90)', sparks: 12 },
 ] as const;
 
-/** The puddle Create Water leaves: frame 0 water, frame 1 water charged with lightning (systems/LastingSpells.ts). */
+/**
+ * The patches of floor spells and flasks leave: frame 0 water (Create Water), 1 water charged with lightning, 2 grease, 3
+ * burning floor (systems/LastingSpells.ts, systems/Surfaces.ts).
+ */
 export function genPuddleSheet(): HTMLCanvasElement {
   const [c, ctx] = mkCanvas(PUDDLE_W * PUDDLE_FRAMES.length, PUDDLE_H);
   PUDDLE_FRAMES.forEach((frame, i) => {

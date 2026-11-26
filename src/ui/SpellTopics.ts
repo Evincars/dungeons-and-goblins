@@ -16,6 +16,8 @@ import { SPELLS, isSpellId } from '../rules/Spells';
 import { featureCooldown, featureUses } from '../rules/ClassFeatures';
 import type { FeatureDef } from '../rules/ClassFeatures';
 import type { CatalogSpell } from '../rules/Spellbook';
+import type { DamageType } from '../rules/DamageTypes';
+import { chargesWater } from '../systems/LastingSpells';
 
 /**
  * How a spell reads on a tooltip, as Baldur's Gate lays it out: its name, what kind of spell it is, what it does at a
@@ -167,6 +169,29 @@ export function castLevelTopic(spell: CatalogSpell, castLevel: number, heroLevel
   const title = text('spell.tip.cast_at', { level: castLevel });
   if (castLevel === spell.level) return { title, body: text('spell.tip.own_level') };
   return { title, body: text('spell.tip.compared', { level: spell.level }), detail: lines };
+}
+
+/**
+ * The small tooltip of a kind of damage's box (Chromatic Orb): the kind in its colour, and what follows from it (thunder and
+ * lightning charge water; fire sets grease alight).
+ */
+export function damageChoiceTopic(spell: CatalogSpell, type: DamageType): TipTopic {
+  const name = capitalised(damageTypeName(type));
+  const follows = type === 'fire' ? text('skills.damage_choice.fire') : chargesWater(type) ? text('skills.damage_choice.water') : '';
+  return {
+    title: name,
+    subtitle: text('skills.damage_choice.subtitle', { spell: spell.name }),
+    headline: { text: name, color: DAMAGE_COLORS[type] },
+    body: [text('skills.damage_choice.body', { spell: spell.name, type: name.toLowerCase() }), follows].filter(Boolean).join(' '),
+  };
+}
+
+/** A spell's tooltip for one kind of damage chosen for it (Chromatic Orb bound as fire): its headline names that kind alone. */
+export function withChosenDamage(topic: TipTopic, type: DamageType): TipTopic {
+  const head = topic.headline;
+  if (!head?.under?.length) return topic;
+  const under = [head.under[0], { text: capitalised(damageTypeName(type)), color: DAMAGE_COLORS[type] }];
+  return { ...topic, headline: { ...head, under } };
 }
 
 /** Seconds as the tooltip writes them: whole when they are, else a tenth. */

@@ -1,5 +1,5 @@
 {
-  "$comment": "Every spell of Baldur's Gate 3 the game knows (made by scripts/bg3-spells.mjs from the BG3 wiki): its name, level (0: cantrip), school, whether it needs concentration, the classes that learn it (at the hero level their slots of its level open, src/data/spellbook.json casterKinds), knight: on the Eldritch Knight's list, the subclasses that learn it, book: its entry in src/data/spellbook.json (the D&D rules: range, dice, At Higher Levels), text: its in-game description, img: its icon under public/. Only the spells in src/data/spells.json can be cast yet; the others show greyed out as not in the game yet.",
+  "$comment": "Every spell of Baldur's Gate 3 the game knows (made by scripts/bg3-spells.mjs from the BG3 wiki): its name, level (0: cantrip), school, whether it needs concentration, the classes that learn it (at the hero level their slots of its level open, src/data/spellbook.json casterKinds), knight: on the Eldritch Knight's list, the subclasses that learn it, book: its entry in src/data/spellbook.json (the D&D rules: range, dice, At Higher Levels), text: its in-game description, img: its icon under public/, hidden: kept (its text and rules) but left out of the Skills tab. Only the spells in src/data/spells.json can be cast yet; the others show greyed out as not in the game yet.",
   "spells": {
     "booming_blade": {
       "name": "Booming Blade",
@@ -41,7 +41,7 @@
       "knight": false,
       "subclasses": [],
       "book": null,
-      "text": "1-10 Damage",
+      "text": "Explode a fresh corpse, causing it to impale those around it: everyone within 10 feet of it makes a Dexterity saving throw or takes 1d10 piercing damage. A corpse burnt by fire, acid or radiance cannot be used, and one used is left a pile of viscera. 60 feet. The damage grows to 2d10 at level 5 and 3d10 at level 10.",
       "img": "spells-icons/Bursting-Sinew-level-1-BG3-spell-1_pixelart.png"
     },
     "shadow_blade": {
@@ -189,7 +189,8 @@
       ],
       "book": "friends",
       "text": "Gain Advantage on Charisma Checks against a non-hostile creature. Once the spell ends, the creature knows it was Charmed and might accuse the spellcaster. 10 Turns In higher difficulty modes, the target might accuse you of enchanting them.",
-      "img": "spells-icons/Friends-Baldurs-Gate-3-Spells_pixelart.png"
+      "img": "spells-icons/Friends-Baldurs-Gate-3-Spells_pixelart.png",
+      "hidden": true
     },
     "guidance": {
       "name": "Guidance",
@@ -225,7 +226,8 @@
       ],
       "book": "light",
       "text": "Infuse an object with an aura of light. Until Long Rest",
-      "img": "spells-icons/Light-Baldurs-Gate-3-Spells_pixelart.png"
+      "img": "spells-icons/Light-Baldurs-Gate-3-Spells_pixelart.png",
+      "hidden": true
     },
     "mage_hand": {
       "name": "Mage Hand",
@@ -246,7 +248,8 @@
       ],
       "book": "mage_hand",
       "text": "Create a spectral hand that can manipulate and interact with objects.",
-      "img": "spells-icons/Mage-Hand-Baldurs-Gate-3-Spells_pixelart.png"
+      "img": "spells-icons/Mage-Hand-Baldurs-Gate-3-Spells_pixelart.png",
+      "hidden": true
     },
     "minor_illusion": {
       "name": "Minor Illusion",
@@ -267,7 +270,8 @@
       ],
       "book": "minor_illusion",
       "text": "Create an illusory image that distracts nearby creatures, compelling them to investigate. You can remain hidden while casting this spell. 10 turns",
-      "img": "spells-icons/Minor-Illusion-Baldurs-Gate-3-Spells_pixelart.png"
+      "img": "spells-icons/Minor-Illusion-Baldurs-Gate-3-Spells_pixelart.png",
+      "hidden": true
     },
     "poison_spray": {
       "name": "Poison Spray",

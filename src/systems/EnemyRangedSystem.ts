@@ -1,4 +1,4 @@
-import { world, q, isActivePlayer, Team } from '../world';
+import { world, q, isActivePlayer, isMob, Team } from '../world';
 import type { Entity, Player } from '../world';
 import type { Level } from '../level/Level';
 import { GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
@@ -22,6 +22,9 @@ import { heroSavingThrow } from './FeatureSystem';
 import { hurtPlayer } from './CombatSystem';
 import { impactOf, playBurstArt, playCastArt, playStrikeArt } from './SpellSystem';
 import { chargesWater, conducted, electrifyArea } from './LastingSpells';
+import { notePressed } from './CloseQuarters';
+import { isBackingOff } from '../ai/execution/skirmish';
+import { igniteGrease } from './Surfaces';
 
 /**
  * Enemies that fight from afar: goblins with a bow or crossbow, and the spellcasters (the red ghost a sorcerer, the evil
@@ -60,7 +63,7 @@ function onTheirScreen(hero: Player, x: number, y: number): boolean {
 }
 
 /** The nearest hero within `reach` who can see the enemy (line of sight, on their screen). */
-function targetFor(level: Level, mob: Shooter, reach: number): Player | null {
+export function targetFor(level: Level, mob: Shooter, reach: number): Player | null {
   let best: Player | null = null;
   let bestD = reach;
   for (const hero of q.players) {
@@ -114,7 +117,8 @@ function shoot(level: Level, mob: Shooter): boolean {
   if ((mob.attackCooldown ?? 0) > 0) return true;
   mob.attackCooldown = SHOT_PERIOD;
   mob.attackTime = SHOT_PERIOD / 2;
-  createArrow(mob.position.x, mob.position.y, dir.x, dir.y, monsterAttack(mob.mobType, mob.mobWeapon), world.id(mob), reach, Team.Mob);
+  const arrow = createArrow(mob.position.x, mob.position.y, dir.x, dir.y, monsterAttack(mob.mobType, mob.mobWeapon), world.id(mob), reach, Team.Mob);
+  notePressed(arrow, mob);
   sound.playSound('bow_shot', mob.position.x, mob.position.y);
   return true;
 }
@@ -206,6 +210,7 @@ function burstReaches(mob: Shooter, def: SpellDef, centre: Point, hero: Player, 
  */
 function burstOnHeroes(mob: Shooter, def: SpellDef, centre: Point, dc: number): void {
   playBurstArt(mob, def, centre);
+  if (def.damageType === 'fire') igniteGrease(centre.x, centre.y, def.radius, world.id(mob) ?? -1);
   const wet = chargesWater(def.damageType) && electrifyArea(def, mob.position, centre) > 0;
   for (const hero of q.players) {
     if (!burstReaches(mob, def, centre, hero, wet)) continue;
@@ -249,8 +254,9 @@ function release(mob: Shooter, def: SpellDef, dir: typeof aim, hero: Player, att
   playCastArt(mob, def, dir.x, dir.y);
   const darts = def.kind === 'missiles' ? def.count : 1;
   for (let i = 0; i < darts; i++) {
-    createSpellBolt(mob.position.x, mob.position.y, dir.x, dir.y, attack, world.id(mob), mob.character?.def,
+    const bolt = createSpellBolt(mob.position.x, mob.position.y, dir.x, dir.y, attack, world.id(mob), mob.character?.def,
       { spell: def.id, impact: impactOf(def), castLevel: def.level, team: Team.Mob, autoHit: def.kind === 'missiles', wait: i * DART_GAP });
+    if (def.kind === 'bolt') notePressed(bolt, mob, def.id);
   }
 }
 
@@ -269,6 +275,8 @@ export function updateEnemyRanged(level: Level): void {
     recover(mob.mobCaster);
     if (mob.removed || mob.health.current <= 0 || mob.falling || (mob.freezeTime ?? 0) > 0) continue;
     if (mob.ai.state !== 'engage' && mob.ai.state !== 'alert') continue;
+    // Backing off from a hero too close (ai/execution/skirmish.ts): it shoots once it has its distance.
+    if (isMob(mob) && isBackingOff(mob)) continue;
     if (!cast(level, mob)) shoot(level, mob);
   }
 }

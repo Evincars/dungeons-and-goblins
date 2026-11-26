@@ -42,6 +42,12 @@ import { SPELL_IMPACTS, SPELL_SOUNDS } from '../audio/SoundBank';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { screenToWorld } from '../render/Camera';
 import { text } from '../core/texts';
+import { notePressed, shotAttack } from './CloseQuarters';
+import { withDamageType } from '../rules/DamageChoice';
+import { castGrease } from './LastingSpells';
+import { castDancingLights } from './DancingLights';
+import { freshCorpseNear, spendCorpse } from './Corpses';
+import { igniteGrease } from './Surfaces';
 
 /**
  * Spells (src/data/spells.json): a quick-bar key casts its square's spell; right click and the cast key cast the one last picked. There are
@@ -72,6 +78,8 @@ const bounds = { x: 0, y: 0, r: 0 };
 const HEAL_LIFT = 8;
 /** A cone leaves the caster's hands this far above their feet. */
 const CONE_HANDS = 12;
+/** A fiery bolt ending sets alight grease this near where it ends (px). */
+const FIRE_TOUCH = 8;
 
 /** Where a projectile ends: the spell's effect (and a caster's own burst art) where it struck; an arrow glints. */
 function burst(bolt: Bolt, struck: boolean): void {
@@ -79,12 +87,14 @@ function burst(bolt: Bolt, struck: boolean): void {
   const { arrow, burst: art, impact, spell } = bolt.projectile;
   if (arrow && struck) playEffect(ARROW_HIT_EFFECT, ARROW_HIT_COLOUR, p.x, p.y, AIM_HEIGHT, ARROW_HIT_SCALE);
   if (arrow && struck) sound.playSound('arrow_hit', p.x, p.y);
-  if (spell) sound.playSound(SPELL_IMPACTS[SPELLS[spell].damageType], p.x, p.y);
+  if (spell) sound.playSound(SPELL_IMPACTS[bolt.projectile.damageType ?? SPELLS[spell].damageType], p.x, p.y);
   if (art) spawnFx(p.x, p.y, art.sheet, art.count, art.count * art.frameTime, { first: art.first, scale: art.scale, yOffset: AIM_HEIGHT });
   // A spell with particles of its own strikes in them (render/SpellVfx.ts), every other in its library effect.
   const particles = spell ? SPELL_VFX[spell]?.impact : undefined;
   if (particles) playVfx(particles, p.x, p.y, AIM_HEIGHT);
   else if (impact) playEffect(impact.shape, impact.colour, p.x, p.y, AIM_HEIGHT, impact.scale);
+  // Fire sets grease alight where it ends.
+  if (spell && (bolt.projectile.damageType ?? SPELLS[spell].damageType) === 'fire') igniteGrease(p.x, p.y, FIRE_TOUCH, bolt.projectile.owner ?? -1);
   // An evoker's spell leaves its Sculpt Spells bubble where it landed.
   if (spell && bolt.projectile.owner !== undefined) sculptAt(world.entity(bolt.projectile.owner), spell, p.x, p.y, SPELLS[spell].radius);
   world.addComponent(bolt, 'removed', true);
@@ -219,12 +229,25 @@ function startCast(caster: Player, level: Level): void {
   }
   const aim = caster.aimVector ?? { x: 0, y: 1 };
   const target = aimPoint(caster);
-  world.addComponent(caster, 'casting', { ticks: 0, dirX: aim.x, dirY: aim.y, released: false, spell: def.id, level: binding.level, targetX: target.x, targetY: target.y });
+  // Bursting Sinew needs a fresh corpse where it is aimed: without one, nothing starts (and nothing recovers).
+  if (def.kind === 'corpse' && !corpseFor(caster, def, target.x, target.y)) {
+    refuse(caster, text('roll.no_corpse'));
+    return;
+  }
+  world.addComponent(caster, 'casting', {
+    ticks: 0, dirX: aim.x, dirY: aim.y, released: false, spell: def.id, level: binding.level, targetX: target.x, targetY: target.y,
+    ...(binding.damageType ? { damageType: binding.damageType } : {}),
+  });
   book.recovery[slot] = def.recoveryTicks;
   caster.castCooldown = SPELL_STATS.cooldown;
 }
 
 export const impactOf = (def: SpellDef): SpellEffect => ({ shape: def.effect.shape, colour: def.effect.colour, scale: def.effect.scale });
+
+/** A bolt of a spell cast with a damage type chosen for it (Chromatic Orb) carries that type; any other its spell's own. */
+function chosenType(def: SpellDef): { damageType?: DamageType } {
+  return def.damageType === SPELLS[def.id].damageType ? {} : { damageType: def.damageType };
+}
 
 /** Eldritch Blast with Agonizing Blast adds the casting ability to its damage; every other bolt rolls its dice. */
 function boltDamage(caster: Player, def: SpellDef, sheet: CharacterSheet): Dice {
@@ -243,8 +266,9 @@ function castBolt(caster: Player, def: SpellDef, dirX: number, dirY: number): vo
   const sheet = characterSheet(caster);
   const damage = plus(boltDamage(caster, def, sheet), spellDamageBonus(caster, def.id));
   const attack = { attackBonus: spellcastingFor(sheet, def.id).attack, damage, mode: sheet.attack.mode, ...adeptDice(sheet, def) };
-  createSpellBolt(caster.position.x, caster.position.y, dirX, dirY, attack, world.id(caster), caster.character?.def,
-    { spell: def.id, impact: impactOf(def), castLevel: def.level });
+  const bolt = createSpellBolt(caster.position.x, caster.position.y, dirX, dirY, attack, world.id(caster), caster.character?.def,
+    { spell: def.id, impact: impactOf(def), castLevel: def.level, ...chosenType(def) });
+  notePressed(bolt, caster, def.id);
 }
 
 /** Magic missile: its darts fly the aimed line one after another, and each always hits. */
@@ -271,7 +295,7 @@ function burstHits(caster: Player, def: SpellDef, foe: Entity, dc: number): void
   recordSpell(caster, def.id, save.success ? 'saved' : 'auto', damage, save.total);
   if (damage <= 0) return;
   const alive = (foe.health?.current ?? 0) > 0;
-  hitMob(foe, caster, damage, true);
+  hitMob(foe, caster, damage, true, def.damageType);
   grimHarvest(caster, foe, def.id, def.level, alive);
   splitEnchantment(caster, foe, def.id, damage);
 }
@@ -373,7 +397,34 @@ function castBurst(caster: Player, def: SpellDef, targetX: number, targetY: numb
     if (caughtBy(caster, def, centre, foe)) strikeOne(caster, def, foe, dc);
   }
   if (chargesWater(def.damageType)) conductToFoes(caster, def, centre, electrifyArea(def, caster.position, centre), dc);
+  if (def.damageType === 'fire') igniteGrease(centre.x, centre.y, def.radius, world.id(caster) ?? -1);
   sculptAt(caster, def.id, centre.x, centre.y, def.radius);
+}
+
+/** Bursting Sinew looks for a fresh corpse this far round the point aimed at (px). */
+const CORPSE_SEEK = 40;
+
+/** The fresh, fit corpse Bursting Sinew would burst for the caster aiming at (x, y): near the aim, within the spell's range. */
+function corpseFor(caster: Player, def: SpellDef, x: number, y: number): Entity | null {
+  const corpse = freshCorpseNear(x, y, CORPSE_SEEK);
+  if (!corpse?.position) return null;
+  const reach = Math.hypot(corpse.position.x - caster.position.x, corpse.position.y - caster.position.y);
+  return reach <= def.range + CORPSE_SEEK ? corpse : null;
+}
+
+/**
+ * Bursting Sinew: the fresh corpse aimed at bursts, impaling everyone near it (a burst round it, saved against: none on a
+ * success); the corpse is used up. With no corpse left there (it was cleared away while the spell was cast), it fizzles.
+ */
+function castBurstingSinew(caster: Player, def: SpellDef, targetX: number, targetY: number, dirX: number, dirY: number): void {
+  const corpse = corpseFor(caster, def, targetX, targetY);
+  if (!corpse?.position) {
+    logLine(caster, text('roll.fizzled'), 'miss');
+    return;
+  }
+  const { x, y } = corpse.position;
+  spendCorpse(corpse);
+  castBurst(caster, { ...def, range: Math.max(def.range, Math.hypot(x - caster.position.x, y - caster.position.y)) }, x, y, dirX, dirY);
 }
 
 /** The extra points a Disciple of Life adds to a healing spell: 2 + the spell's level. */
@@ -419,7 +470,8 @@ function warMagic(caster: Player, spell: SpellDef): void {
 function release(caster: Player, cast: NonNullable<Entity['casting']>): void {
   const base = cast.spell ? SPELLS[cast.spell] : null;
   if (!base) return;
-  const def = castDef(base, cast.level ?? base.level, caster.playerStats.level);
+  // Cast with the damage type chosen when it was bound (Chromatic Orb), if any.
+  const def = withDamageType(castDef(base, cast.level ?? base.level, caster.playerStats.level), cast.damageType);
   const targetX = cast.targetX ?? caster.position.x;
   const targetY = cast.targetY ?? caster.position.y;
   // Mage Armour cast while it is on is switched off: nothing went off, so nothing follows from it (a ward, War Magic).
@@ -430,7 +482,10 @@ function release(caster: Player, cast: NonNullable<Entity['casting']>): void {
   else if (def.kind === 'burst') castBurst(caster, def, targetX, targetY, cast.dirX, cast.dirY);
   else if (def.kind === 'zone') castZone(caster, def, cast.level ?? base.level, targetX, targetY);
   else if (def.kind === 'water') castWater(caster, def, targetX, targetY);
-  else castHeal(caster, def);
+  else if (def.kind === 'surface') castGrease(caster, def, targetX, targetY);
+  else if (def.kind === 'lights') castDancingLights(caster, def, targetX, targetY);
+  else if (def.kind === 'corpse') castBurstingSinew(caster, def, targetX, targetY, cast.dirX, cast.dirY);
+  else if (def.kind === 'heal') castHeal(caster, def);
   sound.playSound(SPELL_SOUNDS[def.id], caster.position.x, caster.position.y);
   warMagic(caster, base);
   spellCast(caster, def.id, def.level);
@@ -465,16 +520,6 @@ function boltVictim(bolt: Bolt): Entity | null {
   return null;
 }
 
-/** A shot flown past its weapon's normal range (projectile.closeLife). */
-function beyondNormalRange(p: Bolt['projectile']): boolean {
-  return p.closeLife !== undefined && p.life < p.closeLife;
-}
-
-/** The attack rolled with disadvantage (which cancels an advantage instead). */
-function withDisadvantage(attack: AttackProfile): AttackProfile {
-  return { ...attack, mode: attack.mode === 'advantage' ? 'normal' : 'disadvantage' };
-}
-
 /** A projectile meets a body: a magic missile's dart always hits; anything else is rolled against its AC (a shot past its normal range with disadvantage). */
 function strikeWith(bolt: Bolt, victim: Entity): boolean {
   const p = bolt.projectile;
@@ -484,22 +529,28 @@ function strikeWith(bolt: Bolt, victim: Entity): boolean {
     const damage = Math.max(MIN_HIT_DAMAGE, rollDice(p.attack.damage, false, rollDie, 0, p.attack.lowestFace));
     if (shooter) logSpellDamage(shooter, damage);
     if (shooter && p.spell) recordSpell(shooter, p.spell, 'auto', damage);
-    hitMob(victim, bolt, damage, true);
+    hitMob(victim, bolt, damage, true, shotType(p));
     harvestWith(shooter, victim, p, alive);
     if (p.spell) splitEnchantment(shooter, victim, p.spell, damage);
     return true;
   }
-  const attack = beyondNormalRange(p) ? withDisadvantage(p.attack) : p.attack;
+  // Past its normal range, or loosed with a foe within 5 feet: with disadvantage (systems/CloseQuarters.ts).
+  const attack = shotAttack(p);
   // A diviner's spell attack that missed may be turned into a hit by a Portent die.
   const rolled = strike(victim, attack, shooter, p.spell);
   const outcome = p.spell ? foreseeHit(shooter, victim, attack, rolled) : rolled;
-  if (outcome.hit) hitMob(victim, bolt, outcome.damage);
+  if (outcome.hit) hitMob(victim, bolt, outcome.damage, false, shotType(p));
   if (outcome.hit) harvestWith(shooter, victim, p, alive);
   // Sharpshooter: an arrow that kills earns a shot more for the next volley.
   if (outcome.hit && p.arrow && alive && (victim.health?.current ?? 1) <= 0 && isPlayer(shooter)) earnBonusAttack(shooter, true);
   if (outcome.hit) drainWith(shooter, p, outcome.damage);
   if (outcome.hit && p.spell) splitEnchantment(shooter, victim, p.spell, outcome.damage);
   return outcome.hit;
+}
+
+/** The kind of damage a shot deals: the type chosen for its spell, its spell's own, an arrow's piercing. */
+function shotType(p: Bolt['projectile']): DamageType {
+  return p.damageType ?? (p.spell ? SPELLS[p.spell].damageType : 'piercing');
 }
 
 /** Vampiric Touch: its caster regains a share of the damage it dealt. */
@@ -562,12 +613,12 @@ function heroVictim(bolt: Bolt): Player | null {
 function strikeHero(bolt: Bolt, hero: Player): boolean {
   const p = bolt.projectile;
   const shooter = p.owner === undefined ? undefined : world.entity(p.owner);
-  const type: DamageType = p.spell ? SPELLS[p.spell].damageType : 'piercing';
+  const type = shotType(p);
   if (p.autoHit) {
     hurtPlayer(hero, shooter ?? bolt, Math.max(MIN_HIT_DAMAGE, rollDice(p.attack.damage, false, rollDie, 0)), type);
     return true;
   }
-  const attack = beyondNormalRange(p) ? withDisadvantage(p.attack) : p.attack;
+  const attack = shotAttack(p);
   const outcome = strike(hero, attack, shooter, p.spell);
   if (outcome.hit) hurtPlayer(hero, shooter ?? bolt, outcome.damage, type);
   return outcome.hit;

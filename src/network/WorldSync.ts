@@ -20,6 +20,8 @@ import { validBuild } from '../rules/Build';
 import { isWeaponBase } from '../rules/WeaponTable';
 import { MAX_ROLL_LINES } from '../systems/RollLogSystem';
 import { MAX_LOG_ENTRIES, MAX_LOG_ITEM } from '../systems/CombatLogSystem';
+import { isThrowableId } from '../rules/Throwables';
+import { isDamageType } from '../rules/DamageTypes';
 import { isSpellId } from '../rules/Spells';
 import { isDieSides } from '../rules/Dice';
 
@@ -116,6 +118,12 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   concentration: { spell: 'string', zone: 'number' },
   zone: { spell: 'string', owner: 'number', castLevel: 'number', ticks: 'number', pulse: 'number', follow: 'boolean' },
   surface: { kind: 'string', radius: 'number', owner: 'number', pulse: 'number' },
+  burning: { ticks: 'number', pulse: 'number', by: 'number' },
+  mobThrowable: { item: 'string', count: 'number' },
+  thrown: { item: 'string', owner: 'number', team: 'number', fromX: 'number', fromY: 'number', toX: 'number', toY: 'number', ticks: 'number', total: 'number' },
+  dancingLights: { owner: 'number', ticks: 'number', orbit: 'boolean', dc: 'number', pulse: 'number' },
+  wisp: { of: 'number', index: 'number' },
+  corpse: { fresh: 'number', fit: 'boolean' },
   summon: { kind: 'string', owner: 'number', attackBonus: 'number', damage: 'object', ac: 'number', cooldown: 'number' },
   loot: { value: 'number', kind: 'number', velX: 'number', velY: 'number', suckRadius: 'number', glide: 'number', age: 'number', life: 'number' },
   item: { type: 'string', name: 'string', value: 'number' },
@@ -156,6 +164,7 @@ const VALUES: Readonly<Record<string, FieldType>> = {
   playerName: 'string', heroClass: 'string', mobWeapon: 'string', protectCooldown: 'number', survivorCooldown: 'number',
   superiorityLeft: 'number', tempHealth: 'number', volley: 'number', actionSurge: 'number', athleteBoost: 'number', indomitableCooldown: 'number',
   bonusAttack: 'boolean', duelistCooldown: 'number', flat: 'boolean', lured: 'number', unseen: 'boolean',
+  knockedDown: 'number', entranced: 'number', lastDamageType: 'string',
 };
 
 function hasType(v: unknown, type: FieldType): boolean {
@@ -191,7 +200,7 @@ const isIntList = (v: unknown) => Array.isArray(v) && v.every(Number.isInteger);
 /** Ticks until each quick-bar square's spell recovers (one a square, at most), none negative. */
 const isRecoveryList = (v: unknown) => isIntList(v) && Array.isArray(v) && v.length <= QUICK_SLOTS && v.every((t) => Number(t) >= 0);
 const isBoundList = (v: unknown) => Array.isArray(v) && v.length <= QUICK_SLOTS
-  && v.every((b) => b === null || (isRecord(b) && validBinding(b.spell, b.level)));
+  && v.every((b) => b === null || (isRecord(b) && validBinding(b.spell, b.level, b.damageType)));
 const isSlotList = (v: unknown) => Array.isArray(v) && v.length <= PLAYER_SLOTS.length && v.every(isPlayerSlot);
 
 /** A rare find being rolled for: a real item, and only known seats answering Need or Pass. */
@@ -271,6 +280,9 @@ function checkDetails(data: EntityState): void {
   ensure(!data.concentration || isSpellId(data.concentration.spell), 'Invalid concentration');
   ensure(!data.zone || isSpellId(data.zone.spell), 'Invalid spell zone');
   ensure(!data.surface || isSurfaceKind(data.surface.kind), 'Invalid puddle');
+  ensure(!data.thrown || isThrowableId(data.thrown.item), 'Invalid thrown flask');
+  ensure(!data.mobThrowable || isThrowableId(data.mobThrowable.item), 'Invalid flask');
+  ensure(data.lastDamageType === undefined || isDamageType(data.lastDamageType), 'Invalid damage type');
   ensure(!data.spellbook || (isRecoveryList(data.spellbook.recovery) && (data.spellbook.bound === undefined || isBoundList(data.spellbook.bound))), 'Invalid spellbook');
   ensure(!data.casting?.spell || isSpellId(data.casting.spell), 'Invalid spell');
   ensure(!data.projectile?.spell || isSpellId(data.projectile.spell), 'Invalid spell');

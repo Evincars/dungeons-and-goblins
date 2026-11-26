@@ -19,6 +19,8 @@ import { chooseLoot } from './LootRoll';
 import { applyCustomization, isCustomizeCommand } from './Customize';
 import { EMPTY_SQUARE, UNBOUND, canBind, featSpellBindable, roomToBind, spellListOf } from '../rules/Spellbook';
 import type { QuickBinding } from '../rules/Spellbook';
+import type { DamageType } from '../rules/DamageTypes';
+import { validChoice } from '../rules/DamageChoice';
 import { bindingFeatureId, canToggle, hasClassFeature } from '../rules/ClassFeatures';
 import { FEATS, bindingFeatId } from '../rules/Feats';
 import type { FeatId } from '../rules/Feats';
@@ -421,8 +423,12 @@ function featBindable(player: Player, feat: FeatId, level: number): boolean {
   return level === 0 && (kind === 'toggle' || kind === 'active') && passiveFeats(cls, player.playerStats.level, player.build).includes(feat);
 }
 
-/** Puts a spell, cast at a level, on a quick-bar square if the hero has learnt it, may cast it there and is in a safe room. */
-export function bindSpell(player: Player, slot: number, spell: string, level: number): boolean {
+/**
+ * Puts a spell, cast at a level (and, for a spell whose caster picks its damage, of the type chosen), on a quick-bar square
+ * if the hero has learnt it, may cast it there and is in a safe room.
+ */
+export function bindSpell(player: Player, slot: number, spell: string, level: number, damageType?: DamageType): boolean {
+  if (!validChoice(spell, damageType)) return false;
   const list = spellListOf(heroClass(player.heroClass).dndClass, player.build);
   if (!Number.isInteger(slot) || slot < 0 || slot >= QUICK_SLOTS || !mayPrepare(player, spell)) return false;
   const feat = bindingFeatId(spell);
@@ -433,7 +439,7 @@ export function bindSpell(player: Player, slot: number, spell: string, level: nu
   if (feature !== null && !hasClassFeature(player, feature)) return false;
   // A wizard keeps only so many cantrips and spells of each level on the bar.
   if (!roomToBind(player, spell, level, slot)) return false;
-  putOnSquare(player, slot, { spell, level });
+  putOnSquare(player, slot, damageType ? { spell, level, damageType } : { spell, level });
   return true;
 }
 
@@ -467,7 +473,7 @@ export function loadBindings(player: Player, bound: readonly (QuickBinding | nul
   const book = player.spellbook ?? (player.spellbook = { recovery: Array.from({ length: QUICK_SLOTS }, () => 0) });
   book.bound = Array.from({ length: QUICK_SLOTS }, () => EMPTY_SQUARE);
   bound.forEach((binding, slot) => {
-    if (binding && binding.spell !== UNBOUND) bindSpell(player, slot, binding.spell, binding.level);
+    if (binding && binding.spell !== UNBOUND) bindSpell(player, slot, binding.spell, binding.level, binding.damageType);
   });
   const loaded = book.bound;
   book.bound = loaded.map((binding, slot) => (bound[slot] === null ? null : binding));
@@ -502,9 +508,9 @@ export function requestToggleFeature(player: Player, feature: string): void {
 }
 
 /** The quick bar: bound at once here, or asked of the host for a guest (whose copy the host's next update corrects if refused). */
-export function requestBind(player: Player, slot: number, spell: string, level: number): void {
-  if (coop.role === 'guest') coop.sendCommand({ kind: 'bind_spell', slot, spell, level });
-  else bindSpell(player, slot, spell, level);
+export function requestBind(player: Player, slot: number, spell: string, level: number, damageType?: DamageType): void {
+  if (coop.role === 'guest') coop.sendCommand({ kind: 'bind_spell', slot, spell, level, ...(damageType ? { damageType } : {}) });
+  else bindSpell(player, slot, spell, level, damageType);
 }
 
 /** Host: carries out what a guest asked for, if it is allowed for that guest's character. */
@@ -536,7 +542,7 @@ export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): voi
     return;
   }
   if (command.kind === 'bind_spell') {
-    bindSpell(player, command.slot, command.spell, command.level);
+    bindSpell(player, command.slot, command.spell, command.level, command.damageType);
     return;
   }
   if (command.kind === 'unbind_spell') {

@@ -9,6 +9,8 @@ import { faceTowards, wander } from '../execution/locomotion';
 import { cutOff, flank, followTrail, strike, support } from '../execution/pursuit';
 import { squadOf } from './squads';
 import { sound } from '../../audio/SoundPlayer';
+import { engagementOf } from './engagement';
+import { holdOff, skirmish } from '../execution/skirmish';
 import { MOB_CRIES } from '../../audio/SoundBank';
 
 /**
@@ -182,8 +184,20 @@ class EngageState extends State<MobAgent> {
   }
 }
 
-/** One tick of fighting in the enemy's squad role. */
+/**
+ * One tick of fighting: a skirmisher keeps its distance, a melee fighter waiting its turn holds off (decision/engagement.ts);
+ * one pressing in fights in its squad role.
+ */
 function fight(level: Level, mob: Mob, target: Player, tick: number): void {
+  const part = engagementOf(mob, tick);
+  if (part === 'skirmish') {
+    skirmish(level, mob, target, tick);
+    return;
+  }
+  if (part === 'wait') {
+    holdOff(level, mob, target, tick);
+    return;
+  }
   switch (mob.ai.role) {
     case 'flank': flank(level, mob, squadOf(mob.ai.targetId), target, tick); break;
     case 'support': support(level, mob, target, tick); break;

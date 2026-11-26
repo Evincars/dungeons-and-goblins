@@ -10,6 +10,7 @@ import { HudDialog } from './HudDialog';
 import { isInventoryOpen, setInventoryOpen } from '../systems/InventorySystem';
 import { MinimapView } from './MinimapView';
 import { QuickBar } from './QuickBar';
+import { pendingBinding } from '../game/SpellBinding';
 import { COMBAT_LOG_SPAN } from './CombatLogPanel';
 import { RestMenu } from './RestMenu';
 import { PartyBanner } from './PartyBanner';
@@ -146,6 +147,8 @@ const diamond = (g: Graphics, r: number): Graphics => g.poly([0, -r, r, 0, 0, r,
  */
 export class HudPanel {
   readonly container = new Container();
+  /** Laid by the scene over the inventory and the shop: the quick bar stands here while a spell waits for its square. */
+  readonly front = new Container();
   readonly dialog = new HudDialog();
   private readonly bars: Bar[] = [];
   private readonly quickBar = new QuickBar(BUTTONS_RIGHT + QUICK_BAR_CLEARANCE, GAME_WIDTH - COMBAT_LOG_SPAN - QUICK_BAR_CLEARANCE);
@@ -303,6 +306,7 @@ export class HudPanel {
     this.partyBanner.update();
     this.lootRolls.update();
     this.quickBar.update(player);
+    this.raiseQuickBar();
     this.passives.update();
     if (!player) return;
     if (this.dialog.showing(this.levelPanel.view)) this.levelPanel.update(player);
@@ -356,6 +360,15 @@ export class HudPanel {
    * whether one was (Escape uses this before the pause menu).
    */
   /** Whether a dialog, the rest menu or the hit-dice menu of a rest vote is open (clicks then fight nobody). */
+  /** While a spell waits for its square, the quick bar stands in `front`, over the inventory; else back in its place, under the HUD's other parts. */
+  private raiseQuickBar(): void {
+    const view = this.quickBar.view;
+    const raised = !!pendingBinding();
+    if (raised === (view.parent === this.front)) return;
+    if (raised) this.front.addChild(view);
+    else this.container.addChildAt(view, 0);
+  }
+
   get panelOpen(): boolean {
     return this.dialog.open || this.restMenu.open || this.partyBanner.menuOpen;
   }

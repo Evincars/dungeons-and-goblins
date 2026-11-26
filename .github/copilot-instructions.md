@@ -333,14 +333,14 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   Shift with them the second, whose squares hold the active class features until bound; `playerInput.spellSlot`) and are cast by
   `systems/SpellSystem.ts` with effects from the library (`assets/Effects.ts`). `Spellbook.ts` reads the whole list: a class opens
   spell levels as the tabletop does, a cantrip's dice grow at hero levels 5/11/17, and a spell cast above its own level
-  (the Skills tab of the inventory offers a box per level, `ui/SpellsPanel.ts`) rolls more and recovers more slowly. A click binds it
+  (the Skills tab of the inventory offers a box per level, `ui/SpellsPanel.ts`) rolls more and recovers more slowly. A click (the inventory stays open, shaded, the quick bar brought in front of it, `HudPanel.front`) binds it
   to a quick-bar square (`game/SpellBinding.ts`, `spellbook.bound`, the `bind_spell` command), and a right click on a square empties
   it (`UNBOUND`, the `unbind_spell` command; nothing comes back in its place); only a spell with its numbers in `spells.json`
   is bound and goes off (`castable`; a heal with a `radius` mends every hero within it). Damage reaching a hero carries its
   type (`hurtPlayer`): resistances halve it and immunities take it all (`rules/Resistances.ts`, listed in the Armor Class
   tooltip, `sheet.defences`). Tooltips with
   more to tell show it while Alt is held (`ui/InfoTooltip.ts`; a long text with no `more` of its own is cut short by itself),
-  laid out as Baldur's Gate's: the title, a quiet `subtitle` (what kind of thing), a large `headline` ("3~18 Damage" over
+  laid out as Baldur's Gate's: the title, a quiet `subtitle` (what kind of thing), a large `headline` ("3-18 Damage" over
   "3d6 Acid", each damage type in its colour), the text with its dice, saves and distances lit (`ui/TipText.ts`), and
   short facts in framed `chips` ("60 ft", "DEX save"; never pixels). The inventory stands at the top of the screen, clear
   of the quick bar's strip (`QUICK_BAR_HEIGHT`); the HUD's buttons say what they are under the pointer. Class features (`rules/ClassFeatures.ts`) fill the Skills tab above the cantrips: a worked passive is on from its

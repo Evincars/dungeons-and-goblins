@@ -19,7 +19,7 @@ import type { CatalogSpell } from '../rules/Spellbook';
 
 /**
  * How a spell reads on a tooltip, as Baldur's Gate lays it out: its name, what kind of spell it is, what it does at a
- * glance in large ("3~18 Damage", and "3d6 Acid" in the colour of acid), the start of its text with its dice, saves and
+ * glance in large ("3-18 Damage", and "3d6 Acid" in the colour of acid), the start of its text with its dice, saves and
  * distances lit, and its range, attack and recovery in short framed chips ("60 ft", "DEX save"). Alt shows the whole text
  * and every number for the level it is cast at.
  */
@@ -95,7 +95,7 @@ function reach(spell: CatalogSpell): string {
 
 const capitalised = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);
 
-/** "3~18 Damage" over "3d6 Acid" (each type in its colour), or "2~8 Healing" over "1d8": what it rolls at this cast level. */
+/** "3-18 Damage" over "3d6 Acid" (each type in its colour), or "2-8 Healing" over "1d8": what it rolls at this cast level. */
 function headline(spell: CatalogSpell, castLevel: number, heroLevel: number): TipHeadline | undefined {
   const rolled = spellStats(spell, castLevel, heroLevel).dice;
   if (!rolled) return undefined;

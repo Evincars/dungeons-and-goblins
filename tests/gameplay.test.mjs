@@ -3017,7 +3017,7 @@ test('a spell tooltip reads at a glance as in Baldur\'s Gate: kind, damage in la
   assert.ok(base.body.startsWith('A ray of sickening greenish energy') && base.body.endsWith('...'), 'the start of the text, cut short');
   assert.ok(base.body.length <= 110);
   assert.equal(base.subtitle, 'Level 1 Necromancy spell');
-  assert.equal(base.headline.text, '2~16 Damage', '2d8 poison');
+  assert.equal(base.headline.text, '2-16 Damage', '2d8 poison');
   assert.deepEqual(base.headline.under.map((run) => run.text), ['2d8', 'Poison']);
   assert.equal(base.headline.under[1].color, DAMAGE_COLORS.poison, 'the type in its own colour');
   const chips = base.chips.map((chip) => chip.text);
@@ -3026,11 +3026,11 @@ test('a spell tooltip reads at a glance as in Baldur\'s Gate: kind, damage in la
   assert.ok(base.more.body.includes('A ray of sickening greenish energy') && base.more.body.includes('2nd level or higher'), 'the whole text and its higher levels');
   assert.ok(base.more.detail.includes('Attack: ranged spell attack'));
   assert.ok(upgraded.detail.includes('Cast at level 2'));
-  assert.equal(upgraded.headline.text, '3~24 Damage', 'a higher level rolls more');
+  assert.equal(upgraded.headline.text, '3-24 Damage', 'a higher level rolls more');
   assert.ok(upgraded.chips.some((chip) => chip.text === '7.5s recovery'), 'and recovers more slowly');
   const blast = Spellbook.CATALOG.eldritch_blast;
-  assert.equal(spellTopic(blast, 0, 1).headline.text, '1~10 Damage');
-  assert.equal(spellTopic(blast, 0, 5).headline.text, '2~20 Damage', 'twice the dice at level 5');
+  assert.equal(spellTopic(blast, 0, 1).headline.text, '1-10 Damage');
+  assert.equal(spellTopic(blast, 0, 5).headline.text, '2-20 Damage', 'twice the dice at level 5');
   const hands = spellTopic(Spellbook.CATALOG.burning_hands, 1, 1);
   assert.ok(hands.chips.some((chip) => chip.text === 'DEX save'), 'a save by its ability\'s short name');
   assert.equal(hands.subtitle, 'Level 1 Evocation spell');
@@ -3043,7 +3043,7 @@ test('a spell tooltip reads at a glance as in Baldur\'s Gate: kind, damage in la
   assert.equal(shortText('one two three four', 12), 'one two...', 'cut at a word');
 });
 
-test('binding a spell from the inventory: it shuts, a square is chosen, and it comes back where it was', async () => {
+test('binding a spell from the inventory: it stays open while a square is chosen', async () => {
   const Binding = await load('game/SpellBinding');
   const { isInventoryOpen, setInventoryOpen } = await load('systems/InventorySystem');
   const cleric = createPlayer(0, 0, 'cleric');
@@ -3051,16 +3051,20 @@ test('binding a spell from the inventory: it shuts, a square is chosen, and it c
   cleric.inSafeRoom = true;
   setInventoryOpen(true);
   Binding.beginBinding({ spell: 'cure_wounds', level: 2 });
-  assert.equal(isInventoryOpen(), false, 'the inventory shuts while a square is chosen');
+  assert.equal(isInventoryOpen(), true, 'the inventory stays open (the quick bar comes forward over it)');
   Binding.finishBinding(cleric, 4);
   assert.deepEqual(Spellbook.quickBinding(cleric, 4), { spell: 'cure_wounds', level: 2 });
   assert.equal(Binding.pendingBinding(), null);
-  assert.equal(isInventoryOpen(), true, 'and comes back');
+  assert.equal(isInventoryOpen(), true, 'and is still open after');
   Binding.beginBinding({ spell: 'cure_wounds', level: 1 });
   Binding.cancelBinding();
   assert.equal(Binding.pendingBinding(), null, 'giving up binds nothing');
   assert.deepEqual(Spellbook.quickBinding(cleric, 4), { spell: 'cure_wounds', level: 2 });
   assert.equal(isInventoryOpen(), true);
+  Binding.beginBinding({ spell: 'cure_wounds', level: 1 });
+  Binding.beginBinding({ spell: 'cure_wounds', level: 2 });
+  assert.deepEqual(Binding.pendingBinding(), { spell: 'cure_wounds', level: 2 }, 'a spell picked while another waits takes its place');
+  Binding.cancelBinding();
   setInventoryOpen(false);
 });
 

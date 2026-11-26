@@ -1,4 +1,3 @@
-import { setInventoryOpen } from '../systems/InventorySystem';
 import { QUICK_SLOTS } from '../world';
 import type { Player } from '../world';
 import { requestBind } from './PlayerActions';
@@ -7,9 +6,9 @@ import type { QuickBinding } from '../rules/Spellbook';
 import { text } from '../core/texts';
 
 /**
- * Putting a spell on the quick bar: the inventory's Skills tab picks the spell and the level to cast it at, the
- * inventory shuts and every quick-bar square invites a click; a click on one binds the spell there, a click on
- * anything else (or Escape) gives up. Either way the inventory comes back as it was.
+ * Putting a spell on the quick bar: the inventory's Skills tab picks the spell and the level to cast it at, the quick bar
+ * comes forward over the inventory (which stays open, shaded) and every square invites a click; a click on one binds the
+ * spell there, a click on anything else (or Escape, or the inventory shutting) gives up.
  */
 
 let pending: QuickBinding | null = null;
@@ -54,36 +53,34 @@ function onRelease(): void {
   if (pending) window.addEventListener('mousedown', onPress, true);
 }
 
-function end(reopen: boolean): void {
+function end(): void {
   if (!pending) return;
   pending = null;
   refused = null;
   overSquare = false;
   window.removeEventListener('mousedown', onPress, true);
   window.removeEventListener('mouseup', onRelease, true);
-  if (reopen) setInventoryOpen(true);
 }
 
-/** Shuts the inventory and waits for a quick-bar square to be picked for this spell. */
+/** Waits for a quick-bar square to be picked for this spell (a spell picked while another waits takes its place). */
 export function beginBinding(binding: QuickBinding): void {
-  end(false);
+  end();
   pending = binding;
-  setInventoryOpen(false);
   window.addEventListener('mouseup', onRelease, true);
 }
 
-/** Gives up: the inventory comes back unchanged. */
+/** Gives up: nothing is bound. */
 export function cancelBinding(): void {
-  end(true);
+  end();
 }
 
-/** The scene is going away: forget the binding without opening anything. */
+/** The scene is going away: forget the binding. */
 export function abandonBinding(): void {
-  end(false);
+  end();
 }
 
 /**
- * A square was picked: the spell goes there and the inventory comes back. A wizard with no room left for the spell's
+ * A square was picked: the spell goes there. A wizard with no room left for the spell's
  * level keeps choosing, told to pick a square that holds one of that level (whose place it takes).
  */
 export function finishBinding(player: Player, slot: number): void {
@@ -93,5 +90,5 @@ export function finishBinding(player: Player, slot: number): void {
     return;
   }
   requestBind(player, slot, pending.spell, pending.level);
-  end(true);
+  end();
 }

@@ -346,11 +346,11 @@ export class QuickBar {
     this.slots.forEach((view, i) => { view.keyTag.text = mark + codeLabel(QUICK_KEYS[i]); });
   }
 
-  /** While a spell waits for a square the squares breathe and a line says what to do; the inventory coming back ends the wait. */
+  /** While a spell waits for a square the squares breathe and a line says what to do; the inventory shutting ends the wait. */
   private updateBinding(): void {
+    if (pendingBinding() && !isInventoryOpen()) cancelBinding();
     const waiting = pendingBinding();
-    if (waiting && isInventoryOpen()) cancelBinding();
-    this.prompt.visible = !!waiting && !isInventoryOpen();
+    this.prompt.visible = !!waiting;
     if (!waiting) {
       this.breath = 0;
       for (const view of this.slots) view.square.scale.set(1);

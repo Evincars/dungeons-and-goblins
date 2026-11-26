@@ -88,7 +88,7 @@ export function wrapLines(content: string, maxWidth: number): string[] {
  * the tooltip stays short and says to hold Alt, and shows the whole story while Alt is held (a long description with no
  * `more` of its own is cut short the same way). `icon`: the texture key of a picture shown in the corner (a spell's icon).
  * As Baldur's Gate lays its tooltips out: `subtitle`, what kind of thing it is, quietly under the title; `headline`, the
- * figure that matters most, large ("3~18 Damage"), with a line under it ("3d6 Acid"); `chips`, short facts framed at the
+ * figure that matters most, large ("3-18 Damage"), with a line under it ("3d6 Acid"); `chips`, short facts framed at the
  * foot ("60 ft", "DEX save").
  */
 export type TipTopic = {

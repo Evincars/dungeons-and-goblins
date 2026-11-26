@@ -39,6 +39,7 @@ import { fuzzyMatch } from '../core/fuzzy';
 import { BAG_SORTS, bagView } from '../game/BagView';
 import type { BagSort } from '../game/BagView';
 import { itemTrained } from '../rules/Classes';
+import { pendingBinding } from '../game/SpellBinding';
 
 /** inventory.png, measured in its own pixels: the leather bag panel, the cloth gear panel, and its two tabs. */
 const ART = { w: 2752, h: 1536 };
@@ -135,6 +136,8 @@ const BAG_CELL_EDGE_ALPHA = 0.3;
 const SQUARE_EDGE = 0xb4a488;
 const SQUARE_EDGE_ALPHA = 0.55;
 const DIM_ALPHA = 0.6;
+/** While a spell waits for its quick-bar square the inventory is shaded this much more, so the bar in front of it stands out. */
+const BINDING_SHADE_ALPHA = 0.5;
 /** The bag shows this many of its rows at a time; the wheel or the scrollbar at its right edge (ui/ScrollBar.ts) moves through the rest. */
 const BAG_VISIBLE_ROWS = 7;
 const BAG_SCROLLBAR_W = ScrollBar.WIDTH;
@@ -366,6 +369,9 @@ export class InventoryOverlay {
   private readonly title = new PixelLabel('', { color: THEME.title, scale: 2, shadow: true });
   private readonly weight = new PixelLabel('', { color: THEME.buttonText, align: 'right', shadow: true });
 
+  /** Over the whole inventory while a spell waits for its quick-bar square (clicks pass through: another spell may be picked). */
+  private readonly bindShade = new Graphics().rect(0, 0, GAME_WIDTH, GAME_HEIGHT - QUICK_BAR_HEIGHT).fill({ color: THEME.backdrop, alpha: BINDING_SHADE_ALPHA });
+
   constructor() {
     this.container.visible = false;
     // The game dims under it, all but the quick bar's strip at the foot.
@@ -373,6 +379,9 @@ export class InventoryOverlay {
     this.build();
     this.fitToScreen();
     this.listen();
+    this.bindShade.eventMode = 'none';
+    this.bindShade.visible = false;
+    this.container.addChild(this.bindShade);
     // Item pictures load the first time they are shown: draw again once they arrive.
     this.stopListening = onArtLoaded(() => {
       this.shown = null;
@@ -415,10 +424,18 @@ export class InventoryOverlay {
     return this.spells?.closeChoice() ?? false;
   }
 
+  /** A spell waiting for its square: the inventory shaded behind the quick bar, its tooltip put away. */
+  private shadeForBinding(): void {
+    const binding = !!pendingBinding();
+    if (binding) this.infoTip.hide();
+    this.bindShade.visible = binding;
+  }
+
   update(): void {
     const player = localPlayer();
     if (!this.container.visible || !player) return;
     this.animateTabs();
+    this.shadeForBinding();
     // The search's HTML input lies over the canvas: while a menu is open over it, clicks go through to the menu.
     if (this.search) this.search.clickable = !this.itemMenu.open;
     if (this.activeTab === SKILLS_TAB) this.spells?.animate();

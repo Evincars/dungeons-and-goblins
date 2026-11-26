@@ -36,7 +36,8 @@ const setDown = (hero, item) => hero.inventory.push(structuredClone(item)) && Pl
 const { attempt, ensure, ValidationError } = await load('core/errors/index');
 const { invitePeer, inviteLink, validInput, validCommand, validRoster, validStart } = await load('network/protocol');
 const { captureWorld, validateNetState, WorldReplica } = await load('network/WorldSync');
-const { sameItems, handleGuestCommand, playerInSlot } = await load('game/PlayerActions');
+const PlayerActionsModule = await load('game/PlayerActions');
+const { sameItems, handleGuestCommand, playerInSlot } = PlayerActionsModule;
 const { buildDungeon } = await load('level/DungeonGenerator');
 const { createShopNpc, createTorch, SHOP_ITEMS } = await load('entities/DungeonFactory');
 const { cleanName } = await load('game/Settings');
@@ -3066,6 +3067,74 @@ test('binding a spell from the inventory: it stays open while a square is chosen
   assert.deepEqual(Binding.pendingBinding(), { spell: 'cure_wounds', level: 2 }, 'a spell picked while another waits takes its place');
   Binding.cancelBinding();
   setInventoryOpen(false);
+});
+
+test('quick bar presets: saved per class, loaded only in a safe room, the stored profile checked', async () => {
+  const Profile = await load('game/profile/QuickBarProfile');
+  const Store = await load('game/profile/ProfileStore');
+  const { loadBindings } = await load('game/PlayerActions');
+  const { QUICK_SLOTS } = await load('world');
+  Store.useProfileStore(new Store.MemoryProfileStore());
+  Profile.resetQuickBarProfile();
+  const cleric = createPlayer(0, 0, 'cleric');
+  cleric.playerStats.level = 3;
+  cleric.inSafeRoom = true;
+  assert.equal(Profile.shownSquares('cleric'), 10, 'the whole bar shows until the player says otherwise');
+  Profile.setShownSquares('cleric', 4);
+  Profile.setShownSquares('fighter', 0);
+  assert.equal(Profile.shownSquares('cleric'), 4);
+  assert.equal(Profile.shownSquares('fighter'), 1, 'at least one square shows');
+  handleBind(cleric, 4, 'cure_wounds', 2);
+  Profile.storePreset('cleric', 0, Profile.snapshotBar(cleric), 1000);
+  const [saved] = Profile.barPresets('cleric');
+  assert.deepEqual(saved.bound[4], { spell: 'cure_wounds', level: 2 });
+  assert.equal(saved.bound.length, QUICK_SLOTS, 'both rows are kept');
+  assert.ok(Profile.presetInUse(saved, cleric), 'the bar is that preset');
+  handleBind(cleric, 4, 'cure_wounds', 1);
+  assert.equal(Profile.presetInUse(saved, cleric), false, 'bound otherwise, it is not');
+
+  cleric.inSafeRoom = false;
+  assert.equal(loadBindings(cleric, saved.bound), false, 'presets load only in a safe room');
+  cleric.inSafeRoom = true;
+  const withUnknown = saved.bound.map((b, i) => (i === 6 ? { spell: 'fireball', level: 3 } : b));
+  assert.ok(loadBindings(cleric, withUnknown));
+  assert.deepEqual(Spellbook.quickBinding(cleric, 4), { spell: 'cure_wounds', level: 2 }, 'the preset is back on the bar');
+  assert.equal(Spellbook.quickBinding(cleric, 6), null, 'a spell the hero may not bind stays empty');
+  assert.ok(Profile.presetInUse(saved, cleric) === false && cleric.spellbook.bound[0] === null, 'a square the preset left to the class gets its own');
+
+  // The profile round-trips through the store; a damaged one keeps what is valid and drops the rest.
+  Profile.resetQuickBarProfile();
+  await Profile.loadQuickBarProfile();
+  assert.equal(Profile.shownSquares('cleric'), 4, 'read back from the store');
+  assert.equal(Profile.barPresets('cleric')[0].savedAt, 1000);
+  const read = Profile.readProfile({ cleric: { shown: 99, presets: [{ bound: [1, 2], savedAt: 1 }, null, 'x'] }, orc: { shown: 3 } });
+  assert.equal(read.cleric.shown, 10, 'clamped to the bar');
+  assert.deepEqual(read.cleric.presets, [null, null, null], 'a damaged preset is dropped');
+  assert.equal(read.orc, undefined, 'only hero classes');
+  Profile.clearPreset('cleric', 0);
+  assert.equal(Profile.barPresets('cleric')[0], null);
+
+  const bound = Array.from({ length: QUICK_SLOTS }, () => null);
+  assert.ok(validCommand({ kind: 'load_bindings', bound }), 'a whole bar passes the network checks');
+  assert.equal(validCommand({ kind: 'load_bindings', bound: bound.slice(1) }), false, 'a bar of the wrong length does not');
+  assert.equal(validCommand({ kind: 'load_bindings', bound: [{ spell: 7, level: 0 }, ...bound.slice(1)] }), false);
+  Store.useProfileStore(new Store.LocalProfileStore());
+  Profile.resetQuickBarProfile();
+});
+
+/** Binds a spell the way the inventory does for a player alone. */
+function handleBind(player, slot, spell, level) {
+  assert.ok(PlayerActionsModule.bindSpell(player, slot, spell, level), `${spell} at level ${level} binds`);
+}
+
+test('the combat log wraps a long entry under itself, set in', async () => {
+  const { wrapEntry } = await load('ui/CombatLogPanel');
+  const rows = wrapEntry({ text: 'Evincars rolls a natural twenty and strikes the goblin chieftain for a great deal of damage', color: 1 }, 80);
+  assert.ok(rows.length > 1, 'too long for one row');
+  assert.equal(rows[0].indent, false);
+  assert.ok(rows.slice(1).every((row) => row.indent), 'the rows after the first are set in');
+  assert.equal(rows.map((row) => row.text).join(' '), 'Evincars rolls a natural twenty and strikes the goblin chieftain for a great deal of damage', 'no word is lost');
+  assert.equal(wrapEntry({ text: 'Short', color: 1 }, 80).length, 1);
 });
 
 // ── Class features ───────────────────────────────────────────────────────────

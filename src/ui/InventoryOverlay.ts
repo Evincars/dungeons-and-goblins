@@ -40,17 +40,19 @@ import { BAG_SORTS, bagView } from '../game/BagView';
 import type { BagSort } from '../game/BagView';
 import { itemTrained } from '../rules/Classes';
 import { pendingBinding } from '../game/SpellBinding';
+import { QuickBarPage } from './QuickBarPage';
 
 /** inventory.png, measured in its own pixels: the leather bag panel, the cloth gear panel, and its two tabs. */
 const ART = { w: 2752, h: 1536 };
 const BAG_AREA = { x: 78, y: 284, w: 1108, h: 1174 };
 const GEAR_AREA = { x: 1404, y: 320, w: 1264, h: 1138 };
-/** The tabs' iron frames, from their outline in (the art has a stray light line just left of and above each). */
-const TABS = [{ x: 1332, y: 6, w: 376, h: 217 }, { x: 1766, y: 6, w: 376, h: 217 }];
-const TAB_TITLES = [text('inventory.tab_gear'), text('inventory.tab_stats')];
-/** The tabs, in order: the character (equipment and sheet) and the skills (spells). */
+/** Where the tabs stand over the gear panel (art pixels; the art's own tabs are not used, see tabFrameTexture). */
+const TABS = [{ x: 1332, y: 6, w: 376, h: 217 }, { x: 1766, y: 6, w: 376, h: 217 }, { x: 2200, y: 6, w: 376, h: 217 }];
+const TAB_TITLES = [text('inventory.tab_gear'), text('inventory.tab_stats'), text('inventory.tab_bar')];
+/** The tabs, in order: the character (equipment and sheet), the skills (spells) and the quick bar (its size and presets). */
 const CHARACTER_TAB = 0;
 const SKILLS_TAB = 1;
+const QUICK_BAR_TAB = 2;
 /** The art's panels start this far down; above them its strip holds only the two tabs, which are drawn on their own. */
 const PANEL_TOP = 223;
 /** The bag panel's iron frame, outside edges (art pixels), and the frame's iron. */
@@ -59,11 +61,19 @@ const IRON = 0x1f222b;
 const IRON_EDGE = 0x4a5563;
 const IRON_OUTLINE = 0x04050a;
 /**
- * The inside of a tab's iron frame, from the inner edge of its outline (art pixels in from the frame's edges): filled
- * black down to its foot, so the tab is the iron frame round a dark opening.
+ * A tab is drawn, not cut from the art: a band of dark forged iron round a dark opening, open at its foot, its top corners
+ * cut off on the slant. In design pixels: the band's width and how much of each top corner is cut. It is drawn TAB_RES
+ * times finer than the design, so its edges stay sharp scaled up to the screen.
  */
-const TAB_INSET = { left: 44, right: 43, top: 45 };
+const TAB_BAND = 4;
+const TAB_CHAMFER = 7;
+const TAB_RES = 4;
 const TAB_INSIDE = 0x030409;
+/** The band's iron: lit faintly from above, darkening down to the panels; a worn highlight along its top, rivets at its upper corners. */
+const TAB_IRON_TOP = 0x2b2f38;
+const TAB_IRON_FOOT = 0x111318;
+const TAB_HIGHLIGHT = 0x5d6673;
+const TAB_RIVET = 0x6b7480;
 /**
  * The tabs stand behind the panels, their feet tucked under the panels' top edge: the others sink this many design
  * pixels further in, the open one stands out its whole height (no gap ever opens under a tab). The open one is lit from
@@ -216,21 +226,77 @@ const FIELDS: readonly FieldDef[] = [
 type Tab = { stand: Container; frame: Sprite; glow: Sprite; label: PixelLabel; page: Container; hovered: boolean; rect: Rect };
 
 
+const css = (color: number): string => `#${color.toString(16).padStart(6, '0')}`;
+
+/** The outline of a tab `w` by `h` with its top corners cut `cut` on the slant, `inset` in from its edges (open at the foot). */
+function tabPath(ctx: CanvasRenderingContext2D, w: number, h: number, cut: number, inset: number): void {
+  ctx.beginPath();
+  ctx.moveTo(inset, h);
+  ctx.lineTo(inset, cut + inset * 0.6);
+  ctx.lineTo(cut + inset * 0.6, inset);
+  ctx.lineTo(w - cut - inset * 0.6, inset);
+  ctx.lineTo(w - inset, cut + inset * 0.6);
+  ctx.lineTo(w - inset, h);
+  ctx.closePath();
+}
+
 /**
- * A tab of the art as a texture of its own: its iron frame, the grey inside it filled black (cut out of the art once,
- * onto a canvas of its own).
+ * A tab's frame (made once for its size): a black outline, a band of dark iron lit faintly from above and darkening
+ * towards the panels, a worn highlight along its top and its slanted corners, a rivet at each upper corner, and the dark
+ * opening inside, open down to its foot.
  */
-function tabFrameTexture(tab: Rect): Texture {
-  const whole = getTexture('inventory_art');
-  const image = imageOf(whole);
-  const canvas = createCanvas(tab.w, tab.h);
-  if (!image) return Texture.EMPTY;
-  const ctx = context2d(canvas);
-  ctx.drawImage(image, whole.frame.x + tab.x, whole.frame.y + tab.y, tab.w, tab.h, 0, 0, tab.w, tab.h);
-  // The frame is open at its foot, where it stands on the panel: its inside is dark all the way down.
-  ctx.fillStyle = `#${TAB_INSIDE.toString(16).padStart(6, '0')}`;
-  ctx.fillRect(TAB_INSET.left, TAB_INSET.top, tab.w - TAB_INSET.left - TAB_INSET.right, tab.h - TAB_INSET.top);
-  return Texture.from(canvas);
+const tabFrames = new Map<string, Texture>();
+function tabFrameTexture(designW: number, designH: number): Texture {
+  const key = `${designW}x${designH}`;
+  const made = tabFrames.get(key);
+  if (made) return made;
+  const r = TAB_RES;
+  const w = Math.round(designW * r);
+  const h = Math.round(designH * r);
+  const ctx = context2d(createCanvas(w, h));
+  const cut = TAB_CHAMFER * r;
+  const band = TAB_BAND * r;
+  ctx.fillStyle = css(IRON_OUTLINE);
+  tabPath(ctx, w, h, cut, 0);
+  ctx.fill();
+  const iron = ctx.createLinearGradient(0, 0, 0, h);
+  iron.addColorStop(0, css(TAB_IRON_TOP));
+  iron.addColorStop(1, css(TAB_IRON_FOOT));
+  ctx.fillStyle = iron;
+  tabPath(ctx, w, h, cut, r);
+  ctx.fill();
+  // The worn edge along the top and the slanted corners, where the light falls.
+  ctx.strokeStyle = css(TAB_HIGHLIGHT);
+  ctx.lineWidth = r * 0.75;
+  ctx.beginPath();
+  ctx.moveTo(r * 1.5, cut + r);
+  ctx.lineTo(cut + r, r * 1.5);
+  ctx.lineTo(w - cut - r, r * 1.5);
+  ctx.lineTo(w - r * 1.5, cut + r);
+  ctx.stroke();
+  // The opening, with a black lip round it.
+  ctx.fillStyle = css(IRON_OUTLINE);
+  tabPath(ctx, w, h + r, cut - r, band - r);
+  ctx.fill();
+  ctx.fillStyle = css(TAB_INSIDE);
+  tabPath(ctx, w, h + r, cut - r, band);
+  ctx.fill();
+  for (const x of [band + cut * 0.15, w - band - cut * 0.15]) drawRivet(ctx, x, band / 2 + cut * 0.55, r);
+  const texture = Texture.from(ctx.canvas);
+  tabFrames.set(key, texture);
+  return texture;
+}
+
+/** A rivet head on the band: a dark dot with a pale spot on its upper left. */
+function drawRivet(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  ctx.fillStyle = css(IRON_OUTLINE);
+  ctx.beginPath();
+  ctx.arc(x, y, r * 1.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = css(TAB_RIVET);
+  ctx.beginPath();
+  ctx.arc(x - r * 0.25, y - r * 0.25, r * 0.6, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 /**
@@ -336,6 +402,7 @@ export class InventoryOverlay {
   private readonly fields: Field[] = [];
   private proficiencies: ProficiencyPanel | null = null;
   private spells: SpellsPanel | null = null;
+  private quickBarPage: QuickBarPage | null = null;
   /** What the rules make of the player's gear, as last drawn (for the tooltips). */
   private sheet: CharacterSheet | null = null;
   private readonly infoTip = new InfoTooltip();
@@ -439,6 +506,7 @@ export class InventoryOverlay {
     // The search's HTML input lies over the canvas: while a menu is open over it, clicks go through to the menu.
     if (this.search) this.search.clickable = !this.itemMenu.open;
     if (this.activeTab === SKILLS_TAB) this.spells?.animate();
+    if (this.activeTab === QUICK_BAR_TAB) this.quickBarPage?.update(player);
     // Alt held or let go: the tooltip up shows its whole story, or its short one again.
     this.infoTip.refresh();
     const inventory = player.inventory ?? [];
@@ -481,7 +549,11 @@ export class InventoryOverlay {
     this.root.addChild(gearPage, skillsPage);
     this.buildGear(designRect(GEAR_AREA), gearPage);
     this.buildSkillsPage(designRect(GEAR_AREA), skillsPage);
-    [gearPage, skillsPage].forEach((page, i) => this.addTab(designRect(TABS[i]), TAB_TITLES[i], page, TABS[i]));
+    const barPage = new Container();
+    this.root.addChild(barPage);
+    this.quickBarPage = new QuickBarPage(designRect(GEAR_AREA));
+    barPage.addChild(this.quickBarPage.view);
+    [gearPage, skillsPage, barPage].forEach((page, i) => this.addTab(designRect(TABS[i]), TAB_TITLES[i], page));
     this.showTab(CHARACTER_TAB);
     this.ghost.anchor.set(0.5);
     this.ghost.alpha = GHOST_ALPHA;
@@ -491,22 +563,22 @@ export class InventoryOverlay {
   }
 
   /**
-   * A tab: the art's iron tab frame on its own (its grey inside filled dark), its title in it, standing behind the panels
-   * with its foot tucked under them; the whole of it a button that shows its page.
+   * A tab: its forged iron frame round a dark opening (tabFrameTexture), its title in it, standing behind the panels with
+   * its foot tucked under them; the whole of it a button that shows its page.
    */
-  private addTab(tab: Rect, title: string, page: Container, art: Rect): void {
+  private addTab(tab: Rect, title: string, page: Container): void {
     const stand = new Container();
     stand.position.set(tab.x, tab.y);
-    const frame = new Sprite(tabFrameTexture(art));
-    frame.scale.set(K);
+    const frame = new Sprite(tabFrameTexture(tab.w, tab.h));
+    frame.scale.set(1 / TAB_RES);
     // The glow fills the tab's dark opening: the lantern below lights it and the title from underneath.
     const glow = new Sprite(tabGlowTexture());
-    glow.position.set(TAB_INSET.left * K, TAB_INSET.top * K);
-    glow.width = tab.w - (TAB_INSET.left + TAB_INSET.right) * K;
-    glow.height = tab.h - TAB_INSET.top * K;
+    glow.position.set(TAB_BAND, TAB_BAND);
+    glow.width = tab.w - 2 * TAB_BAND;
+    glow.height = tab.h - TAB_BAND;
     glow.blendMode = 'add';
     const label = new PixelLabel(title, { color: THEME.buttonText, align: 'center', shadow: true });
-    label.position.set(Math.round(tab.w / 2), Math.round((TAB_INSET.top * K + tab.h) / 2 - GLYPH_H / 2));
+    label.position.set(Math.round(tab.w / 2), Math.round((TAB_BAND + tab.h) / 2 - GLYPH_H / 2));
     stand.addChild(frame, glow, label);
     const hit = new Container();
     hit.eventMode = 'static';
@@ -1232,9 +1304,14 @@ export class InventoryOverlay {
       this.infoTip.showAt(level.topic, level.clear, bounds, 'clear');
       return;
     }
-    const topic = this.dragging ? null : skills ? this.spells?.topicAt(x, y) ?? null : this.topicAt(x, y);
+    const topic = this.dragging ? null : skills ? this.spells?.topicAt(x, y) ?? null : this.pageTopicAt(x, y);
     if (topic) this.infoTip.show(topic, x, y, bounds);
     else this.infoTip.hide();
+  }
+
+  /** What the open page (the character sheet, or the quick bar's) tells at a point, if anything. */
+  private pageTopicAt(x: number, y: number): TipTopic | null {
+    return this.activeTab === QUICK_BAR_TAB ? this.quickBarPage?.topicAt(x, y) ?? null : this.topicAt(x, y);
   }
 
   /** The tooltip topic under a point of the character sheet's column (scrolled as it is), if any. */

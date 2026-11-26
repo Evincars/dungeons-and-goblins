@@ -17,7 +17,7 @@ import { queueAnswer } from './Party';
 import { setSeatPaused } from './Pause';
 import { chooseLoot } from './LootRoll';
 import { applyCustomization, isCustomizeCommand } from './Customize';
-import { EMPTY_SQUARE, canBind, featSpellBindable, roomToBind, spellListOf } from '../rules/Spellbook';
+import { EMPTY_SQUARE, UNBOUND, canBind, featSpellBindable, roomToBind, spellListOf } from '../rules/Spellbook';
 import type { QuickBinding } from '../rules/Spellbook';
 import { bindingFeatureId, canToggle, hasClassFeature } from '../rules/ClassFeatures';
 import { FEATS, bindingFeatId } from '../rules/Feats';
@@ -456,6 +456,31 @@ export function unbindSpell(player: Player, slot: number): boolean {
   return true;
 }
 
+/**
+ * A preset put on the quick bar (game/profile/QuickBarProfile.ts), in a safe room only: every square is emptied, then
+ * takes what the preset holds there if the hero may still bind it (a spell they no longer know, or a wizard's level
+ * already full, leaves it empty); a square the preset left to the class gets the class's own again. Returns whether it
+ * was loaded.
+ */
+export function loadBindings(player: Player, bound: readonly (QuickBinding | null)[]): boolean {
+  if (!preparesSpells(player) || bound.length !== QUICK_SLOTS) return false;
+  const book = player.spellbook ?? (player.spellbook = { recovery: Array.from({ length: QUICK_SLOTS }, () => 0) });
+  book.bound = Array.from({ length: QUICK_SLOTS }, () => EMPTY_SQUARE);
+  bound.forEach((binding, slot) => {
+    if (binding && binding.spell !== UNBOUND) bindSpell(player, slot, binding.spell, binding.level);
+  });
+  const loaded = book.bound;
+  book.bound = loaded.map((binding, slot) => (bound[slot] === null ? null : binding));
+  book.recovery.fill(0);
+  return true;
+}
+
+/** A preset loaded from the inventory: at once here, or asked of the host for a guest. */
+export function requestLoadBindings(player: Player, bound: readonly (QuickBinding | null)[]): void {
+  if (coop.role === 'guest') coop.sendCommand({ kind: 'load_bindings', bound: [...bound] });
+  else loadBindings(player, bound);
+}
+
 /** A right click on a quick-bar square: emptied here at once, or asked of the host for a guest. */
 export function requestUnbind(player: Player, slot: number): void {
   if (coop.role === 'guest') coop.sendCommand({ kind: 'unbind_spell', slot });
@@ -516,6 +541,10 @@ export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): voi
   }
   if (command.kind === 'unbind_spell') {
     unbindSpell(player, command.slot);
+    return;
+  }
+  if (command.kind === 'load_bindings') {
+    loadBindings(player, command.bound);
     return;
   }
   if (command.kind === 'give') {

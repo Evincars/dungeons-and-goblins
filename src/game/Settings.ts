@@ -51,11 +51,16 @@ export type Settings = {
   fullscreen: boolean;
   /** Name the other players see above this character in multiplayer. */
   playerName: string;
+  /** How large the combat log is drawn: a step of ui/CombatLogPanel.ts `LOG_SIZES`. */
+  combatLogSize: number;
 };
 
 export const NAME_MAX = 12;
 const DEFAULT_SFX_VOLUME = 0.6;
 const DEFAULT_MUSIC_VOLUME = 0.5;
+/** The combat log's size step, and how many steps there are (ui/CombatLogPanel.ts keeps their sizes). */
+export const DEFAULT_COMBAT_LOG_SIZE = 1;
+export const COMBAT_LOG_SIZES = 4;
 
 /** Trims and strips anything but letters, digits, spaces and a few separators. */
 export function cleanName(text: unknown): string {
@@ -66,7 +71,7 @@ export function cleanName(text: unknown): string {
 const STORAGE_KEY = 'dungeons-and-goblins-settings';
 
 function defaults(): Settings {
-  return { bindings: { ...DEFAULT_BINDINGS }, heroClass: DEFAULT_CLASS, sfxVolume: DEFAULT_SFX_VOLUME, musicVolume: DEFAULT_MUSIC_VOLUME, fullscreen: false, playerName: '' };
+  return { bindings: { ...DEFAULT_BINDINGS }, heroClass: DEFAULT_CLASS, sfxVolume: DEFAULT_SFX_VOLUME, musicVolume: DEFAULT_MUSIC_VOLUME, fullscreen: false, playerName: '', combatLogSize: DEFAULT_COMBAT_LOG_SIZE };
 }
 
 function isActionName(key: string): key is ActionName {
@@ -117,6 +122,8 @@ function parseSettings(value: unknown, base: Settings): Settings {
     musicVolume: isFiniteNumber(value.musicVolume) ? MathUtils.clamp(value.musicVolume, 0, 1) : base.musicVolume,
     fullscreen: typeof value.fullscreen === 'boolean' ? value.fullscreen : base.fullscreen,
     playerName: cleanName(value.playerName),
+    combatLogSize: Number.isInteger(value.combatLogSize) && isFiniteNumber(value.combatLogSize)
+      ? MathUtils.clamp(value.combatLogSize, 0, COMBAT_LOG_SIZES - 1) : base.combatLogSize,
   };
 }
 

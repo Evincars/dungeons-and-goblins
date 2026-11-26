@@ -18,6 +18,8 @@ export function context2d(canvas: HTMLCanvasElement, options?: CanvasRenderingCo
 }
 
 export function isCanvasImageSource(value: unknown): value is CanvasImageSource {
+  // Outside a browser (the tests) there is no image to draw from.
+  if (typeof HTMLImageElement === 'undefined') return false;
   return value instanceof HTMLImageElement || value instanceof HTMLCanvasElement || value instanceof ImageBitmap
     || (typeof OffscreenCanvas !== 'undefined' && value instanceof OffscreenCanvas)
     || value instanceof HTMLVideoElement || value instanceof SVGImageElement;

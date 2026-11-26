@@ -39,8 +39,7 @@ const GOLD_DARK = 0x4a3818;
 const WELL = 0x07050a;
 /**
  * The health bar's magic: its life a dark blood running from deep crimson at the top to near black below, a faint violet
- * haze round its frame, a crimson gem set at each end, a glint of light drifting along the blood, a bright edge where it
- * ends, and a heartbeat that quickens its light when the hero is close to death.
+ * haze round its frame, a crimson gem set at each end, a bright edge where it ends, and a heartbeat that quickens its light when the hero is close to death.
  */
 const BLOOD = new FillGradient({
   type: 'linear', start: { x: 0, y: 0 }, end: { x: 0, y: 1 }, textureSpace: 'local',
@@ -51,10 +50,6 @@ const HAZE_ALPHA = 0.35;
 const GEM = 0x9a1020;
 const GEM_LIGHT = 0xff5a6a;
 const GEM_R = 3;
-const GLINT_W = 10;
-const GLINT_ALPHA = 0.16;
-/** Updates for the glint to cross the bar once. */
-const GLINT_PERIOD = 240;
 const EDGE_COLOR = 0xff6a7a;
 const EDGE_ALPHA = 0.65;
 /** Below this share of hit points the bar beats like a heart: this many updates a beat, this bright at its height. */
@@ -163,7 +158,7 @@ export class HudPanel {
   private readonly choiceMark = new PixelLabel('!', { color: THEME.hitPoints, scale: MARK_SCALE, align: 'center', outline: true });
   /** Updates so far, which the choice mark breathes by. */
   private breath = 0;
-  /** Updates so far, which the health bar's glint and heartbeat run by. */
+  /** Updates so far, which the health bar's heartbeat runs by. */
   private pulse = 0;
   /** What a HUD button is, told while the pointer is on it. */
   private readonly tip = new InfoTooltip();
@@ -342,13 +337,9 @@ export class HudPanel {
     bar.value.text = text('hud.bar.value', { current, max });
   }
 
-  /** The blood in the bar, `w` wide: its gradient, its shine, the glint drifting along it, its bright edge, and the heartbeat when low. */
+  /** The blood in the bar, `w` wide: its gradient, its shine, its bright edge, and the heartbeat when low (nothing runs along it). */
   private drawBlood(g: Graphics, w: number, h: number, share: number, partial: boolean): void {
     g.roundRect(0, 0, w, h, BAR_RADIUS - BAR_INSET).fill(BLOOD).rect(1, 1, Math.max(0, w - 2), 1).fill({ color: 0xffffff, alpha: SHINE_ALPHA });
-    const glint = ((this.pulse % GLINT_PERIOD) / GLINT_PERIOD) * (w + GLINT_W) - GLINT_W;
-    const from = Math.max(1, glint);
-    const to = Math.min(w - 1, glint + GLINT_W);
-    if (to > from) g.rect(from, 1, to - from, h - 2).fill({ color: 0xffd0d8, alpha: GLINT_ALPHA });
     if (partial) g.rect(w - 1, 1, 1, h - 2).fill({ color: EDGE_COLOR, alpha: EDGE_ALPHA });
     if (share >= LOW_HEALTH) return;
     const beat = (Math.sin((this.pulse / BEAT_PERIOD) * 2 * Math.PI) + 1) / 2;

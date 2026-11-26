@@ -60,6 +60,14 @@ function codeOf(ch: string): number {
   return code >= 32 && code < 256 ? code : 63;
 }
 
+/** How wide a line of text is drawn at this scale, without drawing it (for wrapping text to a width). */
+export function measureText(line: string, scale = 1): number {
+  const ink = glyphInk();
+  let w = 0;
+  for (const ch of line) w += ch === ' ' ? SPACE_WIDTH : ink[codeOf(ch)].width + GLYPH_GAP;
+  return Math.max(0, w - GLYPH_GAP) * scale;
+}
+
 export type PixelLabelOptions = {
   color?: number;
   scale?: number;
@@ -125,13 +133,6 @@ export class PixelLabel extends Container {
     return this.heightPx;
   }
 
-  private lineWidth(line: string, ink: Ink[]): number {
-    let w = 0;
-    for (const ch of line) {
-      w += ch === ' ' ? SPACE_WIDTH : ink[codeOf(ch)].width + GLYPH_GAP;
-    }
-    return Math.max(0, w - GLYPH_GAP) * this.scaleFactor;
-  }
 
   private rebuild(): void {
     this.built = true;
@@ -140,7 +141,7 @@ export class PixelLabel extends Container {
     const ink = glyphInk();
     const s = this.scaleFactor;
     const lines = this.content.split('\n');
-    const widths = lines.map((l) => this.lineWidth(l, ink));
+    const widths = lines.map((l) => measureText(l, s));
     this.widthPx = Math.max(0, ...widths);
     this.heightPx = lines.length * this.lineHeight * s;
 

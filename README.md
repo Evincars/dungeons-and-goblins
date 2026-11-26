@@ -6,12 +6,6 @@
   <a href="https://evincars.github.io/dungeons-and-goblins/">▶ Play here</a>
 </h2>
 
-<p align="center">
-  <a href="https://evincars.github.io/dungeons-and-goblins/"><img src="https://img.shields.io/badge/%E2%96%B6%20PLAY%20HERE-evincars.github.io%2Fdungeons--and--goblins-b0302a?style=for-the-badge" alt="Play Dungeons & Goblins in your browser"></a>
-  <br>
-  <sub>Runs in the browser — no install needed: <a href="https://evincars.github.io/dungeons-and-goblins/">https://evincars.github.io/dungeons-and-goblins/</a></sub>
-</p>
-
 A top-down dungeon crawler in TypeScript, Pixi.js v8 and Miniplex, adapted from Catacomb Snatch Redux.
 Fight through a procedurally generated dungeon (sword, spells and arrows), loot coins and gear, and take
 the exit down to the next level — alone, or with up to three friends in peer-to-peer co-op.

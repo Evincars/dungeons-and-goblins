@@ -27,7 +27,13 @@ import { THEME } from './Theme';
 import { drawIconClock } from './IconClock';
 import { ConcentrationBadge } from './ConcentrationBadge';
 import { durationOf } from './HudTime';
-import { holdsOn } from '../systems/SpellHolds';
+import { holdOf } from '../systems/SpellHolds';
+import { conditionsOn } from '../systems/Conditions';
+import type { ShownCondition } from '../systems/Conditions';
+import type { SpellId } from '../rules/Spells';
+import { RING_COLOURS } from '../systems/ConditionRingSystem';
+import { isHoldKind } from '../rules/Conditions';
+import { conditionIconKey } from '../assets/ConditionIcons';
 
 /** Top left: this far from the screen's edges; each icon this big, this far from the next, stacked down a column. */
 const MARGIN = 8;
@@ -84,8 +90,11 @@ const BONUS_ATTACK_COLOR = 0x5aa8ff;
 /** Seconds to a tenth, as the HUD counts them. */
 const secondsOf = (ticks: number): string => (Math.ceil((ticks / TICKS_PER_SECOND) * 10) / 10).toFixed(1);
 
-/** What a line's icon and tooltip tell about: a class feature, a spell or a feat. */
-type About = { feature: FeatureDef } | { spell: string } | { feat: FeatId } | null;
+/** What a line's icon and tooltip tell about: a class feature, a spell, a feat or a condition (and the spell holding it there). */
+type About = { feature: FeatureDef } | { spell: string } | { feat: FeatId } | { condition: ShownCondition; spell?: SpellId } | null;
+
+/** The hero's conditions, read afresh each update (reused). */
+const shownConditions: ShownCondition[] = [];
 
 /**
  * One icon: what it says (its tooltip's first line) and in what colour, what it is about (its picture and tooltip), its
@@ -149,7 +158,7 @@ function spellLines(player: Player): Line[] {
     lines.push({ content: text('hud.passive.lasting', { name: spellName(id), left: durationOf(left) }), color: BOOST_COLOR, about: { spell: id }, timer: { key: `buff:${id}`, left } });
   }
   if ((buffs?.mageArmor ?? 0) > 0) lines.push({ content: spellName('mage_armor'), color: BOOST_COLOR, about: { spell: 'mage_armor' } });
-  return [...lines, ...hiddenLines(player, own), ...heldLines(player)];
+  return [...lines, ...hiddenLines(player, own), ...conditionLines(player)];
 }
 
 /** Mirror Image's duplicates left (a count on its icon), Invisibility on the hero and See Invisibility, with their time left. */
@@ -174,12 +183,21 @@ function hiddenLines(player: Player, own: string | undefined): Line[] {
   return lines;
 }
 
-/** What an enemy's spell (or webs) holds the hero in, in red, with its time left. */
-function heldLines(player: Player): Line[] {
-  return holdsOn(player).map(({ kind, hold }) => ({
-    content: text('hud.passive.held', { condition: text(`condition.${kind}.name`), left: durationOf(hold.ticks) }), color: HELD_COLOR,
-    about: { spell: hold.spell }, timer: { key: `held:${kind}`, left: hold.ticks },
-  }));
+/**
+ * The conditions the hero is in (systems/Conditions.ts), each with its icon: blinded in fog or Darkness, prone, burning… What
+ * a spell (or webs) holds them in is shown in red, with its time left, and its tooltip names the spell.
+ */
+function conditionLines(player: Player): Line[] {
+  return conditionsOn(player, shownConditions).map((condition) => {
+    const name = text(`condition.${condition}.name`);
+    const hold = isHoldKind(condition) ? holdOf(player, condition) : undefined;
+    const about: About = { condition, spell: hold?.spell };
+    if (!hold) return { content: name, color: RING_COLOURS[condition], about };
+    return {
+      content: text('hud.passive.held', { condition: name, left: durationOf(hold.ticks) }), color: HELD_COLOR, about,
+      timer: { key: `held:${condition}`, left: hold.ticks },
+    };
+  });
 }
 
 /** The switched-on passives (and their recovery), then the boosts an active feature gives while they last. */
@@ -246,8 +264,9 @@ function linesOf(player: Player): Line[] {
 /** The icon of what a line is about: a feature's or a spell's (a feat has none). */
 function iconOf(about: About): string | null {
   if (!about) return null;
+  if ('condition' in about) return conditionIconKey(about.condition);
   if ('feature' in about) return about.feature.icon;
-  return 'spell' in about ? spellIconKey(about.spell) : null;
+  return 'spell' in about && about.spell ? spellIconKey(about.spell) : null;
 }
 
 /** "GW": a feat's initials, for its box. */
@@ -397,11 +416,21 @@ export class PassiveHud {
 /** The story of what an icon is about: its feature's, spell's or feat's. */
 function storyOf(about: About, player: Player): TipTopic | null {
   if (!about) return null;
+  if ('condition' in about) return conditionTopic(about.condition, about.spell);
   const level = player.playerStats.level;
   if ('feature' in about) return featureTopic(about.feature, false, level);
   if ('feat' in about) return featTopic(about.feat, true);
   const spell = CATALOG[about.spell];
   return spell ? spellTopic(spell, spell.level, level) : null;
+}
+
+/** What a condition does, and the spell that holds the hero in it, if one does. */
+function conditionTopic(condition: ShownCondition, spell: SpellId | undefined): TipTopic {
+  const detail = spell ? [text('condition.tip.by', { spell: spellName(spell) })] : [];
+  return {
+    title: text(`condition.${condition}.name`), subtitle: text('condition.tip.condition'), body: text(`condition.${condition}.text`),
+    icon: conditionIconKey(condition), detail,
+  };
 }
 
 /** An icon's tooltip: how it stands now (its seconds left, the ward's strength…), then its story. */

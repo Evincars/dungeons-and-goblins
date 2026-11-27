@@ -133,7 +133,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `public/weapons`; a new kind may reuse another's). These files are the single source: `src/rules/WeaponTable.ts` and
   `ArmorTable.ts` read and check them, `ItemCatalog.ts` makes the items from them, and every rule in
   play follows them (finesse, light for two-weapon fighting, two-handed, reach, loading, range and its disadvantage, versatile,
-  heavy armour's STR); the weapon actions each weapon unlocks with proficiency in `src/data/weapon-actions.json` (`rules/WeaponActions.ts`; not played yet); no ability stats on gear yet; hero classes (abilities, hit points, proficiencies, features) in
+  heavy armour's STR); the weapon actions each weapon unlocks with proficiency in the main hand in `src/data/weapon-actions.json` (`rules/WeaponActions.ts`: Baldur's Gate 3's, from bg3.wiki — cost, once a short rest or at will, damage, save and its DC bonus, the condition and its turns, how real time plays it; played by `systems/WeaponActions.ts`, the conditions they leave on foes in `systems/WeaponMarks.ts`; their icons in `public/weapon-actions`, from `scripts/download-weapon-action-icons.py`); no ability stats on gear yet; hero classes (abilities, hit points, proficiencies, features) in
   `src/data/classes.json`; feats (the Baldur's Gate 3 list: requirement, the ability each raises, `worked`, effects) in
   `src/data/feats.json`, read by `src/rules/Feats.ts` and summed per hero as `FeatEffects` (`featEffects` in `rules/Build.ts`;
   Passive Feats have their own section in the Skills tab: a toggle one is bound to the quick bar as `feat:<id>` and its key
@@ -485,6 +485,21 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `dropAlong`); walking back into it is at half pace. An enemy caster casts it only when it would blow a hero over a drop.
   Misty Step (`kind: teleport`, `systems/MistyStep.ts`) steps to the nearest free place in sight towards the aim within its
   range (`stepTarget`; none: refused before the cast, the aim guide shows where).
+- Gust of Wind blows out the wall torches and campfires along its line (`systems/Snuff.ts`, `torch_out` / `campfire_out`; a
+  guest snuffs its own on the wind's `vfx` signal).
+- Weapon actions (`systems/WeaponActions.ts`): bound as `action:<id>`, used with the main-hand weapon that unlocks them and
+  proficiency in it, each once until a short or long rest (`actionsSpent`, hit or miss; Tenacity at will, its square switches
+  it). A strike or shot is readied (`weaponAction`) and goes with the next blow, at once if none is under way; Cleave's swing
+  sweeps a wide arc, up to 3 foes at half damage; Rush Attack charges 30 feet; Brace and Prepare are a stance for a turn
+  (`actionStance`). On a hit the foe saves against the weapon action DC (8 + proficiency + the better of STR and DEX + the
+  action's bonus; a hybrid DC or the spell DC) or suffers its condition (`weaponMarks`: Bleeding, Dazed, Maimed, Off Balance,
+  Weak Grip, Chest Trauma, Gaping Wounds, Hamstrung; Prone and Disarmed are the foe's own marks), shown by its ring, the
+  condition card and its icon.
+- Condition icons are Baldur's Gate's (`scripts/download-condition-icons.py`, every page of bg3.wiki's Condition Icons,
+  pixelated lightly by `scripts/condition-icons.sh` into `public/conditions`; which condition shows which in
+  `assets/ConditionIcons.ts`). The hero's own conditions (blinded in fog or Darkness, prone, a spell's hold…) stand in the HUD's
+  top left with their icons (`ui/PassiveHud.ts`); the pointer over a body shows a small see-through card of its conditions,
+  their icons and names only (`ui/ConditionTip.ts`).
 - Invisibility (an `ally` spell, `systems/Invisibility.ts`, `invisible`) hides a hero until they attack or cast
   (`revealOnAct`; the companion's concentration ends with it): every screen draws them as a shimmer (`systems/ImageSystem.ts`),
   foes do not see them beyond 5 feet, attacks at them at disadvantage and theirs at advantage. An enemy caster that knows it
@@ -562,9 +577,9 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   (`rules/Rarity.ts`: by its magic, a step rarer for damage of another kind), "Uncommon Magic Weapon", its picture top right,
   the damage range in large figures with the hero's ability and magic added (armour: its Armor Class), its dice and damage
   type marks, a weapon's damage of another kind (`extraDamage`, "+1d4 Fire"), its enchantment, a weapon's "Proficiency
-  unlocks" (the weapon actions of `src/data/weapon-actions.json`, `rules/WeaponActions.ts`: bleeding, dazing, toppling,
-  crippling…, not played yet, shown with placeholder icons of their effect, `ui/ItemIcons.ts`, greyed for a hero untrained in
-  it), warnings, who wears it and the spells on it (Magic Weapon, Shadow Blade), and at its foot its sort, properties
+  unlocks" (the weapon actions of `src/data/weapon-actions.json`, `rules/WeaponActions.ts`, with Baldur's Gate's icons, greyed
+  for a hero untrained in it; while Alt is held the tooltip stays put, the pointer over an action shows its tooltip,
+  `ui/ActionTopic.ts`, and a click binds it to the quick bar as `action:<id>`), warnings, who wears it and the spells on it (Magic Weapon, Shadow Blade), and at its foot its sort, properties
   (two-handed in yellow), range, weight and price. A weapon's damage of another kind is dealt on every hit of its blows and
   arrows (`systems/WeaponHits.ts`, `AttackProfile.elemental`), and fire sets the one struck, hero or foe, alight for two
   rounds (`WEAPON_BURN_TICKS`). Its character sheet (`AbilityGrid`, `SheetField`, `SheetInfoPanel`, `ProficiencyPanel`, tooltips in

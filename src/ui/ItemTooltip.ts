@@ -1,8 +1,8 @@
-import { Container, Graphics, Sprite } from 'pixi.js';
-import type { Texture } from 'pixi.js';
+import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { STAT_NAMES } from '../world';
 import type { InventoryItem, StatName } from '../world';
-import { lazyTexture } from '../assets/LazyArt';
+import { lazyTexture, requestArt } from '../assets/LazyArt';
+import { reportRejection } from '../core/errors';
 import { itemIcon, statShort } from '../entities/Items';
 import { text } from '../core/texts';
 import { formatModifier } from '../rules/Dice';
@@ -12,13 +12,14 @@ import type { ArmorRule } from '../rules/ArmorTable';
 import type { WeaponRule } from '../rules/WeaponTable';
 import { itemTrained } from '../rules/Classes';
 import type { ArmorTraining, HeroClass } from '../rules/Classes';
-import { weaponActions } from '../rules/WeaponActions';
+import { actionIconKey, weaponActions } from '../rules/WeaponActions';
+import type { WeaponActionId } from '../rules/WeaponActions';
 import { RARITY_COLORS, isMagicItem, rarityOf } from '../rules/Rarity';
 import { compareItems } from '../game/ItemCompare';
 import type { Measure, Verdict } from '../game/ItemCompare';
 import { armorCategoryName, armorName, damageTypeName, propertyName, weaponName } from '../rules/Names';
 import { DAMAGE_COLORS } from './TipText';
-import { ACTION_LOOKS, DAMAGE_GLYPHS, diceTexture, glyphTexture, weaponGlyph } from './ItemIcons';
+import { DAMAGE_GLYPHS, diceTexture, glyphTexture, weaponGlyph } from './ItemIcons';
 import type { Glyph } from './ItemIcons';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
@@ -27,13 +28,14 @@ import { THEME } from './Theme';
  * An item's tooltip, laid out as Baldur's Gate lays its own:
  * - its name in its rarity's colour (rules/Rarity.ts; a search's matched letters lit), what it is under it ("Uncommon Magic
  *   Weapon"), its picture in the top right corner;
- * - a weapon's damage as a range in large figures ("4~11 Damage", with the hero's ability and the magic added), its dice
+ * - a weapon's damage as a range in large figures ("4-11 Damage", with the hero's ability and the magic added), its dice
  *   beside the dice ("1d8+3 Slashing") and a weapon's damage of another kind under them ("+1d4 Fire", in its colour); armour's
  *   Armor Class in large figures and how it is made up;
  * - its enchantment ("Weapon Enchantment +1") and what its damage of another kind makes it ("Ever-burning");
- * - a weapon's "Proficiency unlocks": the icons of the weapon actions it unlocks (rules/WeaponActions.ts; placeholders until
- *   their art is made), lit for a hero trained in it, greyed for one who is not; its warnings (untrained, too weak) and the
- *   abilities it adds;
+ * - a weapon's "Proficiency unlocks": the icons of the weapon actions it unlocks (rules/WeaponActions.ts, Baldur's Gate's own),
+ *   lit for a hero trained in it, greyed for one who is not — while Alt is held the tooltip stays put, the pointer over an
+ *   action shows its own tooltip and a click binds it to the quick bar (ui/InventoryOverlay.ts asks `actionAt`); its warnings
+ *   (untrained, too weak) and the abilities it adds;
  * - who wears it, and the spells on it now (Magic Weapon, Shadow Blade);
  * - at its foot its sort and properties (two-handed in yellow, as Baldur's Gate marks what binds both hands), its range, and
  *   on the right its weight and price.
@@ -54,11 +56,13 @@ const HEADLINE_H = 18;
 const GLYPH = 9;
 const GLYPH_GAP = 4;
 const DICE_W = 16;
-/** A weapon action's placeholder icon: a tile this big, this far from the next; its mark drawn twice the size. */
+/** A weapon action's icon: this big, this far from the next, in a thin frame; the one under the pointer is edged in gold. */
 const ACTION_ICON = 22;
 const ACTION_GAP = 4;
-const ACTION_MARK_SCALE = 2;
 const ACTION_FACE = 0x1a1414;
+const ACTION_EDGE = 0x5a5040;
+const ACTION_HOVER = 0xe8c66a;
+const HINT_COLOR = 0x9fb4c8;
 /** The space either side of a rule between sections. */
 const RULE_GAP = 5;
 /** The tooltip sits this far from the pointer. */
@@ -173,6 +177,10 @@ export class ItemTooltip {
   private readonly body = new Container();
   private readonly marks = new Graphics();
   private shown: InventoryItem | null = null;
+  /** The weapon actions laid out, where (inside the tooltip), and whether the hero is trained in the weapon. */
+  private readonly actionSlots: { id: WeaponActionId; x: number; y: number }[] = [];
+  private actionsTrained = false;
+  private readonly actionHover = new Graphics();
   /** What the last layout was made from (a change lays it out again). */
   private key = '';
   /** Where the next part goes down the tooltip, as it is laid out. */
@@ -181,7 +189,7 @@ export class ItemTooltip {
   constructor() {
     this.view.visible = false;
     this.view.eventMode = 'none';
-    this.view.addChild(this.frame, this.body, this.marks);
+    this.view.addChild(this.frame, this.body, this.marks, this.actionHover);
   }
 
   /** Shows `item` near (x, y), kept inside a `bounds`-sized area starting at 0, 0. */
@@ -203,6 +211,38 @@ export class ItemTooltip {
   hide(): void {
     this.view.visible = false;
     this.shown = null;
+    this.hoverAction(null);
+  }
+
+  /** Whether the tooltip is up. */
+  get visible(): boolean {
+    return this.view.visible;
+  }
+
+  /** The weapon action whose icon lies under a point of the screen (global coordinates), if the tooltip shows one there. */
+  actionAt(global: { x: number; y: number }): WeaponActionId | null {
+    if (!this.view.visible) return null;
+    const p = this.view.toLocal(global);
+    const slot = this.actionSlots.find((s) => p.x >= s.x && p.x < s.x + ACTION_ICON && p.y >= s.y && p.y < s.y + ACTION_ICON);
+    return slot?.id ?? null;
+  }
+
+  /** Where an action's icon is on the screen's design area (the tooltip's parent's coordinates), for its own tooltip beside it. */
+  actionBox(id: WeaponActionId): { x: number; y: number; w: number; h: number } | null {
+    const slot = this.actionSlots.find((s) => s.id === id);
+    return slot ? { x: this.view.x + slot.x, y: this.view.y + slot.y, w: ACTION_ICON, h: ACTION_ICON } : null;
+  }
+
+  /** Whether the hero is trained in the weapon shown (its actions may be bound). */
+  get actionsUnlocked(): boolean {
+    return this.actionsTrained;
+  }
+
+  /** Edges the action under the pointer in gold (none: no edge). */
+  hoverAction(id: WeaponActionId | null): void {
+    this.actionHover.clear();
+    const slot = id ? this.actionSlots.find((s) => s.id === id) : undefined;
+    if (slot) this.actionHover.rect(slot.x - 1, slot.y - 1, ACTION_ICON + 2, ACTION_ICON + 2).stroke({ color: ACTION_HOVER, width: 1, alignment: 1 });
   }
 
   /** Forgets the laid-out item, so the next show lays it out again (its picture may have loaded since). */
@@ -215,6 +255,8 @@ export class ItemTooltip {
   private layout(item: InventoryItem, about: TooltipContext): void {
     for (const child of this.body.removeChildren()) child.destroy({ children: true });
     this.marks.clear();
+    this.actionSlots.length = 0;
+    this.actionHover.clear();
     const rules: number[] = [];
     const verdicts = about.against ? compareItems(item, about.against) : {};
     this.y = PAD;
@@ -346,33 +388,48 @@ export class ItemTooltip {
   }
 
   /**
-   * A weapon's "Proficiency unlocks": the placeholder icons of the actions it unlocks, lit for a hero trained in it (greyed
-   * for one who is not), their names under them. Returns whether it shows any.
+   * A weapon's "Proficiency unlocks": the icons of the actions it unlocks, lit for a hero trained in it (greyed for one who is
+   * not), their names under them, and for a trained hero how to bind one (hold Alt). Returns whether it shows any.
    */
   private unlocks(item: InventoryItem, about: TooltipContext): boolean {
     const weapon = weaponRule(item);
     const actions = weapon ? weaponActions(weapon.base) : [];
     if (!actions.length) return false;
     const trained = !about.cls || itemTrained(about.cls, item, about.featArmor ?? [], about.featWeapons ?? []);
+    this.actionsTrained = trained;
     this.glyph('medal', THEME.title, PAD, this.y);
     this.label(text('item.tip.proficiency_unlocks'), THEME.text, PAD + GLYPH + GLYPH_GAP, this.y);
     this.y += LINE_H + 3;
     actions.forEach((action, i) => {
-      const look = ACTION_LOOKS[action.effect];
       const x = PAD + i * (ACTION_ICON + ACTION_GAP);
-      const tile = new Graphics().rect(x, this.y, ACTION_ICON, ACTION_ICON).fill({ color: ACTION_FACE })
-        .stroke({ color: look.color, width: 1, alignment: 1 });
-      tile.alpha = trained ? UNLOCKED_ALPHA : LOCKED_ALPHA;
-      this.body.addChild(tile);
-      // Locked (not trained in the weapon): greyed.
-      const colour = trained ? look.color : LOCKED_TINT;
-      const mark = this.glyph(look.glyph, colour, x + (ACTION_ICON - GLYPH * ACTION_MARK_SCALE) / 2, this.y + (ACTION_ICON - GLYPH * ACTION_MARK_SCALE) / 2, ACTION_MARK_SCALE);
-      mark.alpha = tile.alpha;
+      this.actionIcon(action.id, x, this.y, trained);
+      this.actionSlots.push({ id: action.id, x, y: this.y });
     });
     this.y += ACTION_ICON + 3;
     this.label(actions.map((action) => action.name).join(', '), trained ? THEME.muted : UNTRAINED_COLOR, PAD, this.y);
     this.y += LINE_H;
+    if (!trained) return true;
+    this.label(text('item.tip.alt_unlocks'), HINT_COLOR, PAD, this.y);
+    this.y += LINE_H;
     return true;
+  }
+
+  /** One action's icon in its frame (Baldur's Gate's own, loaded the first time it is shown), greyed when it is locked. */
+  private actionIcon(id: WeaponActionId, x: number, y: number, trained: boolean): void {
+    const tile = new Graphics().rect(x, y, ACTION_ICON, ACTION_ICON).fill({ color: ACTION_FACE }).stroke({ color: ACTION_EDGE, width: 1, alignment: 1 });
+    const icon = new Sprite(Texture.EMPTY);
+    icon.position.set(x, y);
+    // Locked (not trained in the weapon): greyed.
+    icon.alpha = trained ? UNLOCKED_ALPHA : LOCKED_ALPHA;
+    if (!trained) icon.tint = LOCKED_TINT;
+    this.body.addChild(tile, icon);
+    const key = actionIconKey(id);
+    const show = (): void => {
+      if (icon.destroyed) return;
+      icon.texture = lazyTexture(key);
+      icon.scale.set(ACTION_ICON / Math.max(1, icon.texture.width));
+    };
+    reportRejection(requestArt(key).then(show), `Icon ${key} did not load`, 'render');
   }
 
   /** Warnings (untrained, too weak) and what it adds or asks for; returns whether there were any. */

@@ -1,4 +1,5 @@
 import { Rectangle } from 'pixi.js';
+import { traumaSlowdown } from './WeaponMarks';
 import { world, q, isActivePlayer, isMob, isPlayer } from '../world';
 import type { Entity, Player, Summon } from '../world';
 import type { Level } from '../level/Level';
@@ -95,7 +96,8 @@ function enemiesTouching(player: Player): readonly Entity[] {
 
 /** An enemy starts an attack: the next may begin a second from now, even if a hit cuts this one short. */
 function beginAttack(mob: Entity): void {
-  mob.attackCooldown = ATTACK_PERIOD;
+  // Chest Trauma (a hero's Heartstopper) costs it an action: it strikes half as often (systems/WeaponMarks.ts).
+  mob.attackCooldown = ATTACK_PERIOD * traumaSlowdown(mob);
 }
 
 /**

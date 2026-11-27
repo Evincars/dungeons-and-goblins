@@ -1,7 +1,6 @@
 import { Texture } from 'pixi.js';
 import { createCanvas, context2d } from '../render/canvas';
 import type { DamageType } from '../rules/DamageTypes';
-import type { ActionEffect } from '../rules/WeaponActions';
 import type { WeaponBase } from '../rules/WeaponTable';
 
 /**
@@ -78,13 +77,6 @@ export function weaponGlyph(base: WeaponBase): Glyph {
   if (['whip', 'sling', 'blowgun', 'net'].includes(base)) return 'wave';
   return 'blade';
 }
-
-/** Each weapon action's effect: its placeholder icon's mark and edge colour. */
-export const ACTION_LOOKS = {
-  bleeding: { glyph: 'drop', color: 0xe03a3a }, dazed: { glyph: 'star', color: 0xf0d050 }, prone: { glyph: 'down', color: 0xe8913a },
-  crippled: { glyph: 'chevrons', color: 0xb070ff }, weakened: { glyph: 'chevrons', color: 0x8fcf5a }, disarmed: { glyph: 'blade', color: 0x60b0ff },
-  cleave: { glyph: 'arc', color: 0xd8d8e0 }, shot: { glyph: 'point', color: 0x9fd0a0 }, brace: { glyph: 'shield', color: 0xc8a060 },
-} as const satisfies Record<ActionEffect, { glyph: Glyph; color: number }>;
 
 /** The dice beside a weapon's damage: a grey six-sided die and an orange four-sided one, drawn once. */
 let dice: Texture | null = null;

@@ -19,6 +19,7 @@ import { isDown, terrainPace } from './Surfaces';
 import { athleteSpeedFactor } from './FeatureSystem';
 import { longstriderFactor } from './AllySpells';
 import { beingShoved, shoveStep, windPace } from './GustOfWind';
+import { markedPace } from './WeaponMarks';
 
 type Point = { x: number; y: number };
 type Body = (typeof q.physical)['entities'][number];
@@ -168,7 +169,8 @@ function moveBody(level: Level, entity: Body): void {
   // Flinching or down (slipped, prone, held by a spell) it does not walk; in grease or webs it walks at half its pace
   // (systems/Surfaces.ts), and so against a gust of wind (systems/GustOfWind.ts).
   const frozen = (entity.freezeTime ?? 0) > 0 || isDown(entity);
-  const pace = frozen ? 0 : terrainPace(position.x, position.y) * windPace(entity);
+  // Maimed it does not walk at all, hamstrung at half its pace (systems/WeaponMarks.ts).
+  const pace = frozen ? 0 : terrainPace(position.x, position.y) * windPace(entity) * markedPace(entity);
   // A gust's shove carries it whatever holds it.
   const knocked = knockedBack(entity);
   const push = shoveStep(entity, shoved);

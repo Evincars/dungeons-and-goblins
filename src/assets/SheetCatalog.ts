@@ -1,9 +1,11 @@
 import { SpriteSheet, frameRun } from './SpriteSheet';
+import { actionIconSources } from '../rules/WeaponActions';
 import { bloodSheets } from '../entities/Blood';
 import { smokeSheet } from '../entities/Smoke';
 import { blueFireSheet } from '../entities/WindowFire';
 import { TRADER_CLIPS, TRADER_FILES, TRADER_FRAME, TRADER_SHEETS } from '../entities/Trader';
 import { registerLazy } from './LazyArt';
+import { conditionIconSources } from './ConditionIcons';
 import { registerEffects } from './Effects';
 import { ARMOR_SHEET, armorIconRegions, catalogIconSources } from '../entities/ItemCatalog';
 import { spellIconKey, spellIcons } from '../rules/Spellbook';
@@ -297,5 +299,7 @@ export function registerLazyArt(): void {
     if (key) registerLazy(new SpriteSheet(key, src, { smooth: true }), [key]);
   }
   for (const { key, src } of featureIconSources()) registerLazy(new SpriteSheet(key, src, { smooth: true }), [key]);
+  for (const { key, src } of conditionIconSources()) registerLazy(new SpriteSheet(key, src, { smooth: true }), [key]);
+  for (const { key, src } of actionIconSources()) registerLazy(new SpriteSheet(key, src, { smooth: true }), [key]);
   registerEffects();
 }

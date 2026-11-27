@@ -1,3 +1,4 @@
+import { WEAPON_ACTION_IDS, isWeaponActionId } from '../rules/WeaponActions';
 import {
   world, isAfflictionKind, isDepartChoice, isEquipSlot, isItemType, isLogEvent, isLogResult, isMobType, isPlayerSlot, isRestNotice, isRollTone, isSummonKind, isSurfaceKind, isTransmuterStone,
   isVoteKind, MOB_STATES, PLAYER_SLOTS,
@@ -108,6 +109,10 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
     lootBonus: 'number', damageDealt: 'number', critHits: 'number', critMisses: 'number' },
   swordSwing: { delay: 'number', ticks: 'number', dirX: 'number', dirY: 'number', range: 'number', hitIds: 'object', blow: 'number', blows: 'number', offHand: 'boolean', tempo: 'number' },
   maneuver: { id: 'string', ticks: 'number', bonus: 'number' },
+  weaponAction: { id: 'string', ticks: 'number' },
+  actionStance: { id: 'string', ticks: 'number' },
+  weaponMarks: { bleeding: 'number', dazed: 'number', maimed: 'number', offBalance: 'number', weakGrip: 'number', chestTrauma: 'number',
+    gapingWounds: 'number', hamstrung: 'number', by: 'number' },
   status: { prone: 'number', frightened: 'number', goaded: 'number', distracted: 'number', eldritch: 'number', charmed: 'number', by: 'number' },
   arcana: { ward: 'number', portent: 'object', portentTicks: 'number', harvestTicks: 'number', charmTicks: 'number', illusoryTicks: 'number',
     songTicks: 'number', defenceTicks: 'number', stone: 'string', songCharges: 'number', damageCharges: 'number',
@@ -153,6 +158,8 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   inventory: {},
   featuresOff: {},
   featsOn: {},
+  actionsSpent: {},
+  actionsOff: {},
   equipped: {},
   rollLog: {},
   combatLog: { seq: 'number', entries: 'object' },
@@ -207,6 +214,8 @@ const isIntList = (v: unknown) => Array.isArray(v) && v.every(Number.isInteger);
 const isRecoveryList = (v: unknown) => isIntList(v) && Array.isArray(v) && v.length <= QUICK_SLOTS && v.every((t) => Number(t) >= 0);
 const isBoundList = (v: unknown) => Array.isArray(v) && v.length <= QUICK_SLOTS
   && v.every((b) => b === null || (isRecord(b) && validBinding(b.spell, b.level, b.damageType, b.variant)));
+/** A list of weapon actions (spent, or switched off): known ones, each once at most. */
+const isActionList = (v: unknown) => Array.isArray(v) && v.length <= WEAPON_ACTION_IDS.length && v.every(isWeaponActionId);
 const isSlotList = (v: unknown) => Array.isArray(v) && v.length <= PLAYER_SLOTS.length && v.every(isPlayerSlot);
 
 /** A rare find being rolled for: a real item, and only known seats answering Need or Pass. */
@@ -287,6 +296,10 @@ function checkDetails(data: EntityState): void {
   ensure(!data.swordSwing || isIntList(data.swordSwing.hitIds), 'Invalid sword swing');
   ensure(!data.build || validBuild(data.build), 'Invalid build');
   ensure(!data.maneuver || isFeatureId(data.maneuver.id), 'Invalid maneuver');
+  ensure(!data.weaponAction || isWeaponActionId(data.weaponAction.id), 'Invalid weapon action');
+  ensure(!data.actionStance || isWeaponActionId(data.actionStance.id), 'Invalid weapon action stance');
+  ensure(!data.actionsSpent || isActionList(data.actionsSpent), 'Invalid spent weapon actions');
+  ensure(!data.actionsOff || isActionList(data.actionsOff), 'Invalid switched-off weapon actions');
   ensure(!data.arcana || validArcana(data.arcana), 'Invalid school state');
   ensure(!data.summon || (isSummonKind(data.summon.kind) && isDice(data.summon.damage)), 'Invalid undead');
   ensure(!data.concentration || isSpellId(data.concentration.spell), 'Invalid concentration');

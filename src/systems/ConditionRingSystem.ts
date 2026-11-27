@@ -17,6 +17,8 @@ export const RING_COLOURS = {
   unconscious: 0x8a7cff, paralyzed: 0x5ad2ff, laughing: 0xffd84a, prone: 0xd88a3a, restrained: 0xe8e0c8, charmed: 0xff6fc8,
   maddened: 0xe0303a, frightened: 0x9b4dff, blinded: 0xb4bcc8, deafened: 0x7f8aa0, enfeebled: 0x7a8a5a, poisoned: 0x7fc23a,
   incapacitated: 0xc0c0c0, invisible: 0xffffff, burning: 0xff5a1a,
+  bleeding: 0xc8102e, dazed: 0xf0d050, maimed: 0xb070ff, off_balance: 0xffa040, weak_grip: 0x8fcf5a, chest_trauma: 0xff4a6a,
+  gaping_wounds: 0xa01818, hamstrung: 0x9a7aff, disarmed: 0x60b0ff,
 } as const satisfies Record<ShownCondition, number>;
 
 /** The ring's art: a band of runes this wide (px of its radius) at scale 1. */

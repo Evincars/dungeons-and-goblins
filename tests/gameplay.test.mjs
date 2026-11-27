@@ -7522,17 +7522,22 @@ const ItemCompareModule = await load('game/ItemCompare');
 const WeaponHits = await load('systems/WeaponHits');
 const Protocol = await load('network/protocol');
 
-test('every weapon unlocks its weapon actions with proficiency (Baldur\'s Gate\'s "Proficiency unlocks"); a crossbow\'s shot makes a foe bleed', async () => {
-  const { WEAPON_BASES } = await load('rules/WeaponTable');
-  for (const base of WEAPON_BASES) {
-    if (base === 'unarmed') continue;
-    const actions = WeaponActionsModule.weaponActions(base);
-    assert.ok(actions.length >= 1 && actions.length <= 3, `${base} unlocks one to three`);
-  }
-  assert.deepEqual(WeaponActionsModule.weaponActions('greatsword').map((a) => a.id), ['cleave', 'lacerate', 'pommel_strike']);
-  assert.ok(WeaponActionsModule.weaponActions('heavy_crossbow').some((a) => a.effect === 'bleeding'));
-  assert.ok(WeaponActionsModule.weaponActions('longsword').some((a) => a.effect === 'crippled'));
-  assert.equal(WeaponActionsModule.weaponActions('unarmed').length, 0);
+test('weapon actions follow Baldur\'s Gate 3: each weapon\'s own, once a short rest, Tenacity at will; bound to the quick bar as action:<id>', () => {
+  const ids = (base) => WeaponActionsModule.weaponActions(base).map((a) => a.id);
+  assert.deepEqual(ids('greatsword'), ['cleave', 'lacerate', 'pommel_strike']);
+  assert.deepEqual(ids('longsword'), ['lacerate', 'rush_attack', 'pommel_strike']);
+  assert.deepEqual(ids('quarterstaff'), ['topple']);
+  assert.deepEqual(ids('heavy_crossbow'), ['brace_ranged', 'piercing_shot']);
+  for (const base of ['whip', 'lance', 'net', 'sling', 'dart', 'blowgun', 'unarmed']) assert.equal(ids(base).length, 0, `${base} unlocks none`);
+  const lacerate = WeaponActionsModule.weaponAction('lacerate');
+  assert.equal(lacerate.condition, 'bleeding');
+  assert.equal(lacerate.save, 'constitution');
+  assert.equal(lacerate.perRest, true);
+  assert.equal(WeaponActionsModule.weaponAction('tenacity').perRest, false, 'Tenacity: unlimited use');
+  assert.equal(WeaponActionsModule.weaponActionDc(lacerate, 2, 3, 1), 8 + 2 + 3 + 2, '8 + proficiency + the better of STR and DEX + its own +2');
+  assert.equal(WeaponActionsModule.bindingActionId('action:lacerate'), 'lacerate');
+  assert.equal(Protocol.validBinding('action:lacerate', 0), true);
+  assert.equal(Protocol.validBinding('action:nonsense', 0), false);
 });
 
 test('an item\'s rarity follows its magic; a weapon dealing damage of another kind is a step rarer', () => {
@@ -7580,3 +7585,68 @@ test('a weapon dealing fire deals it on every hit and sets the one struck alight
   WeaponHits.elementalHit(orc, fighter, cold, false);
   assert.equal(orc.burning, undefined, 'cold sets nothing alight');
 });
+
+const WeaponActionSystem = await load('systems/WeaponActions');
+const WeaponMarks = await load('systems/WeaponMarks');
+const ConditionsModule = await load('systems/Conditions');
+const Snuff = await load('systems/Snuff');
+const { characterSheet: characterSheetOf } = await load('rules/CharacterSheet');
+
+/** A hero with a longsword in the main hand, beside a goblin. */
+function swordsmanBeside(level) {
+  const hero = playerAt(4, 4);
+  hero.equipped = { primary: { ...HAND_WEAPONS.find((w) => w.base === 'longsword') } };
+  const goblin = mobAt(level, 'goblin', 5, 4);
+  goblin.health.current = goblin.health.max = 200;
+  return { hero, goblin };
+}
+
+test('Lacerate is readied from the quick bar and spent on the next blow: a hit the foe fails to save against leaves it Bleeding, 2 slashing a turn; a rest gives it back', () => {
+  const level = arena(12, 8);
+  const { hero, goblin } = swordsmanBeside(level);
+  assert.equal(PlayerActions.bindSpell(hero, 3, 'action:lacerate', 0), true, 'a fighter trained in a longsword binds it');
+  assert.equal(WeaponActionSystem.actionAvailable(hero, 'lacerate'), 'ok');
+  assert.equal(WeaponActionSystem.actionAvailable(hero, 'topple'), 'no_weapon', 'Topple needs a quarterstaff in the main hand');
+  hero.swordSwing = { delay: 1, ticks: 1, dirX: 1, dirY: 0, range: 1, hitIds: [], blow: 0, blows: 1, offHand: false, tempo: 1 };
+  assert.equal(WeaponActionSystem.useWeaponAction(hero, 'lacerate', level, { x: goblin.position.x, y: goblin.position.y }), 'ok');
+  assert.equal(hero.weaponAction?.id, 'lacerate', 'readied for the next blow');
+  assert.equal(WeaponActionSystem.actionAvailable(hero, 'lacerate'), 'spent', 'once a short rest');
+  useDieRoller(d20s(19, 1));
+  const outcome = Strike.strike(goblin, characterSheetOf(hero).attack, hero);
+  useDieRoller(SURE_HIT);
+  assert.ok(outcome.hit);
+  assert.equal(hero.weaponAction, undefined, 'spent on the blow');
+  assert.ok(WeaponMarks.marked(goblin, 'bleeding'), 'it failed its Constitution save: bleeding');
+  assert.ok(ConditionsModule.conditionsOn(goblin, []).includes('bleeding'), 'its ring and card name it');
+  const before = goblin.health.current;
+  const hurt = (foe, by, damage) => { foe.health.current -= damage; };
+  for (let t = 0; t < 360; t++) WeaponMarks.updateWeaponMarks(hurt);
+  assert.equal(goblin.health.current, before - 2, '2 slashing at the end of the turn');
+  WeaponActionSystem.restoreActions(hero);
+  assert.equal(WeaponActionSystem.actionAvailable(hero, 'lacerate'), 'ok', 'a rest gives it back');
+});
+
+test('Off Balance is not ended by the blow that laid it, but by the next damage; Gaping Wounds add 2 to every later blow', () => {
+  const level = arena(12, 8);
+  const { hero, goblin } = swordsmanBeside(level);
+  const id = world.id(hero);
+  WeaponMarks.markFoe(goblin, 'off_balance', 2, id);
+  WeaponMarks.markFoe(goblin, 'gaping_wounds', 2, id);
+  assert.equal(WeaponMarks.woundedFurther(goblin, 5), 5, 'the blow that laid them: no more');
+  assert.ok(WeaponMarks.marked(goblin, 'off_balance'));
+  assert.equal(WeaponMarks.markedAttackMode('normal', hero, goblin), 'advantage', 'attacks against it have advantage');
+  WeaponMarks.updateWeaponMarks(() => {});
+  assert.equal(WeaponMarks.woundedFurther(goblin, 5), 7, 'Gaping Wounds: 2 piercing more');
+  assert.equal(WeaponMarks.marked(goblin, 'off_balance'), false, 'the hurt ended Off Balance');
+});
+
+test('Gust of Wind blows out the wall torches and campfires along its line, and no others', () => {
+  const near = createTorch(centre(8), centre(4));
+  const far = createTorch(centre(8), centre(12));
+  assert.equal(Snuff.snuffAlong(centre(3), centre(4), 1, 0), 1);
+  assert.equal(near.torch, undefined, 'no more light');
+  assert.equal(near.sparks, undefined, 'no more sparks');
+  assert.equal(near.visual.sheet, 'torch_out');
+  assert.ok(far.torch, 'out of the line, it burns on');
+});
+

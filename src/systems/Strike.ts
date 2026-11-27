@@ -20,6 +20,8 @@ import { isAsleep } from './SleepSpell';
 import { heldIn } from './SpellHolds';
 import { seesInvisible } from './Invisibility';
 import { imageTakes } from './Illusions';
+import { dazedArmorPenalty, markedAttackMode } from './WeaponMarks';
+import { actionBlow, afterActionBlow } from './WeaponActions';
 
 /**
  * Every blow in the game goes through here: the attack is rolled against the target's Armor Class, and the
@@ -31,7 +33,8 @@ import { imageTakes } from './Illusions';
  * undead's its own, anything else (the training dummy) 10.
  */
 export function armorClassOf(target: Entity): number {
-  if (target.mobType) return MONSTERS[target.mobType].ac;
+  // Dazed by a weapon action, a foe's Dexterity no longer guards it (systems/WeaponMarks.ts).
+  if (target.mobType) return MONSTERS[target.mobType].ac - dazedArmorPenalty(target);
   if (target.summon) return target.summon.ac;
   if (target.decoy) return target.decoy.ac;
   if (isPlayer(target)) return characterSheet(target).armorClass.total + evasiveBonus(target);
@@ -141,10 +144,16 @@ function withShadowBlade(attack: AttackProfile, attacker: Entity | undefined, ta
   return { ...attack, mode: better(attack.mode) };
 }
 
+/** What the heroes' weapon actions left on either (systems/WeaponMarks.ts): Off Balance is struck at advantage, a Weak Grip strikes at disadvantage. */
+function withWeaponMarks(attack: AttackProfile, attacker: Entity | undefined, target: Entity): AttackProfile {
+  const mode = markedAttackMode(attack.mode, attacker, target);
+  return mode === attack.mode ? attack : { ...attack, mode };
+}
+
 /** Everything about where the two stand and what holds them that shapes the roll. */
 function withCircumstances(attack: AttackProfile, attacker: Entity | undefined, target: Entity): AttackProfile {
   const placed = withSleeper(withWard(withObscured(withHeroDown(attack, attacker, target), attacker, target), attacker, target), attacker, target);
-  return withSight(withHolds(placed, attacker, target), attacker, target);
+  return withWeaponMarks(withSight(withHolds(placed, attacker, target), attacker, target), attacker, target);
 }
 
 /** One step towards disadvantage, or towards advantage (each cancels the other). */
@@ -161,9 +170,11 @@ export function strike(target: Entity, attack: AttackProfile, logOn: Entity | un
   // Mirror Image: the blow may go for one of the target's duplicates instead (systems/Illusions.ts).
   const image = imageTakes(target, attack, logOn);
   if (image) return image;
-  const prepared = spell ? attack : withShadowBlade(prepareBlow(attack, logOn, target), logOn, target);
+  // A weapon blow carries the hero's readied weapon action and stance (systems/WeaponActions.ts).
+  const prepared = spell ? attack : withShadowBlade(prepareBlow(actionBlow(attack, logOn), logOn, target), logOn, target);
   const outcome = resolveAttack(withTrueStrike(withFirstStrike(withCircumstances(prepared, logOn, target), logOn), logOn), armorClassOf(target));
   if (!spell) afterBlow(logOn, target, outcome);
+  if (!spell) afterActionBlow(logOn, target, outcome);
   if (outcome.critical && target.position) sound.playSound('critical', target.position.x, target.position.y);
   if (outcome.damage > 0 && bleeds(target)) spawnBlood(target);
   if (!logOn) return outcome;

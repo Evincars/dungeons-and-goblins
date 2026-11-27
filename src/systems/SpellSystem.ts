@@ -1,4 +1,7 @@
 import { world, q, isActivePlayer, isPlayer, isTarget, QUICK_SLOTS, Team } from '../world';
+import { bindingActionId } from '../rules/WeaponActions';
+import type { WeaponActionId } from '../rules/WeaponActions';
+import { useWeaponAction } from './WeaponActions';
 import type { Entity, Player, SpellEffect } from '../world';
 import type { DamageType } from '../rules/DamageTypes';
 import { hurtPlayer } from './CombatSystem';
@@ -194,6 +197,18 @@ function startFeat(caster: Player, feat: FeatId, level: Level): void {
   caster.castCooldown = SPELL_STATS.cooldown;
 }
 
+/** What is said when a weapon action used from the quick bar can't be. */
+const ACTION_REFUSALS = {
+  no_weapon: 'roll.action_no_weapon', untrained: 'roll.action_untrained', spent: 'roll.action_spent', not_sprinting: 'roll.action_not_sprinting',
+} as const;
+
+/** The cast key on a weapon action (systems/WeaponActions.ts): used now, or the hero says why not. */
+function startWeaponAction(caster: Player, id: WeaponActionId, level: Level): void {
+  const result = useWeaponAction(caster, id, level, aimPoint(caster));
+  if (result !== 'ok') refuse(caster, text(ACTION_REFUSALS[result]));
+  caster.castCooldown = SPELL_STATS.cooldown;
+}
+
 /** The cast key on a toggle Passive Feat: it switches on or off (a short pause before the next press counts). */
 function switchFeatFromBar(caster: Player, feat: FeatId): void {
   if (!switchFeat(caster, feat)) {
@@ -238,6 +253,11 @@ function startCast(caster: Player, level: Level): void {
   const featureId = binding ? bindingFeatureId(binding.spell) : null;
   if (featureId) {
     startFeature(caster, featureId, level);
+    return;
+  }
+  const actionId = binding ? bindingActionId(binding.spell) : null;
+  if (actionId) {
+    startWeaponAction(caster, actionId, level);
     return;
   }
   // Spells of the wider lists are bound but not worked yet: only those in src/data/spells.json go off.

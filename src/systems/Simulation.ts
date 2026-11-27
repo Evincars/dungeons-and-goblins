@@ -54,6 +54,9 @@ import { updateBuildLock } from '../game/Customize';
 import { updateSafeRooms } from './SafeRoomSystem';
 import { updateProtection } from './ProtectionSystem';
 import { updateManeuvers } from './ManeuverSystem';
+import { updateWeaponActions } from './WeaponActions';
+import { updateWeaponMarks } from './WeaponMarks';
+import { hitMob } from './Hits';
 import { updateFeatureTimers, updateSurvivor } from './FeatureSystem';
 import { updateSchools } from './SchoolSystem';
 import { updateLastingSpells } from './LastingSpells';
@@ -135,6 +138,9 @@ export const SIMULATION: readonly System[] = [
   ({ level }) => updateSafeRooms(level),
   () => updateProtection(),
   () => updateManeuvers(),
+  () => updateWeaponActions(),
+  // Bleeding foes bleed: its slashing damage, credited to whoever opened the wound.
+  () => updateWeaponMarks((foe, by, damage) => hitMob(foe, by, damage, true, 'slashing')),
   () => updateSurvivor(),
   () => updateFeatureTimers(),
   () => updateSchools(),

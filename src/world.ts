@@ -17,6 +17,7 @@ import type { DamageType } from './rules/DamageTypes';
 import type { EffectColour, EffectShape } from './assets/Effects';
 import type { HoldKind } from './rules/Conditions';
 import type { SpellVariant } from './rules/SpellVariants';
+import type { WeaponActionId } from './rules/WeaponActions';
 
 export const enum Team { Neutral = 0, Player = 1, Mob = 2 }
 
@@ -414,6 +415,22 @@ export type Entity = {
    * die rolled for it when that die is rolled up front (Evasive Footwork's Armor Class, a commanded ally's damage, Rally's hit points).
    */
   maneuver?: { id: string; ticks: number; bonus: number };
+  /**
+   * A weapon action readied from the quick bar (src/rules/WeaponActions.ts, systems/WeaponActions.ts) and the ticks it waits:
+   * spent on the hero's next weapon blow or shot (a Cleave on the next swing), hit or miss.
+   */
+  weaponAction?: { id: WeaponActionId; ticks: number };
+  /** The weapon actions the hero has used since their last short or long rest (each once a rest). */
+  actionsSpent?: WeaponActionId[];
+  /** A weapon action's stance at work for a turn (Brace, Prepare) and the ticks it has left. */
+  actionStance?: { id: WeaponActionId; ticks: number };
+  /** Weapon actions that work by themselves the hero has switched off (Tenacity). */
+  actionsOff?: WeaponActionId[];
+  /**
+   * What weapon actions left on a foe (systems/WeaponMarks.ts): the ticks left of each condition, and who left the latest.
+   * Prone is the foe's own mark (`status.prone`); a disarmed foe fights barehanded (`mobWeapon`).
+   */
+  weaponMarks?: WeaponMarks;
   /** Hit points the hero loses before their own (Rally's temporary hit points). */
   tempHealth?: number;
   /**
@@ -706,6 +723,8 @@ export type Entity = {
   // --- sword melee ---
   /** Active swing hitbox: ticks remaining, direction, damage */
   swordSwing?: {
+    /** A Cleave (a weapon action, systems/WeaponActions.ts): the swing sweeps wide, up to CLEAVE_TARGETS foes, each for half damage. */
+    cleave?: boolean;
     /** Ticks before the blow lands (the attack clip's impact frame); then `ticks` with the hitbox live. */
     delay: number;
     ticks: number;
@@ -887,6 +906,12 @@ export type Entity = {
    * network: each browser makes its own.
    */
   localOnly?: true;
+};
+
+/** The conditions weapon actions leave on a foe, each the ticks it has left (systems/WeaponMarks.ts). */
+export type WeaponMarks = {
+  bleeding: number; dazed: number; maimed: number; offBalance: number; weakGrip: number; chestTrauma: number; gapingWounds: number;
+  hamstrung: number; by: number;
 };
 
 export const world = new World<Entity>();

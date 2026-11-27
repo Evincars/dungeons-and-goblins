@@ -1,4 +1,6 @@
 import { q, isPlayer } from '../world';
+import { bindingActionId, weaponsWithAction } from '../rules/WeaponActions';
+import type { WeaponActionId } from '../rules/WeaponActions';
 import type { BagSquare, EquipSlot, Entity, InventoryItem, Player, PlayerSlot } from '../world';
 import { sound } from '../audio/SoundPlayer';
 import { coop } from '../network/CoopSession';
@@ -25,7 +27,7 @@ import { bindingFeatureId, canToggle, hasClassFeature } from '../rules/ClassFeat
 import { FEATS, bindingFeatId } from '../rules/Feats';
 import type { FeatId } from '../rules/Feats';
 import { passiveFeats } from '../rules/Build';
-import { heroClass } from '../rules/Classes';
+import { heroClass, weaponProficient } from '../rules/Classes';
 import { chooseDeparture } from '../systems/ExitSystem';
 import { characterSheet } from '../rules/CharacterSheet';
 import { endMageArmour } from '../systems/LastingSpells';
@@ -415,7 +417,7 @@ export function preparesSpells(player: Player): boolean {
 
 /** Whether this may go on the quick bar now: a spell only in a safe room, a class feature or a Passive Feat anywhere. */
 export function mayPrepare(player: Player, spell: string): boolean {
-  return bindingFeatureId(spell) !== null || bindingFeatId(spell) !== null || preparesSpells(player);
+  return bindingFeatureId(spell) !== null || bindingFeatId(spell) !== null || bindingActionId(spell) !== null || preparesSpells(player);
 }
 
 /** A Passive Feat the hero has that is switched or used from the quick bar (Great Weapon Master, Charger) may be bound; at level 0. */
@@ -423,6 +425,17 @@ function featBindable(player: Player, feat: FeatId, level: number): boolean {
   const cls = heroClass(player.heroClass);
   const kind = FEATS[feat].passive;
   return level === 0 && (kind === 'toggle' || kind === 'active') && passiveFeats(cls, player.playerStats.level, player.build).includes(feat);
+}
+
+/**
+ * A weapon action may be bound (at level 0) by a hero proficient with a weapon that unlocks it, whatever they hold now: it is
+ * used only with that weapon in the main hand (systems/WeaponActions.ts).
+ */
+function actionBindable(player: Player, id: WeaponActionId, level: number): boolean {
+  if (level !== 0) return false;
+  const sheet = characterSheet(player);
+  const cls = heroClass(player.heroClass);
+  return weaponsWithAction(id).some((base) => weaponProficient(cls, base, sheet.feats.weapons));
 }
 
 /**
@@ -434,7 +447,8 @@ export function bindSpell(player: Player, slot: number, spell: string, level: nu
   const list = spellListOf(heroClass(player.heroClass).dndClass, player.build);
   if (!Number.isInteger(slot) || slot < 0 || slot >= QUICK_SLOTS || !mayPrepare(player, spell)) return false;
   const feat = bindingFeatId(spell);
-  const allowed = feat ? featBindable(player, feat, level)
+  const action = bindingActionId(spell);
+  const allowed = action ? actionBindable(player, action, level) : feat ? featBindable(player, feat, level)
     : canBind(list, player.playerStats.level, spell, level, player.build?.spells) || featSpellBindable(player, spell, level);
   if (!allowed) return false;
   const feature = bindingFeatureId(spell);

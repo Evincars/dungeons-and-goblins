@@ -24,6 +24,7 @@ import { foreseenSave } from './SchoolSystem';
 import { charm } from './ManeuverSystem';
 import { concentrate, endConcentration } from './LastingSpells';
 import { inWeb } from './Surfaces';
+import { markedSaveMode } from './WeaponMarks';
 
 /**
  * Spells that hold a body in a condition (`kind: hex` in src/data/spells.json, and a bolt with a `condition`), heroes and foes
@@ -94,9 +95,10 @@ export function failsSave(body: Entity | undefined, stat: StatName): boolean {
   return (stat === 'strength' || stat === 'dexterity') && heldIn(body, 'paralyzed');
 }
 
-/** A restrained body makes its Dexterity saves at disadvantage. */
+/** A restrained body makes its Dexterity saves at disadvantage, and so do the conditions weapon actions leave (systems/WeaponMarks.ts). */
 export function saveMode(body: Entity | undefined, stat: StatName): D20Mode {
-  return stat === 'dexterity' && heldIn(body, 'restrained') ? 'disadvantage' : 'normal';
+  if (stat === 'dexterity' && heldIn(body, 'restrained')) return 'disadvantage';
+  return markedSaveMode(body, stat);
 }
 
 /** The body is held in a condition by a spell for `ticks`, saving against `dc` at the end of each of its turns. */

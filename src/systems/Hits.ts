@@ -6,6 +6,7 @@ import { MOB_CRIES } from '../audio/SoundBank';
 import { wake } from './SleepSpell';
 import { shakeOff } from './SpellHolds';
 import { afflict } from './Afflictions';
+import { woundedFurther } from './WeaponMarks';
 import { SWORD_STATS } from '../entities/WeaponStats';
 
 /** A mob that takes a hit flinches (can't act) for this long, and shows hurt for this long. */
@@ -34,8 +35,10 @@ export function hitMob(mob: Entity, attacker: Entity, damage: number, evenIfFlin
   mob.freezeTime = MOB_FREEZE_TICKS;
   // The hero who dealt it is credited with what it took (for the level's summary).
   const credited = mob.lastHitBy === undefined ? undefined : world.entity(mob.lastHitBy);
-  if (credited?.playerStats) credited.playerStats.damageDealt += Math.min(damage, h.current);
-  h.current = Math.max(0, h.current - damage);
+  // Gaping Wounds take 2 piercing damage more, and the hurt ends Off Balance (systems/WeaponMarks.ts).
+  const dealt = woundedFurther(mob, damage);
+  if (credited?.playerStats) credited.playerStats.damageDealt += Math.min(dealt, h.current);
+  h.current = Math.max(0, h.current - dealt);
   // A blow breaks a charm (Hypnotic Gaze, an illusion's hold) and wakes a sleeper.
   if (mob.status) mob.status.charmed = 0;
   wake(mob);

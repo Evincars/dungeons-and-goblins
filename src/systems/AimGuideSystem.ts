@@ -178,18 +178,45 @@ function drawLine(g: Graphics, x0: number, y0: number, ux: number, uy: number, a
   g.circle(x0 + ux * a.reach, y0 + uy * a.reach, END_RADIUS).stroke({ color: end, alpha: RING_ALPHA * 2, width: 1 });
 }
 
-/** A spell's area as it will go off: a circle, a square (a cube), or a cone or a line from the caster's hands. */
+/** The corners of an area's outline are rounded this much (px), no more than this share of its breadth (a small area stays a shape). */
+const CORNER_RADIUS = 6;
+const CORNER_SHARE = 0.3;
+/** A soft halo round the area's edge, this wide and this faint, and a second faint line this far inside it. */
+const HALO_WIDTH = 4;
+const HALO_ALPHA = 0.08;
+const INSET = 3;
+const INSET_ALPHA = 0.14;
+/** The mark at the middle of an area thrown at a point: a small diamond this big. */
+const MIDDLE_MARK = 2.5;
+
+/** How round an area's corners are: CORNER_RADIUS, smaller for a small area. */
+const cornerOf = (def: AreaShape): number => Math.min(CORNER_RADIUS, def.radius * CORNER_SHARE);
+
+/** Traces an area's outline, `inset` px inside its edge (a circle and a square only), with rounded corners. */
+function traceShape(g: Graphics, def: AreaShape, from: Point, at: Point, inset: number): void {
+  const corner = cornerOf(def);
+  const r = def.radius - inset;
+  if (def.area === 'cube') g.roundRect(at.x - r, at.y - r, r * 2, r * 2, Math.max(0, corner - inset));
+  else if (def.area === 'sphere') g.circle(at.x, at.y, r);
+  else if (def.area === 'line') g.roundShape(lineCorners(def, from, at, lineEnds), corner);
+  else g.roundShape(coneCorners(def, from, at, corners), corner);
+}
+
+/**
+ * A spell's area as it will go off: a circle, a square (a cube), or a cone or a line from the caster's hands, its corners
+ * rounded, a faint fill under a soft halo and a clean edge; a circle or a square has a faint line just inside its edge and a
+ * small mark at its middle.
+ */
 function drawShape(g: Graphics, def: AreaShape, from: Point, at: Point): void {
-  if (def.area === 'cube') g.rect(at.x - def.radius, at.y - def.radius, def.radius * 2, def.radius * 2);
-  else if (def.area === 'sphere') g.circle(at.x, at.y, def.radius);
-  else if (def.area === 'line') {
-    const [a, b, c, d] = lineCorners(def, from, at, lineEnds);
-    g.poly([a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y]);
-  } else {
-    const [a, b, c] = coneCorners(def, from, at, corners);
-    g.poly([a.x, a.y, b.x, b.y, c.x, c.y]);
-  }
-  g.fill({ color: IN_REACH, alpha: FILL_ALPHA }).stroke({ color: IN_REACH, alpha: RING_ALPHA, width: 1 });
+  traceShape(g, def, from, at, 0);
+  g.stroke({ color: IN_REACH, alpha: HALO_ALPHA, width: HALO_WIDTH })
+    .fill({ color: IN_REACH, alpha: FILL_ALPHA })
+    .stroke({ color: IN_REACH, alpha: RING_ALPHA, width: 1 });
+  if (fromHands(def) || def.radius <= INSET * 2) return;
+  traceShape(g, def, from, at, INSET);
+  g.stroke({ color: IN_REACH, alpha: INSET_ALPHA, width: 1 });
+  g.poly([at.x, at.y - MIDDLE_MARK, at.x + MIDDLE_MARK, at.y, at.x, at.y + MIDDLE_MARK, at.x - MIDDLE_MARK, at.y])
+    .fill({ color: IN_REACH, alpha: RING_ALPHA });
 }
 
 /** The area, and a faint mark under each enemy standing in it. */

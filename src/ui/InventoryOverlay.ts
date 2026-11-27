@@ -15,7 +15,7 @@ import { armorClassTopic, armorTrainingTopic, damageTopic, hitPointsTopic, statT
 import { ProficiencyPanel } from './ProficiencyPanel';
 import { SpellsPanel } from './SpellsPanel';
 import { HudDialog } from './HudDialog';
-import { claimPointer } from '../systems/InputSystem';
+import { claimPointer, isAltHeld } from '../systems/InputSystem';
 import { ABILITY_CELL_H, AbilityGrid } from './AbilityGrid';
 import { SheetInfoPanel } from './SheetInfoPanel';
 import { text } from '../core/texts';
@@ -39,7 +39,9 @@ import { fuzzyMatch } from '../core/fuzzy';
 import { BAG_SORTS, bagView } from '../game/BagView';
 import type { BagSort } from '../game/BagView';
 import { itemTrained } from '../rules/Classes';
-import { pendingBinding } from '../game/SpellBinding';
+import { beginBinding, pendingBinding } from '../game/SpellBinding';
+import { actionBinding, weaponAction } from '../rules/WeaponActions';
+import { actionTopic } from './ActionTopic';
 import { QuickBarPage } from './QuickBarPage';
 import { wornCounterpart } from '../game/ItemCompare';
 
@@ -676,6 +678,8 @@ export class InventoryOverlay {
   /** What the rules make of the player's gear, as last drawn (for the tooltips). */
   private sheet: CharacterSheet | null = null;
   private readonly infoTip = new InfoTooltip();
+  /** A weapon action's tooltip, beside its icon in the item's tooltip while Alt is held. */
+  private readonly actionTip = new InfoTooltip();
   /** An item's right-click menu (send it to another player). */
   private readonly itemMenu = new PopupMenu();
   private readonly gold = new PixelLabel('', { color: 0xffcc00, align: 'right', shadow: true });
@@ -779,8 +783,9 @@ export class InventoryOverlay {
     if (this.search) this.search.clickable = !this.itemMenu.open;
     if (this.activeTab === SKILLS_TAB) this.spells?.animate();
     if (this.activeTab === QUICK_BAR_TAB) this.quickBarPage?.update(player);
-    // Alt held or let go: the tooltip up shows its whole story, or its short one again.
+    // Alt held or let go: the tooltip up shows its whole story, or its short one again; an action's goes with Alt.
     this.infoTip.refresh();
+    if (!isAltHeld()) this.releaseActions();
     const inventory = player.inventory ?? [];
     const equipped = player.equipped ?? {};
     const contents = contentsMark(inventory, equipped);
@@ -830,7 +835,7 @@ export class InventoryOverlay {
     this.ghost.anchor.set(0.5);
     this.ghost.alpha = GHOST_ALPHA;
     this.ghost.visible = false;
-    this.top.addChild(this.ghost, this.tooltip.view, this.compareTip.view, this.infoTip.view, this.itemMenu.view);
+    this.top.addChild(this.ghost, this.tooltip.view, this.compareTip.view, this.infoTip.view, this.actionTip.view, this.itemMenu.view);
     this.container.addChild(this.top);
   }
 
@@ -1549,6 +1554,7 @@ export class InventoryOverlay {
 
   private startDrag(e: FederatedPointerEvent): void {
     const player = localPlayer();
+    if (e.button !== RIGHT_BUTTON && this.bindActionAt(e)) return;
     // A press on the menu is for its rows; anywhere else closes the menu.
     if (this.itemMenu.covers(e.global)) return;
     this.itemMenu.hide();
@@ -1611,6 +1617,7 @@ export class InventoryOverlay {
     const player = localPlayer();
     const square = this.squareAt(e);
     if (this.comparing) return;
+    if (!this.dragging && this.pinnedForActions(e)) return;
     if (this.activeTab === SKILLS_TAB) this.spells?.hover(p.x, p.y);
     const item = player && square && !this.dragging && !this.itemMenu.open ? this.itemIn(player, square.place) : undefined;
     // The square under the pointer is edged; while an item is dragged, the square it would land in.
@@ -1637,6 +1644,53 @@ export class InventoryOverlay {
   private hideItemTips(): void {
     this.tooltip.hide();
     this.compareTip.hide();
+    this.actionTip.hide();
+  }
+
+  /**
+   * While Alt is held an item's tooltip stays where it is, so the pointer can go over the weapon actions it unlocks: the one
+   * under it is edged and shows its own tooltip beside it. Returns whether the tooltip is held so (the item under the pointer
+   * is not looked for).
+   */
+  private pinnedForActions(e: FederatedPointerEvent): boolean {
+    const player = localPlayer();
+    if (!isAltHeld() || !this.tooltip.visible || !player) {
+      this.releaseActions();
+      return false;
+    }
+    const id = this.tooltip.actionAt(e.global);
+    this.tooltip.hoverAction(id);
+    const box = id ? this.tooltip.actionBox(id) : null;
+    if (!id || !box) {
+      this.actionTip.hide();
+      return true;
+    }
+    this.actionTip.showAt(actionTopic(weaponAction(id), player), box, { w: DESIGN_W, h: DESIGN_H }, 'beside');
+    return true;
+  }
+
+  /** Alt let go: the action's tooltip goes and the item's follows the pointer again. */
+  private releaseActions(): void {
+    this.actionTip.hide();
+    this.tooltip.hoverAction(null);
+  }
+
+  /**
+   * A click on a weapon action's icon while Alt holds the item's tooltip: the action waits for a quick-bar square, as a spell
+   * does (game/SpellBinding.ts; the host checks the hero may bind it). Locked (untrained), it says so. Returns whether the
+   * click was for an action.
+   */
+  private bindActionAt(e: FederatedPointerEvent): boolean {
+    if (!isAltHeld()) return false;
+    const id = this.tooltip.actionAt(e.global);
+    if (!id) return false;
+    if (!this.tooltip.actionsUnlocked) {
+      sound.playLocal('fail');
+      return true;
+    }
+    this.hideItemTips();
+    beginBinding({ spell: actionBinding(id), level: 0 });
+    return true;
   }
 
   /** Edges the square (the pointer's, or a dragged item's landing place, in gold) and no other. */

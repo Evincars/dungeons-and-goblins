@@ -10,6 +10,7 @@ import { PLAYER_SLOTS, isPlayerSlot } from '../world';
 import type { PlayerSlot } from '../world';
 import { isSfxName, sound } from '../audio/SoundPlayer';
 import { playVfxLocal } from '../render/VfxPlayer';
+import { snuffOnSignal } from '../systems/Snuff';
 import type { VfxShot } from '../render/VfxPlayer';
 import type { SfxName } from '../audio/SoundPlayer';
 import { cleanName, settings } from '../game/Settings';
@@ -298,6 +299,8 @@ export class CoopSession {
       case 'vfx':
         if (!validVfxShot(message.shot)) throw new NetworkError('Invalid effect event');
         playVfxLocal(message.shot);
+        // Torches and campfires are every screen's own: the wind's blast blows out this screen's.
+        snuffOnSignal(message.shot);
         return;
       case 'state':
         if (!Number.isSafeInteger(message.seq) || !validPacket(message.compressed)) throw new NetworkError('Invalid world packet');

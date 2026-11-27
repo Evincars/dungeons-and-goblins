@@ -43,6 +43,7 @@ function remapIds(entity: Entity, made: Made): void {
     entity.ai.allyId = idIn(made, entity.ai.allyId);
   }
   if (entity.status) entity.status.by = ownerIn(made, entity.status.by);
+  if (entity.weaponMarks) entity.weaponMarks.by = ownerIn(made, entity.weaponMarks.by);
   if (entity.projectile?.owner !== undefined) entity.projectile.owner = idIn(made, entity.projectile.owner);
   if (entity.fx?.follow !== undefined) entity.fx.follow = idIn(made, entity.fx.follow);
   remapOwners(entity, made);

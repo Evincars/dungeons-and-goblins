@@ -66,6 +66,30 @@ function buildTorchStrip(): void {
   const strip = Texture.from(canvas);
   strip.source.scaleMode = 'nearest';
   setTexture('torch', strip);
+  buildTorchOut();
+}
+
+/** A torch blown out (Gust of Wind, systems/Snuff.ts): its first frame with the flame cleared off the bracket. */
+function buildTorchOut(): void {
+  const canvas = createCanvas(TORCH_FRAME_SIZE, TORCH_FRAME_SIZE);
+  const ctx = context2d(canvas);
+  ctx.drawImage(imageFor('torch_1'), 0, 0);
+  const f = TORCH_FLAME;
+  ctx.clearRect(f.x - 1, f.y, f.w + 2, f.h);
+  const texture = Texture.from(canvas);
+  texture.source.scaleMode = 'nearest';
+  setTexture('torch_out', texture);
+}
+
+/** A campfire blown out (Gust of Wind): its stones, logs and last embers, no flames. */
+function buildCampfireOut(): void {
+  const canvas = createCanvas(CAMPFIRE_CELL, CAMPFIRE_CELL);
+  const ctx = context2d(canvas);
+  ctx.imageSmoothingEnabled = false;
+  drawCampfireBase(ctx, 0, 0);
+  const texture = Texture.from(canvas);
+  texture.source.scaleMode = 'nearest';
+  setTexture('campfire_out', texture);
 }
 
 /**
@@ -88,6 +112,7 @@ function buildCampfireStrip(): void {
   const strip = Texture.from(canvas);
   strip.source.scaleMode = 'nearest';
   setTexture('campfire', strip);
+  buildCampfireOut();
 }
 
 /**

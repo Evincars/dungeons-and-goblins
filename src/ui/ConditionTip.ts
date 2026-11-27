@@ -1,24 +1,24 @@
+import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { q, isActivePlayer, localPlayer } from '../world';
 import type { Entity } from '../world';
 import { text } from '../core/texts';
+import { reportRejection } from '../core/errors';
 import { GAME_WIDTH, GAME_HEIGHT, screenToWorld } from '../render/Camera';
 import { pointer, pointerFree } from '../systems/InputSystem';
 import { conditionsOn } from '../systems/Conditions';
 import type { ShownCondition } from '../systems/Conditions';
 import { RING_COLOURS } from '../systems/ConditionRingSystem';
-import { holdOf } from '../systems/SpellHolds';
 import { hiddenHere } from '../systems/Invisibility';
-import { isHoldKind } from '../rules/Conditions';
-import { spellName } from '../rules/Names';
-import { InfoTooltip } from './InfoTooltip';
-import type { TipDetail, TipTopic } from './InfoTooltip';
-import { durationOf } from './HudTime';
+import { conditionIconKey } from '../assets/ConditionIcons';
+import { lazyTexture, requestArt } from '../assets/LazyArt';
+import { PixelLabel, measureText } from './PixelText';
+import { THEME } from './Theme';
 
 /**
- * The pointer over a hero or a foe with a ring of a condition under it (systems/ConditionRingSystem.ts): a tooltip beside it
- * names who it is and every condition it is in, in the ring's colour — what each does (the tabletop's rule as the game plays
- * it), how long it may still last and which spell holds it there. Only for what this screen shows (an unseen invisible foe
- * shows nothing).
+ * The pointer over a hero or a foe with a ring of a condition under it (systems/ConditionRingSystem.ts): a small see-through
+ * card beside it with who it is and the conditions it is in — each its icon and its name in the ring's colour, nothing more
+ * (what a condition does is told by the hero's own HUD, ui/PassiveHud.ts). Only for what this screen shows (an unseen
+ * invisible foe shows nothing).
  */
 
 /** A body is under the pointer within this far across its feet (px) and this far up its body. */
@@ -26,8 +26,26 @@ const PICK_WIDE = 12;
 const PICK_HIGH = 34;
 /** Below its feet the pointer still finds it over its ring this far down. */
 const PICK_LOW = 6;
-/** The tooltip stands this far from the pointer. */
-const ANCHOR = 6;
+/** The card stands this far right of and above the pointer. */
+const ANCHOR = 8;
+/** The card's padding, its title's height, each condition's row (icon size) and the gap between icon and name. */
+const PAD = 5;
+const TITLE_H = 10;
+const ROW_H = 12;
+const ICON = 10;
+const ICON_GAP = 4;
+/** The most conditions a card lists (a body is rarely in more than a few). */
+const MAX_ROWS = 10;
+/** The card: its dark see-through fill, its edge, the inner line in the first condition's colour, the gold corner marks. */
+const FILL = 0x07080a;
+const FILL_ALPHA = 0.72;
+const EDGE_ALPHA = 0.85;
+const INNER_INSET = 2;
+const INNER_ALPHA = 0.45;
+const CORNER = 4;
+const CORNER_ALPHA = 0.9;
+/** The text's glyphs stand this far down their row. */
+const TEXT_DROP = 2;
 
 const held: ShownCondition[] = [];
 const at = { x: 0, y: 0 };
@@ -52,54 +70,108 @@ function bodyUnder(x: number, y: number): Entity | undefined {
   return undefined;
 }
 
-/** What one condition says: its name and time left (and the spell holding it), then what it does. */
-function conditionLines(body: Entity, condition: ShownCondition): TipDetail[] {
-  const colour = RING_COLOURS[condition];
-  const kind = isHoldKind(condition) ? condition : null;
-  const hold = kind ? holdOf(body, kind) : undefined;
-  const name = text(`condition.${condition}.name`);
-  const left = hold ? ` - ${text('condition.tip.left', { left: durationOf(hold.ticks) })}` : '';
-  const lines: TipDetail[] = [{ text: `${name}${left}`, color: colour }, text(`condition.${condition}.text`)];
-  if (hold) lines.push(text('condition.tip.by', { spell: spellName(hold.spell) }));
-  return lines;
-}
-
-/** Who the body is, for the tooltip's title: a hero's name, a foe's kind. */
+/** Who the body is, for the card's title: a hero's name, a foe's kind. */
 function nameOf(body: Entity): string {
   if (body.playerName) return body.playerName;
   return body.mobType ? text(`mob.${body.mobType}`) : text('condition.tip.title');
 }
 
-/** The tooltip for a body's conditions. */
-function topicFor(body: Entity): TipTopic {
-  conditionsOn(body, held);
-  const detail = held.flatMap((condition) => conditionLines(body, condition));
-  return { title: nameOf(body), subtitle: text('condition.tip.title'), body: '', detail };
-}
+type Row = { icon: Sprite; label: PixelLabel; iconKey: string };
 
 export class ConditionTip {
-  private readonly tip = new InfoTooltip();
-  private showing: Entity | undefined;
+  readonly view = new Container();
+  private readonly frame = new Graphics();
+  private readonly title = new PixelLabel('', { color: THEME.title, shadow: true });
+  private readonly rows: Row[] = [];
+  /** What the card shows now (redrawn only when it changes), and its size. */
+  private shown = '';
+  private size = { w: 0, h: 0 };
 
-  get view(): InfoTooltip['view'] {
-    return this.tip.view;
+  constructor() {
+    this.view.visible = false;
+    this.view.eventMode = 'none';
+    this.title.position.set(PAD, PAD);
+    this.view.addChild(this.frame, this.title);
+    for (let i = 0; i < MAX_ROWS; i++) this.rows.push(this.makeRow(i));
   }
 
-  /** Once a frame: the tooltip of the body under the pointer, beside the pointer, or none. */
+  private makeRow(i: number): Row {
+    const y = PAD + TITLE_H + i * ROW_H;
+    const icon = new Sprite(Texture.EMPTY);
+    icon.position.set(PAD, y);
+    const label = new PixelLabel('', { shadow: true });
+    label.position.set(PAD + ICON + ICON_GAP, y + TEXT_DROP);
+    this.view.addChild(icon, label);
+    return { icon, label, iconKey: '' };
+  }
+
+  /** Shows a condition's icon in a row (loaded the first time it is asked for). */
+  private setIcon(row: Row, key: string): void {
+    if (row.iconKey === key) return;
+    row.iconKey = key;
+    const show = (): void => {
+      if (row.icon.destroyed || row.iconKey !== key) return;
+      row.icon.texture = lazyTexture(key);
+      row.icon.scale.set(ICON / Math.max(1, row.icon.texture.width));
+    };
+    row.icon.texture = Texture.EMPTY;
+    reportRejection(requestArt(key).then(show), `Icon ${key} did not load`, 'render');
+  }
+
+  /** The card's frame: a dark see-through fill, a thin edge, an inner line in the first condition's colour and gold corners. */
+  private drawFrame(w: number, h: number, accent: number): void {
+    const g = this.frame.clear();
+    g.rect(0, 0, w, h).fill({ color: FILL, alpha: FILL_ALPHA }).stroke({ color: THEME.panelBorder, alpha: EDGE_ALPHA, width: 1, alignment: 1 });
+    g.rect(INNER_INSET, INNER_INSET, w - INNER_INSET * 2, h - INNER_INSET * 2).stroke({ color: accent, alpha: INNER_ALPHA, width: 1, alignment: 1 });
+    // Gold corner marks, an L at each corner.
+    g.moveTo(0, CORNER).lineTo(0, 0).lineTo(CORNER, 0);
+    g.moveTo(w - CORNER, 0).lineTo(w, 0).lineTo(w, CORNER);
+    g.moveTo(w, h - CORNER).lineTo(w, h).lineTo(w - CORNER, h);
+    g.moveTo(CORNER, h).lineTo(0, h).lineTo(0, h - CORNER);
+    g.stroke({ color: THEME.title, alpha: CORNER_ALPHA, width: 1, alignment: 0.5 });
+  }
+
+  /** Lays the card out for a body's conditions (in `held`). */
+  private layout(name: string): void {
+    this.title.text = name;
+    let width = measureText(name);
+    this.rows.forEach((row, i) => {
+      const condition = held[i];
+      row.icon.visible = row.label.visible = condition !== undefined;
+      if (condition === undefined) return;
+      row.label.text = text(`condition.${condition}.name`);
+      row.label.fill = RING_COLOURS[condition];
+      this.setIcon(row, conditionIconKey(condition));
+      width = Math.max(width, ICON + ICON_GAP + measureText(row.label.text));
+    });
+    this.size.w = Math.ceil(width) + PAD * 2;
+    this.size.h = PAD * 2 + TITLE_H + Math.min(held.length, MAX_ROWS) * ROW_H - (ROW_H - ICON);
+    this.drawFrame(this.size.w, this.size.h, RING_COLOURS[held[0]] ?? THEME.panelBorder);
+  }
+
+  /** Once a frame: the card of the body under the pointer, beside the pointer (kept on the screen), or none. */
   update(): void {
     const mouse = pointer();
     screenToWorld(mouse.x, mouse.y, at);
     const body = localPlayer() && pointerFree() ? bodyUnder(at.x, at.y) : undefined;
     if (!body) {
-      if (this.showing) this.tip.hide();
-      this.showing = undefined;
+      this.view.visible = false;
       return;
     }
-    this.showing = body;
-    this.tip.showAt(topicFor(body), { x: mouse.x + ANCHOR, y: mouse.y - ANCHOR, w: ANCHOR, h: ANCHOR }, { w: GAME_WIDTH, h: GAME_HEIGHT }, 'beside');
+    const name = nameOf(body);
+    const key = `${name}|${held.join(',')}`;
+    if (key !== this.shown) {
+      this.shown = key;
+      this.layout(name);
+    }
+    const { w, h } = this.size;
+    const x = mouse.x + ANCHOR + w > GAME_WIDTH ? mouse.x - ANCHOR - w : mouse.x + ANCHOR;
+    const y = Math.max(0, Math.min(GAME_HEIGHT - h, mouse.y - ANCHOR - h));
+    this.view.position.set(Math.round(x), Math.round(y));
+    this.view.visible = true;
   }
 
   destroy(): void {
-    this.tip.hide();
+    this.view.visible = false;
   }
 }

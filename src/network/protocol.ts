@@ -1,4 +1,5 @@
 import { isDepartChoice, isEquipSlot, isGearKind, isItemType, isPlayerSlot, isRestKind, isStatName, PLAYER_SLOTS, QUICK_SLOTS, STAT_NAMES } from '../world';
+import { bindingActionId } from '../rules/WeaponActions';
 import type { BagSquare, DepartChoice, EquipSlot, InventoryItem, PlayerInput, PlayerSlot, RestKind, StatName } from '../world';
 import { validImprovement, validScores } from '../rules/Build';
 import type { Improvement } from '../rules/Build';
@@ -227,7 +228,8 @@ function isItemSquare(value: unknown): value is ItemSquare {
 export function validBinding(spell: unknown, level: unknown, damageType?: unknown, variant?: unknown): boolean {
   if (spell === UNBOUND) return level === 0 && damageType === undefined && variant === undefined;
   if (typeof spell === 'string' && (!validChoice(spell, damageType) || !validVariant(spell, variant))) return false;
-  const named = typeof spell === 'string' && (bindingFeatureId(spell) !== null ? isFeatureId(bindingFeatureId(spell)) : bindingFeatId(spell) !== null || isCatalogSpell(spell));
+  const named = typeof spell === 'string' && (bindingFeatureId(spell) !== null ? isFeatureId(bindingFeatureId(spell))
+    : bindingFeatId(spell) !== null || bindingActionId(spell) !== null || isCatalogSpell(spell));
   return named && Number.isInteger(level) && Number(level) >= 0 && Number(level) <= MAX_SPELL_LEVEL;
 }
 

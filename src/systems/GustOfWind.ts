@@ -15,13 +15,15 @@ import { logLine } from './RollLogSystem';
 import { bodySave } from './BodySaves';
 import { concentrate, endConcentration } from './LastingSpells';
 import { AIM_HEIGHT } from '../entities/ProjectileFactory';
+import { snuffAlong } from './Snuff';
 
 /**
  * Gust of Wind: a line of strong wind from the caster's hands towards their aim, 60 feet long and 10 wide (`area: line`, its
  * size in src/data/spells.json), held by concentration while it lasts. It blows from the caster and turns where they aim. Each
  * creature in it saves (Strength) at once and at the end of every round after, or is blown 15 feet away along the line — over
  * the brink of a pit or a chasm, if one lies that way (systems/MovementSystem.ts lets a shove carry a body over one); walking
- * back into it costs twice the pace. It scatters fog and gas (Fog Cloud, Cloudkill) it blows through. An enemy caster
+ * back into it costs twice the pace. It scatters fog and gas (Fog Cloud, Cloudkill) it blows through, and blows out the wall
+ * torches and campfires it sweeps over (systems/Snuff.ts). An enemy caster
  * (systems/EnemyRangedSystem.ts) casts it only where it would blow a hero over a drop, a single blast.
  */
 
@@ -95,6 +97,12 @@ function scatterFog(def: SpellDef, origin: { x: number; y: number }, end: { x: n
   }
 }
 
+/** The wind's streaks along its line, on every screen, and the flames they sweep over going out. */
+function showWind(x: number, y: number, dirX: number, dirY: number): void {
+  playVfx('gust-of-wind', x, y, AIM_HEIGHT, dirX, dirY);
+  snuffAlong(x, y, dirX, dirY);
+}
+
 /** An enemy's blast catches the heroes in its line. */
 function blowOnHeroes(def: SpellDef, origin: { x: number; y: number }, end: { x: number; y: number }, dirX: number, dirY: number, dc: number): void {
   for (const hero of q.players) if (isActivePlayer(hero) && inLine(def, origin, end, hero)) blowOn(hero, def, dirX, dirY, dc);
@@ -103,7 +111,7 @@ function blowOnHeroes(def: SpellDef, origin: { x: number; y: number }, end: { x:
 /** One blast of the wind from `origin` along (dirX, dirY): its streaks, then everyone caught on the other side saves. */
 function blast(def: SpellDef, origin: { x: number; y: number }, dirX: number, dirY: number, dc: number, onHeroes: boolean): void {
   const end = lineEnd(def, origin, dirX, dirY);
-  playVfx('gust-of-wind', origin.x, origin.y, AIM_HEIGHT, dirX, dirY);
+  showWind(origin.x, origin.y, dirX, dirY);
   scatterFog(def, origin, end);
   if (onHeroes) {
     blowOnHeroes(def, origin, end, dirX, dirY, dc);
@@ -160,7 +168,7 @@ function updateGust(gust: Gust): void {
   }
   turnWithCaster(gust, caster);
   const g = gust.gust;
-  if (g.ticks % BLAST_SHOW_TICKS === 0) playVfx('gust-of-wind', gust.position.x, gust.position.y, AIM_HEIGHT, g.dirX, g.dirY);
+  if (g.ticks % BLAST_SHOW_TICKS === 0) showWind(gust.position.x, gust.position.y, g.dirX, g.dirY);
   if (--g.pulse > 0) return;
   g.pulse = TURN_TICKS;
   const def = castDef(SPELLS.gust_of_wind, g.level, caster.playerStats.level);

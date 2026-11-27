@@ -17,6 +17,9 @@ const SHEETS: Record<string, SheetInfo> = {
   torch:              { frameWidth: 16, frameHeight: 16 },
   // Campfire — stones and logs under torch flames, 4 frames of 24×24
   campfire:           { frameWidth: 24, frameHeight: 24 },
+  // A torch and a campfire blown out by Gust of Wind (systems/Snuff.ts): one frame each, no flames
+  torch_out:          { frameWidth: 16, frameHeight: 16 },
+  campfire_out:       { frameWidth: 24, frameHeight: 24 },
   // The hearth of flagstones under a campfire
   campfire_floor:     { frameWidth: 50, frameHeight: 22 },
 

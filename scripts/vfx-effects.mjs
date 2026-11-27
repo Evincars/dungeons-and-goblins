@@ -688,8 +688,9 @@ effect('fog-cloud-burst', 2, [
   emitter('billow', once(0.25, { max: 60, rate: 240, ring: 0.6, filled: true, life: [0.9, 1.4], radial: 4, drag: 1.6, size: [1, 2.4], colors: C5.fogBillow, round: true, blend: 'alpha' })),
 ]);
 effect('fog-cloud', 1, [
-  emitter('bank', { max: 24, rate: 8, ring: 3.2, filled: true, life: [2.4, 3.4], vmin: [-0.15, -0.08], vmax: [0.15, 0.12], orbit: 0.12, size: [1.8, 2.6], colors: C5.fog, round: true, blend: 'alpha' }),
-  emitter('rim', { max: 50, rate: 18, ring: 3.9, life: [2.2, 3], vmin: [-0.1, -0.05], vmax: [0.1, 0.1], orbit: 0.18, size: [1.2, 1.9], colors: C5.fogRim, round: true, blend: 'alpha' }),
+  emitter('bank', { max: 24, rate: 7, ring: 3.2, filled: true, life: [2.6, 3.6], vmin: [-0.12, -0.06], vmax: [0.12, 0.1], orbit: 0.1, size: [1.8, 2.8], colors: C5.fog, round: true, blend: 'alpha' }),
+  emitter('rim', { max: 60, rate: 22, ring: 3.9, life: [2.2, 3], vmin: [-0.1, -0.05], vmax: [0.1, 0.12], orbit: 0.16, size: [1.2, 2], colors: C5.fogRim, round: true, blend: 'alpha' }),
+  emitter('curls', { max: 30, rate: 10, ring: 3.6, life: [1.6, 2.4], vmin: [-0.3, 0.1], vmax: [0.3, 0.5], orbit: -0.25, size: [0.5, 1.2], colors: C5.fogBillow, round: true, blend: 'alpha' }),
 ]);
 // The floor's sheen (made 32 px round): glints winking on a grease slick and on still water.
 effect('grease-sheen', 1, [
@@ -697,6 +698,189 @@ effect('grease-sheen', 1, [
 ]);
 effect('water-glint', 1, [
   emitter('glints', { max: 12, rate: 4, ring: 1.7, filled: true, life: [0.4, 0.9], size: [0.12, 0.03], colors: C5.glint }),
+]);
+
+// ── Spells that hold, hide and shape: Charm Person, Tasha's, Blindness, Hold Person, Crown of Madness, Ray of
+// Enfeeblement, Blur, Mirror Image, Shadow Blade, See Invisibility, Magic Weapon, Invisibility, Darkness, Flaming Sphere,
+// Gust of Wind, Misty Step, Web; and the marks a blow of fire, poison or acid, cold or lightning leaves for a round ──
+// Sizes follow src/data/spells.json (16 px a unit): Darkness 64 px round; Flaming Sphere a ball about 10 px round, striking
+// 40 px round; Gust of Wind a line 192 px long along +x, 24 px each side; Web a square 48 px each way; See Invisibility 96 px.
+
+const C6 = {
+  charm: gradient([[0, [1, 0.9, 0.97]], [0.4, [1, 0.5, 0.78]], [1, [0.75, 0.2, 0.55]]], [[0, 0.95], [0.6, 0.75], [1, 0]]),
+  laugh: gradient([[0, [1, 1, 0.85]], [0.4, [1, 0.88, 0.35]], [1, [0.9, 0.6, 0.1]]], [[0, 0.95], [0.6, 0.75], [1, 0]]),
+  blind: gradient([[0, [0.5, 0.45, 0.85]], [1, [0.08, 0.05, 0.2]]], [[0, 0], [0.3, 0.75], [1, 0]]),
+  hold: gradient([[0, [1, 1, 1]], [0.35, [0.55, 0.88, 1]], [1, [0.2, 0.45, 0.95]]], [[0, 0.95], [0.6, 0.7], [1, 0]]),
+  madness: gradient([[0, [1, 0.85, 0.8]], [0.35, [0.95, 0.25, 0.2]], [1, [0.4, 0.05, 0.05]]], [[0, 0.95], [0.6, 0.75], [1, 0]]),
+  enfeeble: gradient([[0, [0.55, 0.55, 0.6]], [0.5, [0.2, 0.2, 0.25]], [1, [0.05, 0.05, 0.08]]], [[0, 0.9], [0.6, 0.7], [1, 0]]),
+  enfeebleGlow: gradient([[0, [0.6, 0.65, 0.45]], [1, [0.3, 0.32, 0.2]]], [[0, 0], [0.3, 0.5], [1, 0]]),
+  blur: gradient([[0, [1, 1, 1]], [1, [0.75, 0.85, 1]]], [[0, 0], [0.3, 0.5], [1, 0]]),
+  glass: gradient([[0, [1, 1, 1]], [0.4, [0.7, 0.9, 1]], [1, [0.35, 0.6, 1]]], [[0, 1], [0.6, 0.8], [1, 0]]),
+  gloom: gradient([[0, [0.75, 0.6, 1]], [0.4, [0.4, 0.2, 0.75]], [1, [0.08, 0.02, 0.15]]], [[0, 0.95], [0.6, 0.75], [1, 0]]),
+  gloomSmoke: gradient([[0, [0.2, 0.1, 0.3]], [1, [0.05, 0.02, 0.08]]], [[0, 0], [0.25, 0.6], [1, 0]]),
+  eye: gradient([[0, [1, 1, 0.9]], [0.4, [1, 0.85, 0.4]], [1, [0.8, 0.55, 0.15]]], [[0, 0.95], [0.6, 0.7], [1, 0]]),
+  arcane: gradient([[0, [1, 1, 1]], [0.35, [0.6, 0.85, 1]], [1, [0.3, 0.5, 1]]], [[0, 1], [0.6, 0.8], [1, 0]]),
+  vanish: gradient([[0, [1, 1, 1]], [1, [0.8, 0.9, 1]]], [[0, 0.9], [0.5, 0.45], [1, 0]]),
+  dark: gradient([[0, [0.06, 0.04, 0.1]], [1, [0.01, 0.01, 0.03]]], [[0, 0], [0.3, 0.55], [0.7, 0.45], [1, 0]]),
+  darkRim: gradient([[0, [0.12, 0.08, 0.2]], [1, [0.02, 0.01, 0.05]]], [[0, 0], [0.3, 0.75], [0.75, 0.6], [1, 0]]),
+  wind: gradient([[0, [1, 1, 1]], [0.5, [0.85, 0.92, 1]], [1, [0.6, 0.7, 0.85]]], [[0, 0], [0.2, 0.75], [0.7, 0.5], [1, 0]]),
+  dust: gradient([[0, [0.75, 0.68, 0.55]], [1, [0.5, 0.45, 0.35]]], [[0, 0], [0.25, 0.45], [1, 0]]),
+  mist: gradient([[0, [0.95, 0.97, 1]], [1, [0.7, 0.78, 0.88]]], [[0, 0], [0.25, 0.65], [1, 0]]),
+  silver: gradient([[0, [1, 1, 1]], [1, [0.75, 0.8, 0.9]]], [[0, 1], [0.6, 0.7], [1, 0]]),
+  web: gradient([[0, [1, 1, 1]], [1, [0.8, 0.8, 0.78]]], [[0, 0.95], [0.7, 0.6], [1, 0]]),
+  poison: gradient([[0, [0.85, 1, 0.55]], [0.4, [0.45, 0.85, 0.2]], [1, [0.15, 0.4, 0.05]]], [[0, 0.95], [0.6, 0.75], [1, 0]]),
+  fumes: gradient([[0, [0.5, 0.75, 0.25]], [1, [0.25, 0.4, 0.1]]], [[0, 0], [0.25, 0.4], [1, 0]]),
+  rime: gradient([[0, [1, 1, 1]], [0.4, [0.75, 0.92, 1]], [1, [0.45, 0.7, 1]]], [[0, 1], [0.6, 0.8], [1, 0]]),
+  spark: gradient([[0, [1, 1, 1]], [0.3, [0.7, 0.95, 1]], [1, [0.3, 0.55, 1]]], [[0, 1], [0.7, 0.9], [1, 0]]),
+};
+
+// Charm Person: pink motes spiral in round its head and a warm flush blooms over it.
+effect('charm-person', 1.6, [
+  emitter('motes', once(0.3, { max: 50, rate: 200, ring: 1.4, at: [0, 0.6], life: [0.5, 0.8], radial: -2, orbit: 3, size: [0.2, 0.05], colors: C6.charm, round: true })),
+  emitter('flush', once(0.06, { max: 6, rate: 120, at: [0, 0.6], life: [0.3, 0.5], size: [1.4, 0.5], colors: C6.charm, round: true })),
+]);
+// Tasha's Hideous Laughter: golden bubbles of mirth burst up round the head; while it holds, a few keep popping over it.
+effect('hideous-laughter', 1.6, [
+  emitter('bubbles', once(0.35, { max: 40, rate: 140, box: [1, 0.4], at: [0, 0.6], life: [0.5, 0.9], vmin: [-0.8, 0.8], vmax: [0.8, 2.2], drag: 1, size: [0.25, 0.4], colors: C6.laugh, round: true })),
+  emitter('flash', once(0.05, { max: 4, rate: 80, at: [0, 0.6], life: [0.2, 0.3], size: [1.2, 0.4], colors: C6.laugh, round: true })),
+]);
+effect('laughter-aura', 1, [
+  emitter('bubbles', { max: 12, rate: 6, box: [0.8, 0.2], at: [0, 0.3], life: [0.5, 0.8], vmin: [-0.5, 0.6], vmax: [0.5, 1.4], size: [0.15, 0.3], colors: C6.laugh, round: true }),
+]);
+// Blindness/Deafness: a dark veil draws in round the eyes and settles over them.
+effect('blindness', 1.6, [
+  emitter('veil', once(0.3, { max: 40, rate: 160, ring: 1.3, at: [0, 0.7], life: [0.5, 0.8], radial: -1.8, size: [0.5, 0.2], colors: C6.blind, round: true, blend: 'alpha' })),
+  emitter('glint', once(0.05, { max: 8, rate: 160, at: [0, 0.7], life: [0.2, 0.3], size: [0.6, 0.15], colors: C5.sleepGlow, round: true })),
+]);
+// Hold Person: bands of azure runes close round the body and lock; while it holds, runes hang still round it.
+effect('hold-person', 1.6, [
+  emitter('runes', once(0.15, { max: 60, rate: 400, ring: 1.6, life: [0.45, 0.6], radial: -2.4, orbit: 4, size: [0.2, 0.06], colors: C6.hold })),
+  emitter('lock', once(0.05, { max: 6, rate: 120, life: [0.2, 0.3], size: [1.8, 0.5], colors: C6.hold, round: true })),
+]);
+effect('hold-aura', 1, [
+  emitter('runes', { max: 20, rate: 10, ring: 0.95, life: [0.6, 1], orbit: 0.3, size: [0.12, 0.04], colors: C6.hold }),
+]);
+// Crown of Madness: a crown of jagged iron springs up over the head, sparks of crimson madness off it; while it holds, it
+// turns there.
+effect('crown-of-madness', 1.6, [
+  emitter('spikes', once(0.1, { max: 30, rate: 300, ring: 0.6, at: [0, 1.6], life: [0.35, 0.5], vmin: [0, 0.8], vmax: [0, 1.6], size: [0.18, 0.05], colors: C6.madness })),
+  emitter('flare', once(0.05, { max: 6, rate: 120, at: [0, 1.4], life: [0.2, 0.3], size: [1.2, 0.4], colors: C6.madness, round: true })),
+]);
+effect('madness-aura', 1, [
+  emitter('crown', { max: 18, rate: 14, ring: 0.5, at: [0, 1.6], life: [0.3, 0.5], orbit: 3, vmin: [0, 0.2], vmax: [0, 0.6], size: [0.14, 0.04], colors: C6.madness }),
+]);
+// Ray of Enfeeblement: a black beam of enervating energy, grey motes sloughing off it; it strikes in a sickly pall.
+cast('ray-of-enfeeblement', C6.enfeeble, { round: true });
+effect('ray-of-enfeeblement-flight', 1, [
+  emitter('core', { max: 30, rate: 140, life: [0.06, 0.12], size: [0.45, 0.2], colors: C6.enfeeble, round: true, blend: 'alpha' }),
+  emitter('beam', { max: 60, rate: 120, life: [0.3, 0.5], size: [0.3, 0.05], colors: C6.enfeeble, round: true, blend: 'alpha' }),
+  emitter('motes', { max: 20, rate: 25, box: [0.2, 0.2], life: [0.4, 0.7], vmin: [-0.3, -0.6], vmax: [0.3, 0], size: [0.12, 0.04], colors: C6.enfeebleGlow }),
+]);
+effect('ray-of-enfeeblement-impact', 1.6, [
+  emitter('pall', once(0.2, { max: 30, rate: 160, ring: 0.6, filled: true, life: [0.6, 1], vmin: [-0.4, -0.5], vmax: [0.4, -0.1], size: [0.6, 1], colors: C6.enfeeble, round: true, blend: 'alpha' })),
+  emitter('glow', once(0.06, { max: 6, rate: 100, life: [0.3, 0.45], size: [1.4, 0.6], colors: C6.enfeebleGlow, round: true })),
+]);
+effect('enfeebled-aura', 1, [
+  emitter('motes', { max: 10, rate: 5, box: [0.8, 1.2], life: [0.8, 1.2], vmin: [-0.1, -0.5], vmax: [0.1, -0.2], size: [0.14, 0.04], colors: C6.enfeebleGlow }),
+]);
+// Blur: the body shudders into streaks of itself as it is cast; while it lasts, faint streaks waver off its sides.
+effect('blur', 1.2, [
+  emitter('streaks', once(0.2, { max: 40, rate: 200, box: [0.6, 1.6], life: [0.25, 0.4], vmin: [-3, 0], vmax: [3, 0], drag: 3, size: [0.3, 0.1], colors: C6.blur, round: true })),
+]);
+effect('blur-aura', 1, [
+  emitter('streaks', { max: 16, rate: 10, box: [0.6, 1.4], life: [0.25, 0.4], vmin: [-1.5, 0], vmax: [1.5, 0], drag: 2, size: [0.25, 0.08], colors: C6.blur, round: true }),
+]);
+// Mirror Image: shards of light gather round the body into three likenesses; a duplicate struck shatters like glass.
+effect('mirror-image', 1.4, [
+  emitter('shards', once(0.15, { max: 60, rate: 400, ring: 1.8, life: [0.4, 0.6], radial: -3, size: [0.2, 0.05], colors: C6.glass })),
+  emitter('flash', once(0.05, { max: 6, rate: 120, life: [0.2, 0.3], size: [1.6, 0.5], colors: C6.glass, round: true })),
+]);
+effect('mirror-image-pop', 1.2, [
+  emitter('shards', once(0.06, { max: 40, rate: 700, box: [0.6, 1], life: [0.35, 0.6], vmin: [-3, -1], vmax: [3, 3], gravity: 6, size: [0.18, 0.05], colors: C6.glass })),
+]);
+// Shadow Blade: threads of shadow wind into a blade in the hand; while it lasts, gloom smokes off it (over the head too, where
+// its sign floats: systems/WeaponSignSystem.ts).
+effect('shadow-blade', 1.4, [
+  emitter('threads', once(0.25, { max: 50, rate: 220, ring: 1.2, life: [0.4, 0.6], radial: -2.5, orbit: 3, size: [0.18, 0.05], colors: C6.gloom })),
+  emitter('smoke', once(0.2, { max: 16, rate: 80, life: [0.5, 0.8], vmin: [-0.3, 0.3], vmax: [0.3, 0.8], size: [0.4, 0.8], colors: C6.gloomSmoke, round: true, blend: 'alpha' })),
+]);
+effect('shadow-blade-sign', 1, [
+  emitter('smoke', { max: 16, rate: 9, box: [0.15, 0.6], life: [0.5, 0.8], vmin: [-0.2, 0.2], vmax: [0.2, 0.6], size: [0.25, 0.5], colors: C6.gloomSmoke, round: true, blend: 'alpha' }),
+  emitter('motes', { max: 10, rate: 6, box: [0.15, 0.6], life: [0.4, 0.7], vmin: [-0.2, 0], vmax: [0.2, 0.4], size: [0.1, 0.03], colors: C6.gloom }),
+]);
+// Magic Weapon: blue sparks run up the weapon and burst off its tip; while it lasts, its sign over the head glints.
+effect('magic-weapon', 1.4, [
+  emitter('sparks', once(0.3, { max: 50, rate: 180, box: [0.2, 1], life: [0.35, 0.6], vmin: [-0.4, 0.8], vmax: [0.4, 2], drag: 1, size: [0.16, 0.04], colors: C6.arcane })),
+  emitter('flash', once(0.05, { max: 4, rate: 80, at: [0, 0.8], life: [0.2, 0.3], size: [1.2, 0.4], colors: C6.arcane, round: true })),
+]);
+effect('magic-weapon-sign', 1, [
+  emitter('glints', { max: 12, rate: 7, box: [0.15, 0.6], life: [0.3, 0.6], vmin: [-0.1, 0], vmax: [0.1, 0.3], size: [0.12, 0.03], colors: C6.arcane }),
+]);
+// See Invisibility: golden light flares at the eyes and a ring of it sweeps out as far as it sees (96 px); while it lasts, a
+// glimmer of gold at the eyes.
+effect('see-invisibility', 1.6, [
+  emitter('eyes', once(0.06, { max: 6, rate: 100, at: [0, 1.6], life: [0.25, 0.4], size: [1, 0.3], colors: C6.eye, round: true })),
+  emitter('sweep', once(0.08, { max: 80, rate: 1000, ring: 0.5, life: [0.6, 0.75], radial: 8, drag: 0.2, size: [0.18, 0.05], colors: C6.eye })),
+]);
+effect('see-invisibility-aura', 1, [
+  emitter('glimmer', { max: 8, rate: 5, box: [0.5, 0.1], at: [0, 1.6], life: [0.3, 0.5], size: [0.12, 0.03], colors: C6.eye }),
+]);
+// Invisibility: the body fades in a breath of pale motes; revealed, it shimmers back into sight in a ring of gold.
+effect('invisibility', 1.6, [
+  emitter('motes', once(0.35, { max: 50, rate: 160, box: [0.9, 1.6], life: [0.5, 0.9], vmin: [-0.3, 0.2], vmax: [0.3, 1], drag: 1, size: [0.18, 0.04], colors: C6.vanish })),
+]);
+effect('invisibility-reveal', 1.4, [
+  emitter('ring', once(0.08, { max: 50, rate: 700, ring: 1.6, life: [0.35, 0.5], radial: -3, size: [0.18, 0.05], colors: C6.eye })),
+  emitter('flash', once(0.05, { max: 6, rate: 120, life: [0.2, 0.3], size: [1.6, 0.5], colors: C6.eye, round: true })),
+]);
+// Darkness (64 px round): black rolls out over all of it as it is cast; while it lasts, inky banks heave over it, darkest at
+// the rim (its body is drawn by systems/CloudSystem.ts).
+effect('darkness-burst', 2, [
+  emitter('billow', once(0.3, { max: 70, rate: 240, ring: 0.6, filled: true, life: [1, 1.5], radial: 4, drag: 1.6, size: [1.2, 2.6], colors: C6.darkRim, round: true, blend: 'alpha' })),
+]);
+effect('darkness', 1, [
+  emitter('bank', { max: 30, rate: 10, ring: 3.2, filled: true, life: [2.4, 3.4], vmin: [-0.12, -0.08], vmax: [0.12, 0.1], orbit: 0.1, size: [1.8, 2.8], colors: C6.dark, round: true, blend: 'alpha' }),
+  emitter('rim', { max: 50, rate: 18, ring: 3.9, life: [2.2, 3], vmin: [-0.1, -0.05], vmax: [0.1, 0.1], orbit: 0.16, size: [1.4, 2.2], colors: C6.darkRim, round: true, blend: 'alpha' }),
+]);
+// Flaming Sphere: a ball of fire, flames licking up off it, embers and smoke; a burst of flame as it is called up.
+effect('flaming-sphere', 1, [
+  emitter('core', { max: 30, rate: 90, ring: 0.3, filled: true, at: [0, 0.6], life: [0.12, 0.22], size: [0.7, 0.35], colors: C.fireCore, round: true }),
+  emitter('flames', { max: 60, rate: 80, ring: 0.5, filled: true, at: [0, 0.6], life: [0.3, 0.55], vmin: [-0.3, 0.8], vmax: [0.3, 2], drag: 0.8, size: [0.5, 0.1], colors: C.flame, round: true }),
+  emitter('embers', { max: 20, rate: 10, ring: 0.4, at: [0, 0.6], life: [0.6, 1], vmin: [-1, 1.5], vmax: [1, 3], gravity: 1.5, size: [0.1, 0.04], colors: C.ember }),
+  emitter('smoke', { max: 16, rate: 8, at: [0, 1.2], life: [0.8, 1.2], vmin: [-0.2, 0.6], vmax: [0.2, 1.2], size: [0.4, 0.9], colors: C.smoke, round: true, blend: 'alpha' }),
+]);
+// Gust of Wind (a line along +x, 192 px long): streaks of wind tear along the whole of it, dust whipped up along the floor.
+effect('gust-of-wind', 1.2, [
+  emitter('streaks', once(0.35, { max: 90, rate: 260, box: [1, 2.4], at: [0.5, 0], life: [0.5, 0.8], vmin: [16, -0.2], vmax: [22, 0.2], drag: 0.3, size: [0.35, 0.12], colors: C6.wind, round: true })),
+  emitter('dust', once(0.35, { max: 40, rate: 120, box: [6, 2.4], at: [6, -0.8], life: [0.5, 0.9], vmin: [6, 0], vmax: [12, 0.6], drag: 1, size: [0.4, 0.9], colors: C6.dust, round: true, blend: 'alpha' })),
+]);
+// Misty Step: silver mist puffs out round the body where it leaves and where it comes out.
+effect('misty-step', 1.4, [
+  emitter('mist', once(0.15, { max: 40, rate: 260, ring: 0.6, filled: true, life: [0.6, 1], radial: 2, drag: 1.5, size: [0.8, 1.6], colors: C6.mist, round: true, blend: 'alpha' })),
+  emitter('glints', once(0.15, { max: 24, rate: 160, box: [0.8, 1.4], life: [0.4, 0.7], vmin: [-0.4, 0.2], vmax: [0.4, 1], size: [0.12, 0.03], colors: C6.silver })),
+]);
+// Web (a square 48 px each way): strands fly out to its edges as it is spun.
+effect('web', 1.4, [
+  emitter('strands', once(0.15, { max: 80, rate: 600, life: [0.35, 0.5], radial: 7, drag: 1, size: [0.12, 0.04], colors: C6.web })),
+  emitter('puff', once(0.08, { max: 10, rate: 120, ring: 1.5, filled: true, life: [0.4, 0.6], size: [1, 1.6], colors: C6.web, round: true, blend: 'alpha' })),
+]);
+// The marks a blow leaves for a round (systems/Afflictions.ts): poison and acid drip and fume green off the body, cold rimes it
+// with frost and breathes a cold mist down it, lightning crackles over it. (Fire's is 'burning'.)
+effect('afflict-poison', 1, [
+  emitter('drips', { max: 24, rate: 12, box: [0.9, 1.3], life: [0.4, 0.7], vmin: [-0.1, -0.4], vmax: [0.1, 0], gravity: 3, size: [0.2, 0.1], colors: C6.poison, round: true }),
+  emitter('bubbles', { max: 16, rate: 8, box: [0.8, 1.2], life: [0.3, 0.5], vmin: [-0.2, 0.2], vmax: [0.2, 0.6], size: [0.12, 0.22], colors: C6.poison, round: true }),
+  emitter('fumes', { max: 16, rate: 7, box: [0.8, 1], life: [0.7, 1.1], vmin: [-0.2, 0.4], vmax: [0.2, 0.9], size: [0.5, 1], colors: C6.fumes, round: true, blend: 'alpha' }),
+]);
+effect('afflict-cold', 1, [
+  emitter('rime', { max: 30, rate: 18, box: [1, 1.5], life: [0.5, 0.9], size: [0.24, 0.06], colors: C6.rime }),
+  emitter('glow', { max: 6, rate: 4, box: [0.4, 0.8], life: [0.4, 0.7], size: [1.2, 1.6], colors: C.frostMist, round: true }),
+  emitter('flakes', { max: 16, rate: 8, box: [1, 0.3], at: [0, 0.9], life: [0.8, 1.2], vmin: [-0.2, -1], vmax: [0.2, -0.5], size: [0.12, 0.08], colors: C6.rime, round: true }),
+  emitter('mist', { max: 12, rate: 5, box: [0.8, 0.8], life: [0.8, 1.2], vmin: [-0.2, -0.4], vmax: [0.2, -0.1], size: [0.6, 1.1], colors: C.frostMist, round: true, blend: 'alpha' }),
+]);
+effect('afflict-lightning', 1, [
+  emitter('sparks', { max: 40, rate: 30, box: [1, 1.5], life: [0.08, 0.18], vmin: [-4, -4], vmax: [4, 4], size: [0.18, 0.05], colors: C6.spark }),
+  emitter('arcs', { max: 12, rate: 6, box: [0.8, 1.3], life: [0.06, 0.12], vmin: [-8, -8], vmax: [8, 8], size: [0.3, 0.08], colors: C6.spark }),
+  emitter('glow', { max: 6, rate: 5, box: [0.6, 1], life: [0.08, 0.16], size: [1.2, 0.4], colors: C6.spark, round: true }),
 ]);
 
 // Effects no longer made are dropped from the project.

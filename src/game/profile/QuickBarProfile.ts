@@ -9,6 +9,7 @@ import { MAX_SPELL_LEVEL } from '../../rules/Spellbook';
 import type { QuickBinding } from '../../rules/Spellbook';
 import { profileStore } from './ProfileStore';
 import { isDamageType } from '../../rules/DamageTypes';
+import { isSpellVariant } from '../../rules/SpellVariants';
 
 /**
  * The player's own quick bar, kept between games for each hero class (game/profile/ProfileStore.ts): how many of its
@@ -53,7 +54,9 @@ function readBinding(value: unknown): QuickBinding | null | undefined {
   const level = value.level;
   if (!Number.isInteger(level) || !isFiniteNumber(level) || level < 0 || level > MAX_SPELL_LEVEL) return undefined;
   if (value.damageType !== undefined && !isDamageType(value.damageType)) return undefined;
-  return value.damageType === undefined ? { spell: value.spell, level } : { spell: value.spell, level, damageType: value.damageType };
+  if (value.variant !== undefined && !isSpellVariant(value.variant)) return undefined;
+  const damageType = value.damageType === undefined ? {} : { damageType: value.damageType };
+  return { spell: value.spell, level, ...damageType, ...(value.variant === undefined ? {} : { variant: value.variant }) };
 }
 
 /** A stored preset, or null when it is empty or damaged. */
@@ -145,7 +148,7 @@ export function clearPreset(cls: ClassKey, index: number): void {
 }
 
 const sameBinding = (a: QuickBinding | null | undefined, b: QuickBinding | null | undefined): boolean =>
-  (a ?? null) === null ? (b ?? null) === null : !!b && a?.spell === b.spell && a.level === b.level && a.damageType === b.damageType;
+  (a ?? null) === null ? (b ?? null) === null : !!b && a?.spell === b.spell && a.level === b.level && a.damageType === b.damageType && a.variant === b.variant;
 
 /** Whether the hero's bar is bound exactly as this preset is (it is the one in use). */
 export function presetInUse(preset: BarPreset, player: Player): boolean {

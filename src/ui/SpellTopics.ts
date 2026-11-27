@@ -73,7 +73,7 @@ function castAttack(spell: CatalogSpell): Attack | null {
   if (def.kind === 'bolt') return attack('ranged');
   if (def.kind === 'missiles') return attack('auto');
   if (def.kind === 'heal') return attack('heal');
-  if (def.kind === 'buff') return attack('self');
+  if (def.kind === 'buff' || def.kind === 'teleport') return attack('self');
   if (def.kind === 'water' || def.kind === 'ally' || def.kind === 'fog') return attack('none');
   return def.save ? saveAttack(def.save) : attack('auto');
 }

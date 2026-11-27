@@ -25,6 +25,18 @@ const PLAYED_AS = {
       + 'have advantage, and a hit from within 5 feet is a critical hit. Undead and creatures immune to being charmed aren\'t affected.',
     higherLevels: 'When you cast this spell using a spell slot of 2nd level or higher, roll an additional 2d8 for each slot level above 1st.',
   },
+  crown_of_madness: {
+    description: "One humanoid you aim at within range must succeed on a Wisdom saving throw or become charmed by you for the duration. While the target is charmed in this way, a twisted crown of jagged iron appears on its head, and a madness glows in its eyes. It goes for the creature nearest it other than you, friend or foe, and attacks it; with none near, it fights as before, but never you. At the end of each of its turns, the target can make another Wisdom saving throw. On a success, the spell ends.",
+  },
+  see_invisibility: {
+    description: "For the duration, you see invisible creatures within 10 feet of you as if they were visible. Each of them makes a Dexterity saving throw against your spell save DC once a round while it is in your sight: on a failure it is revealed, and its invisibility ends for everyone.",
+  },
+  flaming_sphere: {
+    description: "A 5-foot-diameter sphere of fire appears where you aim within range and lasts for the duration. Any creature that ends its turn within 5 feet of the sphere must make a Dexterity saving throw. The creature takes 2d6 fire damage on a failed save, or half as much damage on a successful one. The sphere rolls towards wherever you aim, up to 30 feet a round. If it rams a creature, that creature must make the saving throw against the sphere's damage, and the sphere stops moving for the rest of the round. It sheds bright light in a 20-foot radius and ignites grease and webs it rolls over.",
+  },
+  gust_of_wind: {
+    description: "A line of strong wind 60 feet long and 10 feet wide blasts from you in the direction you aim for the spell's duration, and turns as you aim. Each creature in the line when it is cast, and at the end of each round after, must succeed on a Strength saving throw or be pushed 15 feet away from you along the line, over the brink of a pit or a chasm if one lies that way. Any creature in the line must spend 2 feet of movement for every 1 foot it moves when moving closer to you. The gust disperses gas or vapor: fog clouds and Cloudkill it blows through.",
+  },
 };
 
 /** The character level at which each class gets its first slots of spell level 1..9 (null: never). */

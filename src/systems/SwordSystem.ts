@@ -17,6 +17,9 @@ import { nearby, Sense } from '../ai/perception/spatial';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 import { logLine } from './RollLogSystem';
 import { text } from '../core/texts';
+import { heroHeld } from './SpellHolds';
+import { bladeDamageType } from '../rules/SpellWeapons';
+import { revealOnAct } from './Invisibility';
 
 type Swing = NonNullable<Entity['swordSwing']>;
 
@@ -78,7 +81,7 @@ function bodyReach(target: Entity): number {
 
 function canSwing(player: Player): boolean {
   return player.playerInput.intents.attack && player.swordCooldown === 0 && player.health.current > 0
-    && !player.casting && !player.falling;
+    && !player.casting && !player.falling && !heroHeld(player);
 }
 
 /** Great Weapon Master's earned attack: spent on the next swing of the attack key, one blow more. */
@@ -114,6 +117,8 @@ function startSwing(player: Player, fromKey = true): void {
   };
   world.addComponent(player, 'swordSwing', swing);
   player.swordCooldown = SWORD_STATS.cooldown;
+  // An attack ends Invisibility (systems/Invisibility.ts).
+  revealOnAct(player);
   if (swing.delay === 0) swingLands(player, swing);
 }
 
@@ -167,7 +172,8 @@ function strikeWith(player: Player, target: Entity, attack: AttackProfile, along
   const outcome = strike(target, attack, player);
   if (target.position) sound.playSound(outcome.hit ? 'sword_hit' : 'sword_miss', target.position.x, target.position.y);
   if (!outcome.hit) return;
-  hitMob(target, player, outcome.damage, alongside);
+  // A Shadow Blade cuts with psychic gloom (systems/SpellWeapons.ts).
+  hitMob(target, player, outcome.damage, alongside, bladeDamageType(player));
   if (outcome.critical || (target.health?.current ?? 1) <= 0) earnBonusAttack(player, false);
 }
 

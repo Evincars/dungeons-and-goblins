@@ -12,6 +12,8 @@ import { world } from '../world';
 import { attackTempo } from './SwordSystem';
 import { bladeAttack } from './SchoolSystem';
 import { notePressed } from './CloseQuarters';
+import { heroHeld } from './SpellHolds';
+import { revealOnAct } from './Invisibility';
 
 /**
  * Archery: a player fighting with a ranged weapon (bow, crossbow, sling, darts) shoots at the crosshair on
@@ -25,7 +27,7 @@ export function holdsBow(player: Player): boolean {
 }
 
 function canShoot(player: Player): boolean {
-  return !(player.arrowCooldown ?? 0) && player.health.current > 0 && !player.casting && !player.falling && !player.swordSwing;
+  return !(player.arrowCooldown ?? 0) && player.health.current > 0 && !player.casting && !player.falling && !player.swordSwing && !heroHeld(player);
 }
 
 /** How far the weapon in hand shoots, in pixels of the map (none for a weapon the table gives no range). */
@@ -45,6 +47,7 @@ function loose(player: Player, followedBy: number): void {
   const aim = player.aimVector ?? { x: 0, y: 1 };
   const arrow = createArrow(player.position.x, player.position.y, aim.x, aim.y, characterSheet(player).attack, world.id(player), reachOf(player));
   notePressed(arrow, player);
+  revealOnAct(player);
   player.volley = followedBy;
   // Hold the release pose for a moment (the attack clip plays while attackTime is above the recovery); half as long under Action Surge.
   player.attackTime = ATTACK_RECOVERY + Math.ceil(ARROW_STATS.drawTicks / attackTempo(player));

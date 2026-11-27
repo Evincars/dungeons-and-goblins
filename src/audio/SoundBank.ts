@@ -332,6 +332,23 @@ export const SPELL_SOUNDS = {
   longstrider: 'cast_healing_word',
   protection_from_evil_and_good: 'cast_guiding_bolt',
   fog_cloud: 'cast_ray_of_frost',
+  charm_person: 'cast_vicious_mockery',
+  tashas_hideous_laughter: 'cast_vicious_mockery',
+  blindness: 'cast_chill_touch',
+  hold_person: 'cast_guiding_bolt',
+  crown_of_madness: 'cast_vicious_mockery',
+  ray_of_enfeeblement: 'cast_chill_touch',
+  blur: 'cast_healing_word',
+  mirror_image: 'cast_magic_missile',
+  shadow_blade: 'cast_chill_touch',
+  see_invisibility: 'cast_guiding_bolt',
+  magic_weapon: 'cast_magic_missile',
+  invisibility: 'cast_healing_word',
+  darkness: 'cast_chill_touch',
+  flaming_sphere: 'cast_burning_hands',
+  gust_of_wind: 'cast_thunderwave',
+  misty_step: 'cast_healing_word',
+  web: 'cast_chill_touch',
 } as const satisfies Record<SpellId, SfxName>;
 
 export const SPELL_IMPACTS = {

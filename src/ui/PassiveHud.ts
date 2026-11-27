@@ -24,9 +24,10 @@ import type { TipTopic } from './InfoTooltip';
 import { featTopic, featureTopic, spellTopic } from './SpellTopics';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
-import { CLOCK_START, FULL_TURN, squareWedge } from './IconClock';
+import { drawIconClock } from './IconClock';
 import { ConcentrationBadge } from './ConcentrationBadge';
 import { durationOf } from './HudTime';
+import { holdsOn } from '../systems/SpellHolds';
 
 /** Top left: this far from the screen's edges; each icon this big, this far from the next, stacked down a column. */
 const MARGIN = 8;
@@ -45,10 +46,6 @@ const BOX_FILL = 0x000000;
 const BOX_FILL_ALPHA = 0.55;
 const BOX_EDGE_ALPHA = 0.6;
 const INITIALS = 2;
-/** A timer's clock over its icon: the time gone darkens it this much, the time left runs round it as a ring this wide. */
-const CLOCK_VEIL_ALPHA = 0.62;
-const CLOCK_RING_WIDTH = 1;
-const CLOCK_RING_ALPHA = 0.9;
 /** A recovering passive's icon is dimmed to this. */
 const RECOVERING_ALPHA = 0.55;
 /** A passive that is ready is shown in this colour; one that is recovering is dimmed. */
@@ -72,8 +69,11 @@ const TOLD_APART: ReadonlySet<string> = new Set(['arcane_ward', 'portent']);
 /** Each buff a hero may carry and the spell it comes from (cast by themselves or, Longstrider and the ward, by a companion). */
 const BUFF_NAMES = [
   ['bladeWard', 'blade_ward'], ['shield', 'shield'], ['stoneskin', 'stoneskin'], ['trueStrike', 'true_strike'],
-  ['longstrider', 'longstrider'], ['protection', 'protection_from_evil_and_good'],
+  ['longstrider', 'longstrider'], ['protection', 'protection_from_evil_and_good'], ['blur', 'blur'], ['shadowBlade', 'shadow_blade'],
+  ['magicWeapon', 'magic_weapon'],
 ] as const;
+/** A spell holding the hero (an enemy's Hold Person, webs…) is shown in this colour. */
+const HELD_COLOR = 0xff6a5a;
 /** The concentration badge stands this far right of the icons' columns. */
 const BADGE_GAP = 4;
 /** A boost that is running is shown in this colour. */
@@ -149,7 +149,37 @@ function spellLines(player: Player): Line[] {
     lines.push({ content: text('hud.passive.lasting', { name: spellName(id), left: durationOf(left) }), color: BOOST_COLOR, about: { spell: id }, timer: { key: `buff:${id}`, left } });
   }
   if ((buffs?.mageArmor ?? 0) > 0) lines.push({ content: spellName('mage_armor'), color: BOOST_COLOR, about: { spell: 'mage_armor' } });
+  return [...lines, ...hiddenLines(player, own), ...heldLines(player)];
+}
+
+/** Mirror Image's duplicates left (a count on its icon), Invisibility on the hero and See Invisibility, with their time left. */
+function hiddenLines(player: Player, own: string | undefined): Line[] {
+  const lines: Line[] = [];
+  const images = player.buffs?.images ?? 0;
+  const mirror = player.buffs?.mirrorImage ?? 0;
+  if (mirror > 0 && images > 0) {
+    lines.push({
+      content: text('hud.passive.images', { name: spellName('mirror_image'), count: images, left: durationOf(mirror) }), color: BOOST_COLOR,
+      about: { spell: 'mirror_image' }, timer: { key: 'buff:mirror_image', left: mirror }, badge: String(images),
+    });
+  }
+  const unseen = player.invisible?.ticks ?? 0;
+  if (unseen > 0 && own !== 'invisibility') {
+    lines.push({ content: text('hud.passive.invisible', { left: durationOf(unseen) }), color: BOOST_COLOR, about: { spell: 'invisibility' }, timer: { key: 'buff:invisibility', left: unseen } });
+  }
+  const sight = player.seesInvisible ?? 0;
+  if (sight > 0) {
+    lines.push({ content: text('hud.passive.sees_invisible', { left: durationOf(sight) }), color: BOOST_COLOR, about: { spell: 'see_invisibility' }, timer: { key: 'buff:see_invisibility', left: sight } });
+  }
   return lines;
+}
+
+/** What an enemy's spell (or webs) holds the hero in, in red, with its time left. */
+function heldLines(player: Player): Line[] {
+  return holdsOn(player).map(({ kind, hold }) => ({
+    content: text('hud.passive.held', { condition: text(`condition.${kind}.name`), left: durationOf(hold.ticks) }), color: HELD_COLOR,
+    about: { spell: hold.spell }, timer: { key: `held:${kind}`, left: hold.ticks },
+  }));
 }
 
 /** The switched-on passives (and their recovery), then the boosts an active feature gives while they last. */
@@ -305,13 +335,11 @@ export class PassiveHud {
 
   /** The clock over an icon: the time gone darkens it clockwise from the top, the time left runs round it in the line's colour. */
   private drawClock(row: Row, line: Line): void {
-    const g = row.clock.clear();
-    if (!line.timer) return;
-    const left = this.share(line.timer);
-    const c = ICON / 2;
-    const gone = CLOCK_START + FULL_TURN * (1 - left);
-    if (left < 1) squareWedge(g, c, CLOCK_START, gone).fill({ color: 0x000000, alpha: CLOCK_VEIL_ALPHA });
-    g.arc(c, c, c, gone, CLOCK_START + FULL_TURN).stroke({ color: line.color, alpha: CLOCK_RING_ALPHA, width: CLOCK_RING_WIDTH });
+    if (!line.timer) {
+      row.clock.clear();
+      return;
+    }
+    drawIconClock(row.clock, ICON, this.share(line.timer), line.color);
   }
 
   /** Lays the icons out again (only when what they show changes). */

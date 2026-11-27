@@ -4,7 +4,11 @@ import type { Entity } from '../world';
 import { world } from '../world';
 import { TICKS_PER_SECOND } from '../rules/Spells';
 import { vfxEffect, vfxPoint, vfxRenderer } from '../render/Vfx';
-import { AURA_BUFFS, BUFF_AURAS, FLASK_FLIGHT, LASTING_VFX, SHEEN_RADIUS, SPELL_VFX } from '../render/SpellVfx';
+import { AFFLICTION_VFX, AURA_BUFFS, AURA_HOLDS, BUFF_AURAS, FLASK_FLIGHT, HOLD_AURAS, LASTING_VFX, SHEEN_RADIUS, SPELL_VFX } from '../render/SpellVfx';
+import { AFFLICTION_KINDS } from '../world';
+import { hiddenHere } from './Invisibility';
+import { heldIn } from './SpellHolds';
+import { signLift } from './WeaponSignSystem';
 import type { VfxEffectId } from '../render/Vfx';
 import { takeQueuedVfx } from '../render/VfxPlayer';
 import type { VfxShot } from '../render/VfxPlayer';
@@ -171,13 +175,15 @@ function follow(entity: Entity, key: string, look: VfxEffectId, holds: boolean, 
 /** Where a follower goes this tick (reused: written, then read at once). */
 const spot: { x: number; y: number; z: number; s?: number } = { x: 0, y: 0, z: 0 };
 
-/** Each hero's lasting buffs keep their auras round them; each zone its particles over it. */
+/** Each hero's lasting buffs keep their auras round them (an invisible one's shimmer only); each zone its particles over it. */
 function followLasting(gameLayer: Container): void {
   for (const hero of buffed) {
     spot.x = hero.position.x;
     spot.y = hero.position.y - BODY_MIDDLE;
     spot.z = hero.position.y + IN_FRONT;
-    for (const buff of AURA_BUFFS) follow(hero, buff, BUFF_AURAS[buff], (hero.buffs[buff] ?? 0) > 0 && !hero.removed, spot, gameLayer);
+    const shown = !hero.removed && !hiddenHere(hero);
+    for (const buff of AURA_BUFFS) follow(hero, buff, BUFF_AURAS[buff], (hero.buffs[buff] ?? 0) > 0 && shown, spot, gameLayer);
+    followSigns(hero, shown, gameLayer);
   }
   for (const zone of zones) {
     const look = SPELL_VFX[zone.zone.spell]?.zone;
@@ -227,14 +233,14 @@ function followFires(gameLayer: Container): void {
   }
 }
 
-/** Each fog cloud's drifting banks over it; each sleeping foe's motes over its head. */
+/** Each fog cloud's drifting banks over it (Darkness's inky ones); each sleeping foe's motes over its head. */
 function followFogAndSleep(gameLayer: Container): void {
   for (const cloud of fogClouds) {
     spot.x = cloud.position.x;
     spot.y = cloud.position.y;
     // Over everyone in it: the fog lies over the fight.
     spot.z = cloud.position.y + cloud.fogCloud.radius;
-    follow(cloud, 'fog', LASTING_VFX.fog, !cloud.removed, spot, gameLayer);
+    follow(cloud, 'fog', cloud.fogCloud.dark ? LASTING_VFX.darkness : LASTING_VFX.fog, !cloud.removed, spot, gameLayer);
   }
   for (const foe of marked) {
     spot.x = foe.position.x;
@@ -259,6 +265,60 @@ function followLights(gameLayer: Container): void {
   }
 }
 
+const heldBodies = world.with('position', 'spellHolds');
+const markedBodies = world.with('position', 'afflicted');
+const seers = world.with('position', 'seesInvisible');
+/** The sword over a hero's head has its middle this far above its foot (px). */
+const SIGN_MIDDLE = 9;
+/** A seer's glimmer is at their eyes, this far above their feet. */
+const EYES = 26;
+/** The key each hold's aura and each mark follows its body by (made once, so following allocates nothing). */
+const HOLD_KEYS = { paralyzed: 'hold:paralyzed', laughing: 'hold:laughing', maddened: 'hold:maddened', enfeebled: 'hold:enfeebled' } as const;
+const MARK_KEYS = { fire: 'mark:fire', poison: 'mark:poison', acid: 'mark:acid', cold: 'mark:cold', lightning: 'mark:lightning' } as const;
+
+/** The sword over the head of a hero whose weapon a spell shapes: its glints (Magic Weapon) or gloom (Shadow Blade). */
+function followSigns(hero: (typeof buffed)['entities'][number], shown: boolean, gameLayer: Container): void {
+  // The sign's middle: half its blade under its point.
+  spot.y = hero.position.y - signLift(hero) - SIGN_MIDDLE;
+  const blade = (hero.buffs.shadowBlade ?? 0) > 0;
+  follow(hero, 'sign:blade', LASTING_VFX.shadowBlade, shown && blade, spot, gameLayer);
+  follow(hero, 'sign:magic', LASTING_VFX.magicWeapon, shown && !blade && (hero.buffs.magicWeapon ?? 0) > 0, spot, gameLayer);
+}
+
+/**
+ * What holds a body and the marks on it: a hold's aura round it (Hold Person's runes, Tasha's bubbles, the crown of madness,
+ * the enfeebled's motes), a blow's mark for a round (fire, poison or acid, cold, lightning: systems/Afflictions.ts), a seer's
+ * glimmer at the eyes. Nothing on a body this screen does not see (an invisible foe).
+ */
+function followHoldsAndMarks(gameLayer: Container): void {
+  for (const body of heldBodies) {
+    bodySpot(body.position);
+    const shown = !body.removed && !hiddenHere(body);
+    for (const kind of AURA_HOLDS) follow(body, HOLD_KEYS[kind], HOLD_AURAS[kind], shown && heldIn(body, kind), spot, gameLayer);
+  }
+  for (const body of markedBodies) {
+    bodySpot(body.position);
+    // A body already on fire shows those flames, not the mark's.
+    const shown = !body.removed && !hiddenHere(body) && (body.health?.current ?? 0) > 0;
+    for (const kind of AFFLICTION_KINDS) {
+      const on = shown && body.afflicted.kind === kind && !(kind === 'fire' && body.burning);
+      follow(body, MARK_KEYS[kind], AFFLICTION_VFX[kind], on, spot, gameLayer);
+    }
+  }
+  for (const seer of seers) {
+    bodySpot(seer.position);
+    spot.y = seer.position.y - EYES;
+    follow(seer, 'seer', LASTING_VFX.seer, !seer.removed && !hiddenHere(seer), spot, gameLayer);
+  }
+}
+
+/** The spot for a body's aura: its middle, just in front of it. */
+function bodySpot(at: { x: number; y: number }): void {
+  spot.x = at.x;
+  spot.y = at.y - BODY_MIDDLE;
+  spot.z = at.y + IN_FRONT;
+}
+
 /** Once a tick: sparks for each new fire, trails behind flying spells, the one-shots asked for, and all of them moved on by a tick. */
 export function updateVfx(gameLayer: Container): void {
   dropStale(gameLayer);
@@ -269,6 +329,7 @@ export function updateVfx(gameLayer: Container): void {
   followLasting(gameLayer);
   followFires(gameLayer);
   followFogAndSleep(gameLayer);
+  followHoldsAndMarks(gameLayer);
   followLights(gameLayer);
   playShots(gameLayer);
   if (loops.size || shots.length || trails.size || fading.length || following.size) vfxRenderer().update(TICK_SECONDS);

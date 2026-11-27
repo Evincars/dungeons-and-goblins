@@ -4,6 +4,7 @@ import type { Entity } from '../world';
 import { createCanvas, context2d } from '../render/canvas';
 import { conditionsOn } from './Conditions';
 import type { ShownCondition } from './Conditions';
+import { hiddenHere } from './Invisibility';
 
 /**
  * A ring on the floor under every hero and foe in a condition (systems/Conditions.ts), one in each condition's colour, the
@@ -12,9 +13,10 @@ import type { ShownCondition } from './Conditions';
  */
 
 /** Each condition's colour. */
-const RING_COLOURS = {
-  unconscious: 0x8a7cff, prone: 0xd88a3a, charmed: 0xff6fc8, frightened: 0x9b4dff, blinded: 0xb4bcc8, poisoned: 0x7fc23a,
-  restrained: 0xc8a050, burning: 0xff5a1a,
+export const RING_COLOURS = {
+  unconscious: 0x8a7cff, paralyzed: 0x5ad2ff, laughing: 0xffd84a, prone: 0xd88a3a, restrained: 0xe8e0c8, charmed: 0xff6fc8,
+  maddened: 0xe0303a, frightened: 0x9b4dff, blinded: 0xb4bcc8, deafened: 0x7f8aa0, enfeebled: 0x7a8a5a, poisoned: 0x7fc23a,
+  incapacitated: 0xc0c0c0, invisible: 0xffffff, burning: 0xff5a1a,
 } as const satisfies Record<ShownCondition, number>;
 
 /** The ring's art: a band of runes this wide (px of its radius) at scale 1. */
@@ -99,7 +101,8 @@ function ringAt(i: number, parent: Container): Ring {
 
 /** Lays a body's rings under its feet from the pool, from `next` on; returns the next free one. */
 function ringBody(body: Entity, parent: Container, next: number): number {
-  if (!body.position) return next;
+  // An invisible foe this screen does not see shows no rings either (systems/Invisibility.ts).
+  if (!body.position || hiddenHere(body)) return next;
   const breath = BASE_ALPHA + BREATH_ALPHA * Math.sin((clock / BREATH_TICKS) * Math.PI * 2);
   const base = Math.max(MIN_RING, (body.radius?.x ?? MIN_RING) + RING_MARGIN);
   conditionsOn(body, held);

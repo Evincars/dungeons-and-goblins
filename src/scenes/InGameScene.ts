@@ -60,6 +60,7 @@ import { setDifficulty } from '../game/Difficulty';
 import { ResultPanel } from '../ui/ResultPanel';
 import { updateSeeThrough } from '../systems/SeeThroughSystem';
 import { attempt, report, reportRejection } from '../core/errors';
+import { inDarkness } from '../ai/perception/obscured';
 
 /** The Third Eye's darkvision lifts the fog this many times as far round its hero. */
 const DARKVISION_FACTOR = 2;
@@ -540,13 +541,17 @@ export class InGameScene implements Scene {
     return this.lightPool[i] ?? (this.lightPool[i] = { x: 0, y: 0, radius: 0, kind: 0 });
   }
 
-  /** Every light this frame: wall torches, each hero's torch, and glowing entities (spell bolts, candles, lanterns). */
+  /**
+   * Every light this frame: wall torches, each hero's torch, and glowing entities (spell bolts, candles, lanterns) — but none
+   * inside magical darkness (Darkness), which no light shines in.
+   */
   private gatherLights(): LightSource[] {
     const lights = this.frameLights;
     lights.length = 0;
-    for (const torch of this.torchSources) lights.push(torch);
+    for (const torch of this.torchSources) if (!inDarkness(torch.x, torch.y)) lights.push(torch);
     let used = 0;
     for (const p of q.players) {
+      if (inDarkness(p.position.x, p.position.y)) continue;
       const torch = this.pooledLight(used);
       torch.x = p.position.x;
       torch.y = p.position.y - HERO_TORCH_LIFT;
@@ -557,6 +562,7 @@ export class InGameScene implements Scene {
       used++;
     }
     for (const e of q.glowing) {
+      if (inDarkness(e.position.x, e.position.y)) continue;
       const light = this.pooledLight(used++);
       light.x = e.position.x;
       light.y = e.position.y - (e.yOffset ?? 0);

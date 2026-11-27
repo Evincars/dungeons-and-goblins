@@ -23,6 +23,8 @@ import type { DamageType } from '../rules/DamageTypes';
 import { validChoice } from '../rules/DamageChoice';
 import { bindingFeatureId, isFeatureId } from '../rules/ClassFeatures';
 import { bindingFeatId } from '../rules/Feats';
+import { validVariant } from '../rules/SpellVariants';
+import type { SpellVariant } from '../rules/SpellVariants';
 
 /**
  * What co-op peers say to each other, and the checks every incoming message passes before the game
@@ -77,7 +79,7 @@ export type GuestCommand =
   /** Save the starting choices for good before leaving the first safe room. */
   | { kind: 'lock_build' }
   /** Put a spell, cast at a level, on a quick-bar square (the host checks the hero may). */
-  | { kind: 'bind_spell'; slot: number; spell: string; level: number; damageType?: DamageType }
+  | { kind: 'bind_spell'; slot: number; spell: string; level: number; damageType?: DamageType; variant?: SpellVariant }
   /** Empty a quick-bar square (a right click on it). */
   | { kind: 'unbind_spell'; slot: number }
   /** Put a saved preset on the quick bar: what every square of both rows holds (null: the class's own); in a safe room only. */
@@ -210,9 +212,9 @@ function isItemSquare(value: unknown): value is ItemSquare {
 }
 
 /** A spell on the quick bar: one of the lists' spells, at a level from 0 to 9 (or a square the player emptied). */
-export function validBinding(spell: unknown, level: unknown, damageType?: unknown): boolean {
-  if (spell === UNBOUND) return level === 0 && damageType === undefined;
-  if (typeof spell === 'string' && !validChoice(spell, damageType)) return false;
+export function validBinding(spell: unknown, level: unknown, damageType?: unknown, variant?: unknown): boolean {
+  if (spell === UNBOUND) return level === 0 && damageType === undefined && variant === undefined;
+  if (typeof spell === 'string' && (!validChoice(spell, damageType) || !validVariant(spell, variant))) return false;
   const named = typeof spell === 'string' && (bindingFeatureId(spell) !== null ? isFeatureId(bindingFeatureId(spell)) : bindingFeatId(spell) !== null || isCatalogSpell(spell));
   return named && Number.isInteger(level) && Number(level) >= 0 && Number(level) <= MAX_SPELL_LEVEL;
 }
@@ -220,7 +222,7 @@ export function validBinding(spell: unknown, level: unknown, damageType?: unknow
 /** A whole quick bar a guest sent: a square for each of both rows, each empty (null) or a binding there may be. */
 function validBindings(bound: unknown): boolean {
   if (!Array.isArray(bound) || bound.length !== QUICK_SLOTS) return false;
-  return bound.every((b) => b === null || (isRecord(b) && validBinding(b.spell, b.level, b.damageType)));
+  return bound.every((b) => b === null || (isRecord(b) && validBinding(b.spell, b.level, b.damageType, b.variant)));
 }
 
 /** The most maneuvers or spells a hero picks at once. */
@@ -252,7 +254,7 @@ export function validCommand(value: unknown): value is GuestCommand {
   if (value.kind === 'depart') return isDepartChoice(value.choice);
   if (value.kind === 'unbind_spell') return Number.isInteger(value.slot) && Number(value.slot) >= 0 && Number(value.slot) < QUICK_SLOTS;
   if (value.kind === 'load_bindings') return validBindings(value.bound);
-  if (value.kind === 'bind_spell') return validBinding(value.spell, value.level, value.damageType) && Number.isInteger(value.slot) && Number(value.slot) >= 0 && Number(value.slot) < QUICK_SLOTS;
+  if (value.kind === 'bind_spell') return validBinding(value.spell, value.level, value.damageType, value.variant) && Number.isInteger(value.slot) && Number(value.slot) >= 0 && Number(value.slot) < QUICK_SLOTS;
   if (value.kind !== 'loadout' || !Array.isArray(value.inventory) || value.inventory.length > MAX_ITEMS) return false;
   return value.inventory.every(isBagSquare) && validEquipped(value.equipped);
 }

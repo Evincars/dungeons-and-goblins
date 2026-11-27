@@ -2,6 +2,7 @@ import { Container, Sprite } from 'pixi.js';
 import { world } from '../world';
 import type { Entity } from '../world';
 import { frameTexture, whiteFrameTexture } from '../render/Sheets';
+import { hiddenHere } from './Invisibility';
 
 const BAR_STEPS = 20;
 const BAR_HALF_WIDTH = 16;
@@ -37,10 +38,10 @@ function createHealthBar(gameLayer: Container): HealthBar {
   return { container, fill };
 }
 
-/** Bars show only while hurt, and never for the dead or respawning. */
+/** Bars show only while hurt, and never for the dead or respawning, nor an invisible foe this screen does not see. */
 function showsBar(entity: Barred): boolean {
   const { current, max } = entity.health;
-  return !entity.removed && entity.respawnTicks === undefined && current < max && Math.trunc(max) > 0;
+  return !entity.removed && entity.respawnTicks === undefined && current < max && Math.trunc(max) > 0 && !hiddenHere(entity);
 }
 
 function drawBar(entity: Barred, bar: HealthBar): void {

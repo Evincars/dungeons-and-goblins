@@ -19,6 +19,7 @@ import { featSpellIds } from './Feats';
 import type { SpellDef, SpellId } from './Spells';
 import spellbook from '../data/spellbook.json';
 import spellList from '../data/spell-list.json';
+import type { SpellVariant } from './SpellVariants';
 
 /**
  * The spells of Baldur's Gate 3 (src/data/spell-list.json, made by scripts/bg3-spells.mjs from the BG3 wiki): each one's
@@ -85,7 +86,7 @@ export type CatalogSpell = {
  * A spell on the quick bar: which, the level it is cast at, and (for a spell whose caster picks its kind of damage,
  * Chromatic Orb) the damage type chosen when it was bound (rules/DamageChoice.ts).
  */
-export type QuickBinding = { spell: string; level: number; damageType?: DamageType };
+export type QuickBinding = { spell: string; level: number; damageType?: DamageType; variant?: SpellVariant };
 
 /** What a square the player emptied (a right click on the quick bar) holds: nothing, not even the class's own spell for it. */
 export const UNBOUND = 'unbound';

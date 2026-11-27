@@ -4,7 +4,9 @@
  * cannot be lulled to sleep.
  */
 
-export const CONDITIONS = ['prone', 'unconscious', 'charmed', 'frightened', 'blinded', 'poisoned', 'restrained'] as const;
+export const CONDITIONS = [
+  'prone', 'unconscious', 'paralyzed', 'incapacitated', 'charmed', 'frightened', 'blinded', 'deafened', 'poisoned', 'restrained', 'invisible',
+] as const;
 export type Condition = (typeof CONDITIONS)[number];
 
 export function isCondition(value: unknown): value is Condition {
@@ -28,3 +30,21 @@ const OTHERWORLDLY: ReadonlySet<CreatureType> = new Set<CreatureType>(['aberrati
 export function isOtherworldly(type: CreatureType): boolean {
   return OTHERWORLDLY.has(type);
 }
+
+/**
+ * What a spell holds a body in (systems/SpellHolds.ts), heroes and foes alike: paralysed (Hold Person), in fits of laughter
+ * (Tasha's Hideous Laughter: prone and incapacitated), blinded or deafened (Blindness/Deafness), enfeebled (Ray of
+ * Enfeeblement: half damage with Strength weapons), maddened (Crown of Madness: it attacks the creature nearest it other than
+ * its charmer) and restrained (Web).
+ */
+export const HOLD_KINDS = ['paralyzed', 'laughing', 'blinded', 'deafened', 'enfeebled', 'maddened', 'restrained'] as const;
+export type HoldKind = (typeof HOLD_KINDS)[number];
+
+export function isHoldKind(value: unknown): value is HoldKind {
+  return HOLD_KINDS.some((k) => k === value);
+}
+
+/** The tabletop condition a creature must not be immune to for each hold to take it (its monster block's `conditions`). */
+export const HOLD_CONDITION = {
+  paralyzed: 'paralyzed', laughing: 'prone', blinded: 'blinded', deafened: 'deafened', enfeebled: null, maddened: 'charmed', restrained: 'restrained',
+} as const satisfies Record<HoldKind, Condition | null>;

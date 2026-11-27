@@ -89,6 +89,6 @@ export function finishBinding(player: Player, slot: number): void {
     refused = bindKind(pending);
     return;
   }
-  requestBind(player, slot, pending.spell, pending.level, pending.damageType);
+  requestBind(player, slot, pending.spell, pending.level, pending.damageType, pending.variant);
   end();
 }

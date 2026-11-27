@@ -60,6 +60,13 @@ import { updateLastingSpells } from './LastingSpells';
 import { updateSurfaces } from './Surfaces';
 import { updateDancingLights } from './DancingLights';
 import { updateFogClouds } from './FogCloud';
+import { updateSpellHolds } from './SpellHolds';
+import { updateInvisibility } from './Invisibility';
+import { updateGusts } from './GustOfWind';
+import { updateAfflictions } from './Afflictions';
+import { updateImages } from './ImageSystem';
+import { updateWeaponSigns } from './WeaponSignSystem';
+import { updateClouds } from './CloudSystem';
 import { updateThrows } from './ThrowSystem';
 import { updateSummons } from './SummonSystem';
 import { updateMusic } from './MusicSystem';
@@ -131,7 +138,11 @@ export const SIMULATION: readonly System[] = [
   () => updateSurvivor(),
   () => updateFeatureTimers(),
   () => updateSchools(),
-  () => updateLastingSpells(),
+  ({ level }) => updateLastingSpells(level),
+  () => updateSpellHolds(),
+  ({ level }) => updateInvisibility(level),
+  () => updateGusts(),
+  () => updateAfflictions(),
   () => updateSurfaces(),
   ({ tick }) => updateDancingLights(tick),
   () => updateFogClouds(),
@@ -148,11 +159,14 @@ export const PRESENTATION: readonly System[] = [
   () => updateCharacterAnimation(),
   () => updateAnimation(),
   ({ level }) => updateRender(level),
+  () => updateImages(),
+  ({ gameLayer }) => updateWeaponSigns(gameLayer),
+  ({ gameLayer }) => updateClouds(gameLayer),
   ({ gameLayer }) => updateBars(gameLayer),
   ({ gameLayer }) => updateRollTexts(gameLayer),
   ({ gameLayer }) => updateConditionRings(gameLayer),
   ({ gameLayer }) => updateMarker(gameLayer),
-  ({ overLayer }) => updateAimGuide(overLayer),
+  ({ overLayer, level }) => updateAimGuide(overLayer, level),
   ({ gameLayer, tick }) => updateMist(gameLayer, tick),
   ({ gameLayer }) => updateVfx(gameLayer),
   () => updateMusic(),

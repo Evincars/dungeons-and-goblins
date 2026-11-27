@@ -31,6 +31,8 @@ import { characterSheet } from '../rules/CharacterSheet';
 import { endMageArmour } from '../systems/LastingSpells';
 import { needsBothHands, strengthNeeded, strongEnough } from '../rules/Equipment';
 import { MAX_CARRY_KG as CARRY_KG } from '../rules/Encumbrance';
+import { validVariant } from '../rules/SpellVariants';
+import type { SpellVariant } from '../rules/SpellVariants';
 
 /**
  * What players do from the shop and inventory panels. In a lone game or on the host it happens at once;
@@ -427,8 +429,8 @@ function featBindable(player: Player, feat: FeatId, level: number): boolean {
  * Puts a spell, cast at a level (and, for a spell whose caster picks its damage, of the type chosen), on a quick-bar square
  * if the hero has learnt it, may cast it there and is in a safe room.
  */
-export function bindSpell(player: Player, slot: number, spell: string, level: number, damageType?: DamageType): boolean {
-  if (!validChoice(spell, damageType)) return false;
+export function bindSpell(player: Player, slot: number, spell: string, level: number, damageType?: DamageType, variant?: SpellVariant): boolean {
+  if (!validChoice(spell, damageType) || !validVariant(spell, variant)) return false;
   const list = spellListOf(heroClass(player.heroClass).dndClass, player.build);
   if (!Number.isInteger(slot) || slot < 0 || slot >= QUICK_SLOTS || !mayPrepare(player, spell)) return false;
   const feat = bindingFeatId(spell);
@@ -439,7 +441,7 @@ export function bindSpell(player: Player, slot: number, spell: string, level: nu
   if (feature !== null && !hasClassFeature(player, feature)) return false;
   // A wizard keeps only so many cantrips and spells of each level on the bar.
   if (!roomToBind(player, spell, level, slot)) return false;
-  putOnSquare(player, slot, damageType ? { spell, level, damageType } : { spell, level });
+  putOnSquare(player, slot, { spell, level, ...(damageType ? { damageType } : {}), ...(variant ? { variant } : {}) });
   return true;
 }
 
@@ -473,7 +475,7 @@ export function loadBindings(player: Player, bound: readonly (QuickBinding | nul
   const book = player.spellbook ?? (player.spellbook = { recovery: Array.from({ length: QUICK_SLOTS }, () => 0) });
   book.bound = Array.from({ length: QUICK_SLOTS }, () => EMPTY_SQUARE);
   bound.forEach((binding, slot) => {
-    if (binding && binding.spell !== UNBOUND) bindSpell(player, slot, binding.spell, binding.level, binding.damageType);
+    if (binding && binding.spell !== UNBOUND) bindSpell(player, slot, binding.spell, binding.level, binding.damageType, binding.variant);
   });
   const loaded = book.bound;
   book.bound = loaded.map((binding, slot) => (bound[slot] === null ? null : binding));
@@ -508,9 +510,9 @@ export function requestToggleFeature(player: Player, feature: string): void {
 }
 
 /** The quick bar: bound at once here, or asked of the host for a guest (whose copy the host's next update corrects if refused). */
-export function requestBind(player: Player, slot: number, spell: string, level: number, damageType?: DamageType): void {
-  if (coop.role === 'guest') coop.sendCommand({ kind: 'bind_spell', slot, spell, level, ...(damageType ? { damageType } : {}) });
-  else bindSpell(player, slot, spell, level, damageType);
+export function requestBind(player: Player, slot: number, spell: string, level: number, damageType?: DamageType, variant?: SpellVariant): void {
+  if (coop.role === 'guest') coop.sendCommand({ kind: 'bind_spell', slot, spell, level, ...(damageType ? { damageType } : {}), ...(variant ? { variant } : {}) });
+  else bindSpell(player, slot, spell, level, damageType, variant);
 }
 
 /** Host: carries out what a guest asked for, if it is allowed for that guest's character. */
@@ -542,7 +544,7 @@ export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): voi
     return;
   }
   if (command.kind === 'bind_spell') {
-    bindSpell(player, command.slot, command.spell, command.level, command.damageType);
+    bindSpell(player, command.slot, command.spell, command.level, command.damageType, command.variant);
     return;
   }
   if (command.kind === 'unbind_spell') {

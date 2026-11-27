@@ -40,6 +40,11 @@ export const VFX_EFFECTS = [
   'grease', 'dancing-lights-cast', 'dancing-light', 'true-strike', 'true-strike-aura',
   'sleep-cast', 'sleep-flight', 'sleep-impact', 'sleep-zzz', 'longstrider', 'longstrider-aura',
   'protection-from-evil-and-good', 'protection-aura', 'fog-cloud-burst', 'fog-cloud', 'grease-sheen', 'water-glint',
+  'charm-person', 'hideous-laughter', 'laughter-aura', 'blindness', 'hold-person', 'hold-aura', 'crown-of-madness', 'madness-aura',
+  'ray-of-enfeeblement-cast', 'ray-of-enfeeblement-flight', 'ray-of-enfeeblement-impact', 'enfeebled-aura',
+  'blur', 'blur-aura', 'mirror-image', 'mirror-image-pop', 'shadow-blade', 'shadow-blade-sign', 'magic-weapon', 'magic-weapon-sign',
+  'see-invisibility', 'see-invisibility-aura', 'invisibility', 'invisibility-reveal', 'darkness-burst', 'darkness', 'flaming-sphere',
+  'gust-of-wind', 'misty-step', 'web', 'afflict-poison', 'afflict-cold', 'afflict-lightning',
 ] as const;
 export type VfxEffectId = (typeof VFX_EFFECTS)[number];
 

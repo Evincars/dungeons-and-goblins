@@ -50,6 +50,13 @@ import { igniteGrease } from './Surfaces';
 import { castSleep, lull, lulls } from './SleepSpell';
 import { allyAt, allyInReach, castOnAlly } from './AllySpells';
 import { castFogCloud } from './FogCloud';
+import { castHex, foeAt, foeInReach, heroHeld, holdOnHit } from './SpellHolds';
+import { revealOnAct } from './Invisibility';
+import { castGust } from './GustOfWind';
+import { castMistyStep, stepTarget } from './MistyStep';
+import { boundVariant } from '../rules/SpellVariants';
+import type { SpellVariant } from '../rules/SpellVariants';
+import type { HoldKind } from '../rules/Conditions';
 
 /**
  * Spells (src/data/spells.json): a quick-bar key casts its square's spell; right click and the cast key cast the one last picked. There are
@@ -103,7 +110,7 @@ function burst(bolt: Bolt, struck: boolean): void {
 }
 
 function canCast(caster: Player): boolean {
-  return caster.health.current > 0 && caster.respawnTicks === undefined && !caster.swordSwing && !caster.falling && !(caster.castCooldown ?? 0);
+  return caster.health.current > 0 && caster.respawnTicks === undefined && !caster.swordSwing && !caster.falling && !(caster.castCooldown ?? 0) && !heroHeld(caster);
 }
 
 /** What the caster bound to the quick-bar square they picked (known or not yet), if the square holds anything. */
@@ -195,6 +202,27 @@ function switchFeatFromBar(caster: Player, feat: FeatId): void {
   caster.castCooldown = SPELL_STATS.cooldown;
 }
 
+/**
+ * Where a spell about to be cast goes, or null (said over the caster's head; nothing starts and nothing recovers) when it has
+ * nowhere to go: a spell for a companion needs one within its reach where it is aimed, a hex a foe under the crosshair within
+ * its range, Misty Step a free place to step to (it steps there, found now).
+ */
+function castTarget(caster: Player, def: SpellDef, level: Level): { x: number; y: number } | null {
+  const target = aimPoint(caster);
+  if (def.kind === 'ally' && !allyInReach(caster, allyAt(caster, target.x, target.y), def)) {
+    refuse(caster, text('roll.no_companion'));
+    return null;
+  }
+  if (def.kind === 'hex' && !foeInReach(caster, foeAt(target.x, target.y), def)) {
+    refuse(caster, text('roll.no_target'));
+    return null;
+  }
+  if (def.kind !== 'teleport') return target;
+  const step = stepTarget(level, caster, def, target.x, target.y);
+  if (!step) refuse(caster, text('roll.no_place'));
+  return step;
+}
+
 /** The cast key: the spell picked starts (its recovery runs from now), or the caster says why it can't. */
 function startCast(caster: Player, level: Level): void {
   if (!caster.playerInput.intents.cast || !canCast(caster)) return;
@@ -230,18 +258,21 @@ function startCast(caster: Player, level: Level): void {
     return;
   }
   const aim = caster.aimVector ?? { x: 0, y: 1 };
-  const target = aimPoint(caster);
-  // A spell for a companion needs one within its reach where it is aimed: else nothing starts (and nothing recovers).
-  if (def.kind === 'ally' && !allyInReach(caster, allyAt(caster, target.x, target.y), def)) {
-    refuse(caster, text('roll.no_companion'));
-    return;
-  }
+  const target = castTarget(caster, def, level);
+  if (!target) return;
+  const variant = boundVariant(binding);
   world.addComponent(caster, 'casting', {
     ticks: 0, dirX: aim.x, dirY: aim.y, released: false, spell: def.id, level: binding.level, targetX: target.x, targetY: target.y,
-    ...(binding.damageType ? { damageType: binding.damageType } : {}),
+    ...(binding.damageType ? { damageType: binding.damageType } : {}), ...(variant ? { variant } : {}),
   });
   book.recovery[slot] = def.recoveryTicks;
   caster.castCooldown = SPELL_STATS.cooldown;
+}
+
+/** The condition a hex holds its target in: the one bound (Blindness or Deafness), else the spell's own. */
+function holdFor(def: SpellDef, variant: SpellVariant | undefined): HoldKind | 'charmed' {
+  if (variant) return variant;
+  return def.condition ?? 'charmed';
 }
 
 export const impactOf = (def: SpellDef): SpellEffect => ({ shape: def.effect.shape, colour: def.effect.colour, scale: def.effect.scale });
@@ -450,13 +481,18 @@ function release(caster: Player, cast: NonNullable<Entity['casting']>): void {
   const def = withDamageType(castDef(base, cast.level ?? base.level, caster.playerStats.level), cast.damageType);
   const targetX = cast.targetX ?? caster.position.x;
   const targetY = cast.targetY ?? caster.position.y;
+  // Casting a spell ends the caster's invisibility (cast before the spell, so Invisibility on oneself holds).
+  revealOnAct(caster);
   // Mage Armour cast while it is on is switched off: nothing went off, so nothing follows from it (a ward, War Magic).
   if (def.kind === 'buff' && !castBuff(caster, def)) return;
-  if (def.kind === 'bolt' || def.kind === 'missiles' || def.kind === 'sleep') playCastArt(caster, def, cast.dirX, cast.dirY);
+  if (def.kind === 'bolt' || def.kind === 'missiles' || def.kind === 'sleep' || def.kind === 'hex') playCastArt(caster, def, cast.dirX, cast.dirY);
   if (def.kind === 'bolt') castBolt(caster, def, cast.dirX, cast.dirY);
   else if (def.kind === 'sleep') castSleep(caster, def, cast.dirX, cast.dirY);
   else if (def.kind === 'ally') castOnAlly(caster, def, targetX, targetY);
   else if (def.kind === 'fog') castFogCloud(caster, def, targetX, targetY);
+  else if (def.kind === 'hex') castHex(caster, def, targetX, targetY, holdFor(def, cast.variant));
+  else if (def.kind === 'gust') castGust(caster, def, cast.dirX, cast.dirY);
+  else if (def.kind === 'teleport') castMistyStep(caster, targetX, targetY);
   else if (def.kind === 'missiles') castMissiles(caster, def, cast.dirX, cast.dirY);
   else if (def.kind === 'burst') castBurst(caster, def, targetX, targetY, cast.dirX, cast.dirY);
   else if (def.kind === 'zone') castZone(caster, def, cast.level ?? base.level, targetX, targetY);
@@ -507,6 +543,12 @@ function strikeWith(bolt: Bolt, victim: Entity): boolean {
   if (lulls(p.spell)) {
     lull(victim, p.castLevel ?? SPELLS.sleep.level, shooter);
     return true;
+  }
+  // A ray that lays a condition (Ray of Enfeeblement) is rolled to hit and holds its target instead of hurting it.
+  if (p.spell && SPELLS[p.spell].condition) {
+    const laid = strike(victim, shotAttack(p), shooter, p.spell);
+    if (laid.hit) holdOnHit(shooter, SPELLS[p.spell], victim);
+    return laid.hit;
   }
   if (p.autoHit) {
     const damage = Math.max(MIN_HIT_DAMAGE, rollDice(p.attack.damage, false, rollDie, 0, p.attack.lowestFace));

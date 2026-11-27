@@ -60,6 +60,9 @@ function remapOwners(entity: Entity, made: Made): void {
   if (entity.dancingLights) entity.dancingLights.owner = ownerIn(made, entity.dancingLights.owner);
   if (entity.wisp) entity.wisp.of = ownerIn(made, entity.wisp.of);
   if (entity.fogCloud) entity.fogCloud.owner = ownerIn(made, entity.fogCloud.owner);
+  if (entity.gust) entity.gust.owner = ownerIn(made, entity.gust.owner);
+  if (entity.invisible) entity.invisible.by = ownerIn(made, entity.invisible.by);
+  for (const hold of Object.values(entity.spellHolds ?? {})) hold.by = ownerIn(made, hold.by);
   // What a spell held by concentration made or holds (a zone, the lights, a fog, the hero it wards).
   if (entity.concentration && entity.concentration.zone >= 0) entity.concentration.zone = ownerIn(made, entity.concentration.zone);
 }

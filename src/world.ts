@@ -15,6 +15,8 @@ import type { QuickBinding } from './rules/Spellbook';
 import type { ThrowableId } from './rules/Throwables';
 import type { DamageType } from './rules/DamageTypes';
 import type { EffectColour, EffectShape } from './assets/Effects';
+import type { HoldKind } from './rules/Conditions';
+import type { SpellVariant } from './rules/SpellVariants';
 
 export const enum Team { Neutral = 0, Player = 1, Mob = 2 }
 
@@ -213,9 +215,10 @@ export function isTransmuterStone(value: unknown): value is TransmuterStone {
 /**
  * What covers a patch of floor (systems/LastingSpells.ts, systems/Surfaces.ts): water, water a thunder spell has charged with
  * lightning, slick grease (the Grease spell, a thrown grease bottle: difficult terrain where feet slip), or fire (alchemist's
- * fire, grease set alight: it burns whoever stands in it).
+ * fire, grease set alight: it burns whoever stands in it), or webs (Web: difficult terrain that holds whoever fails to slip
+ * through, and burns away in a breath).
  */
-export const SURFACE_KINDS = ['water', 'shock', 'grease', 'fire'] as const;
+export const SURFACE_KINDS = ['water', 'shock', 'grease', 'fire', 'web'] as const;
 export type SurfaceKind = (typeof SURFACE_KINDS)[number];
 
 export function isSurfaceKind(value: unknown): value is SurfaceKind {
@@ -223,7 +226,21 @@ export function isSurfaceKind(value: unknown): value is SurfaceKind {
 }
 
 /** The frame of the puddle art (assets/SpriteGen.ts genPuddleSheet) each kind of puddle shows. */
-export const PUDDLE_FRAMES = { water: 0, shock: 1, grease: 2, fire: 3 } as const satisfies Record<SurfaceKind, number>;
+export const PUDDLE_FRAMES = { water: 0, shock: 1, grease: 2, fire: 3, web: 4 } as const satisfies Record<SurfaceKind, number>;
+
+/**
+ * A spell holding a body in a condition (systems/SpellHolds.ts): the spell, the ticks it may still last, its caster's entity id,
+ * the DC of the save that ends it and the ticks until that save comes round again (at the end of each of its turns).
+ */
+export type SpellHold = { spell: SpellId; ticks: number; by: number; dc: number; pulse: number };
+
+/** The kinds of damage that leave their mark on a body for a while after the blow (systems/Afflictions.ts). */
+export const AFFLICTION_KINDS = ['fire', 'poison', 'acid', 'cold', 'lightning'] as const;
+export type AfflictionKind = (typeof AFFLICTION_KINDS)[number];
+
+export function isAfflictionKind(value: unknown): value is AfflictionKind {
+  return AFFLICTION_KINDS.some((kind) => kind === value);
+}
 /** The puddle art's circle is this wide (px of its radius) at scale 1: a patch of another radius is scaled to fit. */
 export const PUDDLE_ART_RADIUS = 48;
 
@@ -442,7 +459,34 @@ export type Entity = {
    * long rest). Cast on them by a companion or themselves (systems/AllySpells.ts): Longstrider (10 feet more speed) and
    * Protection from Evil and Good (undead attack them at disadvantage).
    */
-  buffs?: { bladeWard: number; shield: number; mageArmor: number; stoneskin: number; trueStrike?: number; longstrider?: number; protection?: number };
+  buffs?: {
+    bladeWard: number; shield: number; mageArmor: number; stoneskin: number; trueStrike?: number; longstrider?: number; protection?: number;
+    /** Blur (attacks at disadvantage), Mirror Image (its ticks, and the duplicates left), Shadow Blade (its ticks and dice). */
+    blur?: number; mirrorImage?: number; images?: number; shadowBlade?: number; bladeDice?: number;
+    /** Magic Weapon: its ticks, and the bonus it gives the weapon in hand (+1, more cast higher). */
+    magicWeapon?: number; weaponBonus?: number;
+  };
+  /**
+   * The conditions spells hold the body in (heroes and foes alike, systems/SpellHolds.ts): Hold Person's paralysis, Tasha's
+   * laughter, Blindness/Deafness, Ray of Enfeeblement, Crown of Madness, Web.
+   */
+  spellHolds?: Partial<Record<HoldKind, SpellHold>>;
+  /**
+   * Invisible (systems/Invisibility.ts): the ticks it lasts and who made it so (a hero's companion holding it by concentration,
+   * or a foe its own spell). It ends when the body attacks or casts a spell, or is revealed by See Invisibility.
+   */
+  invisible?: { ticks: number; by: number };
+  /** See Invisibility (systems/Invisibility.ts): the ticks it lasts. Invisible creatures near are seen, and save or are revealed. */
+  seesInvisible?: number;
+  /** The mark a blow of fire, poison, acid, cold or lightning leaves on a body for a round (systems/Afflictions.ts). */
+  afflicted?: { kind: AfflictionKind; ticks: number };
+  /** A push under way (Gust of Wind): px a tick across and down, for this many ticks more; it may drive the body over a brink. */
+  shove?: { x: number; y: number; ticks: number };
+  /**
+   * Gust of Wind (systems/GustOfWind.ts): its caster's entity id, the ticks it lasts and until it pushes again, and the way it
+   * blows (it follows the caster and turns where they aim).
+   */
+  gust?: { owner: number; ticks: number; pulse: number; dirX: number; dirY: number; level: number };
   /**
    * The spell a hero holds by concentration (one at a time: another such spell ends it; damage may break it), the entity id of
    * what it made or holds (a zone, Dancing Lights, a fog cloud, the hero warded; -1: none) and the ticks it may still last (left
@@ -452,9 +496,9 @@ export type Entity = {
   /**
    * A spell that lingers where it was cast (Cloud of Daggers, Cloudkill, Spirit Guardians…, systems/LastingSpells.ts): the
    * spell, its caster's entity id, the level it was cast at, the ticks it lasts and until it strikes again; `follow`: it
-   * moves with its caster.
+   * moves with its caster; `stopped`: a rolling one (Flaming Sphere) rammed someone and rolls no further for these ticks.
    */
-  zone?: { spell: SpellId; owner: number; castLevel: number; ticks: number; pulse: number; follow: boolean };
+  zone?: { spell: SpellId; owner: number; castLevel: number; ticks: number; pulse: number; follow: boolean; stopped?: number };
   /**
    * A patch of floor covered (Create Water, Grease, a thrown flask): what covers it, how wide (px), its maker's entity id, the
    * ticks until it strikes again (charged water, fire), the ticks it lasts (left out: for good) and the DC of the save its
@@ -487,9 +531,9 @@ export type Entity = {
   entranced?: number;
   /**
    * Fog Cloud (systems/FogCloud.ts): its caster's entity id, how wide it is (px) and the ticks it lasts. Whoever is in it is
-   * heavily obscured (ai/perception/obscured.ts).
+   * heavily obscured (ai/perception/obscured.ts). `dark`: it is Darkness, black, and no light shines in it.
    */
-  fogCloud?: { owner: number; radius: number; ticks: number };
+  fogCloud?: { owner: number; radius: number; ticks: number; dark?: boolean };
   /** The damage type of the last blow a foe took (for its resistances, rules/Resistances.ts). */
   lastDamageType?: DamageType;
   /**
@@ -583,7 +627,11 @@ export type Entity = {
 
   // --- spellcasting ---
   /** A spell being cast: its progress, the way it was aimed and the point it was aimed at, and which spell. */
-  casting?: { ticks: number; dirX: number; dirY: number; released: boolean; spell?: SpellId; level?: number; targetX?: number; targetY?: number; damageType?: DamageType };
+  casting?: {
+    ticks: number; dirX: number; dirY: number; released: boolean; spell?: SpellId; level?: number; targetX?: number; targetY?: number; damageType?: DamageType;
+    /** What the caster picked when binding it (Blindness/Deafness: blinded or deafened, rules/SpellVariants.ts). */
+    variant?: SpellVariant;
+  };
   /**
    * Ticks until the spell on each quick-bar square can be cast again (0: ready), and what the player bound to
    * each square (a missing or empty entry: the class's own spell for that square, see rules/Spellbook.ts).

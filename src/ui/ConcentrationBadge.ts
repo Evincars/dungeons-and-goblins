@@ -12,7 +12,7 @@ import { InfoTooltip } from './InfoTooltip';
 import type { TipTopic } from './InfoTooltip';
 import { spellTopic } from './SpellTopics';
 import { PixelLabel } from './PixelText';
-import { CLOCK_START, FULL_TURN, squareWedge } from './IconClock';
+import { FULL_TURN, drawIconClock } from './IconClock';
 import { durationOf } from './HudTime';
 
 /**
@@ -29,7 +29,6 @@ const FRAME_DIM = 0.45;
 const FRAME_BRIGHT = 1;
 const BREATH_UPDATES = 90;
 const BOX_FILL_ALPHA = 0.6;
-const CLOCK_VEIL_ALPHA = 0.55;
 /** The word beside the icon: this far right of it, this far down. */
 const LABEL_GAP = 4;
 const LABEL_DROP = 9;
@@ -53,7 +52,7 @@ export class ConcentrationBadge {
     this.view.on('pointerout', () => { this.hovered = false; claimPointer(this.view, false); });
     const box = new Graphics().rect(0, 0, ICON, ICON).fill({ color: 0x000000, alpha: BOX_FILL_ALPHA });
     this.label.position.set(ICON + LABEL_GAP, LABEL_DROP);
-    this.view.addChild(box, this.icon, this.clock, this.frame, this.label);
+    this.view.addChild(box, this.icon, this.frame, this.clock, this.label);
   }
 
   /** The tooltip, added where it may draw over everything else of the HUD. */
@@ -75,12 +74,13 @@ export class ConcentrationBadge {
     reportRejection(requestArt(key).then(show), `Icon ${key} did not load`, 'render');
   }
 
-  /** The time gone darkens the icon clockwise from the top. */
+  /** The clock over the icon, as Shield's shows: the time gone darkens it, the time left runs round it in violet, shrinking. */
   private drawClock(left: number, total: number): void {
-    const g = this.clock.clear();
-    if (total <= 0) return;
-    const share = Math.max(0, Math.min(1, left / total));
-    if (share < 1) squareWedge(g, ICON / 2, CLOCK_START, CLOCK_START + FULL_TURN * (1 - share)).fill({ color: 0x000000, alpha: CLOCK_VEIL_ALPHA });
+    if (total <= 0) {
+      this.clock.clear();
+      return;
+    }
+    drawIconClock(this.clock, ICON, left / total, FRAME_COLOR);
   }
 
   /** The violet frame, breathing. */

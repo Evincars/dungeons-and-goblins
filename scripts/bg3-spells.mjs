@@ -54,6 +54,7 @@ const ICON_NAMES = {
 const HIDDEN = new Set([
   'friends', 'light', 'mage_hand', 'minor_illusion', 'bursting_sinew',
   'disguise_self', 'jump', 'expeditious_retreat', 'feather_fall', 'find_familiar',
+  'arcane_lock', 'darkvision', 'detect_thoughts', 'enlarge_reduce', 'knock', 'phantasmal_force',
 ]);
 /** Spells the game holds by concentration though the wiki's table does not say so (one held at a time, as every other). */
 const CONCENTRATION = new Set(['dancing_lights', 'true_strike']);

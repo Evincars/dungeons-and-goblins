@@ -24,6 +24,10 @@ import { nearby, Sense } from '../ai/perception/spatial';
 import { PixelLabel } from '../ui/PixelText';
 import { bracketPath } from './MarkerSystem';
 import { allyAt } from './AllySpells';
+import { foeAt } from './SpellHolds';
+import { hiddenHere } from './Invisibility';
+import { stepTarget } from './MistyStep';
+import type { Level } from '../level/Level';
 
 /**
  * Where a shot will go, shown faintly while the hero aims. A bolt, darts or an arrow fly straight: a dotted line from the
@@ -55,6 +59,11 @@ const LABEL_DX = 6;
 const LABEL_DY = -12;
 /** The brackets round a companion an ally spell would go to: half their body's breadth and height, its middle this far up. */
 const ALLY_BOX = { halfW: 11, halfH: 17, lift: 15 };
+/** A foe's brackets stand this far out from its body each side, at least as wide as a hero's. */
+const BOX_MARGIN = 4;
+/** Where Misty Step comes out, a mark on the floor this wide and deep. */
+const STEP_RX = 9;
+const STEP_RY = 4;
 /** Over the world, under the fog and the HUD (as the corner brackets). */
 const GUIDE_Z = 999_999;
 
@@ -63,7 +72,11 @@ const GUIDE_Z = 999_999;
  * for a shot that flies straight). `radius` and `landsWhere` describe that area: its breadth, and whether it is thrown at
  * the crosshair or wrapped round the caster.
  */
-export type Aim = { reach: number; normal: number; radius: number; landsWhere: 'target' | 'caster' | 'ally'; area: AreaShape | null };
+export type Aim = {
+  reach: number; normal: number; radius: number; landsWhere: 'target' | 'caster' | 'ally' | 'foe' | 'step'; area: AreaShape | null;
+  /** The spell aimed, for a step (Misty Step: where it lands is worked out as the cast will). */
+  spell?: SpellDef;
+};
 
 let guide: Graphics | null = null;
 let label: PixelLabel | null = null;
@@ -79,7 +92,8 @@ const caught: Entity[] = [];
 function aimedSpell(player: Player, binding: QuickBinding): SpellDef | null {
   if (!isSpellId(binding.spell)) return null;
   const def = castDef(SPELLS[binding.spell], binding.level, player.playerStats.level);
-  if (def.kind === 'buff') return null;
+  // See Invisibility shows how far round the caster it sees; no other buff is aimed.
+  if (def.kind === 'buff') return def.buff === 'see_invisibility' ? def : null;
   return def.kind === 'heal' && def.radius <= 0 ? null : def;
 }
 
@@ -95,6 +109,8 @@ const fliesStraight = (def: SpellDef): boolean => def.kind === 'bolt' || def.kin
 /** A shot that flies straight (as far as a spell bolt flies), a companion to touch, or a spell's area. */
 function spellAim(def: SpellDef): Aim {
   if (def.kind === 'ally') return { reach: def.range, normal: def.range, radius: 0, landsWhere: 'ally', area: null };
+  if (def.kind === 'hex') return { reach: def.range, normal: def.range, radius: 0, landsWhere: 'foe', area: null };
+  if (def.kind === 'teleport') return { reach: def.range, normal: def.range, radius: 0, landsWhere: 'step', area: null, spell: def };
   if (!fliesStraight(def)) return areaAim(def);
   const reach = SPELL_STATS.boltSpeed * SPELL_STATS.boltLife;
   return { reach, normal: reach, radius: 0, landsWhere: 'target', area: null };
@@ -181,7 +197,7 @@ function drawArea(g: Graphics, def: AreaShape, from: Point, at: Point): void {
   drawShape(g, def, from, at);
   const near = areaBounds(def, from, at, bounds);
   for (const foe of nearby(near.x, near.y, near.r, Sense.mob, caught)) {
-    if (!foe.position || (foe.health?.current ?? 0) <= 0) continue;
+    if (!foe.position || (foe.health?.current ?? 0) <= 0 || hiddenHere(foe)) continue;
     if (inArea(def, from, at, foe.position.x, foe.position.y)) g.ellipse(foe.position.x, foe.position.y, CAUGHT_RX, CAUGHT_RY);
   }
   g.stroke({ color: OUT_OF_REACH, alpha: CAUGHT_ALPHA, width: 1 });
@@ -222,8 +238,41 @@ function guideAlly(g: Graphics, text: PixelLabel, player: Player, a: Aim): void 
   if (ally !== player) showDistance(text, x + ALLY_BOX.halfW, y - ALLY_BOX.halfH, dist, colour);
 }
 
+/**
+ * A hex (Hold Person, Charm Person…): corner brackets round the foe it would go to (the one under the crosshair), grey within
+ * its range, red beyond it, and how far off it is; with no foe there, a small red mark at the crosshair.
+ */
+function guideFoe(g: Graphics, text: PixelLabel, player: Player, a: Aim): void {
+  const foe = foeAt(aim.x, aim.y);
+  if (!foe?.position) {
+    g.circle(aim.x, aim.y, END_RADIUS).stroke({ color: OUT_OF_REACH, alpha: RING_ALPHA * 2, width: 1 });
+    return;
+  }
+  const x = foe.position.x;
+  const y = foe.position.y - ALLY_BOX.lift;
+  const dist = Math.hypot(foe.position.x - player.position.x, foe.position.y - player.position.y);
+  const colour = dist <= a.reach ? IN_REACH : OUT_OF_REACH;
+  const halfW = Math.max(ALLY_BOX.halfW, (foe.radius?.x ?? 0) + BOX_MARGIN);
+  bracketPath(g, x, y, halfW, ALLY_BOX.halfH).stroke({ color: colour, alpha: RING_ALPHA * 2, width: 1 });
+  showDistance(text, x + halfW, y - ALLY_BOX.halfH, dist, colour);
+}
+
+/** Misty Step: dots to where the caster would come out of the mist, a ring there and how far it is; red at the crosshair if nowhere. */
+function guideStep(g: Graphics, text: PixelLabel, player: Player, a: Aim, level: Level | undefined): void {
+  const to = level && a.spell ? stepTarget(level, player, a.spell, aim.x, aim.y) : null;
+  if (!to) {
+    g.circle(aim.x, aim.y, END_RADIUS).stroke({ color: OUT_OF_REACH, alpha: RING_ALPHA * 2, width: 1 });
+    return;
+  }
+  const { x, y } = player.position;
+  const dist = Math.hypot(to.x - x, to.y - y);
+  if (dist > 0) dots(g, x, y, (to.x - x) / dist, (to.y - y) / dist, 0, dist, IN_REACH);
+  g.ellipse(to.x, to.y, STEP_RX, STEP_RY).fill({ color: IN_REACH, alpha: FILL_ALPHA }).stroke({ color: IN_REACH, alpha: RING_ALPHA * 2, width: 1 });
+  showDistance(text, to.x, to.y, dist, IN_REACH);
+}
+
 /** Once a tick: the guide for what this screen's hero aims, or nothing. */
-export function updateAimGuide(gameLayer: Container): void {
+export function updateAimGuide(gameLayer: Container, level?: Level): void {
   const { g, text } = layers(gameLayer);
   g.clear();
   text.visible = false;
@@ -238,6 +287,14 @@ export function updateAimGuide(gameLayer: Container): void {
   }
   if (a.landsWhere === 'ally') {
     guideAlly(g, text, player, a);
+    return;
+  }
+  if (a.landsWhere === 'foe') {
+    guideFoe(g, text, player, a);
+    return;
+  }
+  if (a.landsWhere === 'step') {
+    guideStep(g, text, player, a, level);
     return;
   }
   // A shot leaves from hand height and flies at the crosshair (the hero's aim is taken from there, MovementSystem.ts), so

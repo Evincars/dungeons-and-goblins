@@ -30,6 +30,7 @@ import { defences } from './Resistances';
 import type { DamageType } from './DamageTypes';
 import { hasKey, isRecord } from '../core/guards';
 import spellList from '../data/spell-list.json';
+import { withSpellWeapon } from './SpellWeapons';
 
 /**
  * What the rules make of a character's class, gear and abilities: Armor Class, the damage and attack bonus
@@ -557,7 +558,8 @@ export function characterSheet(player: Pick<Player, 'equipped' | 'playerStats' |
   const ac = withSpellAC(withSchoolAC(armorClass(equipped, scores.modifiers, cls, styles, feats), school), player.buffs);
   const surge = (player.actionSurge ?? 0) > 0 ? ACTION_SURGE_ATTACKS_FACTOR : 1;
   const offHand = offHandAttack(equipped, scores.modifiers, level, cls, ac.proficient, styles, feats);
-  const attack = weaponAttack(equipped, scores.modifiers, level, cls, ac.proficient, styles, off, feats);
+  // Magic Weapon and Shadow Blade shape the weapon in hand (rules/SpellWeapons.ts).
+  const attack = withSpellWeapon(weaponAttack(equipped, scores.modifiers, level, cls, ac.proficient, styles, off, feats), player.buffs, scores.modifiers, proficiency);
   return {
     ...scores,
     heroClass: cls,

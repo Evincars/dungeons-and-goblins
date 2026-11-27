@@ -24,3 +24,21 @@ export function squareWedge(g: Graphics, c: number, from: number, to: number): G
   return g.closePath();
 }
 
+
+/** The clock's veil darkens the time gone this much; the time left runs round the icon as a ring this wide, this bright. */
+const VEIL_ALPHA = 0.62;
+const RING_WIDTH = 1;
+const RING_ALPHA = 0.9;
+
+/**
+ * The clock over an icon `size` across (as Shield's shows): the time gone darkens it clockwise from the top, and the time left
+ * runs round it as a ring in `color`, shrinking as it runs out. `left`: the share still left (1: just begun).
+ */
+export function drawIconClock(g: Graphics, size: number, left: number, color: number): void {
+  g.clear();
+  const c = size / 2;
+  const share = Math.max(0, Math.min(1, left));
+  const gone = CLOCK_START + FULL_TURN * (1 - share);
+  if (share < 1) squareWedge(g, c, CLOCK_START, gone).fill({ color: 0x000000, alpha: VEIL_ALPHA });
+  if (share > 0) g.arc(c, c, c, gone, CLOCK_START + FULL_TURN).stroke({ color, alpha: RING_ALPHA, width: RING_WIDTH });
+}

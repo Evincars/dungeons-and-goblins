@@ -49,20 +49,20 @@
       "source": "Specter", "creature": "undead", "health": 22, "ac": 12, "proficiency": 2, "xp": 200,
       "abilities": { "strength": 1, "dexterity": 14, "constitution": 11, "intelligence": 10, "wisdom": 10, "charisma": 11 },
       "weapons": ["dagger"], "deathPoints": 160,
-      "defences": { "conditions": ["charmed", "poisoned", "prone", "restrained", "unconscious"], "resist": ["acid", "cold", "fire", "lightning", "thunder"], "resistNonmagical": ["bludgeoning", "piercing", "slashing"], "immune": ["necrotic", "poison"] },
-      "spellcaster": { "class": "sorcerer", "ability": "charisma", "spells": ["fire_bolt", "burning_hands", "magic_missile", "chromatic_orb", "scorching_ray", "fireball"] }
+      "defences": { "conditions": ["charmed", "paralyzed", "poisoned", "prone", "restrained", "unconscious"], "resist": ["acid", "cold", "fire", "lightning", "thunder"], "resistNonmagical": ["bludgeoning", "piercing", "slashing"], "immune": ["necrotic", "poison"] },
+      "spellcaster": { "class": "sorcerer", "ability": "charisma", "spells": ["fire_bolt", "burning_hands", "magic_missile", "chromatic_orb", "scorching_ray", "gust_of_wind", "invisibility", "fireball"] }
     },
     "evil_wizard": {
       "source": "Mage", "creature": "humanoid", "health": 40, "ac": 12, "proficiency": 3, "xp": 2300,
       "abilities": { "strength": 9, "dexterity": 14, "constitution": 11, "intelligence": 17, "wisdom": 12, "charisma": 11 },
       "weapons": ["dagger", "quarterstaff"], "deathPoints": 320,
-      "spellcaster": { "class": "wizard", "ability": "intelligence", "spells": ["fire_bolt", "ray_of_frost", "magic_missile", "thunderwave", "ice_knife", "lightning_bolt"] }
+      "spellcaster": { "class": "wizard", "ability": "intelligence", "spells": ["fire_bolt", "ray_of_frost", "magic_missile", "thunderwave", "ice_knife", "hold_person", "gust_of_wind", "invisibility", "see_invisibility", "lightning_bolt"] }
     },
     "shade": {
       "source": "Shadow", "creature": "undead", "health": 16, "ac": 12, "proficiency": 2, "xp": 100,
       "abilities": { "strength": 6, "dexterity": 14, "constitution": 13, "intelligence": 6, "wisdom": 10, "charisma": 8 },
       "weapons": ["dagger", "sickle"], "deathPoints": 120,
-      "defences": { "conditions": ["frightened", "poisoned", "prone", "restrained"], "resist": ["acid", "cold", "fire", "lightning", "thunder"], "resistNonmagical": ["bludgeoning", "piercing", "slashing"], "immune": ["necrotic", "poison"], "vulnerable": ["radiant"] },
+      "defences": { "conditions": ["frightened", "paralyzed", "poisoned", "prone", "restrained"], "resist": ["acid", "cold", "fire", "lightning", "thunder"], "resistNonmagical": ["bludgeoning", "piercing", "slashing"], "immune": ["necrotic", "poison"], "vulnerable": ["radiant"] },
       "spellcaster": { "class": "warlock", "ability": "charisma", "spells": ["chill_touch", "eldritch_blast"] }
     },
     "grick": {

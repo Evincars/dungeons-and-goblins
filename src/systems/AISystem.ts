@@ -10,6 +10,7 @@ import { cheats } from '../game/Cheats';
 import { followLure } from './DecoySystem';
 import { isDown } from './Surfaces';
 import { followLights } from './DancingLights';
+import { followMadness } from './Madness';
 
 /** Frozen by the console (/freeze): every enemy stops where it stands and thinks of nothing. */
 function holdStill(): void {
@@ -51,6 +52,8 @@ export function updateAI(level: Level, tick: number): void {
     if (followLure(mob)) continue;
     // A foe drawn to Dancing Lights drifts over to stare at them.
     if (followLights(mob)) continue;
+    // A foe maddened by Crown of Madness goes for the nearest of its own.
+    if (followMadness(mob)) continue;
     agentOf(mob).think(level, tick);
   }
 }

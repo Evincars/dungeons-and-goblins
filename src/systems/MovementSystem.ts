@@ -18,6 +18,7 @@ import { BASE_SPEED_FT } from '../rules/CharacterSheet';
 import { isDown, terrainPace } from './Surfaces';
 import { athleteSpeedFactor } from './FeatureSystem';
 import { longstriderFactor } from './AllySpells';
+import { beingShoved, shoveStep, windPace } from './GustOfWind';
 
 type Point = { x: number; y: number };
 type Body = (typeof q.physical)['entities'][number];
@@ -46,6 +47,8 @@ const BODY_REACH = MAX_MOB_RADIUS * 2 + 8;
 /** What a moving body bumps into: players, enemies, and the things that stand in the way (chests, the dummy…). */
 const BODY_SENSES = Sense.player | Sense.mob | Sense.usable;
 const aimPoint = { x: 0, y: 0 };
+/** This tick's shove (reused). */
+const shoved = { x: 0, y: 0 };
 
 /** How far `from` may move along x before touching `to`. */
 function clampX(from: Rectangle, to: Rectangle, xa: number): number {
@@ -110,10 +113,10 @@ function offLimits(level: Level, x: number, y: number, knocked: boolean): boolea
   return (!knocked && level.overPit(x, y)) || level.isWorldPosSafe(x, y);
 }
 
-/** Whether a body is being knocked back hard enough to be driven over a brink. */
+/** Whether a body is being knocked back hard enough to be driven over a brink, or shoved (Gust of Wind). */
 function knockedBack(entity: Body): boolean {
   const bump = entity.bump;
-  return !!bump && Math.abs(bump.x) + Math.abs(bump.y) >= KNOCKED_OVER_SPEED;
+  return beingShoved(entity) || (!!bump && Math.abs(bump.x) + Math.abs(bump.y) >= KNOCKED_OVER_SPEED);
 }
 
 /**
@@ -162,14 +165,17 @@ function moveBody(level: Level, entity: Body): void {
     if (bump) bump.x = bump.y = 0;
     return;
   }
-  // Flinching or down (slipped, prone) it does not walk; in grease it walks at half its pace (systems/Surfaces.ts).
+  // Flinching or down (slipped, prone, held by a spell) it does not walk; in grease or webs it walks at half its pace
+  // (systems/Surfaces.ts), and so against a gust of wind (systems/GustOfWind.ts).
   const frozen = (entity.freezeTime ?? 0) > 0 || isDown(entity);
-  const pace = frozen ? 0 : terrainPace(position.x, position.y);
-  const xa = velocity.x * pace + (bump?.x ?? 0);
-  const ya = velocity.y * pace + (bump?.y ?? 0);
+  const pace = frozen ? 0 : terrainPace(position.x, position.y) * windPace(entity);
+  // A gust's shove carries it whatever holds it.
+  const knocked = knockedBack(entity);
+  const push = shoveStep(entity, shoved);
+  const xa = velocity.x * pace + (bump?.x ?? 0) + push.x;
+  const ya = velocity.y * pace + (bump?.y ?? 0) + push.y;
   const fromX = position.x;
   const fromY = position.y;
-  const knocked = knockedBack(entity);
   move(position, radius, xa, ya, obstaclesFor(level, entity), entity.physicsSlide !== undefined);
   level.pushOutOfSlopes(position, radius.x, radius.y);
   keepOutOfForbidden(level, entity, fromX, fromY, knocked);

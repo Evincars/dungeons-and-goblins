@@ -26,6 +26,7 @@ import { isCatalogSpell, quickBinding } from '../rules/Spellbook';
 import { ARCANE_RECOVERY_TOP_LEVEL } from '../rules/Schools';
 import { shelteredBySculpt, useSchoolFeature } from './SchoolSystem';
 import { raiseUndead } from './SummonSystem';
+import { failsSave, saveMode } from './SpellHolds';
 
 /**
  * The active class features (rules/ClassFeatures.ts), used from the quick bar with the cast key. Each does its work
@@ -233,9 +234,11 @@ export function heroSavingThrow(hero: Player, stat: StatName, dc: number, die: D
  */
 export function heroSaveRoll(hero: Player, stat: StatName, dc: number, die: DieRoller = rollDie, spellBy?: Entity): { total: number; success: boolean } {
   if (shelteredBySculpt(hero)) return { total: dc, success: true };
+  // Paralysed (Hold Person), Strength and Dexterity saves fail outright.
+  if (failsSave(hero, stat)) return { total: 0, success: false };
   const sheet = characterSheet(hero);
   const bonus = sheet.saves[stat].bonus + shieldSave(hero, sheet.feats.shieldSaves, stat);
-  const mode = mageSlayerMode(hero, sheet.feats.mageSlayer, spellBy);
+  const mode = withRestraint(mageSlayerMode(hero, sheet.feats.mageSlayer, spellBy), saveMode(hero, stat));
   const first = rollD20(mode, die) + bonus;
   if (first >= dc) return { total: first, success: true };
   if ((hero.indomitableCooldown ?? 0) > 0 || !featureOn(hero, 'indomitable')) return { total: first, success: false };
@@ -243,6 +246,12 @@ export function heroSaveRoll(hero: Player, stat: StatName, dc: number, die: DieR
   recordEvent(hero, 'feature', { item: nameOfFeature(hero, 'indomitable') });
   const again = rollD20(mode, die) + bonus;
   return { total: again, success: again >= dc };
+}
+
+/** A restrained hero's Dexterity save at disadvantage, which cancels an advantage. */
+function withRestraint(mode: D20Mode, held: D20Mode): D20Mode {
+  if (held !== 'disadvantage') return mode;
+  return mode === 'advantage' ? 'normal' : 'disadvantage';
 }
 
 /** Shield Master: what a shield carried adds to Dexterity saving throws. */

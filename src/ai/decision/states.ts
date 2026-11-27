@@ -85,9 +85,10 @@ export function huntedPlayer(mob: Mob): Player | undefined {
   return isPlayer(target) && isActivePlayer(target) ? target : undefined;
 }
 
-/** Whether an ally can be called into a fight: idle and not sulking after being crowded out of one. */
+/** Whether an ally can be called into a fight: idle, not sulking after being crowded out of one, and not deafened (Deafness). */
 function callable(ally: Entity, shouter: Mob): ally is Mob {
-  return ally !== shouter && isMob(ally) && ally.ai.state === 'idle' && ally.ai.calmTicks <= 0;
+  const deaf = (ally.spellHolds?.deafened?.ticks ?? 0) > 0;
+  return ally !== shouter && isMob(ally) && ally.ai.state === 'idle' && ally.ai.calmTicks <= 0 && !deaf;
 }
 
 /** The shout: idle allies within ALERT_RADIUS learn where the player is and come to help the shouter. */

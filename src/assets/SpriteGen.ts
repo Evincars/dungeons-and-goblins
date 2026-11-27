@@ -471,12 +471,53 @@ function drawPuddleGlints(ctx: CanvasRenderingContext2D, look: PuddleLook, cx: n
   }
 }
 
+/** Webs: this many strands out from the middle, this many rings of silk round it, their silk and the haze under them. */
+const WEB_SPOKES = 16;
+const WEB_RINGS = 7;
+const WEB_SILK = 'rgba(236,236,228,0.8)';
+const WEB_HAZE = 'rgba(220,220,210,0.18)';
+/** A ring sags to this share of its reach between two strands, and wobbles by this share either way. */
+const WEB_SAG = 0.93;
+const WEB_WOBBLE = 0.08;
+
+/**
+ * Web's webs, filling the square (a cube on the map, as the aim guide shows it): a pale haze of silk, strands out from the middle
+ * to the edges and corners, and rings of it sagging between them, a little ragged.
+ */
+function drawWeb(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, seed: number): void {
+  ctx.fillStyle = WEB_HAZE;
+  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  ctx.strokeStyle = WEB_SILK;
+  ctx.lineWidth = 1;
+  const reach = (a: number): number => r / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a)));
+  for (let i = 0; i < WEB_SPOKES; i++) {
+    const a = (i / WEB_SPOKES) * Math.PI * 2 + (noise(seed + i) - 0.5) * 0.15;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * reach(a), cy + Math.sin(a) * reach(a)); ctx.stroke();
+  }
+  for (let ring = 1; ring <= WEB_RINGS; ring++) drawWebRing(ctx, cx, cy, ring / (WEB_RINGS + 0.4), reach, seed + ring * 13);
+}
+
+/** One ring of silk round the web's middle at a share of the way out, sagging a little between strands and wobbling by noise. */
+function drawWebRing(ctx: CanvasRenderingContext2D, cx: number, cy: number, share: number, reach: (a: number) => number, seed: number): void {
+  ctx.beginPath();
+  for (let i = 0; i <= WEB_SPOKES; i++) {
+    const a = (i / WEB_SPOKES) * Math.PI * 2;
+    const sag = i % 2 === 0 ? 1 : WEB_SAG;
+    const d = reach(a) * share * sag * (1 - WEB_WOBBLE / 2 + noise(seed + i) * WEB_WOBBLE);
+    if (i === 0) ctx.moveTo(cx + Math.cos(a) * d, cy + Math.sin(a) * d);
+    else ctx.lineTo(cx + Math.cos(a) * d, cy + Math.sin(a) * d);
+  }
+  ctx.stroke();
+}
+
 /**
  * The patches of floor spells and flasks leave, each a circle as round and as wide as the aim guide showed it: frame 0 water
- * (Create Water), 1 water charged with lightning, 2 grease, 3 burning floor (systems/LastingSpells.ts, systems/Surfaces.ts).
+ * (Create Water), 1 water charged with lightning, 2 grease, 3 burning floor (systems/LastingSpells.ts, systems/Surfaces.ts);
+ * frame 4 Web's webs, a square (its cube).
  */
 export function genPuddleSheet(): HTMLCanvasElement {
-  const [c, ctx] = mkCanvas(PUDDLE_SIZE * PUDDLE_LOOKS.length, PUDDLE_SIZE);
+  const [c, ctx] = mkCanvas(PUDDLE_SIZE * (PUDDLE_LOOKS.length + 1), PUDDLE_SIZE);
+  drawWeb(ctx, PUDDLE_LOOKS.length * PUDDLE_SIZE + PUDDLE_ART_RADIUS, PUDDLE_ART_RADIUS, PUDDLE_ART_RADIUS - 1, 977);
   const r = PUDDLE_ART_RADIUS;
   PUDDLE_LOOKS.forEach((look, i) => {
     const cx = i * PUDDLE_SIZE + r;

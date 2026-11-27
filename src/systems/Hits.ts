@@ -4,6 +4,8 @@ import type { DamageType } from '../rules/DamageTypes';
 import { sound } from '../audio/SoundPlayer';
 import { MOB_CRIES } from '../audio/SoundBank';
 import { wake } from './SleepSpell';
+import { shakeOff } from './SpellHolds';
+import { afflict } from './Afflictions';
 import { SWORD_STATS } from '../entities/WeaponStats';
 
 /** A mob that takes a hit flinches (can't act) for this long, and shows hurt for this long. */
@@ -37,6 +39,9 @@ export function hitMob(mob: Entity, attacker: Entity, damage: number, evenIfFlin
   // A blow breaks a charm (Hypnotic Gaze, an illusion's hold) and wakes a sleeper.
   if (mob.status) mob.status.charmed = 0;
   wake(mob);
+  // Fits of laughter may be shaken off; fire, poison, acid, cold and lightning leave their mark for a round.
+  shakeOff(mob);
+  afflict(mob, type);
 
   const ap = attacker.position;
   const mp = mob.position;

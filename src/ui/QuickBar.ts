@@ -29,6 +29,7 @@ import { bindingFeatId } from '../rules/Feats';
 import { damageTypeName, featName } from '../rules/Names';
 import { THEME } from './Theme';
 import { DAMAGE_COLORS } from './TipText';
+import { RING_COLOURS } from '../systems/ConditionRingSystem';
 
 /** The squares: this big, this far apart, this far up from the bottom edge (the bar shrinks when the screen is too narrow). */
 const SLOT = 22;
@@ -113,7 +114,7 @@ function showEffect(view: SlotView, def: SpellDef): void {
   reportRejection(requestArt(key).then(show), `Spell icon ${def.id} did not load`, 'render');
 }
 
-const bindingKey = (b: QuickBinding | null): string | null => (b ? `${b.spell}/${b.level}/${b.damageType ?? ''}` : null);
+const bindingKey = (b: QuickBinding | null): string | null => (b ? `${b.spell}/${b.level}/${b.damageType ?? ''}/${b.variant ?? ''}` : null);
 
 /** The class feature a binding names, for a hero of this class. */
 function featureOfBinding(binding: QuickBinding | null, castWith: Player['heroClass']): FeatureDef | null {
@@ -149,8 +150,16 @@ function boundTopic(binding: QuickBinding, heroLevel: number, castWith: Player['
   const spell: CatalogSpell = CATALOG[binding.spell];
   const cls = heroClass(castWith);
   const learntAt = isSpellId(binding.spell) ? spellLevelFor(cls, binding.spell) : undefined;
-  const topic = withChosenType(spellTopic(spell, binding.level, heroLevel, learntAt), binding);
+  const topic = withVariant(withChosenType(spellTopic(spell, binding.level, heroLevel, learntAt), binding), binding);
   return isSpellId(binding.spell) ? topic : { ...topic, detail: [...(topic.detail ?? []), text('hud.slot.not_worked')] };
+}
+
+/** A spell bound to do one of its choices (Blindness or Deafness) says which, in its condition's colour. */
+function withVariant(topic: TipTopic, binding: QuickBinding): TipTopic {
+  const variant = binding.variant;
+  if (!variant) return topic;
+  const line = { text: text('hud.slot.variant', { condition: text(`condition.${variant}.name`) }), color: RING_COLOURS[variant] };
+  return { ...topic, detail: [line, ...(topic.detail ?? [])] };
 }
 
 /** A spell bound with a kind of damage chosen for it (Chromatic Orb) says which, in that kind's colour. */
@@ -316,6 +325,9 @@ export class QuickBar {
     view.typeMark.clear();
     const type = binding?.damageType;
     if (type) view.typeMark.poly([1, SLOT - 1 - TYPE_MARK, 1 + TYPE_MARK, SLOT - 1, 1, SLOT - 1]).fill({ color: DAMAGE_COLORS[type] });
+    // What the spell was bound to do (Blindness or Deafness), a corner in its condition's colour.
+    const variant = binding?.variant;
+    if (variant) view.typeMark.poly([1, SLOT - 1 - TYPE_MARK, 1 + TYPE_MARK, SLOT - 1, 1, SLOT - 1]).fill({ color: RING_COLOURS[variant] });
   }
 
   /** One square for the player's spell in it: its picture, whether it is picked, learnt and recovering. */

@@ -13,9 +13,13 @@ import { sound } from '../audio/SoundPlayer';
 import { bleeds, spawnBlood } from '../entities/Blood';
 import { withinCloseQuarters } from '../rules/CloseQuarters';
 import { playVfx } from '../render/VfxPlayer';
-import { inFog } from '../ai/perception/obscured';
+import { inDimLight, inFog } from '../ai/perception/obscured';
+import { holdsShadowBlade } from '../rules/SpellWeapons';
 import { isOtherworldly } from '../rules/Conditions';
 import { isAsleep } from './SleepSpell';
+import { heldIn } from './SpellHolds';
+import { seesInvisible } from './Invisibility';
+import { imageTakes } from './Illusions';
 
 /**
  * Every blow in the game goes through here: the attack is rolled against the target's Armor Class, and the
@@ -97,9 +101,50 @@ function withSleeper(attack: AttackProfile, attacker: Entity | undefined, target
   return { ...attack, mode: better(attack.mode), ...(close ? { critOnHit: true } : {}) };
 }
 
+/** Whether the two stand within 5 feet of each other. */
+function close(attacker: Entity | undefined, target: Entity): boolean {
+  return !!attacker?.position && !!target.position
+    && withinCloseQuarters(attacker.position.x, attacker.position.y, target.position.x, target.position.y);
+}
+
+/**
+ * What spells hold either in (systems/SpellHolds.ts): attacks against the paralysed have advantage and a hit from within 5
+ * feet is a critical hit; one laughing lies prone (advantage from within 5 feet, disadvantage from further); the restrained
+ * and the blinded are struck at advantage and strike at disadvantage.
+ */
+function withHolds(attack: AttackProfile, attacker: Entity | undefined, target: Entity): AttackProfile {
+  let mode = attack.mode;
+  const near = close(attacker, target);
+  if (heldIn(target, 'paralyzed') || heldIn(target, 'restrained') || heldIn(target, 'blinded')) mode = better(mode);
+  if (heldIn(target, 'laughing')) mode = near ? better(mode) : worse(mode);
+  if (heldIn(attacker, 'restrained') || heldIn(attacker, 'blinded')) mode = worse(mode);
+  const crit = heldIn(target, 'paralyzed') && near;
+  if (mode === attack.mode && !crit) return attack;
+  return { ...attack, mode, ...(crit ? { critOnHit: true } : {}) };
+}
+
+/**
+ * Who sees whom (systems/Invisibility.ts): an attacker unseen strikes at advantage, a target unseen is struck at disadvantage
+ * (unless the other sees the invisible); a blurred target (Blur) is struck at disadvantage.
+ */
+function withSight(attack: AttackProfile, attacker: Entity | undefined, target: Entity): AttackProfile {
+  let mode = attack.mode;
+  if (target.invisible && !seesInvisible(attacker)) mode = worse(mode);
+  if (attacker?.invisible && !seesInvisible(target)) mode = better(mode);
+  if ((target.buffs?.blur ?? 0) > 0) mode = worse(mode);
+  return mode === attack.mode ? attack : { ...attack, mode };
+}
+
+/** Shadow Blade (rules/SpellWeapons.ts): a weapon blow with it at a target in dim light or darkness has advantage. */
+function withShadowBlade(attack: AttackProfile, attacker: Entity | undefined, target: Entity): AttackProfile {
+  if (!holdsShadowBlade(attacker?.buffs) || !target.position || !inDimLight(target.position.x, target.position.y)) return attack;
+  return { ...attack, mode: better(attack.mode) };
+}
+
 /** Everything about where the two stand and what holds them that shapes the roll. */
 function withCircumstances(attack: AttackProfile, attacker: Entity | undefined, target: Entity): AttackProfile {
-  return withSleeper(withWard(withObscured(withHeroDown(attack, attacker, target), attacker, target), attacker, target), attacker, target);
+  const placed = withSleeper(withWard(withObscured(withHeroDown(attack, attacker, target), attacker, target), attacker, target), attacker, target);
+  return withSight(withHolds(placed, attacker, target), attacker, target);
 }
 
 /** One step towards disadvantage, or towards advantage (each cancels the other). */
@@ -113,7 +158,10 @@ const better = (mode: AttackProfile['mode']): AttackProfile['mode'] => (mode ===
  * spell) is shaped by the hero's readied maneuver and the marks on both fighters (systems/ManeuverSystem.ts).
  */
 export function strike(target: Entity, attack: AttackProfile, logOn: Entity | undefined, spell?: SpellId): AttackOutcome {
-  const prepared = spell ? attack : prepareBlow(attack, logOn, target);
+  // Mirror Image: the blow may go for one of the target's duplicates instead (systems/Illusions.ts).
+  const image = imageTakes(target, attack, logOn);
+  if (image) return image;
+  const prepared = spell ? attack : withShadowBlade(prepareBlow(attack, logOn, target), logOn, target);
   const outcome = resolveAttack(withTrueStrike(withFirstStrike(withCircumstances(prepared, logOn, target), logOn), logOn), armorClassOf(target));
   if (!spell) afterBlow(logOn, target, outcome);
   if (outcome.critical && target.position) sound.playSound('critical', target.position.x, target.position.y);

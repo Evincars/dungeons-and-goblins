@@ -4,6 +4,7 @@ import type { Entity, RollTone } from '../world';
 import { PixelLabel } from '../ui/PixelText';
 import { characterDef, headAboveFeet } from '../characters/Characters';
 import { MAX_ROLL_LINES, ROLL_LINE_TICKS } from './RollLogSystem';
+import { hiddenHere } from './Invisibility';
 
 const logged = world.with('rollLog', 'position');
 
@@ -59,7 +60,8 @@ function liftOf(entity: Entity): number {
 function drawLog(entity: Entity & { rollLog: NonNullable<Entity['rollLog']>; position: { x: number; y: number } }, view: View): void {
   const log = entity.rollLog;
   const facingRight = !(entity.character?.flipX ?? false);
-  view.container.visible = log.length > 0 && entity.respawnTicks === undefined;
+  // An invisible foe this screen does not see gives itself away by no roll either.
+  view.container.visible = log.length > 0 && entity.respawnTicks === undefined && !hiddenHere(entity);
   view.container.position.set(Math.round(entity.position.x), Math.round(entity.position.y - liftOf(entity)));
   view.labels.forEach((label, i) => {
     const line = log[i];

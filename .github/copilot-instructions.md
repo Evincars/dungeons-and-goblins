@@ -444,8 +444,9 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `wisp`s round an anchor held by concentration, circling the caster when cast at them, else hovering where sent, where foes
   failing a WIS save are drawn to them (`entranced`) until hurt or a hero comes close. True Strike is a buff held by
   concentration (`buffs.trueStrike`) spent on the next attack roll for advantage (`systems/Strike.ts`). Friends, Light, Mage
-  Hand, Minor Illusion, Bursting Sinew, Disguise Self, Enhance Leap (`jump`), Expeditious Retreat, Feather Fall and Find
-  Familiar are kept in `spell-list.json` (`hidden`) but left out of the Skills tab. A spell the game plays otherwise than the
+  Hand, Minor Illusion, Bursting Sinew, Disguise Self, Enhance Leap (`jump`), Expeditious Retreat, Feather Fall, Find
+  Familiar, Arcane Lock, Darkvision, Detect Thoughts, Enlarge/Reduce, Knock and Phantasmal Force are kept in `spell-list.json`
+  (`hidden`) but left out of the Skills tab. A spell the game plays otherwise than the
   tabletop has its description as played in `spellbook.json` (`PLAYED_AS`, `scripts/scrape-spells.mjs`).
 - Sleep (`kind: sleep`, `systems/SleepSpell.ts`) flies as a bolt and lulls the first foe it touches whose hit points are no
   more than its 5d8 (2d8 more a level up): `status.asleep`, unconscious — it neither moves nor acts, attacks at it have
@@ -456,11 +457,55 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   (`buffs.longstrider`), or a ward held by the caster's concentration (`buffs.protection`) — undead attack the warded at
   disadvantage; each keeps an aura and shows on the companion's HUD. Fog Cloud (`kind: fog`, `systems/FogCloud.ts`,
   `fogCloud`) heavily obscures (`ai/perception/obscured.ts`): attacks into it, out of it or within it are at disadvantage,
-  enemies neither see nor shoot a hero in it or behind it unless within 5 feet; its fog is thin particles thick at the rim,
-  so the fight inside shows.
-- A body in a condition (`systems/Conditions.ts`: unconscious, prone, charmed — Dancing Lights' pull too —, frightened,
-  blinded in fog, burning) has a ring of runes under its feet in the condition's colour, one ring for each, turning and
-  breathing (`systems/ConditionRingSystem.ts`, pooled sprites).
+  enemies neither see nor shoot a hero in it or behind it unless within 5 feet; its body is two layers of rolling noise
+  cloud, thick at the rim and thin in the middle so the fight inside shows (`systems/CloudSystem.ts`), with wisps of particles
+  over them. Darkness is the same cloud (`fogCloud.dark`), black, and no light inside it is drawn (`inDarkness`,
+  `InGameScene.gatherLights`); Gust of Wind scatters fog (not Darkness).
+- Spells that hold a body in a condition (`systems/SpellHolds.ts`, `spellHolds`: heroes and foes alike, each hold its spell,
+  caster, DC, time and the ticks to its next save): `kind: hex` goes to the foe under the crosshair within range (the aim
+  guide frames it in brackets; cast higher, Charm Person, Hold Person and Blindness take one more foe a level near it,
+  `targetsPerLevel`) and its creature types (`creatures`, every hero a humanoid) and Intelligence (`minIntelligence`), not to
+  one immune to the condition. Charm Person charms (`status.charmed`, with advantage on the save against a foe fighting the
+  heroes); Tasha's Hideous Laughter lays `laughing` (prone, incapacitated; a save with advantage each time it is hurt,
+  `shakeOff`); Hold Person `paralyzed` (frozen, its clip too, `frozenStill`; STR and DEX saves fail; blows at it advantage,
+  critical from 5 feet); Blindness `blinded` or `deafened` as bound (`rules/SpellVariants.ts`: the Skills tab offers the
+  choice before the levels, kept in the binding's `variant`; blinded: sees nothing beyond 5 feet, `unseenBy`, attacks
+  disadvantage, attacked at advantage; deafened: hears no shout); Crown of Madness `maddened` (`systems/Madness.ts`: it goes
+  for and strikes the nearest other creature, never its charmer); Ray of Enfeeblement (a bolt with `condition`) `enfeebled`
+  (half damage with Strength weapon blows, `enfeebledDamage`); Web's webs `restrained` (a Strength check a round, out of the
+  webs it is free). A hold saves again at the end of each of its turns (`TURN_TICKS`) and lets go when its caster's
+  concentration ends (`endHoldsOf`); a concentration whose hex holds nobody ends. A hero paralysed or laughing (or slipped)
+  can neither swing, shoot nor cast (`heroHeld`). Enemy casters cast Hold Person at heroes (`hexHero`).
+- Web (`kind: surface`, `surface: web`, a cube) is a square of webs (`systems/Surfaces.ts`): difficult terrain, a DEX save on
+  appearing and on stepping in or `restrained`; fire burns it away in a round (2d4 fire to all in it). Flaming Sphere (a
+  zone that `rolls`) rolls 30 feet a round towards its caster's aim, sheds light, sets grease and webs alight and rams the
+  first foe it meets (a save at once; it stops for the round, `zone.stopped`). Gust of Wind (`kind: gust`,
+  `systems/GustOfWind.ts`, a `gust` entity held by concentration) blows a line from the caster that turns where they aim: a
+  STR save at once and each round, or `shove`d 15 feet along it (`MovementSystem`: a shove may carry a body over a brink,
+  `dropAlong`); walking back into it is at half pace. An enemy caster casts it only when it would blow a hero over a drop.
+  Misty Step (`kind: teleport`, `systems/MistyStep.ts`) steps to the nearest free place in sight towards the aim within its
+  range (`stepTarget`; none: refused before the cast, the aim guide shows where).
+- Invisibility (an `ally` spell, `systems/Invisibility.ts`, `invisible`) hides a hero until they attack or cast
+  (`revealOnAct`; the companion's concentration ends with it): every screen draws them as a shimmer (`systems/ImageSystem.ts`),
+  foes do not see them beyond 5 feet, attacks at them at disadvantage and theirs at advantage. An enemy caster that knows it
+  turns invisible as it notices the heroes and stalks them (`STALK_TICKS`): its heroes' screens show nothing of it (no
+  sprite, bar, ring, roll, bracket; `hiddenHere`). See Invisibility (`seesInvisible`; the Third Eye too) shows the invisible near
+  the seer as a shimmer, and once a round each makes a DEX save or is revealed for everyone; enemies cast it against an
+  invisible hero. Blur (`buffs.blur`: attacks at disadvantage, two trembling copies), Mirror Image (`buffs.images`, three faint
+  copies drifting round the hero; `systems/Illusions.ts`: a d20 of 6/8/11+ sends a blow to a duplicate, AC 10 + DEX, a hit
+  destroys it), Shadow Blade and Magic Weapon (`rules/SpellWeapons.ts`, `withSpellWeapon` in the sheet: a 2d8 psychic finesse
+  blade with advantage on a target in dim light, `inDimLight`; +1 (+2 at the 4th, +3 at the 6th) on a weapon with no magic of
+  its own) — a plain sword floats over the hero's head while either holds (`systems/WeaponSignSystem.ts`).
+- A blow of fire, poison, acid, cold or lightning leaves its mark on a hero or a foe for a round (`systems/Afflictions.ts`,
+  `afflicted`): its particles (`AFFLICTION_VFX`: flames, green drips and fumes, frost, crackling sparks) and its body washed in
+  the colour (`systems/ImageSystem.ts`; lightning flickers).
+- A body in a condition (`systems/Conditions.ts`: unconscious, paralysed, Tasha's laughter, prone, restrained, charmed —
+  Dancing Lights' pull too —, maddened, frightened, blinded in fog or by the spell, deafened, enfeebled, burning) has a ring
+  of runes under its feet in the condition's colour (`RING_COLOURS`), one ring for each, turning and breathing
+  (`systems/ConditionRingSystem.ts`, pooled sprites); a hold keeps its particles on the body (`HOLD_AURAS`). The pointer
+  over such a body shows a tooltip of its conditions — each in its colour, what it does, its time left and the spell
+  (`ui/ConditionTip.ts`). The HUD's clocks (`drawIconClock`, `ui/IconClock.ts`) are Shield's everywhere, the concentration
+  badge's too: the time gone darkened, the time left a shrinking ring; the hero's own holds show there in red.
 - Enemies with a bow or crossbow and enemy spellcasters (`systems/EnemyRangedSystem.ts`) shoot and cast only at a hero
   in sight whose screen shows them (never from off-screen), stand to do it, lead a moving target and pick the spell that
   harms most (a burst by how many heroes it catches); their shots are the heroes' bolts and arrows on the enemies' side

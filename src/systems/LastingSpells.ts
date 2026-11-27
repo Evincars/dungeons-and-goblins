@@ -27,7 +27,13 @@ import { hurtPlayer } from './CombatSystem';
 import { hurtUndead } from './SummonSystem';
 import { logLine, logSaveDamage } from './RollLogSystem';
 import { recordSpell } from './CombatLogSystem';
-import { spreadSurface } from './Surfaces';
+import { igniteGrease, spreadSurface } from './Surfaces';
+import { endHoldsOf, holdsAnyone } from './SpellHolds';
+import { castSeeInvisibility, endInvisibility } from './Invisibility';
+import { bladeDice } from '../rules/SpellWeapons';
+import { feetToPx } from '../rules/Scale';
+import { screenToWorld } from '../render/Camera';
+import type { Level } from '../level/Level';
 
 /**
  * Spells that last after they are cast: buffs on the caster (Blade Ward, Shield, Mage Armour, Stoneskin; False Life's
@@ -48,7 +54,18 @@ const CONCENTRATION_MIN_DC = 10;
 /** Charged water strikes whoever stands in it for 1d4 lightning a round. */
 const SHOCK_DAMAGE: Dice = { count: 1, sides: 4, bonus: 0 };
 /** Each tick a hero's buffs run down from these. */
-const NO_BUFFS: Buffs = { bladeWard: 0, shield: 0, mageArmor: 0, stoneskin: 0, trueStrike: 0, longstrider: 0, protection: 0 };
+const NO_BUFFS: Buffs = {
+  bladeWard: 0, shield: 0, mageArmor: 0, stoneskin: 0, trueStrike: 0, longstrider: 0, protection: 0, blur: 0, mirrorImage: 0, images: 0,
+  shadowBlade: 0, magicWeapon: 0,
+};
+/** Flaming Sphere rolls 30 feet a round towards where its caster aims (px a tick), and stops this near the aim. */
+const SPHERE_SPEED = feetToPx(30) / TURN_TICKS;
+const SPHERE_ARRIVE = 2;
+/** The sphere's own body: a foe within this (px beyond its own radius) of its middle is rammed. */
+const SPHERE_BODY = 12;
+/** The sphere sheds light this far (px). */
+const SPHERE_LIGHT = 110;
+const SPHERE_FLICKER = 0.9;
 /** The puddle art (assets/SpriteGen.ts genPuddleSheet). */
 const PUDDLE_SHEET = 'puddle';
 /** The library's crackle is made for a patch this wide (px of its radius): it is scaled to the puddle. */
@@ -96,13 +113,29 @@ export function castBuff(caster: Player, def: SpellDef): boolean {
   else showBuffArt(caster, def, id);
   if (def.concentration) concentrate(caster, def.id, -1, def.durationTicks);
   const buffs = buffsOf(caster);
-  if (def.buff === 'blade_ward') buffs.bladeWard = def.durationTicks;
+  if (def.buff === 'see_invisibility') castSeeInvisibility(caster, def);
+  else if (def.buff === 'blur') buffs.blur = def.durationTicks;
+  else if (def.buff === 'mirror_image') castMirrorImage(buffs, def);
+  else if (def.buff === 'shadow_blade') castShadowBlade(buffs, def);
+  else if (def.buff === 'blade_ward') buffs.bladeWard = def.durationTicks;
   else if (def.buff === 'shield') buffs.shield = def.durationTicks;
   else if (def.buff === 'mage_armor') buffs.mageArmor = 1;
   else if (def.buff === 'stoneskin') buffs.stoneskin = def.durationTicks;
   else if (def.buff === 'true_strike') buffs.trueStrike = def.durationTicks;
   else if (def.buff === 'false_life') caster.tempHealth = Math.max(caster.tempHealth ?? 0, rollDice(def.damage));
   return true;
+}
+
+/** Mirror Image: its duplicates appear (as many as the spell's count), for its time. */
+function castMirrorImage(buffs: Buffs, def: SpellDef): void {
+  buffs.mirrorImage = def.durationTicks;
+  buffs.images = def.count;
+}
+
+/** Shadow Blade: the blade forms in the hand, its dice by the level it was cast at (rules/SpellWeapons.ts). */
+function castShadowBlade(buffs: Buffs, def: SpellDef): void {
+  buffs.shadowBlade = def.durationTicks;
+  buffs.bladeDice = bladeDice(def.level);
 }
 
 /** Mage Armour ends (switched off from the quick bar, or body armour put on), and the hero says so. */
@@ -124,6 +157,10 @@ function runDownBuffs(hero: Player): void {
   if (buffs.trueStrike) buffs.trueStrike = tick(buffs.trueStrike);
   if (buffs.longstrider) buffs.longstrider = tick(buffs.longstrider);
   if (buffs.protection) buffs.protection = tick(buffs.protection);
+  if (buffs.blur) buffs.blur = tick(buffs.blur);
+  if (buffs.mirrorImage) buffs.mirrorImage = tick(buffs.mirrorImage);
+  if (buffs.shadowBlade) buffs.shadowBlade = tick(buffs.shadowBlade);
+  if (buffs.magicWeapon) buffs.magicWeapon = tick(buffs.magicWeapon);
 }
 
 // ── Concentration ─────────────────────────────────────────────────────────────
@@ -133,7 +170,8 @@ function runDownBuffs(hero: Player): void {
  * ends with the concentration, and the concentration ends once it is gone (True Strike spent on a blow, Stoneskin run out).
  */
 const HELD_BUFFS: Readonly<Partial<Record<SpellId, keyof Buffs>>> = {
-  stoneskin: 'stoneskin', true_strike: 'trueStrike', protection_from_evil_and_good: 'protection',
+  stoneskin: 'stoneskin', true_strike: 'trueStrike', protection_from_evil_and_good: 'protection', blur: 'blur', shadow_blade: 'shadowBlade',
+  magic_weapon: 'magicWeapon',
 };
 
 /**
@@ -161,10 +199,31 @@ export function endConcentration(hero: Player): void {
   if (!held) return;
   world.removeComponent(hero, 'concentration');
   const made = held.zone >= 0 ? world.entity(held.zone) : undefined;
-  if ((made?.zone || made?.dancingLights || made?.fogCloud) && !made.removed) world.addComponent(made, 'removed', true);
+  if (isMade(made) && !made.removed) world.addComponent(made, 'removed', true);
   const buff = HELD_BUFFS[held.spell];
-  const buffs = buff ? holderOf(hero, held).buffs : undefined;
-  if (buff && buffs) buffs[buff] = 0;
+  const holder = holderOf(hero, held);
+  if (buff && holder.buffs) holder.buffs[buff] = 0;
+  // An invisibility it kept ends; every foe its hex held goes free (systems/SpellHolds.ts).
+  if (held.spell === 'invisibility' && made?.invisible) endInvisibility(made);
+  endHoldsOf(world.id(hero) ?? -1, held.spell);
+}
+
+/** Whether a held spell made the entity (a zone, Dancing Lights, a fog, a gust, webs) rather than holding a body. */
+const isMade = (made: Entity | undefined): made is Entity => !!(made?.zone || made?.dancingLights || made?.fogCloud || made?.gust || made?.surface);
+
+/** Whether what a held spell made is gone already (Gust of Wind scattered a fog, fire burnt the webs away). */
+function madeGone(held: NonNullable<Player['concentration']>): boolean {
+  if (held.zone < 0) return false;
+  const made = world.entity(held.zone);
+  if (!made) return true;
+  return isMade(made) && !!made.removed;
+}
+
+/** Whether a held hex holds nobody any more (every foe saved out of it), or a held invisibility has ended. */
+function holdsNobody(hero: Player, held: NonNullable<Player['concentration']>): boolean {
+  const def = SPELLS[held.spell];
+  if (held.spell === 'invisibility') return !world.entity(held.zone)?.invisible;
+  return def.condition !== null && def.condition !== 'charmed' && !holdsAnyone(world.id(hero) ?? -1, held.spell);
 }
 
 /** Whether the buff a held spell keeps going is gone already (spent, run out, or its holder fell): nothing is left to hold. */
@@ -180,7 +239,7 @@ function holdConcentration(hero: Player): void {
   const held = hero.concentration;
   if (!held) return;
   if (held.ticks !== undefined) held.ticks--;
-  if ((held.ticks !== undefined && held.ticks <= 0) || heldBuffGone(hero, held)) endConcentration(hero);
+  if ((held.ticks !== undefined && held.ticks <= 0) || heldBuffGone(hero, held) || madeGone(held) || holdsNobody(hero, held)) endConcentration(hero);
 }
 
 const schoolOf = (spell: string): string => (isCatalogSpell(spell) ? CATALOG[spell].school : '');
@@ -216,7 +275,9 @@ export function aimedWithin(caster: Player, x: number, y: number, reach: number)
 export function castZone(caster: Player, def: SpellDef, castLevel: number, targetX: number, targetY: number): void {
   const at = aimedWithin(caster, targetX, targetY, def.range);
   const owner = world.id(caster) ?? -1;
-  const zone = world.add({ position: at, zone: { spell: def.id, owner, castLevel, ticks: def.durationTicks, pulse: 0, follow: def.range <= 0 } });
+  // Flaming Sphere sheds light where it rolls.
+  const light = def.rolls ? { glow: { radius: SPHERE_LIGHT, flicker: SPHERE_FLICKER } } : {};
+  const zone = world.add({ position: at, zone: { spell: def.id, owner, castLevel, ticks: def.durationTicks, pulse: 0, follow: def.range <= 0 }, ...light });
   if (def.concentration) concentrate(caster, def.id, world.id(zone) ?? -1, def.durationTicks);
 }
 
@@ -253,8 +314,53 @@ function pulseZone(zone: Zone, caster: Player): void {
   }
 }
 
+/** Where the caster aims now: their crosshair (this screen's pointer, or the one a guest sent). */
+function aimOf(caster: Player): { x: number; y: number } {
+  return caster.aimWorld ?? screenToWorld(caster.playerInput.mouseX, caster.playerInput.mouseY, aimScratch);
+}
+const aimScratch = { x: 0, y: 0 };
+
+/** The first live foe the rolling sphere's body touches, if any. */
+function rammed(zone: Zone): Entity | undefined {
+  const { x, y } = zone.position;
+  for (const foe of nearby(x, y, SPHERE_BODY + MAX_MOB_RADIUS, Sense.mob, scratch)) {
+    if (isTarget(foe) && foe.health.current > 0 && Math.hypot(foe.position.x - x, foe.position.y - y) <= SPHERE_BODY + foe.radius.x) return foe;
+  }
+  return undefined;
+}
+
+/**
+ * Flaming Sphere rolls towards where its caster aims, 30 feet a round, never into a wall (over a pit it leaps). It sets grease
+ * and webs alight on its way, and rams the first foe it runs into: that foe saves against it at once, and the sphere stops
+ * there for the rest of the round.
+ */
+function rollSphere(level: Level, zone: Zone, caster: Player): void {
+  const z = zone.zone;
+  if ((z.stopped ?? 0) > 0) {
+    z.stopped = (z.stopped ?? 0) - 1;
+    return;
+  }
+  const target = aimOf(caster);
+  const dx = target.x - zone.position.x;
+  const dy = target.y - zone.position.y;
+  const d = Math.hypot(dx, dy);
+  if (d <= SPHERE_ARRIVE) return;
+  const step = Math.min(d, SPHERE_SPEED);
+  const nx = zone.position.x + (dx / d) * step;
+  const ny = zone.position.y + (dy / d) * step;
+  if (level.blocksPoint(nx, ny)) return;
+  zone.position.x = nx;
+  zone.position.y = ny;
+  igniteGrease(nx, ny, SPHERE_BODY, z.owner);
+  const foe = rammed(zone);
+  if (!foe) return;
+  const def = castDef(SPELLS[z.spell], z.castLevel, caster.playerStats.level);
+  zoneStrikes(caster, def, foe, spellcastingFor(characterSheet(caster), def.id).dc);
+  z.stopped = Math.max(1, z.pulse);
+}
+
 /** A zone follows its caster if it should, shows itself, strikes every round, and goes when it ends or its caster falls. */
-function updateZone(zone: Zone): void {
+function updateZone(level: Level | undefined, zone: Zone): void {
   const z = zone.zone;
   const caster = world.entity(z.owner);
   if (!isPlayer(caster) || !isActivePlayer(caster) || z.ticks <= 0) {
@@ -267,6 +373,7 @@ function updateZone(zone: Zone): void {
     zone.position.x = caster.position.x;
     zone.position.y = caster.position.y;
   }
+  if (level && SPELLS[z.spell].rolls) rollSphere(level, zone, caster);
   const art = SPELLS[z.spell].effect;
   // A zone with particles of its own shows in them for as long as it lasts (systems/VfxSystem.ts); any other now and then.
   const shown = SPELL_VFX[z.spell]?.zone !== undefined;
@@ -279,13 +386,17 @@ function updateZone(zone: Zone): void {
 // ── Grease ────────────────────────────────────────────────────────────────────
 
 /**
- * Grease where the caster aims (within the spell's reach), for its duration: difficult terrain that asks a Dexterity save
- * against the caster's spell DC of everyone in it now and whoever steps in (systems/Surfaces.ts).
+ * Grease (or Web's webs) where the caster aims (within the spell's reach), for its duration: difficult terrain that asks a
+ * Dexterity save against the caster's spell DC of everyone in it now and whoever steps in (systems/Surfaces.ts). Webs held
+ * by concentration go when it ends.
  */
 export function castGrease(caster: Player, def: SpellDef, targetX: number, targetY: number): void {
   const at = aimedWithin(caster, targetX, targetY, def.range);
   const dc = spellcastingFor(characterSheet(caster), def.id).dc;
-  spreadSurface('grease', at.x, at.y, def.radius, world.id(caster) ?? -1, def.durationTicks, dc);
+  const patch = spreadSurface(def.surface, at.x, at.y, def.radius, world.id(caster) ?? -1, def.durationTicks, dc);
+  const look = SPELL_VFX[def.id]?.burst;
+  if (look) playVfx(look, at.x, at.y);
+  if (def.concentration) concentrate(caster, def.id, world.id(patch) ?? -1, def.durationTicks);
 }
 
 // ── Water ─────────────────────────────────────────────────────────────────────
@@ -377,7 +488,7 @@ function shock(puddle: Puddle): void {
   for (const hero of q.players) if (isActivePlayer(hero) && inPuddle(puddle, hero)) hurtPlayer(hero, puddle, rollDice(SHOCK_DAMAGE), 'lightning');
   for (const undead of q.summons) if (inPuddle(puddle, undead)) hurtUndead(undead, rollDice(SHOCK_DAMAGE));
   for (const foe of nearby(x, y, puddle.surface.radius + MAX_MOB_RADIUS, Sense.mob, scratch)) {
-    if (isMob(foe) && foe.health.current > 0 && inPuddle(puddle, foe)) hitMob(foe, maker ?? puddle, rollDice(SHOCK_DAMAGE), true);
+    if (isMob(foe) && foe.health.current > 0 && inPuddle(puddle, foe)) hitMob(foe, maker ?? puddle, rollDice(SHOCK_DAMAGE), true, 'lightning');
   }
 }
 
@@ -390,10 +501,10 @@ function updatePuddle(puddle: Puddle): void {
 // ── Every tick ────────────────────────────────────────────────────────────────
 
 /** Buffs run down, spells held by concentration run out, zones strike and follow, charged water shocks. */
-export function updateLastingSpells(): void {
+export function updateLastingSpells(level?: Level): void {
   for (const hero of q.players) runDownBuffs(hero);
   for (const hero of q.players) holdConcentration(hero);
-  for (const zone of q.zones) if (!zone.removed) updateZone(zone);
+  for (const zone of q.zones) if (!zone.removed) updateZone(level, zone);
   for (const puddle of q.surfaces) updatePuddle(puddle);
 }
 
@@ -404,5 +515,7 @@ export function updateLastingSpells(): void {
 export function endUntilRest(hero: Player): void {
   if (hero.buffs) Object.assign(hero.buffs, NO_BUFFS);
   if (hero.arcana) hero.arcana.darkvision = hero.arcana.seeInvisible = false;
+  if (hero.seesInvisible !== undefined) world.removeComponent(hero, 'seesInvisible');
+  if (hero.spellHolds) world.removeComponent(hero, 'spellHolds');
   endConcentration(hero);
 }

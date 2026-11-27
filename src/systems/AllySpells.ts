@@ -7,14 +7,17 @@ import { text } from '../core/texts';
 import { spellName } from '../rules/Names';
 import { buffsOf, concentrate } from './LastingSpells';
 import { logLine } from './RollLogSystem';
+import { castInvisibility } from './Invisibility';
+import { weaponBonus } from '../rules/SpellWeapons';
 
 /**
  * Spells a hero casts on a companion they touch, or on themselves (`kind: ally` in src/data/spells.json): the hero the
  * crosshair is on — the corner brackets of the aim guide frame them, systems/AimGuideSystem.ts — else the caster. The
  * companion must stand within the spell's reach. Longstrider gives them 10 feet more speed for an hour; Protection from Evil
  * and Good, held by the caster's concentration, wards them for a minute: undead (and fiends, fey… the game has only undead
- * of those) attack them at disadvantage (systems/Strike.ts). Each keeps an aura round them while it lasts, and their HUD
- * shows its icon and time left (ui/PassiveHud.ts).
+ * of those) attack them at disadvantage (systems/Strike.ts); Magic Weapon makes the weapon in their hand magic (+1, more cast
+ * higher, rules/SpellWeapons.ts) and Invisibility hides them (systems/Invisibility.ts), both held by the caster's
+ * concentration. Each keeps an aura or mark on them while it lasts, and their HUD shows its icon and time left (ui/PassiveHud.ts).
  */
 
 /** A hero within this far of the crosshair (px, round the middle of their body) is the one picked. */
@@ -53,10 +56,24 @@ export function castOnAlly(caster: Player, def: SpellDef, x: number, y: number):
   const buffs = buffsOf(ally);
   if (def.buff === 'longstrider') buffs.longstrider = def.durationTicks;
   else if (def.buff === 'protection_from_evil_and_good') buffs.protection = def.durationTicks;
+  else if (def.buff === 'invisibility') castInvisibility(caster, ally, def);
+  else if (def.buff === 'magic_weapon') enchantWeapon(buffs, def);
   const look = SPELL_VFX[def.id]?.aura;
   if (look) playVfx(look, ally.position.x, ally.position.y, BODY_MIDDLE);
-  logLine(ally, def.buff === 'protection_from_evil_and_good' ? text('roll.warded') : spellName(def.id), 'heal');
+  logLine(ally, allyLine(def), 'heal');
   return true;
+}
+
+/** What the companion is told over their head: warded, invisible, or the spell's name. */
+function allyLine(def: SpellDef): string {
+  if (def.buff === 'protection_from_evil_and_good') return text('roll.warded');
+  return def.buff === 'invisibility' ? text('roll.invisible') : spellName(def.id);
+}
+
+/** Magic Weapon: the weapon in the companion's hand turns magic for its time, its bonus by the level it was cast at. */
+function enchantWeapon(buffs: NonNullable<Player['buffs']>, def: SpellDef): void {
+  buffs.magicWeapon = def.durationTicks;
+  buffs.weaponBonus = weaponBonus(def.level);
 }
 
 /** How much faster a hero walks: Longstrider's 10 feet while it lasts. */

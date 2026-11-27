@@ -4,7 +4,7 @@ import { isActivePlayer, isPlayer } from '../../world';
 import type { Entity, Mob, Player } from '../../world';
 import { SIGHT_RANGE } from '../constants';
 import { nearby, Sense } from './spatial';
-import { sightObscured } from './obscured';
+import { sightObscured, unseenBy } from './obscured';
 
 /** Players the sight check is run over; reused so looking around allocates nothing. */
 const candidates: Entity[] = [];
@@ -31,8 +31,9 @@ export function canSee(level: Level, mob: Mob, player: Player): boolean {
   if (d2 > SIGHT_RANGE * SIGHT_RANGE) return false;
   const { x: mx, y: my } = mob.position;
   const { x: px, y: py } = player.position;
-  // Fog hides a hero in it or behind it (Fog Cloud), but for one close enough to hear them.
-  if (sightObscured(mx, my, px, py)) return false;
+  // Fog hides a hero in it or behind it (Fog Cloud), but for one close enough to hear them; so does being blinded
+  // (Blindness), and a hero invisible to it (Invisibility, unless it sees the invisible).
+  if (sightObscured(mx, my, px, py) || unseenBy(mob, player)) return false;
   return level.checkLineOfSight(mx, eyeY(level, mx, my), px, eyeY(level, px, py));
 }
 

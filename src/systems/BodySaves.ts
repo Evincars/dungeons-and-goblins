@@ -1,7 +1,8 @@
 import { isPlayer } from '../world';
 import type { Entity, StatName } from '../world';
 import { MONSTERS } from '../rules/Monsters';
-import { rollDie } from '../rules/Dice';
+import { rollCheck } from '../rules/Dice';
+import { failsSave, saveMode } from './SpellHolds';
 import { heroSaveRoll } from './FeatureSystem';
 import { logAbilitySave } from './RollLogSystem';
 
@@ -16,7 +17,8 @@ export function bodySave(body: Entity, stat: StatName, dc: number): boolean {
   return save.success;
 }
 
+/** A foe's save: d20 + its modifier (paralysed, Strength and Dexterity fail; restrained, Dexterity at disadvantage). */
 function foeSave(foe: Entity, stat: StatName, dc: number): { total: number; success: boolean } {
-  const total = rollDie(20) + (foe.mobType ? MONSTERS[foe.mobType].modifiers[stat] : 0);
-  return { total, success: total >= dc };
+  if (failsSave(foe, stat)) return { total: 0, success: false };
+  return rollCheck(foe.mobType ? MONSTERS[foe.mobType].modifiers[stat] : 0, dc, saveMode(foe, stat));
 }

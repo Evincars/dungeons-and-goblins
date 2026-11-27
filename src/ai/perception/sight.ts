@@ -4,6 +4,7 @@ import { isActivePlayer, isPlayer } from '../../world';
 import type { Entity, Mob, Player } from '../../world';
 import { SIGHT_RANGE } from '../constants';
 import { nearby, Sense } from './spatial';
+import { sightObscured } from './obscured';
 
 /** Players the sight check is run over; reused so looking around allocates nothing. */
 const candidates: Entity[] = [];
@@ -21,7 +22,7 @@ function eyeY(level: Level, x: number, y: number): number {
   return level.getTileAt(x, y)?.passable === false ? y - WALL_SINK : y;
 }
 
-/** Whether the mob can see the player: within sight range in the open, with nothing solid between them. */
+/** Whether the mob can see the player: within sight range in the open, with nothing solid (nor fog) between them. */
 export function canSee(level: Level, mob: Mob, player: Player): boolean {
   if (!huntable(level, player)) return false;
   const dx = player.position.x - mob.position.x;
@@ -30,6 +31,8 @@ export function canSee(level: Level, mob: Mob, player: Player): boolean {
   if (d2 > SIGHT_RANGE * SIGHT_RANGE) return false;
   const { x: mx, y: my } = mob.position;
   const { x: px, y: py } = player.position;
+  // Fog hides a hero in it or behind it (Fog Cloud), but for one close enough to hear them.
+  if (sightObscured(mx, my, px, py)) return false;
   return level.checkLineOfSight(mx, eyeY(level, mx, my), px, eyeY(level, px, py));
 }
 

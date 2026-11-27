@@ -51,12 +51,15 @@ const ICON_NAMES = {
 };
 
 /** Spells the game keeps (their text and rules) but leaves out of the Skills tab: they have no part in play here. */
-const HIDDEN = new Set(['friends', 'light', 'mage_hand', 'minor_illusion']);
+const HIDDEN = new Set([
+  'friends', 'light', 'mage_hand', 'minor_illusion', 'bursting_sinew',
+  'disguise_self', 'jump', 'expeditious_retreat', 'feather_fall', 'find_familiar',
+]);
+/** Spells the game holds by concentration though the wiki's table does not say so (one held at a time, as every other). */
+const CONCENTRATION = new Set(['dancing_lights', 'true_strike']);
 /** The wiki's table gives some spells only their numbers: their description as Baldur's Gate tells it. */
 const TEXTS = {
-  bursting_sinew: 'Explode a fresh corpse, causing it to impale those around it: everyone within 10 feet of it makes a Dexterity '
-    + 'saving throw or takes 1d10 piercing damage. A corpse burnt by fire, acid or radiance cannot be used, and one used is left a '
-    + 'pile of viscera. 60 feet. The damage grows to 2d10 at level 5 and 3d10 at level 10.',
+  dancing_lights: 'Light up the dark round you, or send the lights away to draw foes to them. 10 Turns 18m Concentration',
 };
 
 const ENTITIES = { '&amp;': '&', '&#39;': "'", '&#039;': "'", '&quot;': '"', '&nbsp;': ' ', '&lt;': '<', '&gt;': '>' };
@@ -113,7 +116,7 @@ for (const row of rows(await page())) {
   const img = iconOf(id, NAMES[row.name] ?? row.name);
   if (!img) console.warn(`no icon for ${id}`);
   spells[id] = {
-    name: NAMES[row.name] ?? row.name, level: row.level, school: row.school, concentration: row.concentration,
+    name: NAMES[row.name] ?? row.name, level: row.level, school: row.school, concentration: row.concentration || CONCENTRATION.has(id),
     classes: classes.map((c) => c.toLowerCase()), knight: learners.includes('Eldritch Knight'), subclasses,
     book: [BOOK[id], id].find((key) => key && key in book) ?? null, text: TEXTS[id] ?? row.text, img,
     ...(HIDDEN.has(id) ? { hidden: true } : {}),

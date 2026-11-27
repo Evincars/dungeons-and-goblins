@@ -22,13 +22,16 @@ import { SPELL_STATS } from '../entities/WeaponStats';
 import { AIM_HEIGHT } from '../entities/ProjectileFactory';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { PixelLabel } from '../ui/PixelText';
+import { bracketPath } from './MarkerSystem';
+import { allyAt } from './AllySpells';
 
 /**
  * Where a shot will go, shown faintly while the hero aims. A bolt, darts or an arrow fly straight: a dotted line from the
  * hero's hands the way they aim, as far as the shot flies (it goes off there if it strikes nothing on the way) — grey, and
  * amber past a bow's normal range, where shots roll with disadvantage. A spell with an area shows only that area where it
  * will go off — a circle, a square (a cube), or a cone or a line from the hands — at the crosshair, or as far towards it as it reaches,
- * a faint mark under each enemy it would catch, and how far off it is, in feet. A spell's guide shows while its quick-bar key
+ * a faint mark under each enemy it would catch, and how far off it is, in feet. A spell for a companion (Longstrider,
+ * Protection from Evil and Good) frames the hero it would go to in corner brackets, red beyond its reach. A spell's guide shows while its quick-bar key
  * is held (let go, it casts) or while it is cast; a bow's or crossbow's while it is in hand. Drawn on this screen only.
  */
 
@@ -50,6 +53,8 @@ const CAUGHT_RY = 3;
 /** The distance label sits this far right of and above the point it measures to. */
 const LABEL_DX = 6;
 const LABEL_DY = -12;
+/** The brackets round a companion an ally spell would go to: half their body's breadth and height, its middle this far up. */
+const ALLY_BOX = { halfW: 11, halfH: 17, lift: 15 };
 /** Over the world, under the fog and the HUD (as the corner brackets). */
 const GUIDE_Z = 999_999;
 
@@ -58,7 +63,7 @@ const GUIDE_Z = 999_999;
  * for a shot that flies straight). `radius` and `landsWhere` describe that area: its breadth, and whether it is thrown at
  * the crosshair or wrapped round the caster.
  */
-export type Aim = { reach: number; normal: number; radius: number; landsWhere: 'target' | 'caster'; area: AreaShape | null };
+export type Aim = { reach: number; normal: number; radius: number; landsWhere: 'target' | 'caster' | 'ally'; area: AreaShape | null };
 
 let guide: Graphics | null = null;
 let label: PixelLabel | null = null;
@@ -84,9 +89,13 @@ function areaAim(area: AreaShape): Aim {
   return { reach: area.range, normal: area.range, radius: area.radius, landsWhere: thrown ? 'target' : 'caster', area };
 }
 
-/** A shot that flies straight (as far as a spell bolt flies), or a spell's area. */
+/** Whether a spell flies straight as a bolt does (Sleep's mote too). */
+const fliesStraight = (def: SpellDef): boolean => def.kind === 'bolt' || def.kind === 'missiles' || def.kind === 'sleep';
+
+/** A shot that flies straight (as far as a spell bolt flies), a companion to touch, or a spell's area. */
 function spellAim(def: SpellDef): Aim {
-  if (def.kind !== 'bolt' && def.kind !== 'missiles') return areaAim(def);
+  if (def.kind === 'ally') return { reach: def.range, normal: def.range, radius: 0, landsWhere: 'ally', area: null };
+  if (!fliesStraight(def)) return areaAim(def);
   const reach = SPELL_STATS.boltSpeed * SPELL_STATS.boltLife;
   return { reach, normal: reach, radius: 0, landsWhere: 'target', area: null };
 }
@@ -199,6 +208,20 @@ function guideArea(g: Graphics, text: PixelLabel, player: Player, def: AreaShape
   showDistance(text, centre.x, centre.y, dist, IN_REACH);
 }
 
+/**
+ * A spell for a companion: corner brackets round the hero it would go to (the one under the crosshair, else the caster), grey
+ * within its reach, red beyond it, and how far off they are.
+ */
+function guideAlly(g: Graphics, text: PixelLabel, player: Player, a: Aim): void {
+  const ally = allyAt(player, aim.x, aim.y);
+  const x = ally.position.x;
+  const y = ally.position.y - ALLY_BOX.lift;
+  const dist = Math.hypot(ally.position.x - player.position.x, ally.position.y - player.position.y);
+  const colour = ally === player || dist <= a.reach ? IN_REACH : OUT_OF_REACH;
+  bracketPath(g, x, y, ALLY_BOX.halfW, ALLY_BOX.halfH).stroke({ color: colour, alpha: RING_ALPHA * 2, width: 1 });
+  if (ally !== player) showDistance(text, x + ALLY_BOX.halfW, y - ALLY_BOX.halfH, dist, colour);
+}
+
 /** Once a tick: the guide for what this screen's hero aims, or nothing. */
 export function updateAimGuide(gameLayer: Container): void {
   const { g, text } = layers(gameLayer);
@@ -211,6 +234,10 @@ export function updateAimGuide(gameLayer: Container): void {
   screenToWorld(p.x, p.y, aim);
   if (a.area) {
     guideArea(g, text, player, a.area, a.landsWhere === 'target');
+    return;
+  }
+  if (a.landsWhere === 'ally') {
+    guideAlly(g, text, player, a);
     return;
   }
   // A shot leaves from hand height and flies at the crosshair (the hero's aim is taken from there, MovementSystem.ts), so

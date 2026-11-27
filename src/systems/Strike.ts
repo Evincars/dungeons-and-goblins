@@ -13,6 +13,9 @@ import { sound } from '../audio/SoundPlayer';
 import { bleeds, spawnBlood } from '../entities/Blood';
 import { withinCloseQuarters } from '../rules/CloseQuarters';
 import { playVfx } from '../render/VfxPlayer';
+import { inFog } from '../ai/perception/obscured';
+import { isOtherworldly } from '../rules/Conditions';
+import { isAsleep } from './SleepSpell';
 
 /**
  * Every blow in the game goes through here: the attack is rolled against the target's Armor Class, and the
@@ -68,6 +71,37 @@ function withHeroDown(attack: AttackProfile, attacker: Entity | undefined, targe
   return mode === attack.mode ? attack : { ...attack, mode };
 }
 
+/**
+ * Fog (Fog Cloud, ai/perception/obscured.ts): an attacker in it cannot see out, a target in it cannot be seen — either way the
+ * attack is at disadvantage.
+ */
+function withObscured(attack: AttackProfile, attacker: Entity | undefined, target: Entity): AttackProfile {
+  const hidden = (target.position && inFog(target.position.x, target.position.y)) || (attacker?.position && inFog(attacker.position.x, attacker.position.y));
+  return hidden ? { ...attack, mode: worse(attack.mode) } : attack;
+}
+
+/** Protection from Evil and Good (systems/AllySpells.ts): an undead (or fiend, fey…) attacks the warded at disadvantage. */
+function withWard(attack: AttackProfile, attacker: Entity | undefined, target: Entity): AttackProfile {
+  if ((target.buffs?.protection ?? 0) <= 0 || !attacker?.mobType) return attack;
+  return isOtherworldly(MONSTERS[attacker.mobType].creature) ? { ...attack, mode: worse(attack.mode) } : attack;
+}
+
+/**
+ * A target asleep (Sleep, systems/SleepSpell.ts) is unconscious: attacks against it have advantage, and a hit from within 5
+ * feet is a critical hit.
+ */
+function withSleeper(attack: AttackProfile, attacker: Entity | undefined, target: Entity): AttackProfile {
+  if (!isAsleep(target)) return attack;
+  const close = !!attacker?.position && !!target.position
+    && withinCloseQuarters(attacker.position.x, attacker.position.y, target.position.x, target.position.y);
+  return { ...attack, mode: better(attack.mode), ...(close ? { critOnHit: true } : {}) };
+}
+
+/** Everything about where the two stand and what holds them that shapes the roll. */
+function withCircumstances(attack: AttackProfile, attacker: Entity | undefined, target: Entity): AttackProfile {
+  return withSleeper(withWard(withObscured(withHeroDown(attack, attacker, target), attacker, target), attacker, target), attacker, target);
+}
+
 /** One step towards disadvantage, or towards advantage (each cancels the other). */
 const worse = (mode: AttackProfile['mode']): AttackProfile['mode'] => (mode === 'advantage' ? 'normal' : 'disadvantage');
 const better = (mode: AttackProfile['mode']): AttackProfile['mode'] => (mode === 'disadvantage' ? 'normal' : 'advantage');
@@ -80,7 +114,7 @@ const better = (mode: AttackProfile['mode']): AttackProfile['mode'] => (mode ===
  */
 export function strike(target: Entity, attack: AttackProfile, logOn: Entity | undefined, spell?: SpellId): AttackOutcome {
   const prepared = spell ? attack : prepareBlow(attack, logOn, target);
-  const outcome = resolveAttack(withTrueStrike(withFirstStrike(withHeroDown(prepared, logOn, target), logOn), logOn), armorClassOf(target));
+  const outcome = resolveAttack(withTrueStrike(withFirstStrike(withCircumstances(prepared, logOn, target), logOn), logOn), armorClassOf(target));
   if (!spell) afterBlow(logOn, target, outcome);
   if (outcome.critical && target.position) sound.playSound('critical', target.position.x, target.position.y);
   if (outcome.damage > 0 && bleeds(target)) spawnBlood(target);

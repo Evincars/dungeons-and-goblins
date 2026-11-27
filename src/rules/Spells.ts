@@ -25,7 +25,7 @@ export const SPELL_IDS = [
   'chain_lightning', 'circle_of_death', 'disintegrate', 'harm', 'heal', 'otilukes_freezing_sphere',
   'blade_ward', 'shield', 'mage_armor', 'false_life', 'stoneskin', 'arms_of_hadar', 'sunbeam', 'phantasmal_killer', 'vampiric_touch',
   'cloud_of_daggers', 'cloudkill', 'hunger_of_hadar', 'spirit_guardians', 'insect_plague', 'create_or_destroy_water',
-  'bursting_sinew', 'dancing_lights', 'true_strike', 'grease',
+  'dancing_lights', 'true_strike', 'grease', 'sleep', 'longstrider', 'protection_from_evil_and_good', 'fog_cloud',
 ] as const;
 export type SpellId = (typeof SPELL_IDS)[number];
 
@@ -36,18 +36,21 @@ export function isSpellId(value: unknown): value is SpellId {
 /**
  * bolt: a projectile, rolled to hit. missiles: darts that always hit. burst: an area, saved against. heal: the caster (and,
  * with a radius, the heroes near). buff: something that lasts on the caster (systems/LastingSpells.ts). zone: an area that
- * strikes whoever is in it every round while it lasts. water: a puddle where the caster aims. corpse: a fresh corpse bursts
- * (Bursting Sinew, systems/CorpseSpells.ts). lights: hovering lights that shed light and draw foes (Dancing Lights,
- * systems/DancingLights.ts). surface: grease where the caster aims (Grease, systems/Surfaces.ts).
+ * strikes whoever is in it every round while it lasts. water: a puddle where the caster aims. lights: hovering lights that shed light and draw foes (Dancing Lights,
+ * systems/DancingLights.ts). surface: grease where the caster aims (Grease, systems/Surfaces.ts). sleep: a mote flying as a
+ * bolt that lulls the first foe it touches to sleep (Sleep, systems/SleepSpell.ts). ally: a buff on a hero the caster picks
+ * (Longstrider, Protection from Evil and Good, systems/AllySpells.ts). fog: a cloud that heavily obscures (Fog Cloud,
+ * systems/FogCloud.ts).
  */
-export const SPELL_KINDS = ['bolt', 'missiles', 'burst', 'heal', 'buff', 'zone', 'water', 'corpse', 'lights', 'surface'] as const;
+export const SPELL_KINDS = ['bolt', 'missiles', 'burst', 'heal', 'buff', 'zone', 'water', 'lights', 'surface', 'sleep', 'ally', 'fog'] as const;
 export type SpellKind = (typeof SPELL_KINDS)[number];
 
 /**
  * What a buff spell does to its caster: resist weapons (Blade Ward, Stoneskin), +5 AC (Shield), AC 13 + DEX (Mage Armour),
- * temporary hit points (False Life), advantage on the next attack roll (True Strike).
+ * temporary hit points (False Life), advantage on the next attack roll (True Strike); on the hero picked (an `ally` spell): 10
+ * feet more speed (Longstrider), undead attacking at disadvantage (Protection from Evil and Good).
  */
-export const BUFF_IDS = ['blade_ward', 'shield', 'mage_armor', 'false_life', 'stoneskin', 'true_strike'] as const;
+export const BUFF_IDS = ['blade_ward', 'shield', 'mage_armor', 'false_life', 'stoneskin', 'true_strike', 'longstrider', 'protection_from_evil_and_good'] as const;
 export type BuffId = (typeof BUFF_IDS)[number];
 const isBuff = (v: unknown): v is BuffId => BUFF_IDS.some((b) => b === v);
 
@@ -121,7 +124,8 @@ function readSpell(id: SpellId, raw: unknown): SpellDef {
     damageType: isDamageType(raw.damageType) ? raw.damageType : 'force',
     recoveryTicks: Math.round(num(raw.recovery, 1) * TICKS_PER_SECOND),
     count: num(raw.count, 1),
-    save: isStatName(raw.save) ? raw.save : raw.kind === 'zone' ? null : 'dexterity',
+    // A burst always has a save (Dexterity unless named); anything else only the one it names.
+    save: isStatName(raw.save) ? raw.save : raw.kind === 'burst' ? 'dexterity' : null,
     range: num(raw.range, 0),
     radius: num(raw.radius, 0),
     area: isArea(raw.area) ? raw.area : 'sphere',
@@ -192,8 +196,11 @@ export const SPELLS = {
   spirit_guardians: readSpell('spirit_guardians', spells.spirit_guardians),
   insect_plague: readSpell('insect_plague', spells.insect_plague),
   create_or_destroy_water: readSpell('create_or_destroy_water', spells.create_or_destroy_water),
-  bursting_sinew: readSpell('bursting_sinew', spells.bursting_sinew),
   dancing_lights: readSpell('dancing_lights', spells.dancing_lights),
   true_strike: readSpell('true_strike', spells.true_strike),
   grease: readSpell('grease', spells.grease),
+  sleep: readSpell('sleep', spells.sleep),
+  longstrider: readSpell('longstrider', spells.longstrider),
+  protection_from_evil_and_good: readSpell('protection_from_evil_and_good', spells.protection_from_evil_and_good),
+  fog_cloud: readSpell('fog_cloud', spells.fog_cloud),
 } as const satisfies Record<SpellId, SpellDef>;

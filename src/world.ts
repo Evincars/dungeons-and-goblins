@@ -224,6 +224,8 @@ export function isSurfaceKind(value: unknown): value is SurfaceKind {
 
 /** The frame of the puddle art (assets/SpriteGen.ts genPuddleSheet) each kind of puddle shows. */
 export const PUDDLE_FRAMES = { water: 0, shock: 1, grease: 2, fire: 3 } as const satisfies Record<SurfaceKind, number>;
+/** The puddle art's circle is this wide (px of its radius) at scale 1: a patch of another radius is scaled to fit. */
+export const PUDDLE_ART_RADIUS = 48;
 
 /** Who controls a player character: the host, or one of up to three guests in a co-op room. */
 export const PLAYER_SLOTS = ['host', 'p2', 'p3', 'p4'] as const;
@@ -396,9 +398,10 @@ export type Entity = {
    * What a hero's maneuvers or spells have done to a foe, as ticks left of each: tripped, frightened, goaded (disadvantage
    * against anyone but `by`, the entity id of whoever did it), distracted (the next attacker of someone else has advantage)
    * eldritch (its next saving throw against a spell is at disadvantage) and charmed (an enchanter's Hypnotic Gaze or an
-   * illusion holds it: it stands still and strikes nobody until the ticks run out or it is hurt).
+   * illusion holds it: it stands still and strikes nobody until the ticks run out or it is hurt), and asleep (Sleep: it lies
+   * unconscious until the ticks run out or it is hurt, systems/SleepSpell.ts; left out until a foe is first lulled).
    */
-  status?: { prone: number; frightened: number; goaded: number; distracted: number; eldritch: number; charmed: number; by: number };
+  status?: { prone: number; frightened: number; goaded: number; distracted: number; eldritch: number; charmed: number; by: number; asleep?: number };
   /**
    * What a wizard's school keeps going between uses (systems/SchoolSystem.ts): the Arcane Ward's strength; the Portent dice
    * foreseen and the ticks until a used one is foreseen again; the ticks until Grim Harvest, Instinctive Charm, Illusory Self and
@@ -436,11 +439,16 @@ export type Entity = {
   /**
    * Spells that last on a hero (systems/LastingSpells.ts), as ticks left (0: off): Blade Ward and Stoneskin (resistance to
    * weapons' damage), Shield (+5 AC), True Strike (advantage on the next attack roll); Mage Armour is 1 while it lasts (until a
-   * long rest).
+   * long rest). Cast on them by a companion or themselves (systems/AllySpells.ts): Longstrider (10 feet more speed) and
+   * Protection from Evil and Good (undead attack them at disadvantage).
    */
-  buffs?: { bladeWard: number; shield: number; mageArmor: number; stoneskin: number; trueStrike?: number };
-  /** The spell a hero holds by concentration (one at a time; damage may break it), and the entity id of its zone (-1: none). */
-  concentration?: { spell: SpellId; zone: number };
+  buffs?: { bladeWard: number; shield: number; mageArmor: number; stoneskin: number; trueStrike?: number; longstrider?: number; protection?: number };
+  /**
+   * The spell a hero holds by concentration (one at a time: another such spell ends it; damage may break it), the entity id of
+   * what it made or holds (a zone, Dancing Lights, a fog cloud, the hero warded; -1: none) and the ticks it may still last (left
+   * out: as long as what it holds lasts).
+   */
+  concentration?: { spell: SpellId; zone: number; ticks?: number };
   /**
    * A spell that lingers where it was cast (Cloud of Daggers, Cloudkill, Spirit Guardians…, systems/LastingSpells.ts): the
    * spell, its caster's entity id, the level it was cast at, the ticks it lasts and until it strikes again; `follow`: it
@@ -478,11 +486,11 @@ export type Entity = {
   /** A foe drawn to Dancing Lights: the anchor's entity id; it drifts over to gaze at them until hurt, or a hero comes close. */
   entranced?: number;
   /**
-   * A fallen foe's body, fresh enough for Bursting Sinew: the ticks it stays fresh, and whether it may be used (not burnt to a
-   * husk by fire, acid or radiance).
+   * Fog Cloud (systems/FogCloud.ts): its caster's entity id, how wide it is (px) and the ticks it lasts. Whoever is in it is
+   * heavily obscured (ai/perception/obscured.ts).
    */
-  corpse?: { fresh: number; fit: boolean };
-  /** The damage type of the last blow a foe took (whether its corpse is fit for Bursting Sinew; resistances, rules/Resistances.ts). */
+  fogCloud?: { owner: number; radius: number; ticks: number };
+  /** The damage type of the last blow a foe took (for its resistances, rules/Resistances.ts). */
   lastDamageType?: DamageType;
   /**
    * An undead a necromancer raised (systems/SummonSystem.ts): its kind, its master's entity id, and its blow (to hit,

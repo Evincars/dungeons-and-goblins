@@ -17,6 +17,7 @@ import { FEATS } from '../rules/Feats';
 import { BASE_SPEED_FT } from '../rules/CharacterSheet';
 import { isDown, terrainPace } from './Surfaces';
 import { athleteSpeedFactor } from './FeatureSystem';
+import { longstriderFactor } from './AllySpells';
 
 type Point = { x: number; y: number };
 type Body = (typeof q.physical)['entities'][number];
@@ -244,7 +245,7 @@ function drivePlayer(walker: Walker): void {
   // A heavy load slows the hero past 80 % of what they can carry, to a walk at all of it (rules/Encumbrance.ts).
   const kg = loadKg(walker.inventory, walker.equipped);
   const pace = sprintFactor(walker, moving, fullyLaden(kg)) * loadPace(kg);
-  const spd = (walker.speed ?? 1.0) * pace * featSpeedFactor(walker) * athleteSpeedFactor(walker) * schoolSpeedFactor(walker);
+  const spd = (walker.speed ?? 1.0) * pace * featSpeedFactor(walker) * athleteSpeedFactor(walker) * schoolSpeedFactor(walker) * longstriderFactor(walker);
   const vel = walker.velocity;
   if (pi.up)    vel.y -= spd;
   if (pi.down)  vel.y += spd;

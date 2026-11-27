@@ -555,14 +555,11 @@ effect('sunbeam', 2, [
 
 // ── Flasks, grease and fire; the dungeon's own cantrips ──────────────────────
 // Sizes follow src/data/throwables.json and src/data/spells.json (16 px a unit): a flask's splash 48 px round (alchemist's
-// fire) or 96 px (grease); Grease and Bursting Sinew 44 px; fire on the floor about 44 px.
+// fire) or 96 px (grease); Grease 44 px; fire on the floor about 44 px.
 
 const C4 = {
   grease: gradient([[0, [0.75, 0.6, 0.3]], [0.5, [0.5, 0.38, 0.16]], [1, [0.3, 0.22, 0.08]]], [[0, 0.95], [0.7, 0.8], [1, 0]]),
   sheen: gradient([[0, [1, 0.95, 0.75]], [1, [0.85, 0.75, 0.45]]], [[0, 0], [0.3, 0.7], [1, 0]]),
-  gore: gradient([[0, [0.85, 0.12, 0.1]], [0.5, [0.55, 0.04, 0.05]], [1, [0.3, 0.02, 0.03]]], [[0, 1], [0.7, 0.9], [1, 0]]),
-  bone: gradient([[0, [1, 0.97, 0.9]], [1, [0.75, 0.7, 0.6]]], [[0, 1], [0.7, 0.9], [1, 0]]),
-  rot: gradient([[0, [0.3, 0.05, 0.05]], [1, [0.12, 0.02, 0.03]]], [[0, 0], [0.25, 0.5], [1, 0]]),
   gold: gradient([[0, [1, 1, 0.85]], [0.4, [1, 0.85, 0.4]], [1, [0.85, 0.55, 0.15]]]),
   goldGlow: gradient([[0, [1, 0.9, 0.6]], [1, [1, 0.7, 0.25]]], [[0, 0], [0.3, 0.4], [1, 0]]),
   wisp: gradient([[0, [1, 0.98, 0.85]], [0.5, [1, 0.85, 0.5]], [1, [1, 0.6, 0.2]]], [[0, 0.9], [0.6, 0.6], [1, 0]]),
@@ -613,12 +610,6 @@ effect('grease-ignite', 1.8, [
   emitter('whoosh', once(0.15, { max: 120, rate: 800, ring: 2.8, filled: true, life: [0.4, 0.8], vmin: [-0.4, 2], vmax: [0.4, 5], drag: 0.8, size: [0.6, 0.15], colors: C.flame, round: true })),
   emitter('smoke', once(0.3, { max: 20, rate: 70, ring: 2.6, filled: true, life: [1, 1.6], vmin: [-0.4, 1], vmax: [0.4, 2], drag: 0.5, size: [0.7, 1.4], colors: C.smoke, round: true, blend: 'alpha' })),
 ]);
-// Bursting Sinew: the corpse bursts — gore thrown out over the whole of it, splinters of bone flying, a dark mist hanging.
-effect('bursting-sinew', 1.8, [
-  emitter('gore', once(0.08, { max: 80, rate: 900, box: [0.4, 0.4], life: [0.35, 0.7], vmin: [-7, -3], vmax: [7, 6], gravity: 8, drag: 1.5, size: [0.26, 0.1], colors: C4.gore, round: true, blend: 'alpha', floor: 0.6 })),
-  emitter('bone', once(0.06, { max: 30, rate: 500, box: [0.3, 0.3], life: [0.3, 0.55], vmin: [-9, -2], vmax: [9, 7], gravity: 6, drag: 1, size: [0.16, 0.06], colors: C4.bone })),
-  emitter('mist', once(0.2, { max: 16, rate: 80, ring: 2.4, filled: true, life: [0.8, 1.3], vmin: [-0.3, 0.2], vmax: [0.3, 0.8], drag: 0.8, size: [0.7, 1.2], colors: C4.rot, round: true, blend: 'alpha' })),
-]);
 // Dancing Lights: a burst of golden motes as they are called up, then each light a warm orb of torchlight, motes drifting
 // off it.
 effect('dancing-lights-cast', 1.4, [
@@ -638,6 +629,74 @@ effect('true-strike', 1.2, [
 ]);
 effect('true-strike-aura', 1, [
   emitter('runes', { max: 20, rate: 14, ring: 0.8, at: [0, 0.8], life: [0.5, 0.8], orbit: 2.5, size: [0.12, 0.03], colors: C4.gold }),
+]);
+
+// ── 1st-level spells of the dungeon: Sleep, Longstrider, Protection from Evil and Good, Fog Cloud; the floor's sheen ──
+// Sizes follow src/data/spells.json (16 px a unit): Fog Cloud 64 px round; a puddle's sheen is made 32 px round and scaled
+// to the puddle (systems/VfxSystem.ts).
+
+const C5 = {
+  sleep: gradient([[0, [1, 0.95, 1]], [0.4, [0.78, 0.62, 1]], [1, [0.42, 0.3, 0.85]]], [[0, 0.95], [0.6, 0.7], [1, 0]]),
+  sleepGlow: gradient([[0, [0.8, 0.65, 1]], [1, [0.5, 0.35, 0.9]]], [[0, 0], [0.3, 0.35], [1, 0]]),
+  wind: gradient([[0, [0.95, 1, 0.9]], [0.5, [0.6, 0.95, 0.55]], [1, [0.25, 0.6, 0.35]]], [[0, 0.9], [0.6, 0.6], [1, 0]]),
+  ward: gradient([[0, [1, 1, 0.95]], [0.45, [1, 0.92, 0.6]], [1, [0.85, 0.7, 0.35]]], [[0, 0.95], [0.6, 0.75], [1, 0]]),
+  wardGlow: gradient([[0, [1, 0.95, 0.75]], [1, [0.9, 0.8, 0.5]]], [[0, 0], [0.4, 0.16], [1, 0]]),
+  fog: gradient([[0, [0.82, 0.86, 0.9]], [1, [0.62, 0.66, 0.72]]], [[0, 0], [0.35, 0.09], [0.7, 0.07], [1, 0]]),
+  fogRim: gradient([[0, [0.86, 0.9, 0.94]], [1, [0.66, 0.7, 0.76]]], [[0, 0], [0.35, 0.3], [0.75, 0.22], [1, 0]]),
+  fogBillow: gradient([[0, [0.9, 0.93, 0.96]], [1, [0.7, 0.74, 0.8]]], [[0, 0], [0.2, 0.42], [1, 0]]),
+  glint: gradient([[0, [1, 1, 1]], [1, [0.75, 0.9, 1]]], [[0, 0], [0.3, 0.85], [1, 0]]),
+};
+
+// Sleep: a lilac mote of slumber drifting out of the hands, a dust of sparkles trailing and sinking from it; it settles on
+// its foe in a puff of that dust; a sleeper breathes out slow motes that rise and fade over its head.
+cast('sleep', C5.sleep, { round: true });
+effect('sleep-flight', 1, [
+  emitter('core', { max: 24, rate: 110, life: [0.06, 0.12], vmin: [-0.2, -0.2], vmax: [0.2, 0.2], size: [0.5, 0.25], colors: C5.sleep, round: true }),
+  emitter('halo', { max: 8, rate: 18, life: [0.25, 0.4], size: [1, 1.3], colors: C5.sleepGlow, round: true }),
+  emitter('dust', { max: 40, rate: 45, box: [0.2, 0.2], life: [0.5, 0.9], vmin: [-0.3, -0.2], vmax: [0.3, 0.3], gravity: 1, drag: 1, size: [0.12, 0.03], colors: C5.sleep }),
+]);
+effect('sleep-impact', 1.6, [
+  emitter('glow', once(0.06, { max: 6, rate: 120, life: [0.25, 0.4], size: [1.6, 0.6], colors: C5.sleepGlow, round: true })),
+  emitter('dust', once(0.3, { max: 60, rate: 220, ring: 1, filled: true, at: [0, 0.8], life: [0.6, 1.1], vmin: [-0.4, -0.6], vmax: [0.4, 0.2], gravity: 0.8, drag: 0.8, size: [0.14, 0.04], colors: C5.sleep })),
+]);
+effect('sleep-zzz', 2, [
+  emitter('motes', { max: 16, rate: 4.5, box: [0.2, 0.1], life: [1.4, 2], vmin: [0.15, 0.6], vmax: [0.45, 1], drag: 0.2, size: [0.4, 0.7], colors: C5.sleep, round: true }),
+  emitter('sparkles', { max: 16, rate: 5, box: [0.6, 0.3], life: [0.6, 1], vmin: [-0.2, 0.2], vmax: [0.2, 0.6], size: [0.12, 0.03], colors: C5.sleep }),
+  emitter('glow', { max: 4, rate: 1.2, life: [1.2, 1.6], size: [0.8, 1.2], colors: C5.sleepGlow, round: true }),
+]);
+// Longstrider: a gust of green wind wheels up round the legs as it is cast; while it lasts, wisps of it stream off the feet.
+effect('longstrider', 1.4, [
+  emitter('gust', once(0.25, { max: 60, rate: 260, ring: 0.9, at: [0, -0.8], life: [0.35, 0.6], orbit: 5, vmin: [0, 0.6], vmax: [0, 1.6], size: [0.16, 0.04], colors: C5.wind })),
+  emitter('flash', once(0.05, { max: 6, rate: 120, at: [0, -0.4], life: [0.15, 0.25], size: [1.2, 0.4], colors: C5.wind, round: true })),
+]);
+effect('longstrider-aura', 1, [
+  emitter('wisps', { max: 16, rate: 9, box: [0.9, 0.2], at: [0, -0.85], life: [0.35, 0.6], vmin: [-0.6, 0.1], vmax: [0.6, 0.4], drag: 1.5, size: [0.12, 0.03], colors: C5.wind }),
+]);
+// Protection from Evil and Good: a ring of pale golden glyphs closes in round the companion; while it holds, a few of them
+// circle the body in a faint glow.
+effect('protection-from-evil-and-good', 1.4, [
+  emitter('glyphs', once(0.08, { max: 50, rate: 800, ring: 1.6, life: [0.35, 0.5], radial: -2.5, orbit: 2, size: [0.18, 0.05], colors: C5.ward })),
+  emitter('flash', once(0.05, { max: 6, rate: 120, life: [0.18, 0.28], size: [1.8, 0.6], colors: C5.ward, round: true })),
+]);
+effect('protection-aura', 1, [
+  emitter('glyphs', { max: 24, rate: 14, ring: 1.1, life: [0.8, 1.2], orbit: 1.6, size: [0.12, 0.03], colors: C5.ward }),
+  emitter('glow', { max: 8, rate: 6, ring: 0.9, filled: true, life: [0.6, 0.9], size: [0.8, 1.1], colors: C5.wardGlow, round: true }),
+]);
+// Fog Cloud (64 px round): fog billows out over all of it as it is cast; while it lasts, thin banks of fog drift slowly over
+// it and roll along its edge, thick at the rim and thin in the middle, so the fight inside shows through.
+effect('fog-cloud-burst', 2, [
+  emitter('billow', once(0.25, { max: 60, rate: 240, ring: 0.6, filled: true, life: [0.9, 1.4], radial: 4, drag: 1.6, size: [1, 2.4], colors: C5.fogBillow, round: true, blend: 'alpha' })),
+]);
+effect('fog-cloud', 1, [
+  emitter('bank', { max: 24, rate: 8, ring: 3.2, filled: true, life: [2.4, 3.4], vmin: [-0.15, -0.08], vmax: [0.15, 0.12], orbit: 0.12, size: [1.8, 2.6], colors: C5.fog, round: true, blend: 'alpha' }),
+  emitter('rim', { max: 50, rate: 18, ring: 3.9, life: [2.2, 3], vmin: [-0.1, -0.05], vmax: [0.1, 0.1], orbit: 0.18, size: [1.2, 1.9], colors: C5.fogRim, round: true, blend: 'alpha' }),
+]);
+// The floor's sheen (made 32 px round): glints winking on a grease slick and on still water.
+effect('grease-sheen', 1, [
+  emitter('glints', { max: 12, rate: 5, ring: 1.7, filled: true, life: [0.5, 1], size: [0.12, 0.04], colors: C4.sheen }),
+]);
+effect('water-glint', 1, [
+  emitter('glints', { max: 12, rate: 4, ring: 1.7, filled: true, life: [0.4, 0.9], size: [0.12, 0.03], colors: C5.glint }),
 ]);
 
 // Effects no longer made are dropped from the project.

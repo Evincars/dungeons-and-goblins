@@ -49,6 +49,7 @@ import { updateParty } from '../game/Party';
 import { updateLootRolls } from '../game/LootRoll';
 import { updateStashes } from './StashSystem';
 import { updateMarker } from './MarkerSystem';
+import { updateConditionRings } from './ConditionRingSystem';
 import { updateBuildLock } from '../game/Customize';
 import { updateSafeRooms } from './SafeRoomSystem';
 import { updateProtection } from './ProtectionSystem';
@@ -57,8 +58,8 @@ import { updateFeatureTimers, updateSurvivor } from './FeatureSystem';
 import { updateSchools } from './SchoolSystem';
 import { updateLastingSpells } from './LastingSpells';
 import { updateSurfaces } from './Surfaces';
-import { updateCorpses } from './Corpses';
 import { updateDancingLights } from './DancingLights';
+import { updateFogClouds } from './FogCloud';
 import { updateThrows } from './ThrowSystem';
 import { updateSummons } from './SummonSystem';
 import { updateMusic } from './MusicSystem';
@@ -132,8 +133,8 @@ export const SIMULATION: readonly System[] = [
   () => updateSchools(),
   () => updateLastingSpells(),
   () => updateSurfaces(),
-  () => updateCorpses(),
   ({ tick }) => updateDancingLights(tick),
+  () => updateFogClouds(),
   (ctx) => { if (ctx.level.tilesDirty) ctx.rebuildTerrain(); },
 ];
 
@@ -149,6 +150,7 @@ export const PRESENTATION: readonly System[] = [
   ({ level }) => updateRender(level),
   ({ gameLayer }) => updateBars(gameLayer),
   ({ gameLayer }) => updateRollTexts(gameLayer),
+  ({ gameLayer }) => updateConditionRings(gameLayer),
   ({ gameLayer }) => updateMarker(gameLayer),
   ({ overLayer }) => updateAimGuide(overLayer),
   ({ gameLayer, tick }) => updateMist(gameLayer, tick),

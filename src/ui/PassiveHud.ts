@@ -24,6 +24,9 @@ import type { TipTopic } from './InfoTooltip';
 import { featTopic, featureTopic, spellTopic } from './SpellTopics';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
+import { CLOCK_START, FULL_TURN, squareWedge } from './IconClock';
+import { ConcentrationBadge } from './ConcentrationBadge';
+import { durationOf } from './HudTime';
 
 /** Top left: this far from the screen's edges; each icon this big, this far from the next, stacked down a column. */
 const MARGIN = 8;
@@ -46,9 +49,6 @@ const INITIALS = 2;
 const CLOCK_VEIL_ALPHA = 0.62;
 const CLOCK_RING_WIDTH = 1;
 const CLOCK_RING_ALPHA = 0.9;
-/** The clock starts at the top and runs clockwise. */
-const CLOCK_START = -Math.PI / 2;
-const FULL_TURN = Math.PI * 2;
 /** A recovering passive's icon is dimmed to this. */
 const RECOVERING_ALPHA = 0.55;
 /** A passive that is ready is shown in this colour; one that is recovering is dimmed. */
@@ -69,8 +69,13 @@ const BOOSTS = [
 ] as const;
 /** Passives whose own line (systems/SchoolSystem.ts state) says more than their name. */
 const TOLD_APART: ReadonlySet<string> = new Set(['arcane_ward', 'portent']);
-/** Each buff a hero may carry and the spell it comes from. */
-const BUFF_NAMES = [['bladeWard', 'blade_ward'], ['shield', 'shield'], ['stoneskin', 'stoneskin']] as const;
+/** Each buff a hero may carry and the spell it comes from (cast by themselves or, Longstrider and the ward, by a companion). */
+const BUFF_NAMES = [
+  ['bladeWard', 'blade_ward'], ['shield', 'shield'], ['stoneskin', 'stoneskin'], ['trueStrike', 'true_strike'],
+  ['longstrider', 'longstrider'], ['protection', 'protection_from_evil_and_good'],
+] as const;
+/** The concentration badge stands this far right of the icons' columns. */
+const BADGE_GAP = 4;
 /** A boost that is running is shown in this colour. */
 const BOOST_COLOR = 0x40e0d0;
 /** Great Weapon Master's earned attack, waiting for the next swing, is shown in blue. */
@@ -129,17 +134,21 @@ function schoolLines(player: Player, cls: DndClass): Line[] {
   return lines;
 }
 
-/** The spells lasting on the hero (Blade Ward, Shield, Stoneskin with their seconds; Mage Armour) and the one they concentrate on. */
+/**
+ * The spells lasting on the hero with their time left (Blade Ward, Shield, Stoneskin, True Strike; Longstrider and Protection
+ * from Evil and Good, whoever cast them; Mage Armour). The one they concentrate on themselves shows in its badge instead
+ * (ui/ConcentrationBadge.ts).
+ */
 function spellLines(player: Player): Line[] {
   const lines: Line[] = [];
   const buffs = player.buffs;
+  const own = player.concentration?.spell;
   for (const [key, id] of BUFF_NAMES) {
     const left = buffs?.[key] ?? 0;
-    if (left > 0) lines.push({ content: text('hud.passive.recovering', { name: spellName(id), seconds: secondsOf(left) }), color: BOOST_COLOR, about: { spell: id }, timer: { key: `buff:${id}`, left } });
+    if (left <= 0 || id === own) continue;
+    lines.push({ content: text('hud.passive.lasting', { name: spellName(id), left: durationOf(left) }), color: BOOST_COLOR, about: { spell: id }, timer: { key: `buff:${id}`, left } });
   }
   if ((buffs?.mageArmor ?? 0) > 0) lines.push({ content: spellName('mage_armor'), color: BOOST_COLOR, about: { spell: 'mage_armor' } });
-  const held = player.concentration;
-  if (held) lines.push({ content: text('hud.passive.concentration', { spell: spellName(held.spell) }), color: BOOST_COLOR, about: { spell: held.spell } });
   return lines;
 }
 
@@ -237,6 +246,7 @@ export class PassiveHud {
   readonly view = new Container();
   private readonly rows: Row[] = [];
   private readonly tip = new InfoTooltip();
+  private readonly badge = new ConcentrationBadge();
   private lines: Line[] = [];
   private shown = '';
   private hovered = -1;
@@ -247,7 +257,7 @@ export class PassiveHud {
   constructor() {
     this.view.eventMode = 'passive';
     for (let i = 0; i < MAX_LINES; i++) this.rows.push(this.makeRow(i));
-    this.view.addChild(this.tip.view);
+    this.view.addChild(this.badge.view, this.tip.view, this.badge.tipView);
   }
 
   private makeRow(i: number): Row {
@@ -343,31 +353,17 @@ export class PassiveHud {
     }
     lines.forEach((line, i) => { if (this.rows[i]) this.drawClock(this.rows[i], line); });
     this.updateTip(player);
+    // The spell held by concentration, beside the icons' columns (at the top left when there are none).
+    const columns = Math.ceil(lines.length / PER_COLUMN);
+    this.badge.update(player, MARGIN + columns * (ICON + ICON_GAP) + (columns > 0 ? BADGE_GAP : 0), MARGIN);
   }
 
   destroy(): void {
     for (const row of this.rows) claimPointer(row.root, false);
+    this.badge.destroy();
     this.tip.hide();
     this.view.destroy({ children: true });
   }
-}
-
-/** The clock's steps round a turn (its wedge's edge follows the box's square in steps this fine). */
-const WEDGE_STEPS = 48;
-
-/** A wedge of a square `2c` across, from its middle, between two angles (clockwise): the time gone over an icon. */
-function squareWedge(g: Graphics, c: number, from: number, to: number): Graphics {
-  g.moveTo(c, c);
-  const steps = Math.max(1, Math.ceil(((to - from) / FULL_TURN) * WEDGE_STEPS));
-  for (let i = 0; i <= steps; i++) {
-    const angle = from + ((to - from) * i) / steps;
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-    // Out along the ray to the square's edge.
-    const reach = c / Math.max(Math.abs(cos), Math.abs(sin));
-    g.lineTo(c + cos * reach, c + sin * reach);
-  }
-  return g.closePath();
 }
 
 /** The story of what an icon is about: its feature's, spell's or feat's. */

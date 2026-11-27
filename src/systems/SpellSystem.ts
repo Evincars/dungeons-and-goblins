@@ -46,8 +46,10 @@ import { notePressed, shotAttack } from './CloseQuarters';
 import { withDamageType } from '../rules/DamageChoice';
 import { castGrease } from './LastingSpells';
 import { castDancingLights } from './DancingLights';
-import { freshCorpseNear, spendCorpse } from './Corpses';
 import { igniteGrease } from './Surfaces';
+import { castSleep, lull, lulls } from './SleepSpell';
+import { allyAt, allyInReach, castOnAlly } from './AllySpells';
+import { castFogCloud } from './FogCloud';
 
 /**
  * Spells (src/data/spells.json): a quick-bar key casts its square's spell; right click and the cast key cast the one last picked. There are
@@ -229,9 +231,9 @@ function startCast(caster: Player, level: Level): void {
   }
   const aim = caster.aimVector ?? { x: 0, y: 1 };
   const target = aimPoint(caster);
-  // Bursting Sinew needs a fresh corpse where it is aimed: without one, nothing starts (and nothing recovers).
-  if (def.kind === 'corpse' && !corpseFor(caster, def, target.x, target.y)) {
-    refuse(caster, text('roll.no_corpse'));
+  // A spell for a companion needs one within its reach where it is aimed: else nothing starts (and nothing recovers).
+  if (def.kind === 'ally' && !allyInReach(caster, allyAt(caster, target.x, target.y), def)) {
+    refuse(caster, text('roll.no_companion'));
     return;
   }
   world.addComponent(caster, 'casting', {
@@ -401,32 +403,6 @@ function castBurst(caster: Player, def: SpellDef, targetX: number, targetY: numb
   sculptAt(caster, def.id, centre.x, centre.y, def.radius);
 }
 
-/** Bursting Sinew looks for a fresh corpse this far round the point aimed at (px). */
-const CORPSE_SEEK = 40;
-
-/** The fresh, fit corpse Bursting Sinew would burst for the caster aiming at (x, y): near the aim, within the spell's range. */
-function corpseFor(caster: Player, def: SpellDef, x: number, y: number): Entity | null {
-  const corpse = freshCorpseNear(x, y, CORPSE_SEEK);
-  if (!corpse?.position) return null;
-  const reach = Math.hypot(corpse.position.x - caster.position.x, corpse.position.y - caster.position.y);
-  return reach <= def.range + CORPSE_SEEK ? corpse : null;
-}
-
-/**
- * Bursting Sinew: the fresh corpse aimed at bursts, impaling everyone near it (a burst round it, saved against: none on a
- * success); the corpse is used up. With no corpse left there (it was cleared away while the spell was cast), it fizzles.
- */
-function castBurstingSinew(caster: Player, def: SpellDef, targetX: number, targetY: number, dirX: number, dirY: number): void {
-  const corpse = corpseFor(caster, def, targetX, targetY);
-  if (!corpse?.position) {
-    logLine(caster, text('roll.fizzled'), 'miss');
-    return;
-  }
-  const { x, y } = corpse.position;
-  spendCorpse(corpse);
-  castBurst(caster, { ...def, range: Math.max(def.range, Math.hypot(x - caster.position.x, y - caster.position.y)) }, x, y, dirX, dirY);
-}
-
 /** The extra points a Disciple of Life adds to a healing spell: 2 + the spell's level. */
 const DISCIPLE_OF_LIFE_BASE = 2;
 
@@ -476,15 +452,17 @@ function release(caster: Player, cast: NonNullable<Entity['casting']>): void {
   const targetY = cast.targetY ?? caster.position.y;
   // Mage Armour cast while it is on is switched off: nothing went off, so nothing follows from it (a ward, War Magic).
   if (def.kind === 'buff' && !castBuff(caster, def)) return;
-  if (def.kind === 'bolt' || def.kind === 'missiles') playCastArt(caster, def, cast.dirX, cast.dirY);
+  if (def.kind === 'bolt' || def.kind === 'missiles' || def.kind === 'sleep') playCastArt(caster, def, cast.dirX, cast.dirY);
   if (def.kind === 'bolt') castBolt(caster, def, cast.dirX, cast.dirY);
+  else if (def.kind === 'sleep') castSleep(caster, def, cast.dirX, cast.dirY);
+  else if (def.kind === 'ally') castOnAlly(caster, def, targetX, targetY);
+  else if (def.kind === 'fog') castFogCloud(caster, def, targetX, targetY);
   else if (def.kind === 'missiles') castMissiles(caster, def, cast.dirX, cast.dirY);
   else if (def.kind === 'burst') castBurst(caster, def, targetX, targetY, cast.dirX, cast.dirY);
   else if (def.kind === 'zone') castZone(caster, def, cast.level ?? base.level, targetX, targetY);
   else if (def.kind === 'water') castWater(caster, def, targetX, targetY);
   else if (def.kind === 'surface') castGrease(caster, def, targetX, targetY);
   else if (def.kind === 'lights') castDancingLights(caster, def, targetX, targetY);
-  else if (def.kind === 'corpse') castBurstingSinew(caster, def, targetX, targetY, cast.dirX, cast.dirY);
   else if (def.kind === 'heal') castHeal(caster, def);
   sound.playSound(SPELL_SOUNDS[def.id], caster.position.x, caster.position.y);
   warMagic(caster, base);
@@ -525,6 +503,11 @@ function strikeWith(bolt: Bolt, victim: Entity): boolean {
   const p = bolt.projectile;
   const shooter = p.owner === undefined ? undefined : world.entity(p.owner);
   const alive = (victim.health?.current ?? 0) > 0;
+  // Sleep's mote does not strike: it lulls (systems/SleepSpell.ts).
+  if (lulls(p.spell)) {
+    lull(victim, p.castLevel ?? SPELLS.sleep.level, shooter);
+    return true;
+  }
   if (p.autoHit) {
     const damage = Math.max(MIN_HIT_DAMAGE, rollDice(p.attack.damage, false, rollDie, 0, p.attack.lowestFace));
     if (shooter) logSpellDamage(shooter, damage);

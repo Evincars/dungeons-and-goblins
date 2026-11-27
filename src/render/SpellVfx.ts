@@ -76,9 +76,11 @@ export const SPELL_VFX: Readonly<Partial<Record<SpellId, SpellVfx>>> = {
   otilukes_freezing_sphere: { cast: 'ray-of-frost-cast', burst: 'freezing-sphere' },
   sunbeam: { cast: 'sunbeam-cast', burst: 'sunbeam' },
   // Cantrips and spells of the dungeon's own (src/data/spells.json).
-  bursting_sinew: { cast: 'necrotic-cast', burst: 'bursting-sinew' },
   true_strike: { aura: 'true-strike' },
   grease: { burst: 'grease' },
+  sleep: { cast: 'sleep-cast', flight: 'sleep-flight', impact: 'sleep-impact' },
+  longstrider: { aura: 'longstrider' },
+  protection_from_evil_and_good: { aura: 'protection-from-evil-and-good' },
 };
 
 /** The flasks' flight, a trail of particles behind them (systems/ThrowSystem.ts). */
@@ -87,11 +89,19 @@ export const FLASK_FLIGHT = { alchemists_fire: 'alchemists-fire-flight', grease_
 /**
  * The buffs that keep an aura round the hero for as long as they last (`buffs` ticks left), drawn on every screen from the
  * hero's state: Blade Ward's circling glints, Shield's shimmer, Stoneskin's flecks of stone, True Strike's golden runes
- * round the eyes until the blow it guides. Mage Armour, for a whole day,
- * shows only as it is cast.
+ * round the eyes until the blow it guides, Longstrider's wisps of wind at the feet, Protection from Evil and Good's pale
+ * golden glyphs. Mage Armour, for a whole day, shows only as it is cast.
  */
 export const BUFF_AURAS = {
   bladeWard: 'blade-ward-aura', shield: 'shield-aura', stoneskin: 'stoneskin-aura', trueStrike: 'true-strike-aura',
+  longstrider: 'longstrider-aura', protection: 'protection-aura',
 } as const satisfies Readonly<Record<string, VfxEffectId>>;
 export type AuraBuff = keyof typeof BUFF_AURAS;
-export const AURA_BUFFS: readonly AuraBuff[] = ['bladeWard', 'shield', 'stoneskin', 'trueStrike'];
+export const AURA_BUFFS: readonly AuraBuff[] = ['bladeWard', 'shield', 'stoneskin', 'trueStrike', 'longstrider', 'protection'];
+
+/** What lasts on the floor and on bodies with particles of its own: a fog cloud's banks, a sleeper's motes, a puddle's sheen. */
+export const LASTING_VFX = {
+  fog: 'fog-cloud', sleep: 'sleep-zzz', grease: 'grease-sheen', water: 'water-glint',
+} as const satisfies Readonly<Record<string, VfxEffectId>>;
+/** A puddle's sheen is made this wide (px of its radius) and scaled to the puddle. */
+export const SHEEN_RADIUS = 32;

@@ -224,16 +224,25 @@ export function athleteSpeedFactor(hero: Pick<Player, 'athleteBoost'>): number {
  * for a saving throw yet; whatever comes to will roll it here.
  */
 export function heroSavingThrow(hero: Player, stat: StatName, dc: number, die: DieRoller = rollDie, spellBy?: Entity): boolean {
-  // An evoker's Sculpt Spells bubble: whoever stands in it succeeds.
-  if (shelteredBySculpt(hero)) return true;
+  return heroSaveRoll(hero, stat, dc, die, spellBy).success;
+}
+
+/**
+ * A hero's saving throw with what it came to (to show over their head): the d20 and their save bonus against the DC, Indomitable
+ * rolling a failure again. In an evoker's Sculpt Spells bubble it succeeds without a roll (its total is the DC).
+ */
+export function heroSaveRoll(hero: Player, stat: StatName, dc: number, die: DieRoller = rollDie, spellBy?: Entity): { total: number; success: boolean } {
+  if (shelteredBySculpt(hero)) return { total: dc, success: true };
   const sheet = characterSheet(hero);
   const bonus = sheet.saves[stat].bonus + shieldSave(hero, sheet.feats.shieldSaves, stat);
   const mode = mageSlayerMode(hero, sheet.feats.mageSlayer, spellBy);
-  if (rollD20(mode, die) + bonus >= dc) return true;
-  if ((hero.indomitableCooldown ?? 0) > 0 || !featureOn(hero, 'indomitable')) return false;
+  const first = rollD20(mode, die) + bonus;
+  if (first >= dc) return { total: first, success: true };
+  if ((hero.indomitableCooldown ?? 0) > 0 || !featureOn(hero, 'indomitable')) return { total: first, success: false };
   hero.indomitableCooldown = INDOMITABLE_COOLDOWN_TICKS;
   recordEvent(hero, 'feature', { item: nameOfFeature(hero, 'indomitable') });
-  return rollD20(mode, die) + bonus >= dc;
+  const again = rollD20(mode, die) + bonus;
+  return { total: again, success: again >= dc };
 }
 
 /** Shield Master: what a shield carried adds to Dexterity saving throws. */

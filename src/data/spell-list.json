@@ -42,7 +42,8 @@
       "subclasses": [],
       "book": null,
       "text": "Explode a fresh corpse, causing it to impale those around it: everyone within 10 feet of it makes a Dexterity saving throw or takes 1d10 piercing damage. A corpse burnt by fire, acid or radiance cannot be used, and one used is left a pile of viscera. 60 feet. The damage grows to 2d10 at level 5 and 3d10 at level 10.",
-      "img": "spells-icons/Bursting-Sinew-level-1-BG3-spell-1_pixelart.png"
+      "img": "spells-icons/Bursting-Sinew-level-1-BG3-spell-1_pixelart.png",
+      "hidden": true
     },
     "shadow_blade": {
       "name": "Shadow Blade",
@@ -124,7 +125,7 @@
       "name": "Dancing Lights",
       "level": 0,
       "school": "Evocation",
-      "concentration": false,
+      "concentration": true,
       "classes": [
         "sorcerer",
         "wizard"
@@ -136,7 +137,7 @@
         "Eldritch Knight"
       ],
       "book": "dancing_lights",
-      "text": "Illuminate a 9m radius. 10 Turns 18m Concentration",
+      "text": "Light up the dark round you, or send the lights away to draw foes to them. 10 Turns 18m Concentration",
       "img": "spells-icons/Dancing-Lights-Cantrip-BG3_pixelart.png"
     },
     "eldritch_blast": {
@@ -415,7 +416,7 @@
       "name": "True Strike",
       "level": 0,
       "school": "Divination",
-      "concentration": false,
+      "concentration": true,
       "classes": [
         "bard",
         "sorcerer",
@@ -695,7 +696,8 @@
       ],
       "book": "disguise_self",
       "text": "Magically change all aspects of your appearance. (Lasts until the end of a long rest)",
-      "img": "spells-icons/Disguise-self-Cantrip-Bg3_pixelart.png"
+      "img": "spells-icons/Disguise-self-Cantrip-Bg3_pixelart.png",
+      "hidden": true
     },
     "dissonant_whispers": {
       "name": "Dissonant Whispers",
@@ -775,7 +777,8 @@
       ],
       "book": "expeditious_retreat",
       "text": "Gain Dash immediately and as a bonus action on each of your turns until this spell ends. Until Long Rest Concentration",
-      "img": "spells-icons/Expeditious-retreat-Baldurs-Gate-3-Spell-level-1_pixelart.png"
+      "img": "spells-icons/Expeditious-retreat-Baldurs-Gate-3-Spell-level-1_pixelart.png",
+      "hidden": true
     },
     "faerie_fire": {
       "name": "Faerie Fire",
@@ -826,7 +829,8 @@
       "subclasses": [],
       "book": "feather_fall",
       "text": "You and nerby allies Immunity to Falling damage. 10 Turns 9m",
-      "img": "spells-icons/Feather-Fall-Spell-Baldurs-Gate-3_pixelart.png"
+      "img": "spells-icons/Feather-Fall-Spell-Baldurs-Gate-3_pixelart.png",
+      "hidden": true
     },
     "find_familiar": {
       "name": "Find Familiar",
@@ -841,7 +845,8 @@
       "subclasses": [],
       "book": "find_familiar",
       "text": "Gain the service of a familiar, a fey spirit that takes an animal from of your choose. Range: 18m",
-      "img": "spells-icons/Find-Familiar-Baldurs-Gate-3-spell_pixelart.png"
+      "img": "spells-icons/Find-Familiar-Baldurs-Gate-3-spell_pixelart.png",
+      "hidden": true
     },
     "fog_cloud": {
       "name": "Fog Cloud",
@@ -1057,7 +1062,8 @@
       ],
       "book": "jump",
       "text": "Triple a creature's jumping distance. 10 Turns Melee",
-      "img": "spells-icons/Enhance-Leap-Level-1-Spell-Baldurs-Gate-3_pixelart.png"
+      "img": "spells-icons/Enhance-Leap-Level-1-Spell-Baldurs-Gate-3_pixelart.png",
+      "hidden": true
     },
     "longstrider": {
       "name": "Longstrider",

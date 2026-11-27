@@ -3,6 +3,7 @@ import type { Entity } from '../world';
 import type { DamageType } from '../rules/DamageTypes';
 import { sound } from '../audio/SoundPlayer';
 import { MOB_CRIES } from '../audio/SoundBank';
+import { wake } from './SleepSpell';
 import { SWORD_STATS } from '../entities/WeaponStats';
 
 /** A mob that takes a hit flinches (can't act) for this long, and shows hurt for this long. */
@@ -11,7 +12,7 @@ const MOB_HURT_TICKS = 40;
 
 /**
  * Applies a hit to a target and shoves them back (`evenIfFlinching`: land even while it flinches from the last one). The
- * kind of damage, when given, is kept on it (`lastDamageType`: whether its corpse is fit for Bursting Sinew; its
+ * kind of damage, when given, is kept on it (`lastDamageType`: its
  * resistances, rules/Resistances.ts, once they are applied).
  * An enemy cries out when a hit catches it unhurt and leaves it standing (the blow itself is the caller's to sound:
  * a blade, an arrow or a spell).
@@ -33,8 +34,9 @@ export function hitMob(mob: Entity, attacker: Entity, damage: number, evenIfFlin
   const credited = mob.lastHitBy === undefined ? undefined : world.entity(mob.lastHitBy);
   if (credited?.playerStats) credited.playerStats.damageDealt += Math.min(damage, h.current);
   h.current = Math.max(0, h.current - damage);
-  // A blow breaks a charm (Hypnotic Gaze, an illusion's hold).
+  // A blow breaks a charm (Hypnotic Gaze, an illusion's hold) and wakes a sleeper.
   if (mob.status) mob.status.charmed = 0;
+  wake(mob);
 
   const ap = attacker.position;
   const mp = mob.position;

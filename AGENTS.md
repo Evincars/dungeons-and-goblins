@@ -140,11 +140,11 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   Elemental Adept's damage type — is offered in the level panel (`ui/FeatPicks.ts`), checked by `rules/FeatPicks.ts` and kept
   as the Improvement's `picks`; a feat's spells sit in the Skills tab's Feat spells row, are bound at their own level, count
   against no bind limit and are cast with the feat's ability, `spellcastingFor`; the Skills tab runs: class features, the
-  school, Passive Feats and feat spells, then cantrips and each spell level; only `worked` feats are offered, `OFFERED_FEATS`); enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`
+  school, Passive Feats and feat spells, then cantrips and each spell level; only `worked` feats are offered, `OFFERED_FEATS`); enemies' SRD monster blocks (creature type, AC, abilities, weapons, hit points, XP) in `src/data/stats.json`
   (with which kinds carry a bow or crossbow and how often, `ranged`, and which cast spells as what class and with which
   ability, `spellcaster`: their spells are the heroes' own from `spells.json`, cast at the party's level, so a change to a
   spell changes it for both; which carry a flask to throw and how often, `throwables`; and their SRD resistances,
-  immunities and vulnerabilities, `defences`, read by `rules/Resistances.ts` `monsterResponse` — prepared, not applied in
+  immunities and vulnerabilities, `defences` (with the conditions it is immune to, `defences.conditions`, which are applied), read by `rules/Resistances.ts` `monsterResponse` — prepared, not applied in
   play yet: `hitMob` keeps the kind of the last blow, `lastDamageType`); how hard a level is (more and tougher enemies the deeper it lies and in direct proportion
   to the heroes playing, which kinds turn up at which depth) in `src/game/Difficulty.ts`;
   castable spells (dice, recovery, save, area and its shape — sphere, cube, cone or line (Lightning Bolt), `rules/SpellArea.ts`, shared by the heroes, the enemies and the aim guide — effect; a buff, zone or puddle's duration and concentration) in
@@ -332,8 +332,9 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `systems/LastingSpells.ts`: buffs on the caster (`buffs`: Blade Ward, Shield, Mage Armour, Stoneskin; False Life's temporary
   hit points), zones that strike every 6 s (`zone`, `q.zones`), puddles a thunder or lightning spell charges (a lightning bolt flying over them too) and that conduct the burst that
   charged them to everyone standing in them (`electrifyArea`, `conducted`) (`surface`, `q.surfaces`),
-  and one spell held by `concentration` that a failed Constitution save on every hurt ends (DC 10 or half the damage,
-  whichever is higher, `keepConcentration`); what lasts until a long rest also
+  and one spell held by `concentration` — one at a time: casting another ends it and all it keeps going (a zone, the lights,
+  a fog, a buff on the hero it holds, `HELD_BUFFS`); it runs out with its `ticks` or once its buff is spent — that a failed
+  Constitution save on every hurt ends (DC 10 or half the damage, whichever is higher, `keepConcentration`); what lasts until a long rest also
   ends on a fall, `endUntilRest`) have no slots but a
   recovery each (`spellbook.recovery`), sit on the quick bar (two rows of ten at most — the player picks how many squares show, for each hero class, and Shift's row shows as many; the keys past them do nothing —: Q R T 1–5 X C cast the first row's squares — held, the key shows the spell's aim guide, let go, it casts —
   Shift with them the second, whose squares hold the active class features until bound; `playerInput.spellSlot`) and are cast by
@@ -352,9 +353,10 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   of the quick bar's strip (`QUICK_BAR_HEIGHT`); the HUD's buttons say what they are under the pointer. Class features (`rules/ClassFeatures.ts`) fill the Skills tab above the cantrips: a worked passive is on from its
   level and a click switches it off and on (`featuresOff`, the `toggle_feature` command; `featureOn` is what effects ask, and the
   HUD's top left shows the ones on, `ui/PassiveHud.ts`: icons only, stacked down a column, what is the hero's for good
-  (passives, Passive Feats, the ward, a Battle Master's dice) at the top and what comes and goes (boosts, buffs, concentration)
-  under them; a clock over an icon empties while it recovers or lasts, a count sits in its corner, and its tooltip under the
-  pointer says how it stands now); an active (Second Wind, Action Surge…) is bound to a quick-bar square as
+  (passives, Passive Feats, the ward, a Battle Master's dice) at the top and what comes and goes (boosts, buffs, a companion's
+  Longstrider or ward) under them; a clock over an icon empties while it recovers or lasts, a count sits in its corner, and its tooltip under the
+  pointer says how it stands now; beside the columns the spell held by concentration, `ui/ConcentrationBadge.ts`: its icon in a
+  breathing violet frame, "Concentration", a clock, and the spell's tooltip with its time left); an active (Second Wind, Action Surge…) is bound to a quick-bar square as
   `feature:<id>` and used with the cast key (`systems/FeatureSystem.ts`; an active with several uses recovers in its share, `featureCooldown`).
   Every blow of a chain plays at the hero's own swing pace, one after another (`blowTiming`; the attack clip follows
   `swordSwing.tempo`), and the next click waits for the attack period. Action Surge doubles the attacks of every swing and
@@ -430,14 +432,33 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   Bottle leaves grease. Grease (the Grease spell too) is difficult terrain (half pace) and slick: a DEX save on appearing
   and on stepping in, or the body slips prone (`knockedDown` for a hero, the foe's `status.prone`: it neither moves nor its
   AI acts; blows at it within 5 feet have advantage, its own at disadvantage); fire takes grease (`igniteGrease`: fire spells,
-  fiery bolts, alchemist's fire) (`systems/Surfaces.ts`; the puddle art's frames 2 and 3, flames in particles).
-- A fallen foe's body lies there fresh for `FRESH_CORPSE_TICKS` (`systems/Corpses.ts`): Bursting Sinew (`kind: corpse`)
-  bursts the one nearest the aim — everyone near makes a DEX save or is impaled — unless fire, acid or radiance burnt it or
-  it was a specter's or a shadow's. Dancing Lights (`kind: lights`, `systems/DancingLights.ts`) are four glowing `wisp`s round
-  an anchor held by concentration, circling the caster when cast at them, else hovering where sent, where foes failing a
-  WIS save are drawn to them (`entranced`) until hurt or a hero comes close. True Strike is a buff (`buffs.trueStrike`) spent
-  on the next attack roll for advantage (`systems/Strike.ts`). Friends, Light, Mage Hand and Minor Illusion are kept in
-  `spell-list.json` (`hidden`) but left out of the Skills tab.
+  fiery bolts, alchemist's fire) (`systems/Surfaces.ts`; flames in particles). A specter or a shadow never slips (SRD
+  condition immunities, `defences.conditions` in `stats.json`, `immuneTo`). Every save against the floor or a flask shows
+  over the roller's head, heroes' and foes' alike ("DEX save 14: safe", `systems/BodySaves.ts`). Puddles, grease and burning
+  floor are circles as wide as the aim guide showed them (the puddle art's square frames, `PUDDLE_ART_RADIUS`), water
+  with ripples, charged water with bolts, grease with oily swirls, scorched floor with glowing cracks; grease and water wink
+  with glints (`grease-sheen`, `water-glint`).
+- Dancing Lights (`kind: lights`, `systems/DancingLights.ts`), for lighting the dark or drawing foes away, are four glowing
+  `wisp`s round an anchor held by concentration, circling the caster when cast at them, else hovering where sent, where foes
+  failing a WIS save are drawn to them (`entranced`) until hurt or a hero comes close. True Strike is a buff held by
+  concentration (`buffs.trueStrike`) spent on the next attack roll for advantage (`systems/Strike.ts`). Friends, Light, Mage
+  Hand, Minor Illusion, Bursting Sinew, Disguise Self, Enhance Leap (`jump`), Expeditious Retreat, Feather Fall and Find
+  Familiar are kept in `spell-list.json` (`hidden`) but left out of the Skills tab. A spell the game plays otherwise than the
+  tabletop has its description as played in `spellbook.json` (`PLAYED_AS`, `scripts/scrape-spells.mjs`).
+- Sleep (`kind: sleep`, `systems/SleepSpell.ts`) flies as a bolt and lulls the first foe it touches whose hit points are no
+  more than its 5d8 (2d8 more a level up): `status.asleep`, unconscious — it neither moves nor acts, attacks at it have
+  advantage and a hit within 5 feet is a critical (`critOnHit`) — until the time runs out or it is hurt (`wake`, `Hits.ts`);
+  undead (`creature` in `stats.json`, `rules/Conditions.ts`) never sleep. Longstrider and Protection from Evil and Good
+  (`kind: ally`, `systems/AllySpells.ts`) go to the hero under the crosshair (the aim guide's corner brackets frame them;
+  `bracketPath` in `MarkerSystem.ts`), else the caster, within a touch's reach: +10 feet of speed for an hour
+  (`buffs.longstrider`), or a ward held by the caster's concentration (`buffs.protection`) — undead attack the warded at
+  disadvantage; each keeps an aura and shows on the companion's HUD. Fog Cloud (`kind: fog`, `systems/FogCloud.ts`,
+  `fogCloud`) heavily obscures (`ai/perception/obscured.ts`): attacks into it, out of it or within it are at disadvantage,
+  enemies neither see nor shoot a hero in it or behind it unless within 5 feet; its fog is thin particles thick at the rim,
+  so the fight inside shows.
+- A body in a condition (`systems/Conditions.ts`: unconscious, prone, charmed — Dancing Lights' pull too —, frightened,
+  blinded in fog, burning) has a ring of runes under its feet in the condition's colour, one ring for each, turning and
+  breathing (`systems/ConditionRingSystem.ts`, pooled sprites).
 - Enemies with a bow or crossbow and enemy spellcasters (`systems/EnemyRangedSystem.ts`) shoot and cast only at a hero
   in sight whose screen shows them (never from off-screen), stand to do it, lead a moving target and pick the spell that
   harms most (a burst by how many heroes it catches); their shots are the heroes' bolts and arrows on the enemies' side

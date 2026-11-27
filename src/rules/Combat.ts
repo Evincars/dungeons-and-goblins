@@ -24,6 +24,8 @@ export type AttackProfile = {
   precisionSides?: DieSides;
   /** The damage dice are rolled twice and the higher total kept (the Savage Attacker feat). */
   savage?: boolean;
+  /** Any hit is a critical hit (a blow from within 5 feet at an unconscious target). */
+  critOnHit?: boolean;
 };
 
 export type AttackOutcome = AttackRoll & {
@@ -53,7 +55,8 @@ function damageRoll(attack: AttackProfile, critical: boolean, die: DieRoller): n
 export function resolveAttack(attack: AttackProfile, targetAC: number, die: DieRoller = rollDie): AttackOutcome {
   const rolled = rollAttack(attack.attackBonus, targetAC, attack.mode, die, attack.critFrom);
   const precision = precisionBonus(attack, rolled, targetAC, die);
-  const roll = precision > 0 ? { ...rolled, total: rolled.total + precision, hit: true } : rolled;
+  const lifted = precision > 0 ? { ...rolled, total: rolled.total + precision, hit: true } : rolled;
+  const roll = attack.critOnHit && lifted.hit && !lifted.critical ? { ...lifted, critical: true } : lifted;
   const damageDice = roll.critical ? { ...attack.damage, count: attack.damage.count * 2 } : attack.damage;
   const extra = attack.extra && roll.hit ? rollDice(attack.extra, roll.critical, die) : 0;
   const damage = roll.hit ? Math.max(MIN_HIT_DAMAGE, damageRoll(attack, roll.critical, die) + extra) : 0;

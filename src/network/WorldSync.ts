@@ -123,7 +123,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   thrown: { item: 'string', owner: 'number', team: 'number', fromX: 'number', fromY: 'number', toX: 'number', toY: 'number', ticks: 'number', total: 'number' },
   dancingLights: { owner: 'number', ticks: 'number', orbit: 'boolean', dc: 'number', pulse: 'number' },
   wisp: { of: 'number', index: 'number' },
-  corpse: { fresh: 'number', fit: 'boolean' },
+  fogCloud: { owner: 'number', radius: 'number', ticks: 'number' },
   summon: { kind: 'string', owner: 'number', attackBonus: 'number', damage: 'object', ac: 'number', cooldown: 'number' },
   loot: { value: 'number', kind: 'number', velX: 'number', velY: 'number', suckRadius: 'number', glide: 'number', age: 'number', life: 'number' },
   item: { type: 'string', name: 'string', value: 'number' },

@@ -64,7 +64,8 @@ function saveAttack(stat: StatName): Attack {
 
 /**
  * How a spell the game casts reaches its target: a bolt rolls to hit, darts always land, a burst (or a zone with a save) is
- * saved against, a heal mends, a buff works on the caster, a puddle needs no roll.
+ * saved against, a heal mends, a buff works on the caster; a puddle, a companion's buff and fog need no roll; Sleep's mote
+ * always lands.
  */
 function castAttack(spell: CatalogSpell): Attack | null {
   if (!isSpellId(spell.id)) return null;
@@ -73,7 +74,7 @@ function castAttack(spell: CatalogSpell): Attack | null {
   if (def.kind === 'missiles') return attack('auto');
   if (def.kind === 'heal') return attack('heal');
   if (def.kind === 'buff') return attack('self');
-  if (def.kind === 'water') return attack('none');
+  if (def.kind === 'water' || def.kind === 'ally' || def.kind === 'fog') return attack('none');
   return def.save ? saveAttack(def.save) : attack('auto');
 }
 

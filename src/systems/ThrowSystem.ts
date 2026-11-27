@@ -1,8 +1,6 @@
 import { world, q, isActivePlayer, isMob, isPlayer, Team } from '../world';
 import type { Entity } from '../world';
 import type { Level } from '../level/Level';
-import { MONSTERS } from '../rules/Monsters';
-import { rollDie } from '../rules/Dice';
 import { THROWABLES } from '../rules/Throwables';
 import type { ThrowableDef, ThrowableId } from '../rules/Throwables';
 import { CLOSE_QUARTERS_PX } from '../rules/CloseQuarters';
@@ -12,10 +10,10 @@ import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 import { playVfx } from '../render/VfxPlayer';
 import { sound } from '../audio/SoundPlayer';
 import { isBackingOff } from '../ai/execution/skirmish';
-import { heroSavingThrow } from './FeatureSystem';
 import { targetFor } from './EnemyRangedSystem';
 import { burn, isDown, setAlight, spreadSurface } from './Surfaces';
 import { logLine } from './RollLogSystem';
+import { bodySave } from './BodySaves';
 import { text } from '../core/texts';
 
 /**
@@ -99,12 +97,8 @@ function fly(flask: Flask): void {
   land(t.item, t.toX, t.toY, t.owner);
 }
 
-/** A Dexterity save against the flask: a hero's own, a foe's d20 + its modifier. */
-function dodges(body: Entity, def: ThrowableDef): boolean {
-  if (isPlayer(body)) return heroSavingThrow(body, def.save, def.dc);
-  const modifier = body.mobType ? MONSTERS[body.mobType].modifiers[def.save] : 0;
-  return rollDie(20) + modifier >= def.dc;
-}
+/** A save against the flask's splash, shown over the head of whoever rolls it (systems/BodySaves.ts). */
+const dodges = (body: Entity, def: ThrowableDef): boolean => bodySave(body, def.save, def.dc);
 
 /** One body in the splash of liquid fire: a save, or it takes the fire and burns on. */
 function splash(body: Entity, def: ThrowableDef, owner: number): void {

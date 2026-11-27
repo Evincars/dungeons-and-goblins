@@ -4,7 +4,7 @@ import type { Entity } from '../world';
 import { world } from '../world';
 import { TICKS_PER_SECOND } from '../rules/Spells';
 import { vfxEffect, vfxPoint, vfxRenderer } from '../render/Vfx';
-import { AURA_BUFFS, BUFF_AURAS, FLASK_FLIGHT, SPELL_VFX } from '../render/SpellVfx';
+import { AURA_BUFFS, BUFF_AURAS, FLASK_FLIGHT, LASTING_VFX, SHEEN_RADIUS, SPELL_VFX } from '../render/SpellVfx';
 import type { VfxEffectId } from '../render/Vfx';
 import { takeQueuedVfx } from '../render/VfxPlayer';
 import type { VfxShot } from '../render/VfxPlayer';
@@ -147,8 +147,11 @@ function dropLeftBehind(mine: Map<string, PixiVfxEffectInstance>, gameLayer: Con
   for (const [key, effect] of mine) if (effect.root.parent !== gameLayer) mine.delete(key);
 }
 
-/** While `holds`, `look` follows `entity` with its root at (x, y), drawn by depth z; once it does not, it fades out. */
-function follow(entity: Entity, key: string, look: VfxEffectId, holds: boolean, at: { x: number; y: number; z: number }, gameLayer: Container): void {
+/**
+ * While `holds`, `look` follows `entity` with its root at (x, y), drawn by depth z (and scaled by `s`, if given); once it does
+ * not, it fades out.
+ */
+function follow(entity: Entity, key: string, look: VfxEffectId, holds: boolean, at: { x: number; y: number; z: number; s?: number }, gameLayer: Container): void {
   const mine = following.get(entity) ?? following.set(entity, new Map()).get(entity);
   const effect = mine?.get(key);
   if (!mine || !holds) {
@@ -162,10 +165,11 @@ function follow(entity: Entity, key: string, look: VfxEffectId, holds: boolean, 
   mine.set(key, shown);
   shown.root.position.set(at.x, at.y);
   shown.root.zIndex = at.z;
+  if (at.s !== undefined) shown.root.scale.set(at.s);
 }
 
 /** Where a follower goes this tick (reused: written, then read at once). */
-const spot = { x: 0, y: 0, z: 0 };
+const spot: { x: number; y: number; z: number; s?: number } = { x: 0, y: 0, z: 0 };
 
 /** Each hero's lasting buffs keep their auras round them; each zone its particles over it. */
 function followLasting(gameLayer: Container): void {
@@ -186,6 +190,12 @@ function followLasting(gameLayer: Container): void {
 }
 
 const burningSurfaces = world.with('position', 'surface');
+const fogClouds = world.with('position', 'fogCloud');
+const marked = world.with('position', 'status');
+/** A sleeper's motes rise from this far above its feet. */
+const SLEEPER_HEAD = 26;
+/** The sheen on a puddle is drawn with the puddles, under everyone standing (render systems' FLAT_Z is -0.5). */
+const FLOOR_Z = -0.45;
 const burningBodies = world.with('position', 'burning');
 const wisps = world.with('position', 'wisp');
 const flasks = world.with('position', 'thrown');
@@ -202,12 +212,35 @@ function followFires(gameLayer: Container): void {
     spot.y = patch.position.y;
     spot.z = patch.position.y + IN_FRONT;
     follow(patch, 'fire', 'fire-surface', patch.surface.kind === 'fire' && !patch.removed, spot, gameLayer);
+    // Grease and still water wink with glints all over them, the sheen scaled to the patch (drawn under whoever stands in it).
+    const kind = patch.surface.kind;
+    spot.s = patch.surface.radius / SHEEN_RADIUS;
+    spot.z = FLOOR_Z;
+    follow(patch, 'sheen', kind === 'grease' ? LASTING_VFX.grease : LASTING_VFX.water, (kind === 'grease' || kind === 'water') && !patch.removed, spot, gameLayer);
+    spot.s = undefined;
   }
   for (const body of burningBodies) {
     spot.x = body.position.x;
     spot.y = body.position.y - BODY_MIDDLE;
     spot.z = body.position.y + IN_FRONT;
     follow(body, 'burning', 'burning', !body.removed && (body.health?.current ?? 0) > 0, spot, gameLayer);
+  }
+}
+
+/** Each fog cloud's drifting banks over it; each sleeping foe's motes over its head. */
+function followFogAndSleep(gameLayer: Container): void {
+  for (const cloud of fogClouds) {
+    spot.x = cloud.position.x;
+    spot.y = cloud.position.y;
+    // Over everyone in it: the fog lies over the fight.
+    spot.z = cloud.position.y + cloud.fogCloud.radius;
+    follow(cloud, 'fog', LASTING_VFX.fog, !cloud.removed, spot, gameLayer);
+  }
+  for (const foe of marked) {
+    spot.x = foe.position.x;
+    spot.y = foe.position.y - SLEEPER_HEAD;
+    spot.z = foe.position.y + IN_FRONT;
+    follow(foe, 'sleep', LASTING_VFX.sleep, !foe.removed && (foe.status.asleep ?? 0) > 0, spot, gameLayer);
   }
 }
 
@@ -235,6 +268,7 @@ export function updateVfx(gameLayer: Container): void {
   followShots(gameLayer);
   followLasting(gameLayer);
   followFires(gameLayer);
+  followFogAndSleep(gameLayer);
   followLights(gameLayer);
   playShots(gameLayer);
   if (loops.size || shots.length || trails.size || fading.length || following.size) vfxRenderer().update(TICK_SECONDS);

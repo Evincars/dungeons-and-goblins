@@ -179,8 +179,8 @@ function swingAt(player: Player): void {
   }
 }
 
-/** A foe held by a charm (Hypnotic Gaze, an illusion) strikes nobody. */
-const charmed = (mob: Entity): boolean => (mob.status?.charmed ?? 0) > 0;
+/** A foe held by a charm (Hypnotic Gaze, an illusion) or asleep (Sleep) strikes nobody. */
+const charmed = (mob: Entity): boolean => (mob.status?.charmed ?? 0) > 0 || (mob.status?.asleep ?? 0) > 0;
 
 /** Every live enemy whose body overlaps the undead's (into the shared `touching` list). */
 function enemiesTouchingUndead(undead: Summon): readonly Entity[] {

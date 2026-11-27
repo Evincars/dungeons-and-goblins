@@ -122,7 +122,8 @@ export function evasiveBonus(target: Entity): number {
 
 // ── Marks on foes ─────────────────────────────────────────────────────────────
 
-function statusOf(foe: Entity, by: number): NonNullable<Entity['status']> {
+/** A foe's marks, made the first time one is given (`by`: whoever gave the latest). */
+export function statusOf(foe: Entity, by: number): NonNullable<Entity['status']> {
   const status = foe.status ?? { prone: 0, frightened: 0, goaded: 0, distracted: 0, eldritch: 0, charmed: 0, by };
   if (!foe.status) world.addComponent(foe, 'status', status);
   status.by = by;
@@ -269,10 +270,11 @@ export function afterBlow(attacker: Entity | undefined, foe: Entity, outcome: At
 
 // ── Timers ────────────────────────────────────────────────────────────────────
 
-/** A charmed foe stands rooted while the charm lasts (it thinks and moves only once it is free). */
+/** A charmed or sleeping foe stands rooted while the charm or the sleep lasts (it thinks and moves only once it is free). */
 function holdCharmed(foe: Entity, s: NonNullable<Entity['status']>): void {
   s.charmed = Math.max(0, s.charmed - 1);
-  if (s.charmed <= 0) return;
+  if (s.asleep !== undefined) s.asleep = Math.max(0, s.asleep - 1);
+  if (s.charmed <= 0 && (s.asleep ?? 0) <= 0) return;
   foe.freezeTime = Math.max(foe.freezeTime ?? 0, 1);
   if (foe.velocity) foe.velocity.x = foe.velocity.y = 0;
 }
@@ -294,6 +296,6 @@ export function updateManeuvers(): void {
     s.distracted = Math.max(0, s.distracted - 1);
     s.eldritch = Math.max(0, s.eldritch - 1);
     holdCharmed(foe, s);
-    if (s.prone + s.frightened + s.goaded + s.distracted + s.eldritch + s.charmed === 0) world.removeComponent(foe, 'status');
+    if (s.prone + s.frightened + s.goaded + s.distracted + s.eldritch + s.charmed + (s.asleep ?? 0) === 0) world.removeComponent(foe, 'status');
   }
 }

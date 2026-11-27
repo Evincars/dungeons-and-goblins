@@ -12,6 +12,20 @@ const FEET_PER_MILE = 5280;
 /** Character levels at which a cantrip's damage dice multiply (5th: twice, 11th: three times, 17th: four times). */
 const CANTRIP_TIERS = [5, 11, 17];
 const PARALLEL = 5;
+/** Spells this game plays otherwise than the tabletop: their description (and At Higher Levels) as it plays them. */
+const PLAYED_AS = {
+  dancing_lights: {
+    description: 'Four lights hover for a minute, each shedding light round it. Cast at yourself, they circle you and light your way; '
+      + 'sent elsewhere within range, they light that place, and foes near them make a Wisdom saving throw or are drawn to them until '
+      + 'hurt or until a hero comes close.',
+  },
+  sleep: {
+    description: 'A mote of slumber flies the way you aim and settles on the first creature it touches. Roll 5d8: if the creature\'s hit '
+      + 'points are no more than the total, it falls unconscious for 1 minute, until it takes damage. While it sleeps, attacks against it '
+      + 'have advantage, and a hit from within 5 feet is a critical hit. Undead and creatures immune to being charmed aren\'t affected.',
+    higherLevels: 'When you cast this spell using a spell slot of 2nd level or higher, roll an additional 2d8 for each slot level above 1st.',
+  },
+};
 
 /** The character level at which each class gets its first slots of spell level 1..9 (null: never). */
 const UNLOCK = {
@@ -132,7 +146,7 @@ await inBatches(slugs, async (slug) => {
     classes[cls] = entry.level === 0 ? 1 : UNLOCK[CLASS_KIND[cls]][entry.level - 1];
   }
   const { slug: _slug, ...rest } = spell;
-  spells[slugId(slug)] = { ...rest, classes };
+  spells[slugId(slug)] = { ...rest, ...PLAYED_AS[slugId(slug)], classes };
 });
 
 const sorted = Object.fromEntries(Object.entries(spells).sort(([a], [b]) => a.localeCompare(b)));

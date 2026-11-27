@@ -1,5 +1,5 @@
 import { world } from '../world';
-import type { BlowResult, Entity, RollTone } from '../world';
+import type { BlowResult, Entity, RollTone, StatName } from '../world';
 import { text } from '../core/texts';
 import type { AttackOutcome } from '../rules/Combat';
 
@@ -58,6 +58,15 @@ export function logSpellDamage(caster: Entity, damage: number): void {
 /** A saving throw against a spell, over the one who rolled it: "save 14 - half", "save 6 - FAIL". */
 export function logSave(target: Entity, total: number, saved: boolean): void {
   logLine(target, text(saved ? 'roll.save_half' : 'roll.save_fail', { total }), saved ? 'miss' : 'damage');
+}
+
+/**
+ * A saving throw against something other than a spell's damage (keeping one's footing on grease, not catching fire, not
+ * falling asleep), over the one who rolled it: "DEX save 14: safe", "DEX save 6: FAIL".
+ */
+export function logAbilitySave(target: Entity, stat: StatName, total: number, saved: boolean): void {
+  const ability = text(`stat.${stat}.short` as const);
+  logLine(target, text(saved ? 'roll.ability_save_safe' : 'roll.ability_save_fail', { ability, total }), saved ? 'miss' : 'damage');
 }
 
 /** A saving throw against a spell and the damage it let through, over the one who rolled it: "save 14 - half", then "9 dmg". */

@@ -8,16 +8,15 @@ import { characterSheet, spellcastingFor } from '../rules/CharacterSheet';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { playVfx } from '../render/VfxPlayer';
 import { text } from '../core/texts';
-import { aimedWithin, concentrate } from './LastingSpells';
+import { aimedWithin, concentrate, endConcentration } from './LastingSpells';
 import { logLine } from './RollLogSystem';
 
 /**
- * Dancing Lights: four torch-sized lights hover for the spell's duration (held by concentration), shedding light. Cast at
- * oneself they circle the caster, lighting the way; sent somewhere within range they hover there — and foes near them that
- * fail a Wisdom save against the caster's DC are drawn to them (`entranced`): each drifts over and stares, until it is hurt,
- * a hero comes close, or the lights go out. Recast, the lights go where they are sent anew. An anchor entity
- * (`dancingLights`) carries the spell; each light is an entity of its own (`wisp`) with a glow, so the light renderer lights
- * the dark round it on every screen.
+ * Dancing Lights, for lighting the dark or drawing foes away: four lights hover for the spell's duration (held by
+ * concentration), each shedding light. Cast at oneself they circle the caster; sent somewhere within range they hover there,
+ * and foes near them that fail a Wisdom save against the caster's DC are drawn to them (`entranced`) until hurt, until a hero
+ * comes close, or until the lights go out. An anchor entity (`dancingLights`) carries the spell; each light is an entity of
+ * its own (`wisp`) with a glow, so the light renderer lights the dark round it on every screen.
  */
 
 /** Aimed this near the caster (px), the lights circle the caster instead of going somewhere. */
@@ -65,7 +64,7 @@ export function castDancingLights(caster: Player, def: SpellDef, targetX: number
     world.add({ position: { ...at }, yOffset: HOVER, wisp: { of, index }, glow: { radius: LIGHT_RADIUS, flicker: LIGHT_FLICKER } });
   }
   playVfx('dancing-lights-cast', at.x, at.y, HOVER);
-  if (def.concentration) concentrate(caster, def.id, of);
+  if (def.concentration) concentrate(caster, def.id, of, def.durationTicks);
 }
 
 /** Where a light circles its anchor (at x, y) this tick: round it, bobbing, each a quarter turn from the next. */
@@ -105,7 +104,7 @@ function updateAnchor(anchor: Anchor, radius: number): void {
   const holding = isPlayer(caster) && isActivePlayer(caster) && caster.concentration?.zone === world.id(anchor);
   if (!holding || --lights.ticks <= 0) {
     world.addComponent(anchor, 'removed', true);
-    if (isPlayer(caster) && caster.concentration?.zone === world.id(anchor)) world.removeComponent(caster, 'concentration');
+    if (isPlayer(caster) && caster.concentration?.zone === world.id(anchor)) endConcentration(caster);
     return;
   }
   if (lights.orbit) {
@@ -165,7 +164,10 @@ function heroClose(mob: Mob): boolean {
 export function updateDancingLights(tick: number): void {
   for (const anchor of anchors) if (!anchor.removed) updateAnchor(anchor, SPELLS.dancing_lights.radius);
   for (const wisp of wisps) if (!wisp.removed) updateWisp(wisp, tick);
-  for (const foe of entranced.entities.slice()) {
+  // Backwards: a foe that comes to leaves the query as it is walked.
+  const drawn = entranced.entities;
+  for (let i = drawn.length - 1; i >= 0; i--) {
+    const foe = drawn[i];
     const anchor = foe.entranced === undefined ? undefined : world.entity(foe.entranced);
     if (!anchor?.dancingLights || anchor.removed) world.removeComponent(foe, 'entranced');
   }

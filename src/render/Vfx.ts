@@ -37,7 +37,9 @@ export const VFX_EFFECTS = [
   'cloudkill', 'cone-of-cold', 'chain-lightning', 'chain-lightning-strike', 'circle-of-death',
   'disintegrate-cast', 'disintegrate-flight', 'disintegrate-impact', 'freezing-sphere', 'sunbeam-cast', 'sunbeam',
   'alchemists-fire-flight', 'alchemists-fire', 'grease-flight', 'grease-splash', 'grease-ignite', 'fire-surface', 'burning',
-  'grease', 'bursting-sinew', 'dancing-lights-cast', 'dancing-light', 'true-strike', 'true-strike-aura',
+  'grease', 'dancing-lights-cast', 'dancing-light', 'true-strike', 'true-strike-aura',
+  'sleep-cast', 'sleep-flight', 'sleep-impact', 'sleep-zzz', 'longstrider', 'longstrider-aura',
+  'protection-from-evil-and-good', 'protection-aura', 'fog-cloud-burst', 'fog-cloud', 'grease-sheen', 'water-glint',
 ] as const;
 export type VfxEffectId = (typeof VFX_EFFECTS)[number];
 

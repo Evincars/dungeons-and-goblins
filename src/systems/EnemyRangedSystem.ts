@@ -24,6 +24,7 @@ import { impactOf, playBurstArt, playCastArt, playStrikeArt } from './SpellSyste
 import { chargesWater, conducted, electrifyArea } from './LastingSpells';
 import { notePressed } from './CloseQuarters';
 import { isBackingOff } from '../ai/execution/skirmish';
+import { sightObscured } from '../ai/perception/obscured';
 import { igniteGrease } from './Surfaces';
 
 /**
@@ -71,6 +72,8 @@ export function targetFor(level: Level, mob: Shooter, reach: number): Player | n
     const d = Math.hypot(hero.position.x - mob.position.x, hero.position.y - mob.position.y);
     if (d > bestD || !onTheirScreen(hero, mob.position.x, mob.position.y)) continue;
     if (!level.checkLineOfSight(mob.position.x, mob.position.y, hero.position.x, hero.position.y)) continue;
+    // A hero in fog, or behind it, is not seen (ai/perception/obscured.ts).
+    if (sightObscured(mob.position.x, mob.position.y, hero.position.x, hero.position.y)) continue;
     best = hero;
     bestD = d;
   }
@@ -273,7 +276,7 @@ function recover(caster: Caster | undefined): void {
 export function updateEnemyRanged(level: Level): void {
   for (const mob of ranged) {
     recover(mob.mobCaster);
-    if (mob.removed || mob.health.current <= 0 || mob.falling || (mob.freezeTime ?? 0) > 0) continue;
+    if (mob.removed || mob.health.current <= 0 || mob.falling || (mob.freezeTime ?? 0) > 0 || (mob.status?.asleep ?? 0) > 0) continue;
     if (mob.ai.state !== 'engage' && mob.ai.state !== 'alert') continue;
     // Backing off from a hero too close (ai/execution/skirmish.ts): it shoots once it has its distance.
     if (isMob(mob) && isBackingOff(mob)) continue;

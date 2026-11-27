@@ -13,6 +13,8 @@ import { DAMAGE_TYPES, PHYSICAL_DAMAGE_TYPES } from './DamageTypes';
 import type { DamageType, PhysicalDamageType } from './DamageTypes';
 import { isThrowableId } from './Throwables';
 import type { ThrowableId } from './Throwables';
+import { isCondition, isCreatureType } from './Conditions';
+import type { Condition, CreatureType } from './Conditions';
 
 /**
  * Enemies as the tabletop rules see them, from the SRD monster blocks in src/data/stats.json: Armor Class,
@@ -20,8 +22,9 @@ import type { ThrowableId } from './Throwables';
  */
 
 export type MonsterStats = {
-  /** The SRD monster it is copied from. */
+  /** The SRD monster it is copied from, and its creature type. */
   source: string;
+  creature: CreatureType;
   health: number;
   ac: number;
   proficiency: number;
@@ -41,12 +44,13 @@ export type MonsterStats = {
   defences: MonsterDefences;
 };
 
-/** A monster's resistances, immunities and vulnerabilities (rules/Resistances.ts). */
+/** A monster's resistances, immunities and vulnerabilities (rules/Resistances.ts), and the conditions it is immune to. */
 export type MonsterDefences = {
   resist: readonly DamageType[]; immune: readonly DamageType[]; vulnerable: readonly DamageType[]; resistNonmagical: readonly PhysicalDamageType[];
+  conditions: readonly Condition[];
 };
 
-const NO_DEFENCES: MonsterDefences = { resist: [], immune: [], vulnerable: [], resistNonmagical: [] };
+const NO_DEFENCES: MonsterDefences = { resist: [], immune: [], vulnerable: [], resistNonmagical: [], conditions: [] };
 const isDamageType = (v: unknown): v is DamageType => DAMAGE_TYPES.some((t) => t === v);
 const isPhysical = (v: unknown): v is PhysicalDamageType => PHYSICAL_DAMAGE_TYPES.some((t) => t === v);
 
@@ -93,7 +97,20 @@ function readDefences(type: MobType, raw: unknown): MonsterDefences {
     immune: typeList(type, 'immune', d.immune, isDamageType),
     vulnerable: typeList(type, 'vulnerable', d.vulnerable, isDamageType),
     resistNonmagical: typeList(type, 'resistNonmagical', d.resistNonmagical, isPhysical),
+    conditions: conditionList(type, d.conditions),
   };
+}
+
+/** The conditions a defences block makes it immune to, checked. */
+function conditionList(type: MobType, raw: unknown): Condition[] {
+  if (raw === undefined) return [];
+  ensure(Array.isArray(raw) && raw.every(isCondition), `Bad condition immunities for ${type}`, { type });
+  return Array.isArray(raw) ? raw.filter(isCondition) : [];
+}
+
+/** Whether a kind of enemy is immune to a condition (SRD). */
+export function immuneTo(type: MobType, condition: Condition): boolean {
+  return MONSTERS[type].defences.conditions.includes(condition);
 }
 
 function readMonster(type: MobType, raw: RawMonster): MonsterStats {
@@ -102,8 +119,9 @@ function readMonster(type: MobType, raw: RawMonster): MonsterStats {
   ensure(raw.weapons.length > 0 && raw.weapons.every(isWeaponBase), `Unknown weapon for ${type}`, { type, weapons: raw.weapons.join(', ') });
   const modifiers = { ...abilities };
   for (const stat of STAT_NAMES) modifiers[stat] = abilityModifier(abilities[stat]);
+  ensure(isCreatureType(raw.creature), `Unknown creature type for ${type}`, { type });
   return {
-    source: raw.source, health: raw.health, ac: raw.ac, proficiency: raw.proficiency,
+    source: raw.source, creature: isCreatureType(raw.creature) ? raw.creature : 'humanoid', health: raw.health, ac: raw.ac, proficiency: raw.proficiency,
     abilities, modifiers, weapons: raw.weapons.filter(isWeaponBase), xp: raw.xp, deathPoints: raw.deathPoints,
     ranged: readRanged(type, raw), caster: readCaster(type, raw), throwables: readThrowables(type, raw), defences: readDefences(type, raw),
   };

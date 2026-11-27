@@ -1,8 +1,9 @@
-import { world, q, isActivePlayer, isMob, isPlayer } from '../world';
+import { world, q, isActivePlayer, isMob, isPlayer, PUDDLE_ART_RADIUS, PUDDLE_FRAMES } from '../world';
 import type { Entity, Player, SurfaceKind } from '../world';
 import { text } from '../core/texts';
-import { MONSTERS } from '../rules/Monsters';
-import { rollDice, rollDie } from '../rules/Dice';
+import { immuneTo } from '../rules/Monsters';
+import { statusOf } from './ManeuverSystem';
+import { rollDice } from '../rules/Dice';
 import type { Dice } from '../rules/Dice';
 import type { DamageType } from '../rules/DamageTypes';
 import { TICKS_PER_SECOND } from '../rules/Spells';
@@ -12,7 +13,7 @@ import { AIM_HEIGHT } from '../entities/ProjectileFactory';
 import { playEffect } from '../assets/Effects';
 import { playVfx } from '../render/VfxPlayer';
 import { sound } from '../audio/SoundPlayer';
-import { heroSavingThrow } from './FeatureSystem';
+import { bodySave } from './BodySaves';
 import { hurtPlayer } from './CombatSystem';
 import { hitMob } from './Hits';
 import { logLine } from './RollLogSystem';
@@ -46,8 +47,8 @@ const FIRE_LIGHT = 12;
 const FIRE_FLICKER = 0.7;
 /** Grease bursts into flame with this flash. */
 const IGNITE_EFFECT = { shape: 'flame_lick', colour: 'coral', scale: 1.4 } as const;
-/** The puddle art (assets/SpriteGen.ts genPuddleSheet) is this wide at scale 1 (px of its radius). */
-const ART_RADIUS = 32;
+/** The library's flame burst is made for a patch this wide (px of its radius): it is scaled to the grease. */
+const IGNITE_ART_RADIUS = 32;
 
 type Surface = (typeof q.surfaces)['entities'][number];
 
@@ -67,7 +68,7 @@ export function spreadSurface(kind: Extract<SurfaceKind, 'grease' | 'fire'>, x: 
   const surface = world.add({
     position: { x, y }, flat: true,
     surface: { kind, radius, owner, pulse: TURN_TICKS, ...(ticks > 0 ? { ticks } : {}), dc },
-    visual: { sheet: 'puddle', col: kind === 'fire' ? 3 : 2, scale: radius / ART_RADIUS },
+    visual: { sheet: 'puddle', col: PUDDLE_FRAMES[kind], scale: radius / PUDDLE_ART_RADIUS },
     ...(kind === 'fire' ? { glow: { radius: radius + FIRE_LIGHT, flicker: FIRE_FLICKER } } : {}),
   });
   if (kind !== 'grease' || !isSurface(surface)) return surface;
@@ -106,10 +107,10 @@ function kindle(grease: Surface, by: number): void {
   s.ticks = KINDLED_TICKS;
   s.pulse = 0;
   s.owner = by;
-  if (grease.visual) grease.visual.col = 3;
+  if (grease.visual) grease.visual.col = PUDDLE_FRAMES.fire;
   world.addComponent(grease, 'glow', { radius: s.radius + FIRE_LIGHT, flicker: FIRE_FLICKER });
   const { x, y } = grease.position;
-  playEffect(IGNITE_EFFECT.shape, IGNITE_EFFECT.colour, x, y, 0, IGNITE_EFFECT.scale * s.radius / ART_RADIUS);
+  playEffect(IGNITE_EFFECT.shape, IGNITE_EFFECT.colour, x, y, 0, IGNITE_EFFECT.scale * s.radius / IGNITE_ART_RADIUS);
   playVfx('grease-ignite', x, y);
   sound.playSound('impact_fire', x, y);
 }
@@ -130,35 +131,28 @@ function forEachBodyIn(surface: Surface, act: (body: Entity) => void): void {
   }
 }
 
-/** A Dexterity save: a hero's own (their features and all), a foe's d20 + its monster block's modifier. */
-function dexSave(body: Entity, dc: number): boolean {
-  if (isPlayer(body)) return heroSavingThrow(body, 'dexterity', dc);
-  const modifier = body.mobType ? MONSTERS[body.mobType].modifiers.dexterity : 0;
-  return rollDie(20) + modifier >= dc;
-}
+/** A Dexterity save, shown over the head of whoever rolls it (systems/BodySaves.ts). */
+const dexSave = (body: Entity, dc: number): boolean => bodySave(body, 'dexterity', dc);
 
-/** Feet in grease: a Dexterity save, or the body slips and falls. */
+/** Feet in grease: a Dexterity save, or the body slips and falls. A body that never falls prone (a specter floats) keeps going. */
 function slipOrNot(body: Entity, grease: Surface): void {
+  if (body.mobType && immuneTo(body.mobType, 'prone')) return;
   if (!dexSave(body, grease.surface.dc ?? DEFAULT_GREASE_DC)) knockDown(body);
 }
 
 /** A body falls prone: it neither moves nor acts until it is up again, and blows against it have advantage. */
 export function knockDown(body: Entity): void {
-  if (isPlayer(body)) body.knockedDown = SLIP_TICKS;
-  else if (body.mobType) proneStatus(body).prone = Math.max(proneStatus(body).prone, SLIP_TICKS);
+  // Through the world the first time, so the query of those getting up holds them.
+  if (isPlayer(body) && body.knockedDown === undefined) world.addComponent(body, 'knockedDown', SLIP_TICKS);
+  else if (isPlayer(body)) body.knockedDown = SLIP_TICKS;
+  else if (body.mobType) statusOf(body, -1).prone = Math.max(body.status?.prone ?? 0, SLIP_TICKS);
   logLine(body, text('roll.slipped'), 'miss');
   if (body.position) sound.playSound('fail', body.position.x, body.position.y);
 }
 
-/** A foe's marks (systems/ManeuverSystem.ts keeps them), made the first time one is given. */
-function proneStatus(foe: Entity): NonNullable<Entity['status']> {
-  if (!foe.status) world.addComponent(foe, 'status', { prone: 0, frightened: 0, goaded: 0, distracted: 0, eldritch: 0, charmed: 0, by: -1 });
-  return foe.status ?? { prone: 0, frightened: 0, goaded: 0, distracted: 0, eldritch: 0, charmed: 0, by: -1 };
-}
-
-/** Whether a body is down: a hero who slipped, a foe prone. It neither moves nor acts. */
+/** Whether a body is down: a hero who slipped, a foe prone or asleep (Sleep). It neither moves nor acts. */
 export function isDown(body: Entity): boolean {
-  return (body.knockedDown ?? 0) > 0 || (body.status?.prone ?? 0) > 0;
+  return (body.knockedDown ?? 0) > 0 || (body.status?.prone ?? 0) > 0 || (body.status?.asleep ?? 0) > 0;
 }
 
 /** The share of its pace a body at (x, y) moves at: half in grease, else all of it. */
@@ -264,8 +258,9 @@ function updateSurface(surface: Surface): void {
 export function updateSurfaces(): void {
   tickCount++;
   for (const surface of q.surfaces) if (!surface.removed) updateSurface(surface);
-  for (const body of burningBodies.entities.slice()) burnOn(body);
-  for (const hero of downHeroes.entities.slice()) getUp(hero);
+  // Backwards: a body that burns out or gets up leaves its query as it is walked.
+  for (let i = burningBodies.entities.length - 1; i >= 0; i--) burnOn(burningBodies.entities[i]);
+  for (let i = downHeroes.entities.length - 1; i >= 0; i--) getUp(downHeroes.entities[i]);
 }
 
 /** A hero who slipped is a tick nearer to standing up. */

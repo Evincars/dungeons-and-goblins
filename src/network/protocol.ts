@@ -25,6 +25,8 @@ import { bindingFeatureId, isFeatureId } from '../rules/ClassFeatures';
 import { bindingFeatId } from '../rules/Feats';
 import { validVariant } from '../rules/SpellVariants';
 import type { SpellVariant } from '../rules/SpellVariants';
+import { isDamageType } from '../rules/DamageTypes';
+import { isDieSides } from '../rules/Dice';
 
 /**
  * What co-op peers say to each other, and the checks every incoming message passes before the game
@@ -185,6 +187,16 @@ function validStats(stats: unknown): boolean {
     || (isFiniteNumber(stats[k]) && Math.abs(Number(stats[k])) <= MAX_ITEM_STAT));
 }
 
+/** A weapon's extra damage dice can be at most this many (a +3 weapon's 3d6 and then some). */
+const MAX_EXTRA_DICE = 4;
+
+/** A weapon's damage of another kind: none, or a few dice of a real die and a known damage type. */
+function validExtraDamage(value: unknown): boolean {
+  if (value === undefined) return true;
+  return isRecord(value) && Number.isInteger(value.count) && Number(value.count) >= 1 && Number(value.count) <= MAX_EXTRA_DICE
+    && isDieSides(value.sides) && isDamageType(value.type);
+}
+
 export function isInventoryItem(value: unknown): value is InventoryItem {
   if (!isRecord(value) || !isItemType(value.type) || typeof value.name !== 'string' || value.name.length > MAX_ITEM_NAME) return false;
   if (!isFiniteNumber(value.value) || value.value < 0 || value.value > MAX_ITEM_VALUE) return false;
@@ -193,7 +205,7 @@ export function isInventoryItem(value: unknown): value is InventoryItem {
   const idOk = (value.id === undefined || isShortKey(value.id)) && (value.kind === undefined || isShortKey(value.kind));
   const weightOk = value.weight === undefined || (isFiniteNumber(value.weight) && Number(value.weight) >= 0 && Number(value.weight) <= MAX_ITEM_WEIGHT);
   const rulesOk = (value.base === undefined || isItemBase(value.base)) && (value.bonus === undefined || isMagicBonus(value.bonus));
-  return gearOk && iconOk && idOk && weightOk && rulesOk && validStats(value.stats);
+  return gearOk && iconOk && idOk && weightOk && rulesOk && validStats(value.stats) && validExtraDamage(value.extraDamage);
 }
 
 function validEquipped(value: unknown): value is Partial<Record<EquipSlot, InventoryItem>> {

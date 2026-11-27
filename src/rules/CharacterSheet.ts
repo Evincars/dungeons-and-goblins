@@ -185,7 +185,9 @@ function attackWith(w: Wielding, modifiers: Modifiers): WeaponAttack {
   const abilityModifier = modifiers[ability];
   const magic = magicBonus(w.item ?? undefined);
   const dice = w.twoHanded && rule.versatile ? rule.versatile : rule.damage;
+  const extra = w.item?.extraDamage;
   return {
+    ...(extra ? { elemental: { dice: { count: extra.count, sides: extra.sides, bonus: 0 }, type: extra.type } } : {}),
     item: w.item, base: w.base, rule, ability, abilityModifier, abilityDamage: abilityModifier, abilityHit: abilityModifier, magic,
     styleHit: 0, styleDamage: 0, styleName: null, featHit: 0, featDamage: 0, featName: null,
     proficiency: w.proficiency, proficient: w.proficiency > 0, twoHanded: w.twoHanded,

@@ -531,7 +531,7 @@ export class ShopPanel {
 /** What an item's tooltip is told about the hero: their class, STR and the armour training their feats give. */
 function tipContext(player: Player): TooltipContext {
   const sheet = characterSheet(player);
-  return { cls: sheet.heroClass, strength: sheet.scores.strength, featArmor: sheet.feats.armor };
+  return { cls: sheet.heroClass, strength: sheet.scores.strength, modifiers: sheet.modifiers, featArmor: sheet.feats.armor, featWeapons: sheet.feats.weapons };
 }
 
 /** A name in runs of letters, those a search matched (`matched`, indices) lit, as the tooltip's header shows it. */

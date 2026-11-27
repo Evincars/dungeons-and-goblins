@@ -7515,3 +7515,68 @@ test('the six 2nd-level spells the game has no use for are kept but hidden', asy
   for (const id of ['arcane_lock', 'darkvision', 'detect_thoughts', 'enlarge_reduce', 'knock', 'phantasmal_force']) assert.equal(list[id].hidden, true, id);
   for (const id of ['blur', 'web', 'hold_person', 'charm_person', 'tashas_hideous_laughter']) assert.ok(!list[id].hidden, id);
 });
+
+const WeaponActionsModule = await load('rules/WeaponActions');
+const Rarity = await load('rules/Rarity');
+const ItemCompareModule = await load('game/ItemCompare');
+const WeaponHits = await load('systems/WeaponHits');
+const Protocol = await load('network/protocol');
+
+test('every weapon unlocks its weapon actions with proficiency (Baldur\'s Gate\'s "Proficiency unlocks"); a crossbow\'s shot makes a foe bleed', async () => {
+  const { WEAPON_BASES } = await load('rules/WeaponTable');
+  for (const base of WEAPON_BASES) {
+    if (base === 'unarmed') continue;
+    const actions = WeaponActionsModule.weaponActions(base);
+    assert.ok(actions.length >= 1 && actions.length <= 3, `${base} unlocks one to three`);
+  }
+  assert.deepEqual(WeaponActionsModule.weaponActions('greatsword').map((a) => a.id), ['cleave', 'lacerate', 'pommel_strike']);
+  assert.ok(WeaponActionsModule.weaponActions('heavy_crossbow').some((a) => a.effect === 'bleeding'));
+  assert.ok(WeaponActionsModule.weaponActions('longsword').some((a) => a.effect === 'crippled'));
+  assert.equal(WeaponActionsModule.weaponActions('unarmed').length, 0);
+});
+
+test('an item\'s rarity follows its magic; a weapon dealing damage of another kind is a step rarer', () => {
+  const sword = { ...HAND_WEAPONS.find((w) => w.base === 'longsword') };
+  assert.equal(Rarity.rarityOf(sword), 'common');
+  assert.equal(Rarity.rarityOf({ ...sword, bonus: 1 }), 'uncommon');
+  assert.equal(Rarity.rarityOf({ ...sword, bonus: 1, extraDamage: { count: 1, sides: 4, type: 'fire' } }), 'rare');
+  assert.equal(Rarity.rarityOf({ ...sword, bonus: 3, extraDamage: { count: 1, sides: 4, type: 'fire' } }), 'very_rare');
+  assert.equal(Protocol.isInventoryItem({ ...sword, extraDamage: { count: 1, sides: 4, type: 'fire' } }), true);
+  assert.equal(Protocol.isInventoryItem({ ...sword, extraDamage: { count: 1, sides: 5, type: 'fire' } }), false, 'no five-sided die');
+  assert.equal(Protocol.isInventoryItem({ ...sword, extraDamage: { count: 1, sides: 4, type: 'hellfire' } }), false);
+});
+
+test('an item looked at in the bag is compared with what it would replace: a weapon with the main hand\'s, armour with the armour, headwear with the head\'s', () => {
+  const sword = { ...HAND_WEAPONS.find((w) => w.base === 'longsword') };
+  const axe = { ...HAND_WEAPONS.find((w) => w.base === 'battleaxe') };
+  const mail = { type: 'armor', name: 'Chain mail', value: 75, gear: 'armor', base: 'chain_mail' };
+  const shirt = { type: 'armor', name: 'Chain shirt', value: 50, gear: 'armor', base: 'chain_shirt' };
+  const equipped = { primary: sword, armor: mail };
+  assert.equal(ItemCompareModule.wornCounterpart(equipped, axe), sword);
+  assert.equal(ItemCompareModule.wornCounterpart(equipped, shirt), mail);
+  assert.equal(ItemCompareModule.wornCounterpart(equipped, sword), undefined, 'not with itself');
+  assert.equal(ItemCompareModule.wornCounterpart({}, axe), undefined, 'nothing worn: nothing to compare');
+  const shield = { ...SHIELDS[0] };
+  assert.equal(ItemCompareModule.wornCounterpart({ secondary: shield }, { ...shield }), undefined, 'the off hand is not compared yet');
+});
+
+test('a weapon dealing fire deals it on every hit and sets the one struck alight for a couple of rounds, hero or foe', () => {
+  const level = arena(12, 6);
+  const fighter = playerAt(3, 3, 'fighter');
+  fighter.equipped = { primary: { ...HAND_WEAPONS.find((w) => w.base === 'longsword'), extraDamage: { count: 1, sides: 4, type: 'fire' } } };
+  const attack = sheetOf(fighter).attack;
+  assert.deepEqual(attack.elemental, { dice: { count: 1, sides: 4, bonus: 0 }, type: 'fire' });
+  const goblin = mobAt(level, 'goblin', 4, 3);
+  const before = goblin.health.current;
+  WeaponHits.elementalHit(goblin, fighter, attack, false);
+  assert.ok(goblin.health.current < before, 'the fire hurts');
+  assert.equal(goblin.burning?.ticks, WeaponHits.WEAPON_BURN_TICKS, 'and it burns on');
+  assert.equal(goblin.afflicted?.kind, 'fire');
+  const hero = playerAt(6, 3);
+  WeaponHits.elementalHit(hero, goblin, { ...blow, elemental: { dice: { count: 1, sides: 4, bonus: 0 }, type: 'fire' } }, false);
+  assert.ok(hero.burning, 'a hero struck by a fiery weapon burns too');
+  const cold = { ...blow, elemental: { dice: { count: 1, sides: 4, bonus: 0 }, type: 'cold' } };
+  const orc = mobAt(level, 'orc', 8, 3);
+  WeaponHits.elementalHit(orc, fighter, cold, false);
+  assert.equal(orc.burning, undefined, 'cold sets nothing alight');
+});

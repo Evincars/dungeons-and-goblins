@@ -50,6 +50,7 @@ import { igniteGrease } from './Surfaces';
 import { castSleep, lull, lulls } from './SleepSpell';
 import { allyAt, allyInReach, castOnAlly } from './AllySpells';
 import { castFogCloud } from './FogCloud';
+import { elementalHit } from './WeaponHits';
 import { castHex, foeAt, foeInReach, heroHeld, holdOnHit } from './SpellHolds';
 import { revealOnAct } from './Invisibility';
 import { castGust } from './GustOfWind';
@@ -565,6 +566,8 @@ function strikeWith(bolt: Bolt, victim: Entity): boolean {
   const rolled = strike(victim, attack, shooter, p.spell);
   const outcome = p.spell ? foreseeHit(shooter, victim, attack, rolled) : rolled;
   if (outcome.hit) hitMob(victim, bolt, outcome.damage, false, shotType(p));
+  // An arrow from a bow that deals damage of another kind (fire) deals that too.
+  if (outcome.hit && p.arrow) elementalHit(victim, bolt, p.attack, outcome.critical);
   if (outcome.hit) harvestWith(shooter, victim, p, alive);
   // Sharpshooter: an arrow that kills earns a shot more for the next volley.
   if (outcome.hit && p.arrow && alive && (victim.health?.current ?? 1) <= 0 && isPlayer(shooter)) earnBonusAttack(shooter, true);
@@ -646,6 +649,7 @@ function strikeHero(bolt: Bolt, hero: Player): boolean {
   const attack = shotAttack(p);
   const outcome = strike(hero, attack, shooter, p.spell);
   if (outcome.hit) hurtPlayer(hero, shooter ?? bolt, outcome.damage, type);
+  if (outcome.hit && p.arrow) elementalHit(hero, bolt, p.attack, outcome.critical);
   return outcome.hit;
 }
 

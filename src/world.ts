@@ -9,7 +9,7 @@ import type { HeroClassId } from './rules/Classes';
 import type { Build } from './rules/Build';
 import type { WeaponBase } from './rules/WeaponTable';
 import type { AttackProfile } from './rules/Combat';
-import type { Dice } from './rules/Dice';
+import type { Dice, DieSides } from './rules/Dice';
 import type { SpellId } from './rules/Spells';
 import type { QuickBinding } from './rules/Spellbook';
 import type { ThrowableId } from './rules/Throwables';
@@ -73,6 +73,11 @@ export type InventoryItem = {
   stats?: ItemStats;
   /** Kilograms it weighs; what a player carries is limited. */
   weight?: number;
+  /**
+   * A weapon's damage of another kind on every hit, on top of its own (a flaming sword's 1d4 fire): rolled with the blow
+   * (doubled on a critical), and fire sets the one struck alight for a couple of rounds (systems/WeaponHits.ts).
+   */
+  extraDamage?: { count: number; sides: DieSides; type: DamageType };
 };
 
 /** A square of the bag: an item, or empty (the bag keeps items where they were put). */

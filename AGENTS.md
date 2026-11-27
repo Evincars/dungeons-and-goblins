@@ -131,7 +131,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `public/weapons`; a new kind may reuse another's). These files are the single source: `src/rules/WeaponTable.ts` and
   `ArmorTable.ts` read and check them, `ItemCatalog.ts` makes the items from them, and every rule in
   play follows them (finesse, light for two-weapon fighting, two-handed, reach, loading, range and its disadvantage, versatile,
-  heavy armour's STR); no magic bonuses or ability stats on gear yet; hero classes (abilities, hit points, proficiencies, features) in
+  heavy armour's STR); the weapon actions each weapon unlocks with proficiency in `src/data/weapon-actions.json` (`rules/WeaponActions.ts`; not played yet); no ability stats on gear yet; hero classes (abilities, hit points, proficiencies, features) in
   `src/data/classes.json`; feats (the Baldur's Gate 3 list: requirement, the ability each raises, `worked`, effects) in
   `src/data/feats.json`, read by `src/rules/Feats.ts` and summed per hero as `FeatEffects` (`featEffects` in `rules/Build.ts`;
   Passive Feats have their own section in the Skills tab: a toggle one is bound to the quick bar as `feat:<id>` and its key
@@ -552,8 +552,20 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `core/fuzzy.ts`, matched ones lit in the tooltip — and sorted by price, weight or training, `game/BagView.ts`, without moving a
   thing; a right-click menu to equip — a weapon in the primary hand or the off-hand — take off, drop, compare or send; a click
   marks an item, Ctrl+click marks a second and the two are compared side by side, the second's AC, damage and weight marked
-  better or worse, `game/ItemCompare.ts`; gear the hero is not trained in, `itemTrained` in `rules/Classes.ts`, has a red aura
-  behind it), its character sheet (`AbilityGrid`, `SheetField`, `SheetInfoPanel`, `ProficiencyPanel`, tooltips in
+  better or worse, `game/ItemCompare.ts`; an item in the bag under the pointer that would take the place of something worn (a
+  weapon the main hand's, body armour, headwear; not the off hand yet, `wornCounterpart`) is shown beside the worn one the
+  same way; the square under the pointer is edged, and while an item is dragged the square it would land in, in gold; gear
+  the hero is not trained in, `itemTrained` in `rules/Classes.ts`, has a red aura behind it). An item's tooltip
+  (`ui/ItemTooltip.ts`, the shop's and loot rolls' too) is laid out as Baldur's Gate's: its name in its rarity's colour
+  (`rules/Rarity.ts`: by its magic, a step rarer for damage of another kind), "Uncommon Magic Weapon", its picture top right,
+  the damage range in large figures with the hero's ability and magic added (armour: its Armor Class), its dice and damage
+  type marks, a weapon's damage of another kind (`extraDamage`, "+1d4 Fire"), its enchantment, a weapon's "Proficiency
+  unlocks" (the weapon actions of `src/data/weapon-actions.json`, `rules/WeaponActions.ts`: bleeding, dazing, toppling,
+  crippling…, not played yet, shown with placeholder icons of their effect, `ui/ItemIcons.ts`, greyed for a hero untrained in
+  it), warnings, who wears it and the spells on it (Magic Weapon, Shadow Blade), and at its foot its sort, properties
+  (two-handed in yellow), range, weight and price. A weapon's damage of another kind is dealt on every hit of its blows and
+  arrows (`systems/WeaponHits.ts`, `AttackProfile.elemental`), and fire sets the one struck, hero or foe, alight for two
+  rounds (`WEAPON_BURN_TICKS`). Its character sheet (`AbilityGrid`, `SheetField`, `SheetInfoPanel`, `ProficiencyPanel`, tooltips in
   `SheetTopics`; the column scrolls when it is too tall), the lists' scrollbars (`ScrollBar`), panels, pause menu. The game
   draws its own pointer over every scene (`ui/Pointer.ts`, from `public/ui/pointer.png`, made from `public/dng-pointer.png` by
   `scripts/pointer-sheet.py`, lifted and outlined to stand out on the dark; keep the hot spots in step): the hand over menus, the HUD and panels (pressing over anything

@@ -20,6 +20,7 @@ import { text } from '../core/texts';
 import { heroHeld } from './SpellHolds';
 import { bladeDamageType } from '../rules/SpellWeapons';
 import { revealOnAct } from './Invisibility';
+import { elementalHit } from './WeaponHits';
 
 type Swing = NonNullable<Entity['swordSwing']>;
 
@@ -174,6 +175,8 @@ function strikeWith(player: Player, target: Entity, attack: AttackProfile, along
   if (!outcome.hit) return;
   // A Shadow Blade cuts with psychic gloom (systems/SpellWeapons.ts).
   hitMob(target, player, outcome.damage, alongside, bladeDamageType(player));
+  // A weapon that deals damage of another kind (a flaming sword's fire) deals it too, and fire sets the foe alight.
+  elementalHit(target, player, attack, outcome.critical);
   if (outcome.critical || (target.health?.current ?? 1) <= 0) earnBonusAttack(player, false);
 }
 

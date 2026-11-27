@@ -1,4 +1,4 @@
-import type { InventoryItem } from '../world';
+import type { EquipSlot, InventoryItem } from '../world';
 import { armorRule, magicBonus, weaponRule } from '../rules/Equipment';
 import { diceRange } from '../rules/Dice';
 
@@ -46,4 +46,15 @@ export function compareItems(item: InventoryItem, against: InventoryItem): Parti
   const weight = verdict(item.weight ?? null, against.weight ?? null, false);
   if (weight !== undefined) out.weight = weight;
   return out;
+}
+
+/**
+ * The gear the hero wears that an item would take the place of, to compare it with as it is looked at (the inventory shows
+ * the two side by side): a weapon against the main hand's weapon, body armour against the armour worn, headwear against
+ * the head's. The off hand is not compared yet. Nothing for anything else, or for the very item worn.
+ */
+export function wornCounterpart(equipped: Partial<Record<EquipSlot, InventoryItem>>, item: InventoryItem): InventoryItem | undefined {
+  const worn = weaponRule(item) ? equipped.primary : item.gear === 'armor' || item.gear === 'head' ? equipped[item.gear] : undefined;
+  if (!worn || worn === item) return undefined;
+  return weaponRule(item) && !weaponRule(worn) ? undefined : worn;
 }

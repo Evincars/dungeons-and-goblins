@@ -1,5 +1,6 @@
 import { rollAttack, rollDice, rollDie } from './Dice';
 import type { AttackRoll, D20Mode, Dice, DieRoller, DieSides } from './Dice';
+import type { DamageType } from './DamageTypes';
 
 /**
  * One blow under the tabletop rules, at the speed of an action game: d20 + attack bonus against the target's
@@ -26,6 +27,8 @@ export type AttackProfile = {
   savage?: boolean;
   /** Any hit is a critical hit (a blow from within 5 feet at an unconscious target). */
   critOnHit?: boolean;
+  /** The weapon's damage of another kind on a hit (a flaming sword's 1d4 fire), dealt on its own (systems/WeaponHits.ts). */
+  elemental?: { dice: Dice; type: DamageType };
 };
 
 export type AttackOutcome = AttackRoll & {

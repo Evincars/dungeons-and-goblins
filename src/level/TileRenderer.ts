@@ -14,8 +14,13 @@ import { SeeThroughWalls } from '../render/SeeThrough';
 import { TILE_HEIGHT, TILE_WIDTH } from './TileType';
 
 export type LevelView = {
-  /** Floors, faces and wall tops that lie beneath every entity. */
+  /** Floors (and the dark under them) beneath everything. */
   base: Container;
+  /**
+   * Faces, wall tops and rock that lie beneath every entity standing, but over what lies flat on the floor (puddles, grease,
+   * burning floor, webs, rugs, the rings of conditions): those run under the walls, not over them. WALLS_Z in the game layer.
+   */
+  walls: Container;
   /**
    * Wall rows characters can stand behind, and arch lintels: each layer carries
    * a zIndex so it depth-sorts with entities in the game layer.
@@ -113,6 +118,8 @@ export function buildLevelView(level: Level): LevelView {
   commitBlendAtlas();
   commitMineGroundAtlas();
   const container = new Container();
-  container.addChild(voidBackdrop(level), cave, floors, blends, brinks, base, caveWalls, rockCut, ...flat.slants.values());
-  return { base: container, occluders: [...byZ.values()], seeThrough };
+  container.addChild(voidBackdrop(level), cave, floors, blends, brinks);
+  const walls = new Container();
+  walls.addChild(base, caveWalls, rockCut, ...flat.slants.values());
+  return { base: container, walls, occluders: [...byZ.values()], seeThrough };
 }

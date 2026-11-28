@@ -25,7 +25,7 @@ import { keepConcentration } from './LastingSpells';
 import { damageTaken } from '../rules/Resistances';
 import type { DamageType } from '../rules/DamageTypes';
 import { weaponStats } from '../rules/WeaponTable';
-import { logLine } from './RollLogSystem';
+import { logHurt, logLine } from './RollLogSystem';
 import { text } from '../core/texts';
 import { damageTypeName } from '../rules/Names';
 import { enfeebledDamage, incapacitated, shakeOff } from './SpellHolds';
@@ -300,6 +300,8 @@ export function hurtPlayer(player: Entity, source: Entity, damage: number, type:
   if (absorbed > 0) player.tempHealth = (player.tempHealth ?? 0) - absorbed;
 
   h.current = Math.max(0, h.current - (finalDamage - absorbed));
+  // The damage over the hero's head, in red (with its kind, unless a weapon's).
+  logHurt(player, finalDamage, type);
   stagger(player, source);
   // A spell held by concentration may slip (a Constitution save); fits of laughter may be shaken off.
   if (isPlayer(player)) keepConcentration(player, finalDamage);

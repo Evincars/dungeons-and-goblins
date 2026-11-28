@@ -274,6 +274,8 @@
   "roll.crit_miss": "CRIT MISS",
   "roll.damage": "{amount} dmg",
   "roll.crit_damage": "CRIT! {amount} dmg",
+  "roll.crit": "CRIT!",
+  "roll.hurt_typed": "{amount} {type}",
   "roll.heal": "+{amount} HP",
   "roll.save_half": "save {total}: half",
   "roll.save_fail": "save {total}: FAIL",

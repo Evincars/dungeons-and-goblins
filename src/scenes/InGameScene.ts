@@ -62,6 +62,8 @@ import { updateSeeThrough } from '../systems/SeeThroughSystem';
 import { attempt, report, reportRejection } from '../core/errors';
 import { inDarkness } from '../ai/perception/obscured';
 
+/** The terrain's walls in the game layer: over all that lies flat on the floor (FLAT_Z -0.5, condition rings -0.4), under all that stands (0 and up). */
+const WALLS_Z = -0.3;
 /** The Third Eye's darkvision lifts the fog this many times as far round its hero. */
 const DARKVISION_FACTOR = 2;
 /** Tiles revealed around each player when the level starts (every tick after, FOG_REVEAL_TILES). */
@@ -409,11 +411,15 @@ export class InGameScene implements Scene {
   private mountTerrain(): void {
     if (this.terrain) {
       this.terrain.base.destroy({ children: true });
+      this.terrain.walls.destroy({ children: true });
       for (const o of this.terrain.occluders) o.destroy({ children: true });
     }
     this.terrain = buildLevelView(this.level);
     this.terrain.base.zIndex = -1;
     this.gameLayer.addChildAt(this.terrain.base, 0);
+    // The walls lie over whatever is flat on the floor (puddles, webs, rugs at -0.5, rings at -0.4) and under all that stands.
+    this.terrain.walls.zIndex = WALLS_Z;
+    this.gameLayer.addChild(this.terrain.walls);
     for (const o of this.terrain.occluders) this.gameLayer.addChild(o);
   }
 

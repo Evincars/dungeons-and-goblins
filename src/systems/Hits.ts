@@ -1,4 +1,5 @@
 import { world } from '../world';
+import { logHurt } from './RollLogSystem';
 import type { Entity } from '../world';
 import type { DamageType } from '../rules/DamageTypes';
 import { sound } from '../audio/SoundPlayer';
@@ -39,6 +40,8 @@ export function hitMob(mob: Entity, attacker: Entity, damage: number, evenIfFlin
   const dealt = woundedFurther(mob, damage);
   if (credited?.playerStats) credited.playerStats.damageDealt += Math.min(dealt, h.current);
   h.current = Math.max(0, h.current - dealt);
+  // The damage over its head, in red (with its kind, unless a weapon's).
+  logHurt(mob, dealt, type);
   // A blow breaks a charm (Hypnotic Gaze, an illusion's hold) and wakes a sleeper.
   if (mob.status) mob.status.charmed = 0;
   wake(mob);

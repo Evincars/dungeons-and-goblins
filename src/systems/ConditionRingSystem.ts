@@ -5,11 +5,14 @@ import { createCanvas, context2d } from '../render/canvas';
 import { conditionsOn } from './Conditions';
 import type { ShownCondition } from './Conditions';
 import { hiddenHere } from './Invisibility';
+import { conditionIconKey } from '../assets/ConditionIcons';
+import { lazyTexture } from '../assets/LazyArt';
 
 /**
  * A ring on the floor under every hero and foe in a condition (systems/Conditions.ts), one in each condition's colour, the
  * next a little wider round the last: a band of runes turning slowly and breathing in brightness, lying flat on the floor
- * as the aim guide's marks under foes do. Drawn on this screen from the world's state, so co-op guests show them too.
+ * as the aim guide's marks under foes do; and over its head, above its health bar, a row of the conditions' icons. Drawn on
+ * this screen from the world's state, so co-op guests show them too.
  */
 
 /** Each condition's colour. */
@@ -40,6 +43,17 @@ const BASE_ALPHA = 0.72;
 const BREATH_ALPHA = 0.25;
 /** Over the puddles and rugs (at -0.5), under everything that stands. */
 const RING_Z = -0.4;
+/** The icons over a head: this big (px), this far apart, their foot this far over the health bar's place (or the feet). */
+const HEAD_ICON = 9;
+const HEAD_ICON_GAP = 1;
+const OVER_BAR = 3;
+const HEAD_FALLBACK = -40;
+/** Drawn just in front of the body (and its bar), a touch see-through. */
+const HEAD_DEPTH_BIAS = 0.6;
+const HEAD_ALPHA = 0.92;
+
+/** The pool of icons over heads, in the game layer (each sorts by depth with its body). */
+const heads: Sprite[] = [];
 
 type Ring = { holder: Container; sprite: Sprite };
 
@@ -120,12 +134,58 @@ function ringBody(body: Entity, parent: Container, next: number): number {
   return next;
 }
 
-/** Once a tick: a ring for each condition of every hero on their feet and every live foe; the rest of the pool hidden. */
+/** The i-th icon over a head, made the first time it is wanted (the pool starts afresh on each level's game layer). */
+function headIconAt(i: number, gameLayer: Container): Sprite {
+  // A new level's game layer: the icons left on the last one went with it.
+  if (heads.length > 0 && (heads[0].destroyed || heads[0].parent !== gameLayer)) heads.length = 0;
+  const have = heads[i];
+  if (have) return have;
+  const icon = new Sprite(Texture.EMPTY);
+  icon.anchor.set(0, 1);
+  gameLayer.addChild(icon);
+  heads.push(icon);
+  return icon;
+}
+
+/** Lays a row of the body's conditions' icons (in `held`) over its head, centred, from `next` on; returns the next free one. */
+function iconsOverHead(body: Entity, gameLayer: Container, next: number): number {
+  if (!body.position || held.length === 0) return next;
+  const width = held.length * HEAD_ICON + (held.length - 1) * HEAD_ICON_GAP;
+  const left = Math.round(body.position.x - width / 2);
+  const foot = Math.round(body.position.y + (body.healthBarOffset ?? HEAD_FALLBACK) - OVER_BAR);
+  for (let i = 0; i < held.length; i++) {
+    const icon = headIconAt(next++, gameLayer);
+    const texture = lazyTexture(conditionIconKey(held[i]));
+    if (icon.texture !== texture) icon.texture = texture;
+    icon.width = icon.height = HEAD_ICON;
+    icon.position.set(left + i * (HEAD_ICON + HEAD_ICON_GAP), foot);
+    icon.zIndex = body.position.y + HEAD_DEPTH_BIAS;
+    icon.alpha = HEAD_ALPHA;
+    icon.visible = texture !== Texture.EMPTY;
+  }
+  return next;
+}
+
+/** One body: its rings under its feet and its icons over its head. */
+function markBody(body: Entity, parent: Container, gameLayer: Container, at: { ring: number; icon: number }): void {
+  at.ring = ringBody(body, parent, at.ring);
+  // ringBody filled `held` with the body's conditions (none for a body this screen does not see).
+  if (body.position && !hiddenHere(body)) at.icon = iconsOverHead(body, gameLayer, at.icon);
+}
+
+const next = { ring: 0, icon: 0 };
+
+/**
+ * Once a tick: a ring under the feet and an icon over the head for each condition of every hero on their feet and every live
+ * foe; the rest of the pools hidden.
+ */
 export function updateConditionRings(gameLayer: Container): void {
   const parent = ringsIn(gameLayer);
   clock++;
-  let next = 0;
-  for (const hero of q.players) if (isActivePlayer(hero)) next = ringBody(hero, parent, next);
-  for (const foe of q.mobs) if (foe.health.current > 0 && !foe.removed) next = ringBody(foe, parent, next);
-  for (let i = next; i < rings.length; i++) rings[i].holder.visible = false;
+  next.ring = 0;
+  next.icon = 0;
+  for (const hero of q.players) if (isActivePlayer(hero)) markBody(hero, parent, gameLayer, next);
+  for (const foe of q.mobs) if (foe.health.current > 0 && !foe.removed) markBody(foe, parent, gameLayer, next);
+  for (let i = next.ring; i < rings.length; i++) rings[i].holder.visible = false;
+  for (let i = next.icon; i < heads.length; i++) heads[i].visible = false;
 }

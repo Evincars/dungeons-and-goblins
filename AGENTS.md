@@ -496,8 +496,17 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
 - Condition icons are Baldur's Gate's (`scripts/download-condition-icons.py`, every page of bg3.wiki's Condition Icons,
   pixelated lightly by `scripts/condition-icons.sh` into `public/conditions`; which condition shows which in
   `assets/ConditionIcons.ts`). The hero's own conditions (blinded in fog or Darkness, prone, a spell's hold…) stand in the HUD's
-  top left with their icons (`ui/PassiveHud.ts`); the pointer over a body shows a small see-through card of its conditions,
+  top left with their icons (`ui/PassiveHud.ts`); every body in a condition shows its icons in a row over its head, above its
+  health bar (`systems/ConditionRingSystem.ts`); the pointer over a body shows a small see-through card of its conditions,
   their icons and names only (`ui/ConditionTip.ts`).
+- Damage shows over whoever takes it, in red, as it is dealt (`logHurt` in `systems/RollLogSystem.ts`, from `hitMob` and
+  `hurtPlayer`): "7" for a weapon's kinds, "3 fire" for any other; the attacker shows only its roll to hit, a miss or "CRIT!".
+- The terrain's walls and rock lie in their own container (`LevelView.walls`, WALLS_Z) over what lies flat on the floor
+  (puddles, grease, burning floor, webs, rugs, condition rings) and under all that stands.
+- A particle effect following a body (burning, a mark, a hold's aura) that is no longer asked for fades on the body
+  (`systems/VfxSystem.ts` `letGoUnasked`), never left emitting in the air.
+- In the caverns an inner corner where a north cliff meets the rock below it is opened to cave ground (`CaveZone.openCorners`),
+  and a cliff ending beside open floor has cave ground under its end (`caveCliffEnd`, `TerrainAutotile.ts`).
 - Invisibility (an `ally` spell, `systems/Invisibility.ts`, `invisible`) hides a hero until they attack or cast
   (`revealOnAct`; the companion's concentration ends with it): every screen draws them as a shimmer (`systems/ImageSystem.ts`),
   foes do not see them beyond 5 feet, attacks at them at disadvantage and theirs at advantage. An enemy caster that knows it

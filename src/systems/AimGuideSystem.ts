@@ -24,7 +24,7 @@ import { nearby, Sense } from '../ai/perception/spatial';
 import { PixelLabel } from '../ui/PixelText';
 import { bracketPath } from './MarkerSystem';
 import { allyAt } from './AllySpells';
-import { foeAt } from './SpellHolds';
+import { foeAt, hexTargets } from './SpellHolds';
 import { hiddenHere } from './Invisibility';
 import { stepTarget } from './MistyStep';
 import type { Level } from '../level/Level';
@@ -74,7 +74,7 @@ const GUIDE_Z = 999_999;
  */
 export type Aim = {
   reach: number; normal: number; radius: number; landsWhere: 'target' | 'caster' | 'ally' | 'foe' | 'step'; area: AreaShape | null;
-  /** The spell aimed, for a step (Misty Step: where it lands is worked out as the cast will). */
+  /** The spell aimed, for a step (Misty Step: where it lands is worked out as the cast will) or a hex (the foes it takes). */
   spell?: SpellDef;
 };
 
@@ -109,7 +109,7 @@ const fliesStraight = (def: SpellDef): boolean => def.kind === 'bolt' || def.kin
 /** A shot that flies straight (as far as a spell bolt flies), a companion to touch, or a spell's area. */
 function spellAim(def: SpellDef): Aim {
   if (def.kind === 'ally') return { reach: def.range, normal: def.range, radius: 0, landsWhere: 'ally', area: null };
-  if (def.kind === 'hex') return { reach: def.range, normal: def.range, radius: 0, landsWhere: 'foe', area: null };
+  if (def.kind === 'hex') return { reach: def.range, normal: def.range, radius: 0, landsWhere: 'foe', area: null, spell: def };
   if (def.kind === 'teleport') return { reach: def.range, normal: def.range, radius: 0, landsWhere: 'step', area: null, spell: def };
   if (!fliesStraight(def)) return areaAim(def);
   const reach = SPELL_STATS.boltSpeed * SPELL_STATS.boltLife;
@@ -265,9 +265,17 @@ function guideAlly(g: Graphics, text: PixelLabel, player: Player, a: Aim): void 
   if (ally !== player) showDistance(text, x + ALLY_BOX.halfW, y - ALLY_BOX.halfH, dist, colour);
 }
 
+/** Corner brackets round a foe's body standing at (x, y), in a colour; returns how wide they stand either side of it. */
+function frameFoe(g: Graphics, foe: Entity, x: number, y: number, colour: number, alpha: number): number {
+  const halfW = Math.max(ALLY_BOX.halfW, (foe.radius?.x ?? 0) + BOX_MARGIN);
+  bracketPath(g, x, y - ALLY_BOX.lift, halfW, ALLY_BOX.halfH).stroke({ color: colour, alpha, width: 1 });
+  return halfW;
+}
+
 /**
  * A hex (Hold Person, Charm Person…): corner brackets round the foe it would go to (the one under the crosshair), grey within
- * its range, red beyond it, and how far off it is; with no foe there, a small red mark at the crosshair.
+ * its range, red beyond it, and how far off it is; cast above its level, fainter brackets round each other foe it would take
+ * too (the nearest to the first, as the cast picks them). With no foe there, a small red mark at the crosshair.
  */
 function guideFoe(g: Graphics, text: PixelLabel, player: Player, a: Aim): void {
   const foe = foeAt(aim.x, aim.y);
@@ -275,13 +283,14 @@ function guideFoe(g: Graphics, text: PixelLabel, player: Player, a: Aim): void {
     g.circle(aim.x, aim.y, END_RADIUS).stroke({ color: OUT_OF_REACH, alpha: RING_ALPHA * 2, width: 1 });
     return;
   }
-  const x = foe.position.x;
-  const y = foe.position.y - ALLY_BOX.lift;
   const dist = Math.hypot(foe.position.x - player.position.x, foe.position.y - player.position.y);
   const colour = dist <= a.reach ? IN_REACH : OUT_OF_REACH;
-  const halfW = Math.max(ALLY_BOX.halfW, (foe.radius?.x ?? 0) + BOX_MARGIN);
-  bracketPath(g, x, y, halfW, ALLY_BOX.halfH).stroke({ color: colour, alpha: RING_ALPHA * 2, width: 1 });
-  showDistance(text, x + halfW, y - ALLY_BOX.halfH, dist, colour);
+  const halfW = frameFoe(g, foe, foe.position.x, foe.position.y, colour, RING_ALPHA * 2);
+  showDistance(text, foe.position.x + halfW, foe.position.y - ALLY_BOX.lift - ALLY_BOX.halfH, dist, colour);
+  if (!a.spell || colour !== IN_REACH) return;
+  for (const other of hexTargets(a.spell, foe)) {
+    if (other !== foe && other.position) frameFoe(g, other, other.position.x, other.position.y, IN_REACH, RING_ALPHA);
+  }
 }
 
 /** Misty Step: dots to where the caster would come out of the mist, a ring there and how far it is; red at the crosshair if nowhere. */

@@ -260,19 +260,24 @@ function inWater(body: Entity): boolean {
   return false;
 }
 
-/** A burning body burns on a tick: every round it takes fire; it burns out, dies, or is put out by water. */
+/**
+ * A burning body burns on a tick: at the end of every round it takes fire (the last round's too, so two rounds alight burn
+ * twice); it burns out, dies, or is put out by water.
+ */
 function burnOn(body: Entity): void {
   const fire = body.burning;
   if (!fire) return;
-  const out = (body.health?.current ?? 0) <= 0 || --fire.ticks <= 0 || inWater(body);
-  if (out) {
+  if ((body.health?.current ?? 0) <= 0 || inWater(body)) {
     world.removeComponent(body, 'burning');
     return;
   }
-  if (--fire.pulse > 0) return;
-  fire.pulse = TURN_TICKS;
-  burn(body, fire.by, FIRE_DAMAGE);
-  if (body.position) playEffect(IGNITE_EFFECT.shape, IGNITE_EFFECT.colour, body.position.x, body.position.y, AIM_HEIGHT, IGNITE_EFFECT.scale / 2);
+  fire.ticks--;
+  if (--fire.pulse <= 0) {
+    fire.pulse = TURN_TICKS;
+    burn(body, fire.by, FIRE_DAMAGE);
+    if (body.position) playEffect(IGNITE_EFFECT.shape, IGNITE_EFFECT.colour, body.position.x, body.position.y, AIM_HEIGHT, IGNITE_EFFECT.scale / 2);
+  }
+  if (fire.ticks <= 0 && body.burning) world.removeComponent(body, 'burning');
 }
 
 // ── Every tick ────────────────────────────────────────────────────────────────

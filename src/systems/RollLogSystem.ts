@@ -2,10 +2,13 @@ import { world } from '../world';
 import type { BlowResult, Entity, RollTone, StatName } from '../world';
 import { text } from '../core/texts';
 import type { AttackOutcome } from '../rules/Combat';
+import type { DamageType } from '../rules/DamageTypes';
+import { damageTypeName } from '../rules/Names';
 
 /**
- * The dice rolls over a fighter's head, as a queue: each attack adds what it rolled to hit and how it went
- * (the damage, or a miss) at the bottom; the top line fades first, and the next one waits a moment after it.
+ * The dice rolls over a fighter's head, as a queue: each attack adds what it rolled to hit and how it went (a miss, a
+ * critical) at the bottom; the damage shows over whoever takes it, in red, when it is dealt (`logHurt`: "7", "3 fire"). The
+ * top line fades first, and the next one waits a moment after it.
  * The host keeps the log; guests are sent it with the rest of the world.
  */
 
@@ -36,23 +39,32 @@ export function blowResult(outcome: AttackOutcome): AttackResult {
   return outcome.hit ? 'hit' : 'miss';
 }
 
-/** The second line: "MISS", "CRIT MISS", "7 dmg" or "CRIT! 14 dmg". */
-function resultLine(result: AttackResult, damage: number): string {
-  if (result === 'crit') return text('roll.crit_damage', { amount: damage });
+/** The second line, when there is one: "MISS", "CRIT MISS" or "CRIT!" (a hit's damage shows over the one it hurts). */
+function resultLine(result: AttackResult): string | null {
+  if (result === 'crit') return text('roll.crit');
   if (result === 'fumble') return text('roll.crit_miss');
-  return result === 'hit' ? text('roll.damage', { amount: damage }) : text('roll.miss');
+  return result === 'hit' ? null : text('roll.miss');
 }
 
-/** Logs an attack over the attacker's head: what it rolled to hit ("17 to hit"), then how it went. */
+/** Logs an attack over the attacker's head: what it rolled to hit ("17 to hit"), then how it went if it did not simply hit. */
 export function logAttack(attacker: Entity, outcome: AttackOutcome): void {
   const result = blowResult(outcome);
   logLine(attacker, text('roll.to_hit', { total: outcome.total }), result);
-  logLine(attacker, resultLine(result, outcome.damage), result === 'hit' || result === 'crit' ? 'damage' : result);
+  const line = resultLine(result);
+  if (line) logLine(attacker, line, result === 'crit' ? 'crit' : result);
 }
 
-/** A spell's damage that needed no attack roll (a magic missile's dart): "4 dmg" over the caster. */
-export function logSpellDamage(caster: Entity, damage: number): void {
-  logLine(caster, text('roll.damage', { amount: damage }), 'damage');
+/** The kinds of damage a weapon deals: told by their number alone (any other kind is named, "3 fire"). */
+const PLAIN_TYPES: ReadonlySet<DamageType> = new Set<DamageType>(['bludgeoning', 'piercing', 'slashing']);
+
+/**
+ * Damage taken, over the head of whoever takes it, in red, when it is dealt (a blow, a spell, bleeding, burning…): "7", or
+ * with its kind when that is not a weapon's ("3 fire", "4 acid").
+ */
+export function logHurt(body: Entity, amount: number, type?: DamageType): void {
+  if (amount <= 0) return;
+  const line = type && !PLAIN_TYPES.has(type) ? text('roll.hurt_typed', { amount, type: damageTypeName(type) }) : String(amount);
+  logLine(body, line, 'damage');
 }
 
 /** A saving throw against a spell, over the one who rolled it: "save 14 - half", "save 6 - FAIL". */
@@ -69,10 +81,9 @@ export function logAbilitySave(target: Entity, stat: StatName, total: number, sa
   logLine(target, text(saved ? 'roll.ability_save_safe' : 'roll.ability_save_fail', { ability, total }), saved ? 'miss' : 'damage');
 }
 
-/** A saving throw against a spell and the damage it let through, over the one who rolled it: "save 14 - half", then "9 dmg". */
-export function logSaveDamage(target: Entity, total: number, saved: boolean, damage: number): void {
+/** A saving throw against a spell, over the one who rolled it: "save 14 - half" (the damage it let through follows as it is dealt). */
+export function logSaveDamage(target: Entity, total: number, saved: boolean): void {
   logSave(target, total, saved);
-  if (damage > 0) logLine(target, text('roll.damage', { amount: damage }), 'damage');
 }
 
 /** Hit points given back, over the one healed: "+24 HP". */

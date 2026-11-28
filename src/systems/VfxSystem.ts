@@ -130,10 +130,53 @@ function followShots(gameLayer: Container): void {
   }
 }
 
-/** Lets an effect that followed something stop and fade out. */
-function letGo(effect: PixiVfxEffectInstance): void {
+/**
+ * Followers whose body is still there as they fade: their root goes on following it (its last particles stay on it rather
+ * than hanging in the air where it stood), by how far over its feet the effect played.
+ */
+const fadingOn: { effect: PixiVfxEffectInstance; body: Entity; lift: number; dx: number }[] = [];
+/** The tick each follower was last asked for: one not asked for this tick has lost what held it, and fades. */
+const lastAsked = new WeakMap<PixiVfxEffectInstance, number>();
+let tickNo = 0;
+
+/** Lets an effect that followed something stop and fade out (on the body, if it is still there). */
+function letGo(effect: PixiVfxEffectInstance, body?: Entity): void {
   effect.stop();
   fading.push(effect);
+  const at = body?.position;
+  if (body && at && world.id(body) !== undefined && !body.removed) {
+    fadingOn.push({ effect, body, lift: at.y - effect.root.y, dx: effect.root.x - at.x });
+  }
+}
+
+/** Fading followers keep to their body until their last particles are gone (or the body is). */
+function moveFadingOn(): void {
+  for (let i = fadingOn.length - 1; i >= 0; i--) {
+    const { effect, body, lift, dx } = fadingOn[i];
+    const at = body.position;
+    if (!effect.isActive || effect.root.destroyed || !at || world.id(body) === undefined || body.removed) {
+      fadingOn.splice(i, 1);
+      continue;
+    }
+    effect.root.position.set(at.x + dx, at.y - lift);
+  }
+}
+
+/**
+ * A follower not asked for this tick has lost what held it (the body left the query when its burning, mark or hold ended):
+ * it stops and fades on its body. Without this it would go on emitting where it last stood.
+ */
+function letGoUnasked(): void {
+  for (const [entity, mine] of following) letGoUnaskedOf(entity, mine);
+}
+
+/** One entity's followers not asked for this tick fade on it. */
+function letGoUnaskedOf(entity: Entity, mine: Map<string, PixiVfxEffectInstance>): void {
+  for (const [key, effect] of mine) {
+    if (lastAsked.get(effect) === tickNo) continue;
+    letGo(effect, entity);
+    mine.delete(key);
+  }
 }
 
 /** Effects following entities that are gone (or were left on another level) fade out. */
@@ -159,7 +202,7 @@ function follow(entity: Entity, key: string, look: VfxEffectId, holds: boolean, 
   const mine = following.get(entity) ?? following.set(entity, new Map()).get(entity);
   const effect = mine?.get(key);
   if (!mine || !holds) {
-    if (effect) letGo(effect);
+    if (effect) letGo(effect, entity);
     mine?.delete(key);
     return;
   }
@@ -167,6 +210,7 @@ function follow(entity: Entity, key: string, look: VfxEffectId, holds: boolean, 
   const shown = effect ?? (definition ? start(definition, gameLayer, at.x, at.y, at.z) : undefined);
   if (!shown) return;
   mine.set(key, shown);
+  lastAsked.set(shown, tickNo);
   shown.root.position.set(at.x, at.y);
   shown.root.zIndex = at.z;
   if (at.s !== undefined) shown.root.scale.set(at.s);
@@ -321,6 +365,7 @@ function bodySpot(at: { x: number; y: number }): void {
 
 /** Once a tick: sparks for each new fire, trails behind flying spells, the one-shots asked for, and all of them moved on by a tick. */
 export function updateVfx(gameLayer: Container): void {
+  tickNo++;
   dropStale(gameLayer);
   lightFires(gameLayer);
   letTrailsFade(gameLayer);
@@ -331,6 +376,8 @@ export function updateVfx(gameLayer: Container): void {
   followFogAndSleep(gameLayer);
   followHoldsAndMarks(gameLayer);
   followLights(gameLayer);
+  letGoUnasked();
+  moveFadingOn();
   playShots(gameLayer);
   if (loops.size || shots.length || trails.size || fading.length || following.size) vfxRenderer().update(TICK_SECONDS);
 }

@@ -291,10 +291,9 @@ function zoneStrikes(caster: Player, def: SpellDef, foe: Entity, dc: number): vo
     const modifier = foe.mobType ? MONSTERS[foe.mobType].modifiers[def.save] : 0;
     const save = foreseenSave(foe, caster, modifier, dc);
     if (save.success) damage = savedDamage(caster, def.level, rolled);
-    logSaveDamage(foe, save.total, save.success, damage);
+    logSaveDamage(foe, save.total, save.success);
     recordSpell(caster, def.id, save.success ? 'saved' : 'auto', damage, save.total);
   } else {
-    logLine(foe, text('roll.damage', { amount: damage }), 'damage');
     recordSpell(caster, def.id, 'auto', damage);
   }
   if (damage <= 0) return;

@@ -178,17 +178,35 @@ export function foeInReach(caster: Entity, foe: Entity | undefined, def: SpellDe
   return Math.hypot(foe.position.x - caster.position.x, foe.position.y - caster.position.y) <= def.range;
 }
 
-/** The foes a hex cast at `first` takes: it, and for each level cast above its own one more of those standing nearest it. */
-function hexTargets(def: SpellDef, first: Entity): readonly Entity[] {
+/** How far a foe stands from a point (for picking the nearest; a foe with no place counts as far off). */
+function distanceFrom(foe: Entity, x: number, y: number): number {
+  return foe.position ? Math.hypot(foe.position.x - x, foe.position.y - y) : Infinity;
+}
+
+/** Puts a foe into the picked list (after the first), kept nearest first, no longer than `most`. */
+function pickNearer(foe: Entity, x: number, y: number, most: number): void {
+  const d = distanceFrom(foe, x, y);
+  let at = picked.length;
+  while (at > 1 && distanceFrom(picked[at - 1], x, y) > d) at--;
+  if (at > most) return;
+  picked.splice(at, 0, foe);
+  if (picked.length > most) picked.length = most;
+}
+
+/**
+ * The foes a hex cast at `first` takes: it, and for each level cast above its own one more of those standing nearest it
+ * (a reused list: read it at once). The aim guide frames them all before the cast (systems/AimGuideSystem.ts).
+ */
+export function hexTargets(def: SpellDef, first: Entity): readonly Entity[] {
   picked.length = 0;
   picked.push(first);
   const more = def.targetsPerLevel * Math.max(0, def.level - SPELLS[def.id].level);
   if (more <= 0 || !first.position) return picked;
   const { x, y } = first.position;
-  const near = nearby(x, y, feetToPx(CLUSTER_FEET), Sense.mob, scratch)
-    .filter((foe) => foe !== first && isMob(foe) && foe.health.current > 0 && !foe.invisible)
-    .sort((a, b) => Math.hypot((a.position?.x ?? 0) - x, (a.position?.y ?? 0) - y) - Math.hypot((b.position?.x ?? 0) - x, (b.position?.y ?? 0) - y));
-  for (let i = 0; i < Math.min(more, near.length); i++) picked.push(near[i]);
+  for (const foe of nearby(x, y, feetToPx(CLUSTER_FEET), Sense.mob, scratch)) {
+    if (foe === first || !isMob(foe) || foe.health.current <= 0 || foe.invisible) continue;
+    pickNearer(foe, x, y, more + 1);
+  }
   return picked;
 }
 

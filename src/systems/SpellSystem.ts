@@ -10,7 +10,7 @@ import { bonusSwing, earnBonusAttack, hitMob } from './SwordSystem';
 import { bonusShot, holdsBow } from './ArrowSystem';
 import { spellSaveMode } from './ManeuverSystem';
 import { strike } from './Strike';
-import { logHeal, logLine, logSaveDamage, logSpellDamage } from './RollLogSystem';
+import { logHeal, logLine, logSaveDamage } from './RollLogSystem';
 import { recordSpell } from './CombatLogSystem';
 import { characterSheet, lowestFace, spellcastingFor } from '../rules/CharacterSheet';
 import type { CharacterSheet } from '../rules/CharacterSheet';
@@ -345,7 +345,7 @@ function burstHits(caster: Player, def: SpellDef, foe: Entity, dc: number): void
   const save = foreseenSave(foe, caster, modifier, dc);
   const rolled = Math.max(MIN_HIT_DAMAGE, rollDice(def.damage, false, rollDie, 0, lowestFace(characterSheet(caster), def.damageType)) + spellDamageBonus(caster, def.id));
   const damage = save.success ? savedDamage(caster, def.level, rolled) : rolled;
-  logSaveDamage(foe, save.total, save.success, damage);
+  logSaveDamage(foe, save.total, save.success);
   recordSpell(caster, def.id, save.success ? 'saved' : 'auto', damage, save.total);
   if (damage <= 0) return;
   const alive = (foe.health?.current ?? 0) > 0;
@@ -573,7 +573,6 @@ function strikeWith(bolt: Bolt, victim: Entity): boolean {
   }
   if (p.autoHit) {
     const damage = Math.max(MIN_HIT_DAMAGE, rollDice(p.attack.damage, false, rollDie, 0, p.attack.lowestFace));
-    if (shooter) logSpellDamage(shooter, damage);
     if (shooter && p.spell) recordSpell(shooter, p.spell, 'auto', damage);
     hitMob(victim, bolt, damage, true, shotType(p));
     harvestWith(shooter, victim, p, alive);

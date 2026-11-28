@@ -963,8 +963,12 @@ function slantPiece(art: SlantArt, dx: number, footLeft: number, z?: number): Te
 
 /** In a cave hall, patches of the floor are cave ground: bare, pebbly or grassy; in the caverns all of it is. */
 function caveGround(level: Level, tx: number, ty: number): Ground | null {
+  return level.caveFloor.has(tx + ty * level.width) ? caveTile(level, tx, ty) : null;
+}
+
+/** The cave ground a tile shows: bare, pebbly, grassy or heath (only patches of it in a cave hall outside the caverns). */
+function caveTile(level: Level, tx: number, ty: number): Ground | null {
   const i = tx + ty * level.width;
-  if (!level.caveFloor.has(i)) return null;
   const n = noise(tx, ty, CAVE_NOISE_SCALE);
   const zone = level.caveZone.has(i);
   if (n < CAVE_LEVEL && !zone) return null;
@@ -988,9 +992,23 @@ function stoneGround(level: Level, t: TileData, tx: number, ty: number): Ground 
   return at('stone', FLOOR_MAIN);
 }
 
+/** Open floor a body may stand on (not a wall, nor a hole). */
+const openFloor = (t: TileData | null): boolean => t?.type === TileType.Floor || t?.type === TileType.Obstacle;
+
+/**
+ * A cavern wall whose cliff ends beside open floor: the cliff's end piece curves in before the tile's edge, so cave ground
+ * is laid under it there (else the dark under everything shows through as a black strip beside the cliff's end).
+ */
+function caveCliffEnd(level: Level, t: TileData | null, tx: number, ty: number): boolean {
+  if (!level.caveZone.has(tx + ty * level.width) || openFloor(t) || t?.type === TileType.Hole) return false;
+  if (level.slopes.has(tx + ty * level.width) || !openFloor(level.getTile(tx, ty + 1))) return false;
+  return openFloor(level.getTile(tx - 1, ty)) || openFloor(level.getTile(tx + 1, ty));
+}
+
 /** The ground a tile is floored with, or null when it isn't floor (walls, holes, off the map). */
 export function groundAt(level: Level, tx: number, ty: number): Ground | null {
   const t = level.getTile(tx, ty);
+  if (caveCliffEnd(level, t, tx, ty)) return caveTile(level, tx, ty);
   // A pit's own tiles are floored too: a quatrefoil leaves their corners open ground, and the pit art covers the rest.
   const pitFloor = t?.type === TileType.Hole && level.hasPit(tx, ty);
   // A slanted wall's tiles are floored too: its art covers the wall's side of the slant.

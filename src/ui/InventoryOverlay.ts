@@ -41,6 +41,7 @@ import type { BagSort } from '../game/BagView';
 import { itemTrained } from '../rules/Classes';
 import { beginBinding, pendingBinding } from '../game/SpellBinding';
 import { actionBinding, weaponAction } from '../rules/WeaponActions';
+import type { WeaponActionId } from '../rules/WeaponActions';
 import { actionTopic } from './ActionTopic';
 import { QuickBarPage } from './QuickBarPage';
 import { wornCounterpart } from '../game/ItemCompare';
@@ -1616,8 +1617,9 @@ export class InventoryOverlay {
     this.ghost.position.set(p.x, p.y);
     const player = localPlayer();
     const square = this.squareAt(e);
-    if (this.comparing) return;
+    // While Alt is held the tooltips stay put for their weapon actions (a comparison's too).
     if (!this.dragging && this.pinnedForActions(e)) return;
+    if (this.comparing) return;
     if (this.activeTab === SKILLS_TAB) this.spells?.hover(p.x, p.y);
     const item = player && square && !this.dragging && !this.itemMenu.open ? this.itemIn(player, square.place) : undefined;
     // The square under the pointer is edged; while an item is dragged, the square it would land in.
@@ -1654,25 +1656,36 @@ export class InventoryOverlay {
    */
   private pinnedForActions(e: FederatedPointerEvent): boolean {
     const player = localPlayer();
-    if (!isAltHeld() || !this.tooltip.visible || !player) {
+    if (!isAltHeld() || !(this.tooltip.visible || this.compareTip.visible) || !player) {
       this.releaseActions();
       return false;
     }
-    const id = this.tooltip.actionAt(e.global);
-    this.tooltip.hoverAction(id);
-    const box = id ? this.tooltip.actionBox(id) : null;
-    if (!id || !box) {
+    const at = this.actionUnder(e);
+    // Only the tooltip under the pointer edges an action; the other forgets its edge.
+    for (const tip of [this.tooltip, this.compareTip]) tip.hoverAction(at?.tip === tip ? at.id : null);
+    const box = at ? at.tip.actionBox(at.id) : null;
+    if (!at || !box) {
       this.actionTip.hide();
       return true;
     }
-    this.actionTip.showAt(actionTopic(weaponAction(id), player), box, { w: DESIGN_W, h: DESIGN_H }, 'beside');
+    this.actionTip.showAt(actionTopic(weaponAction(at.id), player), box, { w: DESIGN_W, h: DESIGN_H }, 'beside');
     return true;
   }
 
-  /** Alt let go: the action's tooltip goes and the item's follows the pointer again. */
+  /** The weapon action under the pointer in either item tooltip (the item's, or the one it is compared with), and which. */
+  private actionUnder(e: FederatedPointerEvent): { tip: ItemTooltip; id: WeaponActionId } | null {
+    for (const tip of [this.tooltip, this.compareTip]) {
+      const id = tip.actionAt(e.global);
+      if (id) return { tip, id };
+    }
+    return null;
+  }
+
+  /** Alt let go: the action's tooltip goes and the items' follow the pointer again. */
   private releaseActions(): void {
     this.actionTip.hide();
     this.tooltip.hoverAction(null);
+    this.compareTip.hoverAction(null);
   }
 
   /**
@@ -1682,12 +1695,14 @@ export class InventoryOverlay {
    */
   private bindActionAt(e: FederatedPointerEvent): boolean {
     if (!isAltHeld()) return false;
-    const id = this.tooltip.actionAt(e.global);
-    if (!id) return false;
-    if (!this.tooltip.actionsUnlocked) {
+    const at = this.actionUnder(e);
+    if (!at) return false;
+    const { tip, id } = at;
+    if (!tip.actionsUnlocked) {
       sound.playLocal('fail');
       return true;
     }
+    this.endCompare();
     this.hideItemTips();
     beginBinding({ spell: actionBinding(id), level: 0 });
     return true;

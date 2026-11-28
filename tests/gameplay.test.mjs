@@ -1375,8 +1375,8 @@ test('every blow is rolled and shown over the attacker: hits hurt, misses do not
   updateSword();
   updateSword();
   assert.equal(goblin.health.current, goblin.health.max - 4, 'a bare-handed fighter punches for 1 + STR +3');
-  assert.equal(player.rollLog.at(-2).text, '20 to hit', 'd20 15 + proficiency 2 + STR 3 against the goblin\'s AC 15');
-  assert.deepEqual([player.rollLog.at(-1).text, player.rollLog.at(-1).tone], ['4 dmg', 'damage']);
+  assert.deepEqual([player.rollLog.at(-1).text, player.rollLog.at(-1).tone], ['20 to hit', 'hit'], 'd20 15 + proficiency 2 + STR 3 against the goblin\'s AC 15; a hit says no more');
+  assert.deepEqual([goblin.rollLog.at(-1).text, goblin.rollLog.at(-1).tone], ['4', 'damage'], 'the damage shows over the goblin it hurt, in red');
 });
 
 test('a pack spreads round the player: three press in from every side and strike, the rest wait their turn a little way off', async () => {
@@ -4445,7 +4445,8 @@ test('with a melee weapon in each hand one click makes an attack with each, roll
   }
   const entries = currentLog().entries.filter((e) => e.seq > before);
   assert.equal(entries.length, 2, 'both weapons swing for the one click');
-  assert.equal(hero.rollLog.length, 4, 'and both show over the hero head: a roll to hit and a result each');
+  assert.equal(hero.rollLog.length, 2, 'and both show over the hero head: a roll to hit each (their damage over the dummy)');
+  assert.equal(dummy.rollLog.length, 2, 'the dummy shows the damage of each');
   assert.equal(entries.map((e) => e.result).join(), 'hit,hit', 'the second hits although the first just struck');
   assert.equal(dummy.health.current, dummy.health.max - entries[0].damage - entries[1].damage, 'and both damage rolls count');
   assert.ok(rolled.filter((sides) => sides === 20).length >= 2, 'each rolls its own d20');
@@ -5985,7 +5986,7 @@ test('every blow of a swing during the Bladesong (Extra Attack\'s too) gathers a
   assert.equal(usedFeature(singer, 'bladesong_climax', 12, level, dummy.position), 'ok');
   const lines = rollLines(dummy);
   assert.ok(lines.some((line) => line.startsWith('save')), 'the save over the dummy');
-  assert.ok(lines.some((line) => line.endsWith('dmg')), 'and the damage under it');
+  assert.ok(lines.some((line) => /^\d+( [a-z]+)?$/.test(line)), 'and the damage under it, as it is dealt ("9 force")');
 });
 
 test('a level box of a spell tells only what that level changes: dice, darts and cooldown', async () => {
@@ -7650,3 +7651,55 @@ test('Gust of Wind blows out the wall torches and campfires along its line, and 
   assert.ok(far.torch, 'out of the line, it burns on');
 });
 
+
+test('a body on fire burns at the end of every round, the last round too, and the damage shows over its own head with its kind', () => {
+  const level = arena(12, 8);
+  const hero = playerAt(3, 3);
+  const goblin = mobAt(level, 'goblin', 6, 3);
+  goblin.health.current = goblin.health.max = 100;
+  Surfaces.setAlight(goblin, world.id(hero), 2 * 360);
+  goblin.rollLog = [];
+  for (let t = 0; t < 2 * 360 + 5; t++) Surfaces.updateSurfaces();
+  assert.equal(goblin.burning, undefined, 'it burnt out after two rounds');
+  const burns = goblin.rollLog.filter((line) => / fire$/.test(line.text));
+  assert.equal(burns.length, 2, 'two rounds alight: burnt twice');
+  assert.ok(burns.every((line) => line.tone === 'damage'), 'in red');
+  assert.equal(goblin.health.current, 100 - burns.reduce((sum, line) => sum + Number(line.text.split(' ')[0]), 0));
+  assert.ok(!(hero.rollLog ?? []).some((line) => /dmg/.test(line.text)), 'nothing over the one who lit it');
+});
+
+test('a hit shows its damage over the one it hurts, plain red figures for a weapon\'s; the attacker keeps only its roll to hit', () => {
+  const level = arena(12, 8);
+  const hero = playerAt(3, 3);
+  const goblin = mobAt(level, 'goblin', 4, 3);
+  goblin.health.current = goblin.health.max = 100;
+  useDieRoller(SURE_HIT);
+  const outcome = Strike.strike(goblin, blow, hero);
+  hitMob(goblin, hero, outcome.damage, true, 'slashing');
+  assert.deepEqual(hero.rollLog.map((l) => l.text), ['24 to hit'.replace('24', String(outcome.total))]);
+  assert.equal(goblin.rollLog.at(-1).text, String(outcome.damage));
+  assert.equal(goblin.rollLog.at(-1).tone, 'damage');
+});
+
+test('Hold Person takes the foe under the crosshair alone at 2nd level; cast at 3rd, the foe nearest it as well', () => {
+  const level = arena(16, 8);
+  const goblins = [mobAt(level, 'goblin', 6, 3), mobAt(level, 'goblin', 7, 3), mobAt(level, 'goblin', 9, 3)];
+  beginPerception();
+  const at2 = { ...SPELLS.hold_person, level: 2 };
+  assert.deepEqual([...Holds.hexTargets(at2, goblins[0])], [goblins[0]]);
+  const at3 = { ...SPELLS.hold_person, level: 3 };
+  assert.deepEqual([...Holds.hexTargets(at3, goblins[0])], [goblins[0], goblins[1]], 'the nearest one more');
+});
+
+test('in the caverns a cliff ending beside open floor has cave ground under its end, not the dark', async () => {
+  const { groundAt } = await load('level/TerrainAutotile');
+  const level = arena(8, 8);
+  wallRect(level, 1, 1, 6, 2);
+  for (let i = 0; i < level.width * level.height; i++) level.caveZone.add(i);
+  // The cliff of row 2 ends at x = 4 beside open floor at (5, 2).
+  level.setTile(5, 2, createTile(TileType.Floor));
+  level.caveFloor.add(5 + 2 * level.width);
+  assert.ok(groundAt(level, 4, 2), 'its end is floored');
+  assert.equal(groundAt(level, 2, 2), null, 'a cliff running on is not');
+  assert.equal(groundAt(level, 2, 1), null, 'nor the rock behind it');
+});

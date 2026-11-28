@@ -12,6 +12,32 @@ const FEET_PER_MILE = 5280;
 /** Character levels at which a cantrip's damage dice multiply (5th: twice, 11th: three times, 17th: four times). */
 const CANTRIP_TIERS = [5, 11, 17];
 const PARALLEL = 5;
+/** Spells this game plays otherwise than the tabletop: their description (and At Higher Levels) as it plays them. */
+const PLAYED_AS = {
+  dancing_lights: {
+    description: 'Four lights hover for a minute, each shedding light round it. Cast at yourself, they circle you and light your way; '
+      + 'sent elsewhere within range, they light that place, and foes near them make a Wisdom saving throw or are drawn to them until '
+      + 'hurt or until a hero comes close.',
+  },
+  sleep: {
+    description: 'A mote of slumber flies the way you aim and settles on the first creature it touches. Roll 5d8: if the creature\'s hit '
+      + 'points are no more than the total, it falls unconscious for 1 minute, until it takes damage. While it sleeps, attacks against it '
+      + 'have advantage, and a hit from within 5 feet is a critical hit. Undead and creatures immune to being charmed aren\'t affected.',
+    higherLevels: 'When you cast this spell using a spell slot of 2nd level or higher, roll an additional 2d8 for each slot level above 1st.',
+  },
+  crown_of_madness: {
+    description: "One humanoid you aim at within range must succeed on a Wisdom saving throw or become charmed by you for the duration. While the target is charmed in this way, a twisted crown of jagged iron appears on its head, and a madness glows in its eyes. It goes for the creature nearest it other than you, friend or foe, and attacks it; with none near, it fights as before, but never you. At the end of each of its turns, the target can make another Wisdom saving throw. On a success, the spell ends.",
+  },
+  see_invisibility: {
+    description: "For the duration, you see invisible creatures within 10 feet of you as if they were visible. Each of them makes a Dexterity saving throw against your spell save DC once a round while it is in your sight: on a failure it is revealed, and its invisibility ends for everyone.",
+  },
+  flaming_sphere: {
+    description: "A 5-foot-diameter sphere of fire appears where you aim within range and lasts for the duration. Any creature that ends its turn within 5 feet of the sphere must make a Dexterity saving throw. The creature takes 2d6 fire damage on a failed save, or half as much damage on a successful one. The sphere rolls towards wherever you aim, up to 30 feet a round. If it rams a creature, that creature must make the saving throw against the sphere's damage, and the sphere stops moving for the rest of the round. It sheds bright light in a 20-foot radius and ignites grease and webs it rolls over.",
+  },
+  gust_of_wind: {
+    description: "A line of strong wind 60 feet long and 10 feet wide blasts from you in the direction you aim for the spell's duration, and turns as you aim. Each creature in the line when it is cast, and at the end of each round after, must succeed on a Strength saving throw or be pushed 15 feet away from you along the line, over the brink of a pit or a chasm if one lies that way. Any creature in the line must spend 2 feet of movement for every 1 foot it moves when moving closer to you. The gust disperses gas or vapor: fog clouds and Cloudkill it blows through.",
+  },
+};
 
 /** The character level at which each class gets its first slots of spell level 1..9 (null: never). */
 const UNLOCK = {
@@ -132,7 +158,7 @@ await inBatches(slugs, async (slug) => {
     classes[cls] = entry.level === 0 ? 1 : UNLOCK[CLASS_KIND[cls]][entry.level - 1];
   }
   const { slug: _slug, ...rest } = spell;
-  spells[slugId(slug)] = { ...rest, classes };
+  spells[slugId(slug)] = { ...rest, ...PLAYED_AS[slugId(slug)], classes };
 });
 
 const sorted = Object.fromEntries(Object.entries(spells).sort(([a], [b]) => a.localeCompare(b)));

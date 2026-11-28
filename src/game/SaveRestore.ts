@@ -28,7 +28,7 @@ function idIn(made: Made, saved: number | undefined): number | undefined {
 const ownerIn = (made: Made, saved: number): number => idIn(made, saved) ?? -1;
 
 /** Sets or clears an optional id component through the world, so the queries over it stay right. */
-function setId(entity: Entity, key: 'spawnedBy' | 'lured', id: number | undefined): void {
+function setId(entity: Entity, key: 'spawnedBy' | 'lured' | 'entranced', id: number | undefined): void {
   if (id === undefined) world.removeComponent(entity, key);
   else entity[key] = id;
 }
@@ -37,11 +37,13 @@ function setId(entity: Entity, key: 'spawnedBy' | 'lured', id: number | undefine
 function remapIds(entity: Entity, made: Made): void {
   if (entity.spawnedBy !== undefined) setId(entity, 'spawnedBy', idIn(made, entity.spawnedBy));
   if (entity.lured !== undefined) setId(entity, 'lured', idIn(made, entity.lured));
+  if (entity.entranced !== undefined) setId(entity, 'entranced', idIn(made, entity.entranced));
   if (entity.ai) {
     entity.ai.targetId = idIn(made, entity.ai.targetId);
     entity.ai.allyId = idIn(made, entity.ai.allyId);
   }
   if (entity.status) entity.status.by = ownerIn(made, entity.status.by);
+  if (entity.weaponMarks) entity.weaponMarks.by = ownerIn(made, entity.weaponMarks.by);
   if (entity.projectile?.owner !== undefined) entity.projectile.owner = idIn(made, entity.projectile.owner);
   if (entity.fx?.follow !== undefined) entity.fx.follow = idIn(made, entity.fx.follow);
   remapOwners(entity, made);
@@ -54,6 +56,16 @@ function remapOwners(entity: Entity, made: Made): void {
   if (entity.zone) entity.zone.owner = ownerIn(made, entity.zone.owner);
   if (entity.surface) entity.surface.owner = ownerIn(made, entity.surface.owner);
   if (entity.summon) entity.summon.owner = ownerIn(made, entity.summon.owner);
+  if (entity.burning) entity.burning.by = ownerIn(made, entity.burning.by);
+  if (entity.thrown) entity.thrown.owner = ownerIn(made, entity.thrown.owner);
+  if (entity.dancingLights) entity.dancingLights.owner = ownerIn(made, entity.dancingLights.owner);
+  if (entity.wisp) entity.wisp.of = ownerIn(made, entity.wisp.of);
+  if (entity.fogCloud) entity.fogCloud.owner = ownerIn(made, entity.fogCloud.owner);
+  if (entity.gust) entity.gust.owner = ownerIn(made, entity.gust.owner);
+  if (entity.invisible) entity.invisible.by = ownerIn(made, entity.invisible.by);
+  for (const hold of Object.values(entity.spellHolds ?? {})) hold.by = ownerIn(made, hold.by);
+  // What a spell held by concentration made or holds (a zone, the lights, a fog, the hero it wards).
+  if (entity.concentration && entity.concentration.zone >= 0) entity.concentration.zone = ownerIn(made, entity.concentration.zone);
 }
 
 /** What the host keeps for itself and the save leaves out, made again. */

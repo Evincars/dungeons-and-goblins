@@ -5,6 +5,7 @@ import type { ClipDef } from '../characters/CharacterDef';
 import { isSwing } from '../characters/StateTriggers';
 import type { Entity } from '../world';
 import { attackTempo } from './SwordSystem';
+import { frozenStill } from './SpellHolds';
 
 /** Steps a character's clip on by one frame when its time is up, then loops, holds or finishes it. */
 function advance(c: CharacterComponent, clip: ClipDef, frames: number): void {
@@ -37,7 +38,8 @@ export function updateCharacterAnimation(): void {
     if (!found) continue;
     const frames = clipFrames(found.clip, found.sheet);
     // A swing clip keeps pace with the blow it shows (twice as fast under Action Surge, faster for a long chain).
-    const rate = isSwing(c.state) ? swingRate(entity) : 1;
+    // Paralysed (Hold Person): frozen still, its clip too.
+    const rate = frozenStill(entity) ? 0 : isSwing(c.state) ? swingRate(entity) : 1;
     const carried = (c.carry ?? 0) + rate;
     const steps = Math.floor(carried);
     c.carry = carried - steps;

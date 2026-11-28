@@ -24,6 +24,7 @@ import { hasChoices } from '../rules/Build';
 import { heroClass } from '../rules/Classes';
 import { heroName } from '../rules/Names';
 import type { Level } from '../level/Level';
+import { ConditionTip } from './ConditionTip';
 
 /** The health bar, bottom left: how thick, its corner rounding and the margin to the screen's edge. */
 const BAR_H = 12;
@@ -154,6 +155,7 @@ export class HudPanel {
   private readonly minimap = new MinimapView();
   private readonly levelPanel = new LevelPanel();
   private readonly passives = new PassiveHud();
+  private readonly conditions = new ConditionTip();
   /** A mark on the level bubble while the hero has a choice to make. */
   private readonly choiceMark = new PixelLabel('!', { color: THEME.hitPoints, scale: MARK_SCALE, align: 'center', outline: true });
   /** Updates so far, which the choice mark breathes by. */
@@ -176,7 +178,7 @@ export class HudPanel {
     // The rest menu opens upwards from over the rest button.
     const rest = points[BUTTONS.findIndex((def) => def.id === 'rest')];
     this.restMenu = new RestMenu(Math.round(rest.x - BUTTON_R), Math.round(rest.y - BUTTON_R - 2));
-    this.container.addChild(this.quickBar.view, this.partyBanner.view, this.lootRolls.view, this.passives.view, this.restMenu.view, this.dialog.container, this.tip.view);
+    this.container.addChild(this.quickBar.view, this.partyBanner.view, this.lootRolls.view, this.passives.view, this.restMenu.view, this.dialog.container, this.tip.view, this.conditions.view);
   }
 
   private addBar(spec: Pick<Bar, 'color' | 'current' | 'max'>, i: number): void {
@@ -303,6 +305,7 @@ export class HudPanel {
     this.quickBar.update(player);
     this.raiseQuickBar();
     this.passives.update();
+    this.conditions.update();
     if (!player) return;
     if (this.dialog.showing(this.levelPanel.view)) this.levelPanel.update(player);
     this.choiceMark.visible = hasChoices(heroClass(player.heroClass), player.playerStats.level, player.build);
@@ -373,6 +376,7 @@ export class HudPanel {
     this.dialog.destroy();
     this.levelPanel.destroy();
     this.passives.destroy();
+    this.conditions.destroy();
     this.quickBar.destroy();
     this.restMenu.destroy();
     this.partyBanner.destroy();

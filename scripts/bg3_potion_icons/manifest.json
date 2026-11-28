@@ -1,0 +1,746 @@
+[
+  {
+    "category": "potions",
+    "item": "Antidote",
+    "url": "https://bg3.wiki/w/images/6/60/POT_Antidote_Unfaded_Icon.png",
+    "file": "potions/Antidote.png"
+  },
+  {
+    "category": "potions",
+    "item": "Basilisk Oil",
+    "url": "https://bg3.wiki/w/images/d/d9/POT_Basilisk_Oil_Unfaded_Icon.png",
+    "file": "potions/Basilisk Oil.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion Invulnerability",
+    "url": "https://bg3.wiki/w/images/f/f6/POT_Potion_Invulnerability_Unfaded_Icon.png",
+    "file": "potions/Potion Invulnerability.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Angelic Reprieve",
+    "url": "https://bg3.wiki/w/images/5/5a/POT_Potion_of_Angelic_Reprieve_Unfaded_Icon.png",
+    "file": "potions/Potion of Angelic Reprieve.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Angelic Slumber",
+    "url": "https://bg3.wiki/w/images/6/62/POT_Potion_of_Angelic_Slumber_Unfaded_Icon.png",
+    "file": "potions/Potion of Angelic Slumber.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Animal Speaking",
+    "url": "https://bg3.wiki/w/images/c/c9/POT_Potion_of_Animal_Speaking_Unfaded_Icon.png",
+    "file": "potions/Potion of Animal Speaking.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Everlasting Vigour",
+    "url": "https://bg3.wiki/w/images/e/e3/POT_Potion_of_Everlasting_Vigour_Unfaded_Icon.png",
+    "file": "potions/Potion of Everlasting Vigour.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Feather Fall",
+    "url": "https://bg3.wiki/w/images/7/7a/POT_Potion_of_Feather_Fall_Unfaded_Icon.png",
+    "file": "potions/Potion of Feather Fall.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Flying",
+    "url": "https://bg3.wiki/w/images/6/63/POT_Potion_of_Flying_Unfaded_Icon.png",
+    "file": "potions/Potion of Flying.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Gaseous Form",
+    "url": "https://bg3.wiki/w/images/0/0f/POT_Potion_of_Gaseous_Form_Unfaded_Icon.png",
+    "file": "potions/Potion of Gaseous Form.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Glorious Vaulting",
+    "url": "https://bg3.wiki/w/images/3/30/POT_Potion_of_Glorious_Vaulting_Unfaded_Icon.png",
+    "file": "potions/Potion of Glorious Vaulting.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Greater Healing",
+    "url": "https://bg3.wiki/w/images/3/3e/POT_Potion_of_Greater_Healing_Unfaded_Icon.png",
+    "file": "potions/Potion of Greater Healing.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Healing",
+    "url": "https://bg3.wiki/w/images/0/04/POT_Potion_of_Healing_Unfaded_Icon.png",
+    "file": "potions/Potion of Healing.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Invisibility",
+    "url": "https://bg3.wiki/w/images/8/89/POT_Potion_of_Invisibility_Unfaded_Icon.png",
+    "file": "potions/Potion of Invisibility.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Mind Reading",
+    "url": "https://bg3.wiki/w/images/8/80/POT_Potion_of_Mind_Reading_Unfaded_Icon.png",
+    "file": "potions/Potion of Mind Reading.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Sleep",
+    "url": "https://bg3.wiki/w/images/6/6c/POT_Potion_of_Sleep_Unfaded_Icon.png",
+    "file": "potions/Potion of Sleep.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Speed",
+    "url": "https://bg3.wiki/w/images/8/87/POT_Potion_of_Speed_Unfaded_Icon.png",
+    "file": "potions/Potion of Speed.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Superior Healing",
+    "url": "https://bg3.wiki/w/images/9/90/POT_Potion_of_Superior_Healing_Unfaded_Icon.png",
+    "file": "potions/Potion of Superior Healing.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Supreme Healing",
+    "url": "https://bg3.wiki/w/images/a/a6/POT_Potion_of_Supreme_Healing_Unfaded_Icon.png",
+    "file": "potions/Potion of Supreme Healing.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Vitality",
+    "url": "https://bg3.wiki/w/images/b/bd/POT_Potion_of_Vitality_Unfaded_Icon.png",
+    "file": "potions/Potion of Vitality.png"
+  },
+  {
+    "category": "potions",
+    "item": "Remedial Potion",
+    "url": "https://bg3.wiki/w/images/5/5d/POT_Remedial_Potion_Unfaded_Icon.png",
+    "file": "potions/Remedial Potion.png"
+  },
+  {
+    "category": "potions",
+    "item": "Wilted Dreams",
+    "url": "https://bg3.wiki/w/images/6/6e/POT_Wilted_Dreams_Unfaded_Icon.png",
+    "file": "potions/Wilted Dreams.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion Bottle A",
+    "url": "https://bg3.wiki/w/images/7/7e/Potion_Bottle_A_Unfaded_Icon.png",
+    "file": "potions/Potion Bottle A.png"
+  },
+  {
+    "category": "potions",
+    "item": "Potion of Universal Resistance",
+    "url": "https://bg3.wiki/w/images/3/3e/Potion_of_Universal_Resistance_Unfaded_Icon.png",
+    "file": "potions/Potion of Universal Resistance.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Acid Resistance",
+    "url": "https://bg3.wiki/w/images/7/78/ELX_Elixir_of_Acid_Resistance_Unfaded.png",
+    "file": "elixirs/Elixir of Acid Resistance.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Arcane Cultivation",
+    "url": "https://bg3.wiki/w/images/2/2c/ELX_Elixir_of_Arcane_Cultivation_Unfaded.png",
+    "file": "elixirs/Elixir of Arcane Cultivation.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Barkskin",
+    "url": "https://bg3.wiki/w/images/2/26/ELX_Elixir_of_Barkskin_Unfaded.png",
+    "file": "elixirs/Elixir of Barkskin.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Battlemage's Power",
+    "url": "https://bg3.wiki/w/images/7/75/ELX_Elixir_of_Battlemage%27s_Power_Unfaded.png",
+    "file": "elixirs/Elixir of Battlemage's Power.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Cloud Giant Strength",
+    "url": "https://bg3.wiki/w/images/1/15/ELX_Elixir_of_Cloud_Giant_Strength_Unfaded.png",
+    "file": "elixirs/Elixir of Cloud Giant Strength.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Cold Resistance",
+    "url": "https://bg3.wiki/w/images/6/6f/ELX_Elixir_of_Cold_Resistance_Unfaded.png",
+    "file": "elixirs/Elixir of Cold Resistance.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Darkvision",
+    "url": "https://bg3.wiki/w/images/8/8a/ELX_Elixir_of_Darkvision_Unfaded.png",
+    "file": "elixirs/Elixir of Darkvision.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Fire Resistance",
+    "url": "https://bg3.wiki/w/images/3/38/ELX_Elixir_of_Fire_Resistance_Unfaded.png",
+    "file": "elixirs/Elixir of Fire Resistance.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Force Resistance",
+    "url": "https://bg3.wiki/w/images/d/d8/ELX_Elixir_of_Force_Resistance_Unfaded.png",
+    "file": "elixirs/Elixir of Force Resistance.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Guileful Movement",
+    "url": "https://bg3.wiki/w/images/a/af/ELX_Elixir_of_Guileful_Movement_Unfaded.png",
+    "file": "elixirs/Elixir of Guileful Movement.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Heroism",
+    "url": "https://bg3.wiki/w/images/e/e8/ELX_Elixir_of_Heroism_Unfaded.png",
+    "file": "elixirs/Elixir of Heroism.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Hill Giant Strength",
+    "url": "https://bg3.wiki/w/images/f/fe/ELX_Elixir_of_Hill_Giant_Strength_Unfaded.png",
+    "file": "elixirs/Elixir of Hill Giant Strength.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Lightning Resistance",
+    "url": "https://bg3.wiki/w/images/1/13/ELX_Elixir_of_Lightning_Resistance_Unfaded.png",
+    "file": "elixirs/Elixir of Lightning Resistance.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Necrotic Resistance",
+    "url": "https://bg3.wiki/w/images/e/ed/ELX_Elixir_of_Necrotic_Resistance_Unfaded.png",
+    "file": "elixirs/Elixir of Necrotic Resistance.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Poison Resistance",
+    "url": "https://bg3.wiki/w/images/c/c5/ELX_Elixir_of_Poison_Resistance_Unfaded.png",
+    "file": "elixirs/Elixir of Poison Resistance.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Psychic Resistance",
+    "url": "https://bg3.wiki/w/images/f/f1/ELX_Elixir_of_Psychic_Resistance_Unfaded.png",
+    "file": "elixirs/Elixir of Psychic Resistance.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Radiant Resistance",
+    "url": "https://bg3.wiki/w/images/0/0f/ELX_Elixir_of_Radiant_Resistance_Unfaded.png",
+    "file": "elixirs/Elixir of Radiant Resistance.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of See Invisibility",
+    "url": "https://bg3.wiki/w/images/a/a8/ELX_Elixir_of_See_Invisibility_Unfaded.png",
+    "file": "elixirs/Elixir of See Invisibility.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Silvanus",
+    "url": "https://bg3.wiki/w/images/b/b7/ELX_Elixir_of_Silvanus_Unfaded.png",
+    "file": "elixirs/Elixir of Silvanus.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of The Colossus",
+    "url": "https://bg3.wiki/w/images/2/22/ELX_Elixir_of_The_Colossus_Unfaded.png",
+    "file": "elixirs/Elixir of The Colossus.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Thunder Resistance",
+    "url": "https://bg3.wiki/w/images/3/36/ELX_Elixir_of_Thunder_Resistance_Unfaded.png",
+    "file": "elixirs/Elixir of Thunder Resistance.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Universal Resistance",
+    "url": "https://bg3.wiki/w/images/1/12/ELX_Elixir_of_Universal_Resistance_Unfaded.png",
+    "file": "elixirs/Elixir of Universal Resistance.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Viciousness",
+    "url": "https://bg3.wiki/w/images/0/09/ELX_Elixir_of_Viciousness_Unfaded.png",
+    "file": "elixirs/Elixir of Viciousness.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Vigilance",
+    "url": "https://bg3.wiki/w/images/f/ff/ELX_Elixir_of_Vigilance_Unfaded.png",
+    "file": "elixirs/Elixir of Vigilance.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Greater Elixir of Arcane Cultivation",
+    "url": "https://bg3.wiki/w/images/f/f2/ELX_Greater_Elixir_of_Arcane_Cultivation_Unfaded.png",
+    "file": "elixirs/Greater Elixir of Arcane Cultivation.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Superior Elixir of Arcane Cultivation",
+    "url": "https://bg3.wiki/w/images/5/58/ELX_Superior_Elixir_of_Arcane_Cultivation_Unfaded.png",
+    "file": "elixirs/Superior Elixir of Arcane Cultivation.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Supreme Elixir of Arcane Cultivation",
+    "url": "https://bg3.wiki/w/images/1/16/ELX_Supreme_Elixir_of_Arcane_Cultivation_Unfaded.png",
+    "file": "elixirs/Supreme Elixir of Arcane Cultivation.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Tadpole Elixir",
+    "url": "https://bg3.wiki/w/images/0/0c/ELX_Tadpole_Elixir_Unfaded.png",
+    "file": "elixirs/Tadpole Elixir.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Mysterious Elixir",
+    "url": "https://bg3.wiki/w/images/0/0c/Mysterious_Elixir_Unfaded.png",
+    "file": "elixirs/Mysterious Elixir.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Elixir of Health",
+    "url": "https://bg3.wiki/w/images/b/bd/POT_Elixir_of_Health_Unfaded.png",
+    "file": "elixirs/Elixir of Health.png"
+  },
+  {
+    "category": "elixirs",
+    "item": "Potion of Vitality",
+    "url": "https://bg3.wiki/w/images/f/fa/POT_Potion_of_Vitality_Unfaded.png",
+    "file": "elixirs/Potion of Vitality.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Baby Blue and Gold Dye",
+    "url": "https://bg3.wiki/w/images/1/12/Baby_Blue_and_Gold_Dye_Detail_Unfaded.png",
+    "file": "dyes/Baby Blue and Gold Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Black and Azure Dye",
+    "url": "https://bg3.wiki/w/images/6/68/Black_and_Azure_Dye_Detail_Unfaded.png",
+    "file": "dyes/Black and Azure Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Black and Furnace Red Dye",
+    "url": "https://bg3.wiki/w/images/b/b5/Black_and_Furnace_Red_Dye_Detail_Unfaded.png",
+    "file": "dyes/Black and Furnace Red Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Black and Jade Green Dye",
+    "url": "https://bg3.wiki/w/images/4/4c/Black_and_Jade_Green_Dye_Detail_Unfaded.png",
+    "file": "dyes/Black and Jade Green Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Black and Summer Green Dye",
+    "url": "https://bg3.wiki/w/images/4/49/Black_and_Summer_Green_Dye_Detail_Unfaded.png",
+    "file": "dyes/Black and Summer Green Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Bloody Plum Dye",
+    "url": "https://bg3.wiki/w/images/5/54/Bloody_Plum_Dye_Detail_Unfaded.png",
+    "file": "dyes/Bloody Plum Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Blue Dye",
+    "url": "https://bg3.wiki/w/images/5/52/Blue_Dye_Detail_Unfaded.png",
+    "file": "dyes/Blue Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Boreal Blue Dye",
+    "url": "https://bg3.wiki/w/images/f/f9/Boreal_Blue_Dye_Detail_Unfaded.png",
+    "file": "dyes/Boreal Blue Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Brown Alabaster Dye",
+    "url": "https://bg3.wiki/w/images/4/4c/Brown_Alabaster_Dye_Detail_Unfaded.png",
+    "file": "dyes/Brown Alabaster Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Cobalt Dye",
+    "url": "https://bg3.wiki/w/images/6/60/Cobalt_Dye_Detail_Unfaded.png",
+    "file": "dyes/Cobalt Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Custard and Pink Rose Dye",
+    "url": "https://bg3.wiki/w/images/2/2c/Custard_and_Pink_Rose_Dye_Detail_Unfaded.png",
+    "file": "dyes/Custard and Pink Rose Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Dark Amethyst Dye",
+    "url": "https://bg3.wiki/w/images/6/6c/Dark_Amethyst_Dye_Detail_Unfaded.png",
+    "file": "dyes/Dark Amethyst Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Deep Lilac Dye",
+    "url": "https://bg3.wiki/w/images/e/e0/Deep_Lilac_Dye_Detail_Unfaded.png",
+    "file": "dyes/Deep Lilac Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Drake General Dye",
+    "url": "https://bg3.wiki/w/images/3/31/Drake_General_Dye_Detail_Unfaded.png",
+    "file": "dyes/Drake General Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Dye Remover",
+    "url": "https://bg3.wiki/w/images/b/b5/Dye_Remover_Detail_Unfaded.png",
+    "file": "dyes/Dye Remover.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Faewild Green and Dun Dye",
+    "url": "https://bg3.wiki/w/images/8/87/Faewild_Green_and_Dun_Dye_Detail_Unfaded.png",
+    "file": "dyes/Faewild Green and Dun Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Gorgeous Maroon Dye",
+    "url": "https://bg3.wiki/w/images/f/f5/Gorgeous_Maroon_Dye_Detail_Unfaded.png",
+    "file": "dyes/Gorgeous Maroon Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Green Dye",
+    "url": "https://bg3.wiki/w/images/c/cf/Green_Dye_Detail_Unfaded.png",
+    "file": "dyes/Green Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Harlequin Black and White Dye",
+    "url": "https://bg3.wiki/w/images/1/1c/Harlequin_Black_and_White_Dye_Detail_Unfaded.png",
+    "file": "dyes/Harlequin Black and White Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Indigo Dye",
+    "url": "https://bg3.wiki/w/images/8/8e/Indigo_Dye_Detail_Unfaded.png",
+    "file": "dyes/Indigo Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Jet and Pink Rose Dye",
+    "url": "https://bg3.wiki/w/images/0/09/Jet_and_Pink_Rose_Dye_Detail_Unfaded.png",
+    "file": "dyes/Jet and Pink Rose Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Lavender Dye",
+    "url": "https://bg3.wiki/w/images/2/22/Lavender_Dye_Detail_Unfaded.png",
+    "file": "dyes/Lavender Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Light Blue Dye",
+    "url": "https://bg3.wiki/w/images/b/be/Light_Blue_Dye_Detail_Unfaded.png",
+    "file": "dyes/Light Blue Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Lime Lemon and Lichen Dye",
+    "url": "https://bg3.wiki/w/images/7/70/Lime_Lemon_and_Lichen_Dye_Detail_Unfaded.png",
+    "file": "dyes/Lime Lemon and Lichen Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Lush Burgundy Dye",
+    "url": "https://bg3.wiki/w/images/7/73/Lush_Burgundy_Dye_Detail_Unfaded.png",
+    "file": "dyes/Lush Burgundy Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Mellow Fruit Dye",
+    "url": "https://bg3.wiki/w/images/c/c6/Mellow_Fruit_Dye_Detail_Unfaded.png",
+    "file": "dyes/Mellow Fruit Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Muddy Red Dye",
+    "url": "https://bg3.wiki/w/images/b/b4/Muddy_Red_Dye_Detail_Unfaded.png",
+    "file": "dyes/Muddy Red Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Ocean Dye",
+    "url": "https://bg3.wiki/w/images/8/8b/Ocean_Dye_Detail_Unfaded.png",
+    "file": "dyes/Ocean Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Orange Dye",
+    "url": "https://bg3.wiki/w/images/6/62/Orange_Dye_Detail_Unfaded.png",
+    "file": "dyes/Orange Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Pale Green Dye",
+    "url": "https://bg3.wiki/w/images/4/40/Pale_Green_Dye_Detail_Unfaded.png",
+    "file": "dyes/Pale Green Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Pale Orange Dye",
+    "url": "https://bg3.wiki/w/images/1/17/Pale_Orange_Dye_Detail_Unfaded.png",
+    "file": "dyes/Pale Orange Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Pale Pink Dye",
+    "url": "https://bg3.wiki/w/images/b/bd/Pale_Pink_Dye_Detail_Unfaded.png",
+    "file": "dyes/Pale Pink Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Peach and Apricot Dye",
+    "url": "https://bg3.wiki/w/images/d/d5/Peach_and_Apricot_Dye_Detail_Unfaded.png",
+    "file": "dyes/Peach and Apricot Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Pink and Leaf Green Dye",
+    "url": "https://bg3.wiki/w/images/a/ab/Pink_and_Leaf_Green_Dye_Detail_Unfaded.png",
+    "file": "dyes/Pink and Leaf Green Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Purple Dye",
+    "url": "https://bg3.wiki/w/images/a/ab/Purple_Dye_Detail_Unfaded.png",
+    "file": "dyes/Purple Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Red Dye",
+    "url": "https://bg3.wiki/w/images/4/4f/Red_Dye_Detail_Unfaded.png",
+    "file": "dyes/Red Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Sage Green Dye",
+    "url": "https://bg3.wiki/w/images/b/bb/Sage_Green_Dye_Detail_Unfaded.png",
+    "file": "dyes/Sage Green Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Sea Green Dye",
+    "url": "https://bg3.wiki/w/images/9/96/Sea_Green_Dye_Detail_Unfaded.png",
+    "file": "dyes/Sea Green Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Sinful Red on Bone White",
+    "url": "https://bg3.wiki/w/images/6/6b/Sinful_Red_on_Bone_White_Detail_Unfaded.png",
+    "file": "dyes/Sinful Red on Bone White.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Swamp Green Dye",
+    "url": "https://bg3.wiki/w/images/d/d1/Swamp_Green_Dye_Detail_Unfaded.png",
+    "file": "dyes/Swamp Green Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "White and Scarlet Dye",
+    "url": "https://bg3.wiki/w/images/0/05/White_and_Scarlet_Dye_Detail_Unfaded.png",
+    "file": "dyes/White and Scarlet Dye.png"
+  },
+  {
+    "category": "dyes",
+    "item": "Yellow Dye",
+    "url": "https://bg3.wiki/w/images/2/24/Yellow_Dye_Detail_Unfaded.png",
+    "file": "dyes/Yellow Dye.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Karabasan's Poison",
+    "url": "https://bg3.wiki/w/images/5/5a/COAT_Karabasan%27s_Poison_Unfaded.png",
+    "file": "grenades/Karabasan's Poison.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Earth Grenade",
+    "url": "https://bg3.wiki/w/images/1/12/Earth_Grenade_Unfaded.png",
+    "file": "grenades/Earth Grenade.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Acid Vial",
+    "url": "https://bg3.wiki/w/images/3/36/GRN_Acid_Vial_Unfaded.png",
+    "file": "grenades/Acid Vial.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Alchemist's Fire",
+    "url": "https://bg3.wiki/w/images/e/e5/GRN_Alchemist%27s_Fire_Unfaded.png",
+    "file": "grenades/Alchemist's Fire.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Caustic Bulb",
+    "url": "https://bg3.wiki/w/images/9/94/GRN_Caustic_Bulb_Unfaded.png",
+    "file": "grenades/Caustic Bulb.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Flammable Slime Bomb",
+    "url": "https://bg3.wiki/w/images/1/16/GRN_Flammable_Slime_Bomb_Unfaded.png",
+    "file": "grenades/Flammable Slime Bomb.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Flashblinder",
+    "url": "https://bg3.wiki/w/images/9/99/GRN_Flashblinder_Unfaded.png",
+    "file": "grenades/Flashblinder.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Grease Bottle",
+    "url": "https://bg3.wiki/w/images/0/00/GRN_Grease_Bottle_Unfaded.png",
+    "file": "grenades/Grease Bottle.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Hag's Bane",
+    "url": "https://bg3.wiki/w/images/2/2d/GRN_Hag%27s_Bane_Unfaded.png",
+    "file": "grenades/Hag's Bane.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Haste Spore Flask",
+    "url": "https://bg3.wiki/w/images/0/01/GRN_Haste_Spore_Flask_Unfaded.png",
+    "file": "grenades/Haste Spore Flask.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Haste Spore Grenade",
+    "url": "https://bg3.wiki/w/images/7/7c/GRN_Haste_Spore_Grenade_Unfaded.png",
+    "file": "grenades/Haste Spore Grenade.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Hearthlight Bomb",
+    "url": "https://bg3.wiki/w/images/f/fb/GRN_Hearthlight_Bomb_Unfaded.png",
+    "file": "grenades/Hearthlight Bomb.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Holy Water",
+    "url": "https://bg3.wiki/w/images/2/2e/GRN_Holy_Water_Unfaded.png",
+    "file": "grenades/Holy Water.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Noxious Spore Grenade",
+    "url": "https://bg3.wiki/w/images/a/a8/GRN_Noxious_Spore_Grenade_Unfaded.png",
+    "file": "grenades/Noxious Spore Grenade.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Oil Flask",
+    "url": "https://bg3.wiki/w/images/6/62/GRN_Oil_Flask_Unfaded.png",
+    "file": "grenades/Oil Flask.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Orthonic Handbomb",
+    "url": "https://bg3.wiki/w/images/b/b8/GRN_Orthonic_Handbomb_Unfaded.png",
+    "file": "grenades/Orthonic Handbomb.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Poisonous Slime Bomb",
+    "url": "https://bg3.wiki/w/images/e/e2/GRN_Poisonous_Slime_Bomb_Unfaded.png",
+    "file": "grenades/Poisonous Slime Bomb.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Runepowder Vial",
+    "url": "https://bg3.wiki/w/images/4/45/GRN_Runepowder_Vial_Unfaded.png",
+    "file": "grenades/Runepowder Vial.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Smokepowder Bomb",
+    "url": "https://bg3.wiki/w/images/1/12/GRN_Smokepowder_Bomb_Unfaded.png",
+    "file": "grenades/Smokepowder Bomb.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Smokepowder Satchel",
+    "url": "https://bg3.wiki/w/images/e/e3/GRN_Smokepowder_Satchel_Unfaded.png",
+    "file": "grenades/Smokepowder Satchel.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Spiked Bulb",
+    "url": "https://bg3.wiki/w/images/2/21/GRN_Spiked_Bulb_Unfaded.png",
+    "file": "grenades/Spiked Bulb.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Void Bulb",
+    "url": "https://bg3.wiki/w/images/e/e9/GRN_Void_Bulb_Unfaded.png",
+    "file": "grenades/Void Bulb.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Web Grenade",
+    "url": "https://bg3.wiki/w/images/e/ee/GRN_Web_Grenade_Unfaded.png",
+    "file": "grenades/Web Grenade.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Iron Flask",
+    "url": "https://bg3.wiki/w/images/6/67/Iron_Flask_Unfaded.png",
+    "file": "grenades/Iron Flask.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Alchemy Myconid Grenade Fire",
+    "url": "https://bg3.wiki/w/images/e/ec/Item_LOOT_Alchemy_Myconid_Grenade_Fire_Unfaded.png",
+    "file": "grenades/Alchemy Myconid Grenade Fire.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Grenade BloodSurface",
+    "url": "https://bg3.wiki/w/images/8/8d/Item_WPN_Grenade_BloodSurface_Unfaded.webp",
+    "file": "grenades/Grenade BloodSurface.png"
+  },
+  {
+    "category": "grenades",
+    "item": "Jug of Water",
+    "url": "https://bg3.wiki/w/images/1/1b/Jug_of_Water_Unfaded.png",
+    "file": "grenades/Jug of Water.png"
+  }
+]

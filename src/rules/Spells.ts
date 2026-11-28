@@ -8,6 +8,9 @@ import { DAMAGE_TYPES } from './DamageTypes';
 import type { DamageType } from './DamageTypes';
 import { parseDice } from './Dice';
 import type { Dice } from './Dice';
+import { isCreatureType, isHoldKind } from './Conditions';
+import type { CreatureType, HoldKind } from './Conditions';
+import { feetToPx } from './Scale';
 import spells from '../data/spells.json';
 
 /**
@@ -25,6 +28,10 @@ export const SPELL_IDS = [
   'chain_lightning', 'circle_of_death', 'disintegrate', 'harm', 'heal', 'otilukes_freezing_sphere',
   'blade_ward', 'shield', 'mage_armor', 'false_life', 'stoneskin', 'arms_of_hadar', 'sunbeam', 'phantasmal_killer', 'vampiric_touch',
   'cloud_of_daggers', 'cloudkill', 'hunger_of_hadar', 'spirit_guardians', 'insect_plague', 'create_or_destroy_water',
+  'dancing_lights', 'true_strike', 'grease', 'sleep', 'longstrider', 'protection_from_evil_and_good', 'fog_cloud',
+  'charm_person', 'tashas_hideous_laughter', 'blindness', 'hold_person', 'crown_of_madness', 'ray_of_enfeeblement', 'blur',
+  'mirror_image', 'shadow_blade', 'see_invisibility', 'magic_weapon', 'invisibility', 'darkness', 'flaming_sphere', 'gust_of_wind',
+  'misty_step', 'web',
 ] as const;
 export type SpellId = (typeof SPELL_IDS)[number];
 
@@ -35,13 +42,29 @@ export function isSpellId(value: unknown): value is SpellId {
 /**
  * bolt: a projectile, rolled to hit. missiles: darts that always hit. burst: an area, saved against. heal: the caster (and,
  * with a radius, the heroes near). buff: something that lasts on the caster (systems/LastingSpells.ts). zone: an area that
- * strikes whoever is in it every round while it lasts. water: a puddle where the caster aims.
+ * strikes whoever is in it every round while it lasts. water: a puddle where the caster aims. lights: hovering lights that shed light and draw foes (Dancing Lights,
+ * systems/DancingLights.ts). surface: grease where the caster aims (Grease, systems/Surfaces.ts). sleep: a mote flying as a
+ * bolt that lulls the first foe it touches to sleep (Sleep, systems/SleepSpell.ts). ally: a buff on a hero the caster picks
+ * (Longstrider, Protection from Evil and Good, systems/AllySpells.ts). fog: a cloud that heavily obscures (Fog Cloud,
+ * systems/FogCloud.ts; Darkness, darker). hex: a foe the caster picks saves or is held in a condition (Charm Person, Tasha's
+ * Hideous Laughter, Blindness/Deafness, Hold Person, Crown of Madness, systems/SpellHolds.ts). gust: a line of wind from the
+ * caster that pushes whoever it catches (Gust of Wind, systems/GustOfWind.ts). teleport: the caster steps through mist to where
+ * they aim (Misty Step, systems/MistyStep.ts).
  */
-export const SPELL_KINDS = ['bolt', 'missiles', 'burst', 'heal', 'buff', 'zone', 'water'] as const;
+export const SPELL_KINDS = ['bolt', 'missiles', 'burst', 'heal', 'buff', 'zone', 'water', 'lights', 'surface', 'sleep', 'ally', 'fog', 'hex', 'gust', 'teleport'] as const;
 export type SpellKind = (typeof SPELL_KINDS)[number];
 
-/** What a buff spell does to its caster: resist weapons (Blade Ward, Stoneskin), +5 AC (Shield), AC 13 + DEX (Mage Armour), temporary hit points (False Life). */
-export const BUFF_IDS = ['blade_ward', 'shield', 'mage_armor', 'false_life', 'stoneskin'] as const;
+/**
+ * What a buff spell does to its caster: resist weapons (Blade Ward, Stoneskin), +5 AC (Shield), AC 13 + DEX (Mage Armour),
+ * temporary hit points (False Life), advantage on the next attack roll (True Strike); on the hero picked (an `ally` spell): 10
+ * feet more speed (Longstrider), undead attacking at disadvantage (Protection from Evil and Good). Blur (attacks at the caster
+ * at disadvantage), Mirror Image (duplicates that draw attacks), Shadow Blade (a blade of shadow in hand), See Invisibility;
+ * on the hero picked: Magic Weapon (+1 to hit and damage), Invisibility.
+ */
+export const BUFF_IDS = [
+  'blade_ward', 'shield', 'mage_armor', 'false_life', 'stoneskin', 'true_strike', 'longstrider', 'protection_from_evil_and_good',
+  'blur', 'mirror_image', 'shadow_blade', 'see_invisibility', 'magic_weapon', 'invisibility',
+] as const;
 export type BuffId = (typeof BUFF_IDS)[number];
 const isBuff = (v: unknown): v is BuffId => BUFF_IDS.some((b) => b === v);
 
@@ -56,6 +79,11 @@ const isArea = (v: unknown): v is SpellArea => SPELL_AREAS.some((a) => a === v);
 /** Every damage type, weapons' too: a cloud of daggers slashes, a swarm of insects pierces. */
 export const SPELL_DAMAGE_TYPES = DAMAGE_TYPES;
 export type SpellDamageType = DamageType;
+
+/** What a surface spell spreads: grease (Grease) or webs (Web). */
+export const SPELL_SURFACES = ['grease', 'web'] as const;
+export type SpellSurface = (typeof SPELL_SURFACES)[number];
+const isSpellSurface = (v: unknown): v is SpellSurface => SPELL_SURFACES.some((k) => k === v);
 
 /** Ticks a second of recovery lasts (the game runs 60 a second). */
 export const TICKS_PER_SECOND = 60;
@@ -84,6 +112,17 @@ export type SpellDef = {
   concentration: boolean;
   /** The share of a bolt's damage its caster regains as hit points (Vampiric Touch: half). */
   drain: number;
+  /** The condition a hex (or a bolt that hits) holds its target in, the creature types it takes (null: any) and the least Intelligence. */
+  condition: HoldKind | 'charmed' | null;
+  creatures: readonly CreatureType[] | null;
+  minIntelligence: number;
+  /** The foes more a hex takes for each level it is cast above its own (Charm Person, Hold Person, Blindness: one). */
+  targetsPerLevel: number;
+  /** A fog that is Darkness; a zone that rolls where its caster aims (Flaming Sphere); how far a gust pushes (px); what a surface spreads. */
+  dark: boolean;
+  rolls: boolean;
+  push: number;
+  surface: SpellSurface;
   effect: { shape: EffectShape; colour: EffectColour; scale: number };
 };
 
@@ -107,6 +146,10 @@ function readSpell(id: SpellId, raw: unknown): SpellDef {
   ensure(isShape(effect[0]) && isColour(effect[1]), `Unknown effect for spell ${id}`, { id });
   ensure(raw.save === undefined || isStatName(raw.save), `Unknown saving throw for spell ${id}`, { id });
   ensure(raw.area === undefined || isArea(raw.area), `Unknown area for spell ${id}`, { id });
+  ensure(raw.condition === undefined || raw.condition === 'charmed' || isHoldKind(raw.condition), `Unknown condition for spell ${id}`, { id });
+  ensure(raw.surface === undefined || isSpellSurface(raw.surface), `Unknown surface for spell ${id}`, { id });
+  const creatures = Array.isArray(raw.creatures) ? raw.creatures : null;
+  ensure(creatures === null || creatures.every(isCreatureType), `Unknown creature type for spell ${id}`, { id });
   return {
     id,
     kind: isKind(raw.kind) ? raw.kind : 'bolt',
@@ -115,7 +158,8 @@ function readSpell(id: SpellId, raw: unknown): SpellDef {
     damageType: isDamageType(raw.damageType) ? raw.damageType : 'force',
     recoveryTicks: Math.round(num(raw.recovery, 1) * TICKS_PER_SECOND),
     count: num(raw.count, 1),
-    save: isStatName(raw.save) ? raw.save : raw.kind === 'zone' ? null : 'dexterity',
+    // A burst always has a save (Dexterity unless named); anything else only the one it names.
+    save: isStatName(raw.save) ? raw.save : raw.kind === 'burst' ? 'dexterity' : null,
     range: num(raw.range, 0),
     radius: num(raw.radius, 0),
     area: isArea(raw.area) ? raw.area : 'sphere',
@@ -123,6 +167,14 @@ function readSpell(id: SpellId, raw: unknown): SpellDef {
     durationTicks: Math.round(num(raw.seconds, 0) * TICKS_PER_SECOND),
     concentration: raw.concentration === true,
     drain: num(raw.drain, 0),
+    condition: raw.condition === 'charmed' || isHoldKind(raw.condition) ? raw.condition : null,
+    creatures: creatures ? creatures.filter(isCreatureType) : null,
+    minIntelligence: num(raw.minIntelligence, 0),
+    targetsPerLevel: num(raw.targetsPerLevel, 0),
+    dark: raw.dark === true,
+    rolls: raw.rolls === true,
+    push: feetToPx(num(raw.push, 0)),
+    surface: isSpellSurface(raw.surface) ? raw.surface : 'grease',
     effect: { shape: isShape(effect[0]) ? effect[0] : 'star_burst', colour: isColour(effect[1]) ? effect[1] : 'white', scale: num(raw.effectScale, 1) },
   };
 }
@@ -186,4 +238,28 @@ export const SPELLS = {
   spirit_guardians: readSpell('spirit_guardians', spells.spirit_guardians),
   insect_plague: readSpell('insect_plague', spells.insect_plague),
   create_or_destroy_water: readSpell('create_or_destroy_water', spells.create_or_destroy_water),
+  dancing_lights: readSpell('dancing_lights', spells.dancing_lights),
+  true_strike: readSpell('true_strike', spells.true_strike),
+  grease: readSpell('grease', spells.grease),
+  sleep: readSpell('sleep', spells.sleep),
+  longstrider: readSpell('longstrider', spells.longstrider),
+  protection_from_evil_and_good: readSpell('protection_from_evil_and_good', spells.protection_from_evil_and_good),
+  fog_cloud: readSpell('fog_cloud', spells.fog_cloud),
+  charm_person: readSpell('charm_person', spells.charm_person),
+  tashas_hideous_laughter: readSpell('tashas_hideous_laughter', spells.tashas_hideous_laughter),
+  blindness: readSpell('blindness', spells.blindness),
+  hold_person: readSpell('hold_person', spells.hold_person),
+  crown_of_madness: readSpell('crown_of_madness', spells.crown_of_madness),
+  ray_of_enfeeblement: readSpell('ray_of_enfeeblement', spells.ray_of_enfeeblement),
+  blur: readSpell('blur', spells.blur),
+  mirror_image: readSpell('mirror_image', spells.mirror_image),
+  shadow_blade: readSpell('shadow_blade', spells.shadow_blade),
+  see_invisibility: readSpell('see_invisibility', spells.see_invisibility),
+  magic_weapon: readSpell('magic_weapon', spells.magic_weapon),
+  invisibility: readSpell('invisibility', spells.invisibility),
+  darkness: readSpell('darkness', spells.darkness),
+  flaming_sphere: readSpell('flaming_sphere', spells.flaming_sphere),
+  gust_of_wind: readSpell('gust_of_wind', spells.gust_of_wind),
+  misty_step: readSpell('misty_step', spells.misty_step),
+  web: readSpell('web', spells.web),
 } as const satisfies Record<SpellId, SpellDef>;

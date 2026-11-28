@@ -1,5 +1,5 @@
 {
-  "$comment": "Every spell of Baldur's Gate 3 the game knows (made by scripts/bg3-spells.mjs from the BG3 wiki): its name, level (0: cantrip), school, whether it needs concentration, the classes that learn it (at the hero level their slots of its level open, src/data/spellbook.json casterKinds), knight: on the Eldritch Knight's list, the subclasses that learn it, book: its entry in src/data/spellbook.json (the D&D rules: range, dice, At Higher Levels), text: its in-game description, img: its icon under public/. Only the spells in src/data/spells.json can be cast yet; the others show greyed out as not in the game yet.",
+  "$comment": "Every spell of Baldur's Gate 3 the game knows (made by scripts/bg3-spells.mjs from the BG3 wiki): its name, level (0: cantrip), school, whether it needs concentration, the classes that learn it (at the hero level their slots of its level open, src/data/spellbook.json casterKinds), knight: on the Eldritch Knight's list, the subclasses that learn it, book: its entry in src/data/spellbook.json (the D&D rules: range, dice, At Higher Levels), text: its in-game description, img: its icon under public/, hidden: kept (its text and rules) but left out of the Skills tab. Only the spells in src/data/spells.json can be cast yet; the others show greyed out as not in the game yet.",
   "spells": {
     "booming_blade": {
       "name": "Booming Blade",
@@ -41,8 +41,9 @@
       "knight": false,
       "subclasses": [],
       "book": null,
-      "text": "1-10 Damage",
-      "img": "spells-icons/Bursting-Sinew-level-1-BG3-spell-1_pixelart.png"
+      "text": "Explode a fresh corpse, causing it to impale those around it: everyone within 10 feet of it makes a Dexterity saving throw or takes 1d10 piercing damage. A corpse burnt by fire, acid or radiance cannot be used, and one used is left a pile of viscera. 60 feet. The damage grows to 2d10 at level 5 and 3d10 at level 10.",
+      "img": "spells-icons/Bursting-Sinew-level-1-BG3-spell-1_pixelart.png",
+      "hidden": true
     },
     "shadow_blade": {
       "name": "Shadow Blade",
@@ -124,7 +125,7 @@
       "name": "Dancing Lights",
       "level": 0,
       "school": "Evocation",
-      "concentration": false,
+      "concentration": true,
       "classes": [
         "sorcerer",
         "wizard"
@@ -136,7 +137,7 @@
         "Eldritch Knight"
       ],
       "book": "dancing_lights",
-      "text": "Illuminate a 9m radius. 10 Turns 18m Concentration",
+      "text": "Light up the dark round you, or send the lights away to draw foes to them. 10 Turns 18m Concentration",
       "img": "spells-icons/Dancing-Lights-Cantrip-BG3_pixelart.png"
     },
     "eldritch_blast": {
@@ -189,7 +190,8 @@
       ],
       "book": "friends",
       "text": "Gain Advantage on Charisma Checks against a non-hostile creature. Once the spell ends, the creature knows it was Charmed and might accuse the spellcaster. 10 Turns In higher difficulty modes, the target might accuse you of enchanting them.",
-      "img": "spells-icons/Friends-Baldurs-Gate-3-Spells_pixelart.png"
+      "img": "spells-icons/Friends-Baldurs-Gate-3-Spells_pixelart.png",
+      "hidden": true
     },
     "guidance": {
       "name": "Guidance",
@@ -225,7 +227,8 @@
       ],
       "book": "light",
       "text": "Infuse an object with an aura of light. Until Long Rest",
-      "img": "spells-icons/Light-Baldurs-Gate-3-Spells_pixelart.png"
+      "img": "spells-icons/Light-Baldurs-Gate-3-Spells_pixelart.png",
+      "hidden": true
     },
     "mage_hand": {
       "name": "Mage Hand",
@@ -246,7 +249,8 @@
       ],
       "book": "mage_hand",
       "text": "Create a spectral hand that can manipulate and interact with objects.",
-      "img": "spells-icons/Mage-Hand-Baldurs-Gate-3-Spells_pixelart.png"
+      "img": "spells-icons/Mage-Hand-Baldurs-Gate-3-Spells_pixelart.png",
+      "hidden": true
     },
     "minor_illusion": {
       "name": "Minor Illusion",
@@ -267,7 +271,8 @@
       ],
       "book": "minor_illusion",
       "text": "Create an illusory image that distracts nearby creatures, compelling them to investigate. You can remain hidden while casting this spell. 10 turns",
-      "img": "spells-icons/Minor-Illusion-Baldurs-Gate-3-Spells_pixelart.png"
+      "img": "spells-icons/Minor-Illusion-Baldurs-Gate-3-Spells_pixelart.png",
+      "hidden": true
     },
     "poison_spray": {
       "name": "Poison Spray",
@@ -411,7 +416,7 @@
       "name": "True Strike",
       "level": 0,
       "school": "Divination",
-      "concentration": false,
+      "concentration": true,
       "classes": [
         "bard",
         "sorcerer",
@@ -691,7 +696,8 @@
       ],
       "book": "disguise_self",
       "text": "Magically change all aspects of your appearance. (Lasts until the end of a long rest)",
-      "img": "spells-icons/Disguise-self-Cantrip-Bg3_pixelart.png"
+      "img": "spells-icons/Disguise-self-Cantrip-Bg3_pixelart.png",
+      "hidden": true
     },
     "dissonant_whispers": {
       "name": "Dissonant Whispers",
@@ -771,7 +777,8 @@
       ],
       "book": "expeditious_retreat",
       "text": "Gain Dash immediately and as a bonus action on each of your turns until this spell ends. Until Long Rest Concentration",
-      "img": "spells-icons/Expeditious-retreat-Baldurs-Gate-3-Spell-level-1_pixelart.png"
+      "img": "spells-icons/Expeditious-retreat-Baldurs-Gate-3-Spell-level-1_pixelart.png",
+      "hidden": true
     },
     "faerie_fire": {
       "name": "Faerie Fire",
@@ -822,7 +829,8 @@
       "subclasses": [],
       "book": "feather_fall",
       "text": "You and nerby allies Immunity to Falling damage. 10 Turns 9m",
-      "img": "spells-icons/Feather-Fall-Spell-Baldurs-Gate-3_pixelart.png"
+      "img": "spells-icons/Feather-Fall-Spell-Baldurs-Gate-3_pixelart.png",
+      "hidden": true
     },
     "find_familiar": {
       "name": "Find Familiar",
@@ -837,7 +845,8 @@
       "subclasses": [],
       "book": "find_familiar",
       "text": "Gain the service of a familiar, a fey spirit that takes an animal from of your choose. Range: 18m",
-      "img": "spells-icons/Find-Familiar-Baldurs-Gate-3-spell_pixelart.png"
+      "img": "spells-icons/Find-Familiar-Baldurs-Gate-3-spell_pixelart.png",
+      "hidden": true
     },
     "fog_cloud": {
       "name": "Fog Cloud",
@@ -1053,7 +1062,8 @@
       ],
       "book": "jump",
       "text": "Triple a creature's jumping distance. 10 Turns Melee",
-      "img": "spells-icons/Enhance-Leap-Level-1-Spell-Baldurs-Gate-3_pixelart.png"
+      "img": "spells-icons/Enhance-Leap-Level-1-Spell-Baldurs-Gate-3_pixelart.png",
+      "hidden": true
     },
     "longstrider": {
       "name": "Longstrider",
@@ -1364,7 +1374,8 @@
       "subclasses": [],
       "book": "arcane_lock",
       "text": "Close a door or container with a magical lock.It can no longer be lockpicked or opened with Knock . 10 Turns Melee",
-      "img": "spells-icons/Arcane-Lock-spell-BG3_pixelart.png"
+      "img": "spells-icons/Arcane-Lock-spell-BG3_pixelart.png",
+      "hidden": true
     },
     "barkskin": {
       "name": "Barkskin",
@@ -1514,7 +1525,8 @@
       "subclasses": [],
       "book": "darkvision",
       "text": "Grant a creature the ability to see in the dark out to a range of 12m. Until Long Rest Melee",
-      "img": "spells-icons/Darkvision-Baldurs-Gate-3-Spells_pixelart.png"
+      "img": "spells-icons/Darkvision-Baldurs-Gate-3-Spells_pixelart.png",
+      "hidden": true
     },
     "detect_thoughts": {
       "name": "Detect Thoughts",
@@ -1532,7 +1544,8 @@
       ],
       "book": "detect_thoughts",
       "text": "Focus your mind to read the thoughts of certain creatures while talking to them. Until Long Rest Concentration",
-      "img": "spells-icons/Detect-Thoughts-Baldurs-Gate-3-Spells_pixelart.png"
+      "img": "spells-icons/Detect-Thoughts-Baldurs-Gate-3-Spells_pixelart.png",
+      "hidden": true
     },
     "enhance_ability": {
       "name": "Enhance Ability",
@@ -1564,7 +1577,8 @@
       "subclasses": [],
       "book": "enlarge_reduce",
       "text": "Make a creature larger or smaller to affect their weapon damage and Strength Checks and Saving Throws. 9m CON Save Concentration",
-      "img": "spells-icons/Enlarge_Reduce-Baldurs-Gate-3-Spells_pixelart.png"
+      "img": "spells-icons/Enlarge_Reduce-Baldurs-Gate-3-Spells_pixelart.png",
+      "hidden": true
     },
     "flame_blade": {
       "name": "Flame Blade",
@@ -1676,7 +1690,8 @@
       "subclasses": [],
       "book": "knock",
       "text": "Unlock an object that is held shut by a mundane lock. 18m",
-      "img": "spells-icons/Knock-Baldurs-Gate-3-Spells_pixelart.png"
+      "img": "spells-icons/Knock-Baldurs-Gate-3-Spells_pixelart.png",
+      "hidden": true
     },
     "lesser_restoration": {
       "name": "Lesser Restoration",
@@ -1813,7 +1828,8 @@
       ],
       "book": "phantasmal_force",
       "text": "1-6 Damage 1d6 Phychic Deal damage to a creature each turn. The type of damage changes to the last type the creature suffered. 10 turns",
-      "img": "spells-icons/Phantasmal-Force-Baldurs-Gate-3-Spells_pixelart.png"
+      "img": "spells-icons/Phantasmal-Force-Baldurs-Gate-3-Spells_pixelart.png",
+      "hidden": true
     },
     "prayer_of_healing": {
       "name": "Prayer of Healing",

@@ -1,5 +1,6 @@
+import { WEAPON_ACTION_IDS, isWeaponActionId } from '../rules/WeaponActions';
 import {
-  world, isDepartChoice, isEquipSlot, isItemType, isLogEvent, isLogResult, isMobType, isPlayerSlot, isRestNotice, isRollTone, isSummonKind, isSurfaceKind, isTransmuterStone,
+  world, isAfflictionKind, isDepartChoice, isEquipSlot, isItemType, isLogEvent, isLogResult, isMobType, isPlayerSlot, isRestNotice, isRollTone, isSummonKind, isSurfaceKind, isTransmuterStone,
   isVoteKind, MOB_STATES, PLAYER_SLOTS,
   QUICK_SLOTS, TACTIC_ROLES,
 } from '../world';
@@ -20,8 +21,11 @@ import { validBuild } from '../rules/Build';
 import { isWeaponBase } from '../rules/WeaponTable';
 import { MAX_ROLL_LINES } from '../systems/RollLogSystem';
 import { MAX_LOG_ENTRIES, MAX_LOG_ITEM } from '../systems/CombatLogSystem';
+import { isThrowableId, isThrownKind } from '../rules/Throwables';
+import { isDamageType } from '../rules/DamageTypes';
 import { isSpellId } from '../rules/Spells';
 import { isDieSides } from '../rules/Dice';
+import { isHoldKind } from '../rules/Conditions';
 
 /**
  * The live world as the co-op host sends it: every entity that is not rebuilt locally from the level
@@ -105,6 +109,10 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
     lootBonus: 'number', damageDealt: 'number', critHits: 'number', critMisses: 'number' },
   swordSwing: { delay: 'number', ticks: 'number', dirX: 'number', dirY: 'number', range: 'number', hitIds: 'object', blow: 'number', blows: 'number', offHand: 'boolean', tempo: 'number' },
   maneuver: { id: 'string', ticks: 'number', bonus: 'number' },
+  weaponAction: { id: 'string', ticks: 'number' },
+  actionStance: { id: 'string', ticks: 'number' },
+  weaponMarks: { bleeding: 'number', dazed: 'number', maimed: 'number', offBalance: 'number', weakGrip: 'number', chestTrauma: 'number',
+    gapingWounds: 'number', hamstrung: 'number', by: 'number' },
   status: { prone: 'number', frightened: 'number', goaded: 'number', distracted: 'number', eldritch: 'number', charmed: 'number', by: 'number' },
   arcana: { ward: 'number', portent: 'object', portentTicks: 'number', harvestTicks: 'number', charmTicks: 'number', illusoryTicks: 'number',
     songTicks: 'number', defenceTicks: 'number', stone: 'string', songCharges: 'number', damageCharges: 'number',
@@ -116,6 +124,17 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   concentration: { spell: 'string', zone: 'number' },
   zone: { spell: 'string', owner: 'number', castLevel: 'number', ticks: 'number', pulse: 'number', follow: 'boolean' },
   surface: { kind: 'string', radius: 'number', owner: 'number', pulse: 'number' },
+  burning: { ticks: 'number', pulse: 'number', by: 'number' },
+  mobThrowable: { item: 'string', count: 'number' },
+  thrown: { item: 'string', owner: 'number', team: 'number', fromX: 'number', fromY: 'number', toX: 'number', toY: 'number', ticks: 'number', total: 'number' },
+  dancingLights: { owner: 'number', ticks: 'number', orbit: 'boolean', dc: 'number', pulse: 'number' },
+  wisp: { of: 'number', index: 'number' },
+  fogCloud: { owner: 'number', radius: 'number', ticks: 'number' },
+  spellHolds: {},
+  invisible: { ticks: 'number', by: 'number' },
+  afflicted: { kind: 'string', ticks: 'number' },
+  shove: { x: 'number', y: 'number', ticks: 'number' },
+  gust: { owner: 'number', ticks: 'number', pulse: 'number', dirX: 'number', dirY: 'number', level: 'number' },
   summon: { kind: 'string', owner: 'number', attackBonus: 'number', damage: 'object', ac: 'number', cooldown: 'number' },
   loot: { value: 'number', kind: 'number', velX: 'number', velY: 'number', suckRadius: 'number', glide: 'number', age: 'number', life: 'number' },
   item: { type: 'string', name: 'string', value: 'number' },
@@ -126,6 +145,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
     senseIn: 'number', stateTicks: 'number', calmTicks: 'number', lastSeenX: 'number', lastSeenY: 'number',
     lastSeenTick: 'number', trailTick: 'number' },
   falling: { age: 'number', duration: 'number' },
+  corpse: { def: 'string', flipX: 'boolean', scale: 'number', seed: 'number' },
   ephemeral: { age: 'number', life: 'number', drop: 'number' },
   room: { id: 'number', type: 'string', bounds: 'object' },
   exitButton: { activated: 'boolean', choices: 'object' },
@@ -139,6 +159,8 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
   inventory: {},
   featuresOff: {},
   featsOn: {},
+  actionsSpent: {},
+  actionsOff: {},
   equipped: {},
   rollLog: {},
   combatLog: { seq: 'number', entries: 'object' },
@@ -156,6 +178,7 @@ const VALUES: Readonly<Record<string, FieldType>> = {
   playerName: 'string', heroClass: 'string', mobWeapon: 'string', protectCooldown: 'number', survivorCooldown: 'number',
   superiorityLeft: 'number', tempHealth: 'number', volley: 'number', actionSurge: 'number', athleteBoost: 'number', indomitableCooldown: 'number',
   bonusAttack: 'boolean', duelistCooldown: 'number', flat: 'boolean', lured: 'number', unseen: 'boolean',
+  knockedDown: 'number', entranced: 'number', lastDamageType: 'string', seesInvisible: 'number',
 };
 
 function hasType(v: unknown, type: FieldType): boolean {
@@ -191,7 +214,9 @@ const isIntList = (v: unknown) => Array.isArray(v) && v.every(Number.isInteger);
 /** Ticks until each quick-bar square's spell recovers (one a square, at most), none negative. */
 const isRecoveryList = (v: unknown) => isIntList(v) && Array.isArray(v) && v.length <= QUICK_SLOTS && v.every((t) => Number(t) >= 0);
 const isBoundList = (v: unknown) => Array.isArray(v) && v.length <= QUICK_SLOTS
-  && v.every((b) => b === null || (isRecord(b) && validBinding(b.spell, b.level)));
+  && v.every((b) => b === null || (isRecord(b) && validBinding(b.spell, b.level, b.damageType, b.variant)));
+/** A list of weapon actions (spent, or switched off): known ones, each once at most. */
+const isActionList = (v: unknown) => Array.isArray(v) && v.length <= WEAPON_ACTION_IDS.length && v.every(isWeaponActionId);
 const isSlotList = (v: unknown) => Array.isArray(v) && v.length <= PLAYER_SLOTS.length && v.every(isPlayerSlot);
 
 /** A rare find being rolled for: a real item, and only known seats answering Need or Pass. */
@@ -239,6 +264,12 @@ function isDice(dice: unknown): boolean {
   return isRecord(dice) && Number.isInteger(dice.count) && isDieSides(dice.sides) && Number.isInteger(dice.bonus);
 }
 
+/** The conditions spells hold a body in: known kinds, each a known spell with whole, sane numbers. */
+function validHolds(holds: NonNullable<EntityState['spellHolds']>): boolean {
+  return Object.entries(holds).every(([kind, hold]) => isHoldKind(kind) && isRecord(hold) && isSpellId(hold.spell)
+    && isFiniteNumber(hold.ticks) && isFiniteNumber(hold.by) && isFiniteNumber(hold.dc) && isFiniteNumber(hold.pulse));
+}
+
 /** Rules beyond field types: known names and kinds, clean player names, well-formed lists. */
 function checkDetails(data: EntityState): void {
   ensure(data.playerSlot === undefined || isPlayerSlot(data.playerSlot), 'Invalid player slot');
@@ -252,6 +283,7 @@ function checkDetails(data: EntityState): void {
   ensure(!data.chest || isDropTableId(data.chest.drops), 'Invalid chest');
   ensure(!data.spawner || isMobType(data.spawner.mobType), 'Invalid spawner');
   ensure(!data.character || (hasCharacter(data.character.def) && isCharacterState(data.character.state)), 'Invalid character');
+  ensure(!data.corpse || hasCharacter(data.corpse.def), 'Invalid corpse');
   ensure(!data.ai || (MOB_STATES.includes(data.ai.state) && TACTIC_ROLES.includes(data.ai.role)), 'Invalid enemy state');
   ensure(!data.item || isItemType(data.item.type), 'Invalid item');
   ensure(!data.featuresOff || (Array.isArray(data.featuresOff) && data.featuresOff.length <= MAX_FEATURES && data.featuresOff.every(isFeatureId)), 'Invalid switched-off features');
@@ -266,11 +298,20 @@ function checkDetails(data: EntityState): void {
   ensure(!data.swordSwing || isIntList(data.swordSwing.hitIds), 'Invalid sword swing');
   ensure(!data.build || validBuild(data.build), 'Invalid build');
   ensure(!data.maneuver || isFeatureId(data.maneuver.id), 'Invalid maneuver');
+  ensure(!data.weaponAction || isWeaponActionId(data.weaponAction.id), 'Invalid weapon action');
+  ensure(!data.actionStance || isWeaponActionId(data.actionStance.id), 'Invalid weapon action stance');
+  ensure(!data.actionsSpent || isActionList(data.actionsSpent), 'Invalid spent weapon actions');
+  ensure(!data.actionsOff || isActionList(data.actionsOff), 'Invalid switched-off weapon actions');
   ensure(!data.arcana || validArcana(data.arcana), 'Invalid school state');
   ensure(!data.summon || (isSummonKind(data.summon.kind) && isDice(data.summon.damage)), 'Invalid undead');
   ensure(!data.concentration || isSpellId(data.concentration.spell), 'Invalid concentration');
   ensure(!data.zone || isSpellId(data.zone.spell), 'Invalid spell zone');
   ensure(!data.surface || isSurfaceKind(data.surface.kind), 'Invalid puddle');
+  ensure(!data.spellHolds || validHolds(data.spellHolds), 'Invalid spell holds');
+  ensure(!data.afflicted || isAfflictionKind(data.afflicted.kind), 'Invalid affliction');
+  ensure(!data.thrown || isThrownKind(data.thrown.item), 'Invalid thrown flask');
+  ensure(!data.mobThrowable || isThrowableId(data.mobThrowable.item), 'Invalid flask');
+  ensure(data.lastDamageType === undefined || isDamageType(data.lastDamageType), 'Invalid damage type');
   ensure(!data.spellbook || (isRecoveryList(data.spellbook.recovery) && (data.spellbook.bound === undefined || isBoundList(data.spellbook.bound))), 'Invalid spellbook');
   ensure(!data.casting?.spell || isSpellId(data.casting.spell), 'Invalid spell');
   ensure(!data.projectile?.spell || isSpellId(data.projectile.spell), 'Invalid spell');

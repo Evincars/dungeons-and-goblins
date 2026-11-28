@@ -121,7 +121,10 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   made by `scripts/mine-sheets.py` into `public/caves2/mines-terrain.png` (keep the two in step)); the slanted wall pieces of the catacombs' and the castle's tilesets in `src/level/SlantTiles.ts`,
   made by `scripts/iso-sheets.py` into each tileset's `mainlevbuild-isometric.png` copy (keep the two in step); the Wizard's bind table, Bladesong's blades
   and the undead's stats in `src/rules/Schools.ts`, the school features' timings in `src/systems/SchoolSystem.ts`; enemy AI knobs (sight, squad sizes, flanking, trail
-  following) in `src/ai/constants.ts`; the D&D weapons in `src/data/weapons.json`
+  following, how many press in hand to hand at once and where the rest wait, the distance skirmishers keep) in `src/ai/constants.ts`;
+  the flasks and potions (Alchemist's Fire, the Grease Bottle, the potions of healing: range, splash, save, damage, burning,
+  healing, what they leave on the floor, and the item's price, weight and picture from `public/potions`, downloaded by
+  `scripts/download-potion-icons.py` and pixelated by `scripts/potion-icons.sh`) in `src/data/throwables.json` (`rules/Throwables.ts`); the D&D weapons in `src/data/weapons.json`
   (every weapon of both D&D tables: damage, sort, properties, range in feet (every distance the game tells or reads is in feet, `rules/Scale.ts`), versatile dice, price, weight, and its pictures in
   `public/weapons`, one found weapon each, no two kinds sharing a picture) and the armour and robe in `src/data/armors.json` (AC, DEX
   cap, the STR needed to put it on at all, stealth, price, weight; a suit's picture a column of `public/armors.png`, whose first four
@@ -129,7 +132,7 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `public/weapons`; a new kind may reuse another's). These files are the single source: `src/rules/WeaponTable.ts` and
   `ArmorTable.ts` read and check them, `ItemCatalog.ts` makes the items from them, and every rule in
   play follows them (finesse, light for two-weapon fighting, two-handed, reach, loading, range and its disadvantage, versatile,
-  heavy armour's STR); no magic bonuses or ability stats on gear yet; hero classes (abilities, hit points, proficiencies, features) in
+  heavy armour's STR); the weapon actions each weapon unlocks with proficiency in the main hand in `src/data/weapon-actions.json` (`rules/WeaponActions.ts`: Baldur's Gate 3's, from bg3.wiki — cost, once a short rest or at will, damage, save and its DC bonus, the condition and its turns, how real time plays it; played by `systems/WeaponActions.ts`, the conditions they leave on foes in `systems/WeaponMarks.ts`; their icons in `public/weapon-actions`, from `scripts/download-weapon-action-icons.py`); no ability stats on gear yet; hero classes (abilities, hit points, proficiencies, features) in
   `src/data/classes.json`; feats (the Baldur's Gate 3 list: requirement, the ability each raises, `worked`, effects) in
   `src/data/feats.json`, read by `src/rules/Feats.ts` and summed per hero as `FeatEffects` (`featEffects` in `rules/Build.ts`;
   Passive Feats have their own section in the Skills tab: a toggle one is bound to the quick bar as `feat:<id>` and its key
@@ -138,10 +141,12 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   Elemental Adept's damage type — is offered in the level panel (`ui/FeatPicks.ts`), checked by `rules/FeatPicks.ts` and kept
   as the Improvement's `picks`; a feat's spells sit in the Skills tab's Feat spells row, are bound at their own level, count
   against no bind limit and are cast with the feat's ability, `spellcastingFor`; the Skills tab runs: class features, the
-  school, Passive Feats and feat spells, then cantrips and each spell level; only `worked` feats are offered, `OFFERED_FEATS`); enemies' SRD monster blocks (AC, abilities, weapons, hit points, XP) in `src/data/stats.json`
+  school, Passive Feats and feat spells, then cantrips and each spell level; only `worked` feats are offered, `OFFERED_FEATS`); enemies' SRD monster blocks (creature type, AC, abilities, weapons, hit points, XP) in `src/data/stats.json`
   (with which kinds carry a bow or crossbow and how often, `ranged`, and which cast spells as what class and with which
   ability, `spellcaster`: their spells are the heroes' own from `spells.json`, cast at the party's level, so a change to a
-  spell changes it for both); how hard a level is (more and tougher enemies the deeper it lies and in direct proportion
+  spell changes it for both; which carry a flask to throw and how often, `throwables`; and their SRD resistances,
+  immunities and vulnerabilities, `defences` (with the conditions it is immune to, `defences.conditions`, which are applied), read by `rules/Resistances.ts` `monsterResponse` — prepared, not applied in
+  play yet: `hitMob` keeps the kind of the last blow, `lastDamageType`); how hard a level is (more and tougher enemies the deeper it lies and in direct proportion
   to the heroes playing, which kinds turn up at which depth) in `src/game/Difficulty.ts`;
   castable spells (dice, recovery, save, area and its shape — sphere, cube, cone or line (Lightning Bolt), `rules/SpellArea.ts`, shared by the heroes, the enemies and the aim guide — effect; a buff, zone or puddle's duration and concentration) in
   `src/data/spells.json`; every spell of Baldur's Gate 3 the game knows (name, level, school, the classes that learn it,
@@ -195,8 +200,12 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   whether to go deeper or end the run; deeper needs all of them, and whoever is outside then is left behind, dead. Its
   lever (`LeverSystem.ts`, `lever.exit`) drops the room's portcullis 5 s after one pull, for good (`DoorSystem.ts`, `door.exit`).
 - `src/ai/` — enemy AI: `perception/` (rbush index, sight, player trails) → `decision/` (Yuka
-  `StateMachine` states, squad tactics by Yuka `Think`, each squad member's place in a ring round its target,
-  `surround.ts`) → `execution/` (Yuka steering).
+  `StateMachine` states, squad tactics by Yuka `Think`, who in a squad presses in, waits or skirmishes, `engagement.ts`: only
+  `MELEE_SLOTS` (3) of a squad fight a hero hand to hand, the rest hold off at `WAIT_RADIUS` and step in as a place frees,
+  or turn to another hero they see with room round them; each one pressing in has its place in a ring round its target,
+  `surround.ts`) → `execution/` (Yuka steering; `skirmish.ts`: a bow, a crossbow or a caster keeps its target between
+  `SKIRMISH_MIN` and `SKIRMISH_MAX`, backing off from a hero who comes close, and stands to shoot between them; one waiting
+  holds off facing the fight).
 - `src/level/` — `Level` tiles, `TileGraph`/`TileSearch` (Yuka graph search), procedural generation
   (`generators/`: BSP rooms, some with a corner or two cut back into the wall, squared off or on the slant, each dressed by
   theme — crypt, storeroom or plain hall with a colonnade and floor grates — with brick or cobblestone walls,
@@ -324,8 +333,9 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `systems/LastingSpells.ts`: buffs on the caster (`buffs`: Blade Ward, Shield, Mage Armour, Stoneskin; False Life's temporary
   hit points), zones that strike every 6 s (`zone`, `q.zones`), puddles a thunder or lightning spell charges (a lightning bolt flying over them too) and that conduct the burst that
   charged them to everyone standing in them (`electrifyArea`, `conducted`) (`surface`, `q.surfaces`),
-  and one spell held by `concentration` that a failed Constitution save on every hurt ends (DC 10 or half the damage,
-  whichever is higher, `keepConcentration`); what lasts until a long rest also
+  and one spell held by `concentration` — one at a time: casting another ends it and all it keeps going (a zone, the lights,
+  a fog, a buff on the hero it holds, `HELD_BUFFS`); it runs out with its `ticks` or once its buff is spent — that a failed
+  Constitution save on every hurt ends (DC 10 or half the damage, whichever is higher, `keepConcentration`); what lasts until a long rest also
   ends on a fall, `endUntilRest`) have no slots but a
   recovery each (`spellbook.recovery`), sit on the quick bar (two rows of ten at most — the player picks how many squares show, for each hero class, and Shift's row shows as many; the keys past them do nothing —: Q R T 1–5 X C cast the first row's squares — held, the key shows the spell's aim guide, let go, it casts —
   Shift with them the second, whose squares hold the active class features until bound; `playerInput.spellSlot`) and are cast by
@@ -344,9 +354,10 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   of the quick bar's strip (`QUICK_BAR_HEIGHT`); the HUD's buttons say what they are under the pointer. Class features (`rules/ClassFeatures.ts`) fill the Skills tab above the cantrips: a worked passive is on from its
   level and a click switches it off and on (`featuresOff`, the `toggle_feature` command; `featureOn` is what effects ask, and the
   HUD's top left shows the ones on, `ui/PassiveHud.ts`: icons only, stacked down a column, what is the hero's for good
-  (passives, Passive Feats, the ward, a Battle Master's dice) at the top and what comes and goes (boosts, buffs, concentration)
-  under them; a clock over an icon empties while it recovers or lasts, a count sits in its corner, and its tooltip under the
-  pointer says how it stands now); an active (Second Wind, Action Surge…) is bound to a quick-bar square as
+  (passives, Passive Feats, the ward, a Battle Master's dice) at the top and what comes and goes (boosts, buffs, a companion's
+  Longstrider or ward) under them; a clock over an icon empties while it recovers or lasts, a count sits in its corner, and its tooltip under the
+  pointer says how it stands now; beside the columns the spell held by concentration, `ui/ConcentrationBadge.ts`: its icon in a
+  breathing violet frame, "Concentration", a clock, and the spell's tooltip with its time left); an active (Second Wind, Action Surge…) is bound to a quick-bar square as
   `feature:<id>` and used with the cast key (`systems/FeatureSystem.ts`; an active with several uses recovers in its share, `featureCooldown`).
   Every blow of a chain plays at the hero's own swing pace, one after another (`blowTiming`; the attack clip follows
   `swordSwing.tempo`), and the next click waits for the attack period. Action Surge doubles the attacks of every swing and
@@ -394,10 +405,12 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   right, the trader and both sides' gold between; each column with the inventory's filters and search; a row's icon, a line of
   what it does (`ui/ItemSummary.ts`) and price, the inventory's tooltip under the pointer) asks before each trade; it buys for
   half the price, `SELL_SHARE`, and offers what it bought back once, `shopNpc.resale`. Heroes set out with 10 gold
-  (`STARTING_GOLD`) and one of each weapon, shield and armour they are trained in, as long as it does not slow them
-  (`giveStartingKit`); past 80 % of what they carry they slow, to a walk with no sprint at all of it (`rules/Encumbrance.ts`).
+  (`STARTING_GOLD`), two flasks of Alchemist's Fire (`STARTING_FLASKS`) and one of each weapon, shield and armour they are
+  trained in, as long as it does not slow them (`giveStartingKit`); past 80 % of what they carry they slow, to a walk with no sprint at all of it (`rules/Encumbrance.ts`).
   Blood splashes from a hero or a foe a blow
-  hurts (`entities/Blood.ts`, `public/blood`, small). `src/render/` — sheets, camera, terrain layers.
+  hurts (`entities/Blood.ts`, `public/blood`, small). A dead enemy, its death clip played, lies where it fell as a corpse
+  (`entities/Corpse.ts`, `corpse`, synced; the newest `MAX_CORPSES` kept) on its last death frame over a pool of blood that
+  spreads under it, a few of the splashes' frames darkened, flattened and scattered by the corpse's seed (`systems/CorpseSystem.ts`). `src/render/` — sheets, camera, terrain layers.
 - The picture is 16:9 (`render/Camera.ts`), wider (up to 21:9) only on an ultrawide monitor, by the monitor's shape, not the
   window's; the window shows it as large as fits, with bars. In a level the mouse wheel zooms the world (not the HUD) in and
   out between the picture as made and twice as close (`camera.zoom`, `zoomBy`; `screenToWorld` follows it); the game layer
@@ -411,6 +424,122 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   has no icon for shows another feature's of a like name, each borrowed icon shown by that feature alone
   (`scripts/feature-icons.py` `BORROWED`). The exit room has one campfire, in its middle, and a candelabra either side of
   its gate inside it (its lever beside the upper one).
+- A ranged attack (a bow, a crossbow, a ranged spell attack, the heroes' or the enemies') made with a hostile creature
+  within 5 feet is at disadvantage (`rules/CloseQuarters.ts`; `systems/CloseQuarters.ts` marks the projectile `pressed` as it
+  leaves the hands); a melee spell attack is not. A spell whose caster picks its kind of damage (Chromatic Orb) is bound with
+  the kind chosen in the Skills tab (a row of coloured boxes before the level boxes, `rules/DamageChoice.ts`), kept in the
+  binding (`damageType`, a coloured corner on its quick-bar square) and cast with it.
+- Enemies carry a flask now and then (`mobThrowable`) and throw it (`systems/ThrowSystem.ts`, an arc, `thrown`) at a hero
+  they see, from beyond arm's reach, where most heroes stand: Alchemist's Fire splashes fire (a DEX save, or the body takes
+  it and burns, `burning`, a round at a time until it burns out or stands in water) and leaves the floor burning; the Grease
+  Bottle leaves grease. Grease (the Grease spell too) is difficult terrain (half pace) and slick: a DEX save on appearing
+  and on stepping in, or the body slips prone (`knockedDown` for a hero, the foe's `status.prone`: it neither moves nor its
+  AI acts; blows at it within 5 feet have advantage, its own at disadvantage); fire takes grease (`igniteGrease`: fire spells,
+  fiery bolts, alchemist's fire) (`systems/Surfaces.ts`; flames in particles). A specter or a shadow never slips (SRD
+  condition immunities, `defences.conditions` in `stats.json`, `immuneTo`). Every save against the floor or a flask shows
+  over the roller's head, heroes' and foes' alike ("DEX save 14: safe", `systems/BodySaves.ts`). Puddles, grease and burning
+  floor are circles as wide as the aim guide showed them (the puddle art's square frames, `PUDDLE_ART_RADIUS`), water
+  with ripples, charged water with bolts, grease with oily swirls, scorched floor with glowing cracks; grease and water wink
+  with glints (`grease-sheen`, `water-glint`).
+- Dancing Lights (`kind: lights`, `systems/DancingLights.ts`), for lighting the dark or drawing foes away, are four glowing
+  `wisp`s round an anchor held by concentration, circling the caster when cast at them, else hovering where sent, where foes
+  failing a WIS save are drawn to them (`entranced`) until hurt or a hero comes close. True Strike is a buff held by
+  concentration (`buffs.trueStrike`) spent on the next attack roll for advantage (`systems/Strike.ts`). Friends, Light, Mage
+  Hand, Minor Illusion, Bursting Sinew, Disguise Self, Enhance Leap (`jump`), Expeditious Retreat, Feather Fall, Find
+  Familiar, Arcane Lock, Darkvision, Detect Thoughts, Enlarge/Reduce, Knock and Phantasmal Force are kept in `spell-list.json`
+  (`hidden`) but left out of the Skills tab. A spell the game plays otherwise than the
+  tabletop has its description as played in `spellbook.json` (`PLAYED_AS`, `scripts/scrape-spells.mjs`).
+- Sleep (`kind: sleep`, `systems/SleepSpell.ts`) flies as a bolt and lulls the first foe it touches whose hit points are no
+  more than its 5d8 (2d8 more a level up): `status.asleep`, unconscious — it neither moves nor acts, attacks at it have
+  advantage and a hit within 5 feet is a critical (`critOnHit`) — until the time runs out or it is hurt (`wake`, `Hits.ts`);
+  undead (`creature` in `stats.json`, `rules/Conditions.ts`) never sleep. Longstrider and Protection from Evil and Good
+  (`kind: ally`, `systems/AllySpells.ts`) go to the hero under the crosshair (the aim guide's corner brackets frame them;
+  `bracketPath` in `MarkerSystem.ts`), else the caster, within a touch's reach: +10 feet of speed for an hour
+  (`buffs.longstrider`), or a ward held by the caster's concentration (`buffs.protection`) — undead attack the warded at
+  disadvantage; each keeps an aura and shows on the companion's HUD. Fog Cloud (`kind: fog`, `systems/FogCloud.ts`,
+  `fogCloud`) heavily obscures (`ai/perception/obscured.ts`): attacks into it, out of it or within it are at disadvantage,
+  enemies neither see nor shoot a hero in it or behind it unless within 5 feet; its body is two layers of rolling noise
+  cloud, thick at the rim and thin in the middle so the fight inside shows (`systems/CloudSystem.ts`), with wisps of particles
+  over them. Darkness is the same cloud (`fogCloud.dark`), black, and no light inside it is drawn (`inDarkness`,
+  `InGameScene.gatherLights`); Gust of Wind scatters fog (not Darkness).
+- Spells that hold a body in a condition (`systems/SpellHolds.ts`, `spellHolds`: heroes and foes alike, each hold its spell,
+  caster, DC, time and the ticks to its next save): `kind: hex` goes to the foe under the crosshair within range (the aim
+  guide frames it in brackets; cast higher, Charm Person, Hold Person and Blindness take one more foe a level near it,
+  `targetsPerLevel`) and its creature types (`creatures`, every hero a humanoid) and Intelligence (`minIntelligence`), not to
+  one immune to the condition. Charm Person charms (`status.charmed`, with advantage on the save against a foe fighting the
+  heroes); Tasha's Hideous Laughter lays `laughing` (prone, incapacitated; a save with advantage each time it is hurt,
+  `shakeOff`); Hold Person `paralyzed` (frozen, its clip too, `frozenStill`; STR and DEX saves fail; blows at it advantage,
+  critical from 5 feet); Blindness `blinded` or `deafened` as bound (`rules/SpellVariants.ts`: the Skills tab offers the
+  choice before the levels, kept in the binding's `variant`; blinded: sees nothing beyond 5 feet, `unseenBy`, attacks
+  disadvantage, attacked at advantage; deafened: hears no shout); Crown of Madness `maddened` (`systems/Madness.ts`: it goes
+  for and strikes the nearest other creature, never its charmer); Ray of Enfeeblement (a bolt with `condition`) `enfeebled`
+  (half damage with Strength weapon blows, `enfeebledDamage`); Web's webs `restrained` (a Strength check a round, out of the
+  webs it is free). A hold saves again at the end of each of its turns (`TURN_TICKS`) and lets go when its caster's
+  concentration ends (`endHoldsOf`); a concentration whose hex holds nobody ends. A hero paralysed or laughing (or slipped)
+  can neither swing, shoot nor cast (`heroHeld`). Enemy casters cast Hold Person at heroes (`hexHero`).
+- Web (`kind: surface`, `surface: web`, a cube) is a square of webs (`systems/Surfaces.ts`): difficult terrain, a DEX save on
+  appearing and on stepping in or `restrained`; fire burns it away in a round (2d4 fire to all in it). Flaming Sphere (a
+  zone that `rolls`) rolls 30 feet a round towards its caster's aim, sheds light, sets grease and webs alight and rams the
+  first foe it meets (a save at once; it stops for the round, `zone.stopped`). Gust of Wind (`kind: gust`,
+  `systems/GustOfWind.ts`, a `gust` entity held by concentration) blows a line from the caster that turns where they aim: a
+  STR save at once and each round, or `shove`d 15 feet along it (`MovementSystem`: a shove may carry a body over a brink,
+  `dropAlong`); walking back into it is at half pace. An enemy caster casts it only when it would blow a hero over a drop.
+  Misty Step (`kind: teleport`, `systems/MistyStep.ts`) steps to the nearest free place in sight towards the aim within its
+  range (`stepTarget`; none: refused before the cast, the aim guide shows where).
+- Gust of Wind blows out the wall torches, campfires and open-flamed candles (`FLAME_PROPS`, their art without the flame
+  `prop_<kind>_out` made at load) along its line (`systems/Snuff.ts`, `torch_out` / `campfire_out`; their light, sparks and flicker
+  kept in `snuffed`; a guest snuffs its own on the wind's `vfx` signal); fire lights them again — wherever fire sets grease alight
+  (`igniteGrease`: fire spells and bolts, Alchemist's Fire, the Flaming Sphere), `kindleAround`, the host telling guests by a
+  `kindle` message.
+- Heroes throw anything in the bag (its right-click menu's Throw; held ready in `game/ThrowAim.ts`, a left click on the world
+  throws it, a right click or Escape puts it away; `systems/ThrowAimSystem.ts`, the `throw` command): a flask or potion bursts
+  where it lands (`systems/ThrowSystem.ts` `throwItem`), a potion of healing healing every creature its splash wets, foes too
+  (`quaff`; drunk from the menu, `drink`); anything else strikes the foe it lands on (`objectAttack`: a throwing weapon as its
+  table says, else 1d4 + STR improvised, disadvantage past its normal range) and lies where it fell. The aim guide shows the
+  throw's flight, its splash and a mark under each body it would reach, green under heroes, red under foes.
+- Weapon actions (`systems/WeaponActions.ts`): bound as `action:<id>`, used with the main-hand weapon that unlocks them and
+  proficiency in it, each once until a short or long rest (`actionsSpent`, hit or miss; Tenacity at will, its square switches
+  it). A strike or shot is readied (`weaponAction`) and goes with the next blow, at once if none is under way; Cleave's swing
+  sweeps a wide arc, up to 3 foes at half damage; Rush Attack charges 30 feet; Brace and Prepare are a stance for a turn
+  (`actionStance`). On a hit the foe saves against the weapon action DC (8 + proficiency + the better of STR and DEX + the
+  action's bonus; a hybrid DC or the spell DC) or suffers its condition (`weaponMarks`: Bleeding, Dazed, Maimed, Off Balance,
+  Weak Grip, Chest Trauma, Gaping Wounds, Hamstrung; Prone and Disarmed are the foe's own marks), shown by its ring, the
+  condition card and its icon.
+- Condition icons are Baldur's Gate's (`scripts/download-condition-icons.py`, every page of bg3.wiki's Condition Icons,
+  pixelated lightly by `scripts/condition-icons.sh` into `public/conditions`; which condition shows which in
+  `assets/ConditionIcons.ts`). The hero's own conditions (blinded in fog or Darkness, prone, a spell's hold…) stand in the HUD's
+  top left with their icons (`ui/PassiveHud.ts`); every body in a condition shows its icons in a row over its head, above its
+  health bar (`systems/ConditionRingSystem.ts`); the pointer over a body shows a small see-through card of its conditions,
+  their icons and names only (`ui/ConditionTip.ts`).
+- Damage shows over whoever takes it, in red, as it is dealt (`logHurt` in `systems/RollLogSystem.ts`, from `hitMob` and
+  `hurtPlayer`): "7" for a weapon's kinds, "3 fire" for any other; the attacker shows only its roll to hit, a miss or "CRIT!".
+- The terrain's walls and rock lie in their own container (`LevelView.walls`, WALLS_Z) over what lies flat on the floor
+  (puddles, grease, burning floor, webs, rugs, condition rings) and under all that stands.
+- A particle effect following a body (burning, a mark, a hold's aura) that is no longer asked for fades on the body
+  (`systems/VfxSystem.ts` `letGoUnasked`), never left emitting in the air.
+- In the caverns an inner corner where a north cliff meets the rock below it is opened to cave ground (`CaveZone.openCorners`),
+  and a cliff ending beside open floor has cave ground under its end (`caveCliffEnd`, `TerrainAutotile.ts`).
+- Invisibility (an `ally` spell, `systems/Invisibility.ts`, `invisible`) hides a hero until they attack or cast
+  (`revealOnAct`; the companion's concentration ends with it): every screen draws them as a shimmer (`systems/ImageSystem.ts`),
+  foes do not see them beyond 5 feet, attacks at them at disadvantage and theirs at advantage. An enemy caster that knows it
+  turns invisible as it notices the heroes and stalks them (`STALK_TICKS`): its heroes' screens show nothing of it (no
+  sprite, bar, ring, roll, bracket; `hiddenHere`). See Invisibility (`seesInvisible`; the Third Eye too) shows the invisible near
+  the seer as a shimmer, and once a round each makes a DEX save or is revealed for everyone; enemies cast it against an
+  invisible hero. Blur (`buffs.blur`: attacks at disadvantage, two trembling copies), Mirror Image (`buffs.images`, three faint
+  copies drifting round the hero; `systems/Illusions.ts`: a d20 of 6/8/11+ sends a blow to a duplicate, AC 10 + DEX, a hit
+  destroys it), Shadow Blade and Magic Weapon (`rules/SpellWeapons.ts`, `withSpellWeapon` in the sheet: a 2d8 psychic finesse
+  blade with advantage on a target in dim light, `inDimLight`; +1 (+2 at the 4th, +3 at the 6th) on a weapon with no magic of
+  its own) — a plain sword floats over the hero's head while either holds (`systems/WeaponSignSystem.ts`).
+- A blow of fire, poison, acid, cold or lightning leaves its mark on a hero or a foe for a round (`systems/Afflictions.ts`,
+  `afflicted`): its particles (`AFFLICTION_VFX`: flames, green drips and fumes, frost, crackling sparks) and its body washed in
+  the colour (`systems/ImageSystem.ts`; lightning flickers).
+- A body in a condition (`systems/Conditions.ts`: unconscious, paralysed, Tasha's laughter, prone, restrained, charmed —
+  Dancing Lights' pull too —, maddened, frightened, blinded in fog or by the spell, deafened, enfeebled, burning) has a ring
+  of runes under its feet in the condition's colour (`RING_COLOURS`), one ring for each, turning and breathing
+  (`systems/ConditionRingSystem.ts`, pooled sprites); a hold keeps its particles on the body (`HOLD_AURAS`). The pointer
+  over such a body shows a tooltip of its conditions — each in its colour, what it does, its time left and the spell
+  (`ui/ConditionTip.ts`). The HUD's clocks (`drawIconClock`, `ui/IconClock.ts`) are Shield's everywhere, the concentration
+  badge's too: the time gone darkened, the time left a shrinking ring; the hero's own holds show there in red.
 - Enemies with a bow or crossbow and enemy spellcasters (`systems/EnemyRangedSystem.ts`) shoot and cast only at a hero
   in sight whose screen shows them (never from off-screen), stand to do it, lead a moving target and pick the spell that
   harms most (a burst by how many heroes it catches); their shots are the heroes' bolts and arrows on the enemies' side
@@ -459,8 +588,20 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `core/fuzzy.ts`, matched ones lit in the tooltip — and sorted by price, weight or training, `game/BagView.ts`, without moving a
   thing; a right-click menu to equip — a weapon in the primary hand or the off-hand — take off, drop, compare or send; a click
   marks an item, Ctrl+click marks a second and the two are compared side by side, the second's AC, damage and weight marked
-  better or worse, `game/ItemCompare.ts`; gear the hero is not trained in, `itemTrained` in `rules/Classes.ts`, has a red aura
-  behind it), its character sheet (`AbilityGrid`, `SheetField`, `SheetInfoPanel`, `ProficiencyPanel`, tooltips in
+  better or worse, `game/ItemCompare.ts`; an item in the bag under the pointer that would take the place of something worn (a
+  weapon the main hand's, body armour, headwear; not the off hand yet, `wornCounterpart`) is shown beside the worn one the
+  same way; the square under the pointer is edged, and while an item is dragged the square it would land in, in gold; gear
+  the hero is not trained in, `itemTrained` in `rules/Classes.ts`, has a red aura behind it). An item's tooltip
+  (`ui/ItemTooltip.ts`, the shop's and loot rolls' too) is laid out as Baldur's Gate's: its name in its rarity's colour
+  (`rules/Rarity.ts`: by its magic, a step rarer for damage of another kind), "Uncommon Magic Weapon", its picture top right,
+  the damage range in large figures with the hero's ability and magic added (armour: its Armor Class), its dice and damage
+  type marks, a weapon's damage of another kind (`extraDamage`, "+1d4 Fire"), its enchantment, a weapon's "Proficiency
+  unlocks" (the weapon actions of `src/data/weapon-actions.json`, `rules/WeaponActions.ts`, with Baldur's Gate's icons, greyed
+  for a hero untrained in it; while Alt is held the tooltip stays put, the pointer over an action shows its tooltip,
+  `ui/ActionTopic.ts`, and a click binds it to the quick bar as `action:<id>`), warnings, who wears it and the spells on it (Magic Weapon, Shadow Blade), and at its foot its sort, properties
+  (two-handed in yellow), range, weight and price. A weapon's damage of another kind is dealt on every hit of its blows and
+  arrows (`systems/WeaponHits.ts`, `AttackProfile.elemental`), and fire sets the one struck, hero or foe, alight for two
+  rounds (`WEAPON_BURN_TICKS`). Its character sheet (`AbilityGrid`, `SheetField`, `SheetInfoPanel`, `ProficiencyPanel`, tooltips in
   `SheetTopics`; the column scrolls when it is too tall), the lists' scrollbars (`ScrollBar`), panels, pause menu. The game
   draws its own pointer over every scene (`ui/Pointer.ts`, from `public/ui/pointer.png`, made from `public/dng-pointer.png` by
   `scripts/pointer-sheet.py`, lifted and outlined to stand out on the dark; keep the hot spots in step): the hand over menus, the HUD and panels (pressing over anything

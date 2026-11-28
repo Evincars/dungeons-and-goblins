@@ -9,6 +9,8 @@ import { faceTowards, wander } from '../execution/locomotion';
 import { cutOff, flank, followTrail, strike, support } from '../execution/pursuit';
 import { squadOf } from './squads';
 import { sound } from '../../audio/SoundPlayer';
+import { engagementOf } from './engagement';
+import { holdOff, skirmish } from '../execution/skirmish';
 import { MOB_CRIES } from '../../audio/SoundBank';
 
 /**
@@ -83,9 +85,10 @@ export function huntedPlayer(mob: Mob): Player | undefined {
   return isPlayer(target) && isActivePlayer(target) ? target : undefined;
 }
 
-/** Whether an ally can be called into a fight: idle and not sulking after being crowded out of one. */
+/** Whether an ally can be called into a fight: idle, not sulking after being crowded out of one, and not deafened (Deafness). */
 function callable(ally: Entity, shouter: Mob): ally is Mob {
-  return ally !== shouter && isMob(ally) && ally.ai.state === 'idle' && ally.ai.calmTicks <= 0;
+  const deaf = (ally.spellHolds?.deafened?.ticks ?? 0) > 0;
+  return ally !== shouter && isMob(ally) && ally.ai.state === 'idle' && ally.ai.calmTicks <= 0 && !deaf;
 }
 
 /** The shout: idle allies within ALERT_RADIUS learn where the player is and come to help the shouter. */
@@ -182,8 +185,20 @@ class EngageState extends State<MobAgent> {
   }
 }
 
-/** One tick of fighting in the enemy's squad role. */
+/**
+ * One tick of fighting: a skirmisher keeps its distance, a melee fighter waiting its turn holds off (decision/engagement.ts);
+ * one pressing in fights in its squad role.
+ */
 function fight(level: Level, mob: Mob, target: Player, tick: number): void {
+  const part = engagementOf(mob, tick);
+  if (part === 'skirmish') {
+    skirmish(level, mob, target, tick);
+    return;
+  }
+  if (part === 'wait') {
+    holdOff(level, mob, target, tick);
+    return;
+  }
   switch (mob.ai.role) {
     case 'flank': flank(level, mob, squadOf(mob.ai.targetId), target, tick); break;
     case 'support': support(level, mob, target, tick); break;

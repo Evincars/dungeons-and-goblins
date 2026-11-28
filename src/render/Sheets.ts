@@ -17,13 +17,16 @@ const SHEETS: Record<string, SheetInfo> = {
   torch:              { frameWidth: 16, frameHeight: 16 },
   // Campfire — stones and logs under torch flames, 4 frames of 24×24
   campfire:           { frameWidth: 24, frameHeight: 24 },
+  // A torch and a campfire blown out by Gust of Wind (systems/Snuff.ts): one frame each, no flames
+  torch_out:          { frameWidth: 16, frameHeight: 16 },
+  campfire_out:       { frameWidth: 24, frameHeight: 24 },
   // The hearth of flagstones under a campfire
   campfire_floor:     { frameWidth: 50, frameHeight: 22 },
 
   // ── Procedural UI / FX sheets ───────────────────────────────────────────────
   spell_bolt:         { frameWidth: 16,  frameHeight: 16  },
   spawner:            { frameWidth: 32,  frameHeight: 40  },
-  puddle:             { frameWidth: 64,  frameHeight: 32  },
+  puddle:             { frameWidth: 96,  frameHeight: 96  },
   portcullis:         { frameWidth: 32,  frameHeight: 72  },
   lever:              { frameWidth: 32,  frameHeight: 32  },
   fx_sword_swing:     { frameWidth: 48,  frameHeight: 48  },

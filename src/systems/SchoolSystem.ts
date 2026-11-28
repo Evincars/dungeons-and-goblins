@@ -454,7 +454,6 @@ export function splitEnchantment(caster: Entity | undefined, foe: Entity, spell:
   if (!other) return;
   arcana.splitTicks = TURN_TICKS;
   if (other.position) playEffect(CHARM_EFFECT.shape, CHARM_EFFECT.colour, other.position.x, other.position.y, AIM_HEIGHT, CHARM_EFFECT.scale);
-  logLine(other, text('roll.damage', { amount: damage }), 'damage');
   hitMob(other, caster, damage, true);
 }
 
@@ -699,7 +698,7 @@ function climaxStrikes(hero: Player, at: { x: number; y: number }, dice: number)
     const save = foreseenSave(foe, hero, modifier, dc);
     const rolled = rollDice({ count: dice, sides: CLIMAX_DIE, bonus: 0 });
     const damage = save.success ? Math.floor(rolled / 2) : rolled;
-    logSaveDamage(foe, save.total, save.success, damage);
+    logSaveDamage(foe, save.total, save.success);
     hitMob(foe, hero, damage, true);
   }
 }

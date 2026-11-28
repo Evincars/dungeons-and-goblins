@@ -24,17 +24,22 @@ let clock = 0;
 /** What it was last drawn for, so it is drawn again only when that changes. */
 const drawn = { halfW: -1, halfH: -1 };
 
-function draw(g: Graphics, halfW: number, halfH: number): void {
+/** The four corner brackets round a box `2 halfW` × `2 halfH` centred on (x, y), as a path to stroke. */
+export function bracketPath(g: Graphics, x: number, y: number, halfW: number, halfH: number): Graphics {
   const arm = Math.min(ARM, halfW, halfH);
-  g.clear();
   for (const sx of [-1, 1]) {
     for (const sy of [-1, 1]) {
-      const cx = sx * halfW;
-      const cy = sy * halfH;
+      const cx = x + sx * halfW;
+      const cy = y + sy * halfH;
       g.moveTo(cx - sx * arm, cy).lineTo(cx, cy).lineTo(cx, cy - sy * arm);
     }
   }
-  g.stroke({ color: COLOR, width: 1, alignment: 0.5 });
+  return g;
+}
+
+function draw(g: Graphics, halfW: number, halfH: number): void {
+  g.clear();
+  bracketPath(g, 0, 0, halfW, halfH).stroke({ color: COLOR, width: 1, alignment: 0.5 });
   drawn.halfW = halfW;
   drawn.halfH = halfH;
 }

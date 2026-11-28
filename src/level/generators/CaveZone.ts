@@ -70,8 +70,45 @@ export class CaveZone {
     const kept = others.filter((r) => !caves.includes(r));
     this.markZone(caves, kept, x0, x1);
     this.digChasm(caves, start, anchors);
+    this.openCorners();
     for (const room of caves) room.cave = true;
     return caves;
+  }
+
+  /** A plain wall tile (not a slanted wall's, which draws its own rock). */
+  private plainWall(x: number, y: number): boolean {
+    const t = this.level.getTile(x, y)?.type ?? TileType.Wall;
+    return (t === TileType.Wall || t === TileType.BreakableWall) && !this.level.slopes.has(x + y * this.level.width);
+  }
+
+  /**
+   * Where a cavern's north cliff ends against the rock running down its side (an inner corner), the rock's tile in the
+   * corner touches the cave only at a point: drawn from the rock block it shows only its dark heart, a black square beside
+   * the cliff, and its box catches bodies pressing into the corner. It is opened to cave ground instead: the cliff to its
+   * north and the rock round it frame the nook.
+   */
+  private openCorners(): void {
+    const { level } = this;
+    const corners: Array<[number, number]> = [];
+    for (const i of level.caveZone) {
+      const x = i % level.width;
+      const y = Math.floor(i / level.width);
+      if (this.innerCorner(x, y, -1) || this.innerCorner(x, y, 1)) corners.push([x, y]);
+    }
+    if (corners.length === 0) return;
+    this.site.setTiles(corners, TileType.Floor);
+    for (const [x, y] of corners) level.caveFloor.add(x + y * level.width);
+  }
+
+  /**
+   * Whether the wall tile at (x, y) is the corner where a north cliff running from `side` (-1: west, 1: east) meets the
+   * rock going down below it: the cliff's tile beside it with cave floor at its foot, rock under the corner, and rock to
+   * its north (so opening it makes a nook, not a way through).
+   */
+  private innerCorner(x: number, y: number, side: -1 | 1): boolean {
+    if (!this.plainWall(x, y) || !this.plainWall(x, y + 1) || !this.plainWall(x, y - 1)) return false;
+    if (!this.plainWall(x + side, y) || !this.level.caveZone.has(x + side + (y + 1) * this.level.width)) return false;
+    return this.site.isFloor(x + side, y + 1);
   }
 
   /** The cave: every cavern room and its walls, and whatever else lies in the band outside the catacomb rooms' walls. */

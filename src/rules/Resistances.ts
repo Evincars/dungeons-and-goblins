@@ -2,6 +2,8 @@ import type { Entity } from '../world';
 import { DAMAGE_TYPES, PHYSICAL_DAMAGE_TYPES } from './DamageTypes';
 import type { DamageType } from './DamageTypes';
 import { featureOn } from './ClassFeatures';
+import type { MobType } from '../world';
+import { MONSTERS } from './Monsters';
 
 /**
  * Resistances and immunities to the kinds of damage (src/rules/DamageTypes.ts). A resistance halves the damage of its kind
@@ -43,4 +45,33 @@ export function defences(who: Bearer): { resist: DamageType[]; immune: DamageTyp
   const immune = DAMAGE_TYPES.filter((type) => immuneTo(who, type));
   const resist = DAMAGE_TYPES.filter((type) => !immune.includes(type) && resists(who, type));
   return { resist, immune };
+}
+
+// ── Monsters ──────────────────────────────────────────────────────────────────
+
+/**
+ * How a monster meets a kind of damage (src/data/stats.json `defences`, SRD): immune (none of it), resistant (half),
+ * vulnerable (double) or neither. Weapon damage it resists only from nonmagical weapons counts as resisted unless the blow
+ * is magical (a +1 weapon, a spell). Prepared for play, not applied yet: hitMob records the kind (`lastDamageType`).
+ */
+export type DamageResponse = 'immune' | 'resistant' | 'vulnerable' | 'normal';
+
+export function monsterResponse(type: MobType, damageType: DamageType, magical: boolean): DamageResponse {
+  const d = MONSTERS[type].defences;
+  if (d.immune.includes(damageType)) return 'immune';
+  const nonmagical = !magical && d.resistNonmagical.some((t) => t === damageType);
+  if (d.resist.includes(damageType) || nonmagical) return 'resistant';
+  return d.vulnerable.includes(damageType) ? 'vulnerable' : 'normal';
+}
+
+/** Damage as a monster that meets it so takes it: none, half (rounded down), double, or all of it. */
+export function adjustDamage(damage: number, response: DamageResponse): number {
+  if (response === 'immune') return 0;
+  if (response === 'resistant') return Math.floor(damage / 2);
+  return response === 'vulnerable' ? damage * 2 : damage;
+}
+
+/** The damage a monster of this kind would take of a blow (what play will apply once the defences are switched on). */
+export function monsterDamageTaken(type: MobType, damage: number, damageType: DamageType, magical: boolean): number {
+  return adjustDamage(damage, monsterResponse(type, damageType, magical));
 }

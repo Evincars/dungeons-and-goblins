@@ -1,4 +1,5 @@
 import { world, q, Team, isTarget } from '../world';
+import { takeCleave } from './WeaponActions';
 import type { Entity, Player } from '../world';
 import { sound } from '../audio/SoundPlayer';
 import type { SfxName } from '../audio/SoundPlayer';
@@ -17,6 +18,10 @@ import { nearby, Sense } from '../ai/perception/spatial';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
 import { logLine } from './RollLogSystem';
 import { text } from '../core/texts';
+import { heroHeld } from './SpellHolds';
+import { bladeDamageType } from '../rules/SpellWeapons';
+import { revealOnAct } from './Invisibility';
+import { elementalHit } from './WeaponHits';
 
 type Swing = NonNullable<Entity['swordSwing']>;
 
@@ -35,6 +40,14 @@ export { hitMob };
 
 /** The chain's last blow ends this many ticks before the period does, so the next swing never cuts it short. */
 const CHAIN_MARGIN = 1;
+
+/**
+ * A Cleave (systems/WeaponActions.ts) sweeps wider than a swing's arc — the cosine of its half-angle, about 110° either side, so
+ * it catches foes beside the hero too — strikes this many foes at most, and deals this share of each blow's damage.
+ */
+const CLEAVE_ARC_COS = -0.35;
+export const CLEAVE_TARGETS = 3;
+const CLEAVE_SHARE = 0.5;
 
 /** Action Surge plays every blow this many times faster. */
 const SURGE_TEMPO = 2;
@@ -78,7 +91,7 @@ function bodyReach(target: Entity): number {
 
 function canSwing(player: Player): boolean {
   return player.playerInput.intents.attack && player.swordCooldown === 0 && player.health.current > 0
-    && !player.casting && !player.falling;
+    && !player.casting && !player.falling && !heroHeld(player);
 }
 
 /** Great Weapon Master's earned attack: spent on the next swing of the attack key, one blow more. */
@@ -111,9 +124,12 @@ function startSwing(player: Player, fromKey = true): void {
     blows,
     offHand: !!sheet.offHand,
     tempo: timing.tempo,
+    ...(takeCleave(player) ? { cleave: true } : {}),
   };
   world.addComponent(player, 'swordSwing', swing);
   player.swordCooldown = SWORD_STATS.cooldown;
+  // An attack ends Invisibility (systems/Invisibility.ts).
+  revealOnAct(player);
   if (swing.delay === 0) swingLands(player, swing);
 }
 
@@ -146,7 +162,7 @@ function inArc(player: Player, swing: Swing, mob: Entity, mobId: number): boolea
   const dy = mob.position.y - player.position.y;
   const dist = Math.hypot(dx, dy);
   if (dist > swing.range + bodyReach(mob)) return false;
-  return (dx * swing.dirX + dy * swing.dirY) / (dist || 1) >= SWORD_STATS.arcCos;
+  return (dx * swing.dirX + dy * swing.dirY) / (dist || 1) >= (swing.cleave ? CLEAVE_ARC_COS : SWORD_STATS.arcCos);
 }
 
 
@@ -156,18 +172,22 @@ function inArc(player: Player, swing: Swing, mob: Entity, mobId: number): boolea
  */
 function swingAt(player: Player, target: Entity, swing: Swing): void {
   const sheet = characterSheet(player);
-  strikeWith(player, target, sheet.attack, false);
+  strikeWith(player, target, sheet.attack, false, swing.cleave);
   if (swing.offHand && swing.blow === 0 && sheet.offHand && (target.health?.current ?? 0) > 0) strikeWith(player, target, sheet.offHand, true);
   // Polearm Master: the butt end strikes with the first blow too.
   if (swing.blow === 0 && sheet.butt && (target.health?.current ?? 0) > 0) strikeWith(player, target, sheet.butt, true);
 }
 
 /** One attack of the blow: rolled against the target's Armor Class, and a hit lands even on a target that the other weapon just struck. */
-function strikeWith(player: Player, target: Entity, attack: AttackProfile, alongside: boolean): void {
+function strikeWith(player: Player, target: Entity, attack: AttackProfile, alongside: boolean, cleave = false): void {
   const outcome = strike(target, attack, player);
   if (target.position) sound.playSound(outcome.hit ? 'sword_hit' : 'sword_miss', target.position.x, target.position.y);
   if (!outcome.hit) return;
-  hitMob(target, player, outcome.damage, alongside);
+  // A Shadow Blade cuts with psychic gloom (systems/SpellWeapons.ts); a Cleave's blow deals half.
+  const damage = cleave ? Math.max(1, Math.floor(outcome.damage * CLEAVE_SHARE)) : outcome.damage;
+  hitMob(target, player, damage, alongside, bladeDamageType(player));
+  // A weapon that deals damage of another kind (a flaming sword's fire) deals it too, and fire sets the foe alight.
+  elementalHit(target, player, attack, outcome.critical);
   if (outcome.critical || (target.health?.current ?? 1) <= 0) earnBonusAttack(player, false);
 }
 
@@ -188,6 +208,7 @@ function resolveSwing(player: Player, swing: Swing): void {
     if (!isTarget(mob) || mob.health.current <= 0 || mob.team === Team.Player) continue;
     const mobId = world.id(mob);
     if (mobId === undefined || !inArc(player, swing, mob, mobId)) continue;
+    if (swing.cleave && swing.hitIds.length >= CLEAVE_TARGETS) return;
     swing.hitIds.push(mobId);
     swingAt(player, mob, swing);
   }

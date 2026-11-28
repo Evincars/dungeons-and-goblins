@@ -125,7 +125,7 @@ function walkToGoalTile(level: Level, mob: Mob, goal: number, x: number, y: numb
  * can't stand on (a player pressed against a wall) is reached by routing to the nearest ground, then
  * walking the last bit straight at it.
  */
-function walkToPoint(level: Level, mob: Mob, x: number, y: number): void {
+export function walkToPoint(level: Level, mob: Mob, x: number, y: number): void {
   if (clearLine(level, mob.position.x, mob.position.y, x, y)) {
     resetRoute(mob);
     driveTo(level, mob, x, y);

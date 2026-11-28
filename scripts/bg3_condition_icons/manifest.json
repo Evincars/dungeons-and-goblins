@@ -1,0 +1,3908 @@
+[
+  {
+    "condition": "A Clown in Town",
+    "file_name": "A Clown in Town Condition Icon.png",
+    "url": "https://bg3.wiki/w/images/3/32/A_Clown_in_Town_Condition_Icon.png",
+    "file": "A Clown in Town.png"
+  },
+  {
+    "condition": "A Most Bloody Inheritance",
+    "file_name": "A Most Bloody Inheritance Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/74/A_Most_Bloody_Inheritance_Condition_Icon.webp",
+    "file": "A Most Bloody Inheritance.png"
+  },
+  {
+    "condition": "Aberrant Shape",
+    "file_name": "Aberrant Shape Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d1/Aberrant_Shape_Condition_Icon.webp",
+    "file": "Aberrant Shape.png"
+  },
+  {
+    "condition": "Ability Drain Strength",
+    "file_name": "Ability Drain Strength Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4c/Ability_Drain_Strength_Condition_Icon.webp",
+    "file": "Ability Drain Strength.png"
+  },
+  {
+    "condition": "Abjure Enemy",
+    "file_name": "Abjure Enemy Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/ce/Abjure_Enemy_Condition_Icon.webp",
+    "file": "Abjure Enemy.png"
+  },
+  {
+    "condition": "Absorb Elements Acid Damage",
+    "file_name": "Absorb Elements Acid Damage Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/27/Absorb_Elements_Acid_Damage_Condition_Icon.webp",
+    "file": "Absorb Elements Acid Damage.png"
+  },
+  {
+    "condition": "Absorb Elements Cold Damage",
+    "file_name": "Absorb Elements Cold Damage Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/41/Absorb_Elements_Cold_Damage_Condition_Icon.webp",
+    "file": "Absorb Elements Cold Damage.png"
+  },
+  {
+    "condition": "Absorb Elements Fire Damage",
+    "file_name": "Absorb Elements Fire Damage Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/eb/Absorb_Elements_Fire_Damage_Condition_Icon.webp",
+    "file": "Absorb Elements Fire Damage.png"
+  },
+  {
+    "condition": "Absorb Elements Lightning Damage",
+    "file_name": "Absorb Elements Lightning Damage Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c2/Absorb_Elements_Lightning_Damage_Condition_Icon.webp",
+    "file": "Absorb Elements Lightning Damage.png"
+  },
+  {
+    "condition": "Absorb Elements Thunder Damage",
+    "file_name": "Absorb Elements Thunder Damage Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/85/Absorb_Elements_Thunder_Damage_Condition_Icon.webp",
+    "file": "Absorb Elements Thunder Damage.png"
+  },
+  {
+    "condition": "Absorbed Intellect",
+    "file_name": "Absorbed Intellect Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e1/Absorbed_Intellect_Condition_Icon.webp",
+    "file": "Absorbed Intellect.png"
+  },
+  {
+    "condition": "Acid",
+    "file_name": "Acid Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/28/Acid_Condition_Icon.webp",
+    "file": "Acid.png"
+  },
+  {
+    "condition": "Acid Infusion",
+    "file_name": "Acid Infusion Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/1d/Acid_Infusion_Condition_Icon.webp",
+    "file": "Acid Infusion.png"
+  },
+  {
+    "condition": "Action Surge",
+    "file_name": "Action Surge Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/6f/Action_Surge_Condition_Icon.webp",
+    "file": "Action Surge.png"
+  },
+  {
+    "condition": "Aegis of the Absolute",
+    "file_name": "Aegis of the Absolute Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b8/Aegis_of_the_Absolute_Condition_Icon.webp",
+    "file": "Aegis of the Absolute.png"
+  },
+  {
+    "condition": "Agitated",
+    "file_name": "Agitated Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/41/Agitated_Condition_Icon.webp",
+    "file": "Agitated.png"
+  },
+  {
+    "condition": "Aid",
+    "file_name": "Aid Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c4/Aid_Condition_Icon.webp",
+    "file": "Aid.png"
+  },
+  {
+    "condition": "Alcohol",
+    "file_name": "Alcohol Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0a/Alcohol_Condition_Icon.webp",
+    "file": "Alcohol.png"
+  },
+  {
+    "condition": "Ambushed",
+    "file_name": "Ambushed Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/ca/Ambushed_Condition_Icon.webp",
+    "file": "Ambushed.png"
+  },
+  {
+    "condition": "Animalistic Vitality Icon",
+    "file_name": "Animalistic Vitality Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/31/Animalistic_Vitality_Icon.webp",
+    "file": "Animalistic Vitality Icon.png"
+  },
+  {
+    "condition": "Antidote",
+    "file_name": "Antidote Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d0/Antidote_Condition_Icon.webp",
+    "file": "Antidote.png"
+  },
+  {
+    "condition": "Arcane Acuity",
+    "file_name": "Arcane Acuity Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/37/Arcane_Acuity_Condition_Icon.webp",
+    "file": "Arcane Acuity.png"
+  },
+  {
+    "condition": "Arcane Ammunition",
+    "file_name": "Arcane Ammunition Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/23/Arcane_Ammunition_Condition_Icon.webp",
+    "file": "Arcane Ammunition.png"
+  },
+  {
+    "condition": "Arcane Battery",
+    "file_name": "Arcane Battery Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/8d/Arcane_Battery_Condition_Icon.webp",
+    "file": "Arcane Battery.png"
+  },
+  {
+    "condition": "Arcane Charge",
+    "file_name": "Arcane Charge Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f0/Arcane_Charge_Condition_Icon.webp",
+    "file": "Arcane Charge.png"
+  },
+  {
+    "condition": "Arcane Hunger",
+    "file_name": "Arcane Hunger Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/ea/Arcane_Hunger_Condition_Icon.webp",
+    "file": "Arcane Hunger.png"
+  },
+  {
+    "condition": "Arcane Lock",
+    "file_name": "Arcane Lock Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9d/Arcane_Lock_Condition_Icon.webp",
+    "file": "Arcane Lock.png"
+  },
+  {
+    "condition": "Arcane Synergy",
+    "file_name": "Arcane Synergy Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/1d/Arcane_Synergy_Condition_Icon.webp",
+    "file": "Arcane Synergy.png"
+  },
+  {
+    "condition": "Arcane Ward",
+    "file_name": "Arcane Ward Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/7a/Arcane_Ward_Condition_Icon.webp",
+    "file": "Arcane Ward.png"
+  },
+  {
+    "condition": "Ardent Apostle",
+    "file_name": "Ardent Apostle Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a8/Ardent_Apostle_Condition_Icon.webp",
+    "file": "Ardent Apostle.png"
+  },
+  {
+    "condition": "Armour of Agathys",
+    "file_name": "Armour of Agathys Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e1/Armour_of_Agathys_Condition_Icon.webp",
+    "file": "Armour of Agathys.png"
+  },
+  {
+    "condition": "Armour of the Swarm",
+    "file_name": "Armour of the Swarm Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/78/Armour_of_the_Swarm_Condition_Icon.webp",
+    "file": "Armour of the Swarm.png"
+  },
+  {
+    "condition": "Arms of Hadar",
+    "file_name": "Arms of Hadar Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e9/Arms_of_Hadar_Condition_Icon.webp",
+    "file": "Arms of Hadar.png"
+  },
+  {
+    "condition": "Ascended Fiend",
+    "file_name": "Ascended Fiend Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/ac/Ascended_Fiend_Condition_Icon.webp",
+    "file": "Ascended Fiend.png"
+  },
+  {
+    "condition": "Aspect of the Elk",
+    "file_name": "Aspect of the Elk Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/7a/Aspect_of_the_Elk_Condition_Icon.webp",
+    "file": "Aspect of the Elk.png"
+  },
+  {
+    "condition": "Aspect of the Stallion",
+    "file_name": "Aspect of the Stallion Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e2/Aspect_of_the_Stallion_Condition_Icon.webp",
+    "file": "Aspect of the Stallion.png"
+  },
+  {
+    "condition": "Aspect of the Wolf",
+    "file_name": "Aspect of the Wolf Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/56/Aspect_of_the_Wolf_Condition_Icon.webp",
+    "file": "Aspect of the Wolf.png"
+  },
+  {
+    "condition": "Astral Knowledge",
+    "file_name": "Astral Knowledge Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/66/Astral_Knowledge_Condition_Icon.webp",
+    "file": "Astral Knowledge.png"
+  },
+  {
+    "condition": "At Death's Door Advanced",
+    "file_name": "At Death's Door Advanced Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/59/At_Death%27s_Door_Advanced_Condition_Icon.webp",
+    "file": "At Death's Door Advanced.png"
+  },
+  {
+    "condition": "At Death's Door Emergent",
+    "file_name": "At Death's Door Emergent Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9f/At_Death%27s_Door_Emergent_Condition_Icon.webp",
+    "file": "At Death's Door Emergent.png"
+  },
+  {
+    "condition": "At Death's Door Moderate",
+    "file_name": "At Death's Door Moderate Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d9/At_Death%27s_Door_Moderate_Condition_Icon.webp",
+    "file": "At Death's Door Moderate.png"
+  },
+  {
+    "condition": "Aura of Bloodthirst",
+    "file_name": "Aura of Bloodthirst Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/5a/Aura_of_Bloodthirst_Condition_Icon.webp",
+    "file": "Aura of Bloodthirst.png"
+  },
+  {
+    "condition": "Aura of Courage",
+    "file_name": "Aura of Courage Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a2/Aura_of_Courage_Condition_Icon.webp",
+    "file": "Aura of Courage.png"
+  },
+  {
+    "condition": "Aura of Devotion",
+    "file_name": "Aura of Devotion Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/6a/Aura_of_Devotion_Condition_Icon.webp",
+    "file": "Aura of Devotion.png"
+  },
+  {
+    "condition": "Aura of Hate",
+    "file_name": "Aura of Hate Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a3/Aura_of_Hate_Condition_Icon.webp",
+    "file": "Aura of Hate.png"
+  },
+  {
+    "condition": "Aura of Possibility",
+    "file_name": "Aura of Possibility Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/6b/Aura_of_Possibility_Condition_Icon.webp",
+    "file": "Aura of Possibility.png"
+  },
+  {
+    "condition": "Aura of Protection",
+    "file_name": "Aura of Protection Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/3a/Aura_of_Protection_Condition_Icon.webp",
+    "file": "Aura of Protection.png"
+  },
+  {
+    "condition": "Aura of Terror",
+    "file_name": "Aura of Terror Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0e/Aura_of_Terror_Condition_Icon.webp",
+    "file": "Aura of Terror.png"
+  },
+  {
+    "condition": "Aura of Warding",
+    "file_name": "Aura of Warding Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4c/Aura_of_Warding_Condition_Icon.webp",
+    "file": "Aura of Warding.png"
+  },
+  {
+    "condition": "Avatar of BOOOAL",
+    "file_name": "Avatar of BOOOAL Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d1/Avatar_of_BOOOAL_Condition_Icon.webp",
+    "file": "Avatar of BOOOAL.png"
+  },
+  {
+    "condition": "Bane",
+    "file_name": "Bane Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/2f/Bane_Condition_Icon.webp",
+    "file": "Bane.png"
+  },
+  {
+    "condition": "Banished",
+    "file_name": "Banished Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0d/Banished_Condition_Icon.webp",
+    "file": "Banished.png"
+  },
+  {
+    "condition": "Bardic Inspiration",
+    "file_name": "Bardic Inspiration Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d3/Bardic_Inspiration_Condition_Icon.webp",
+    "file": "Bardic Inspiration.png"
+  },
+  {
+    "condition": "Barkskin",
+    "file_name": "Barkskin Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/00/Barkskin_Condition_Icon.webp",
+    "file": "Barkskin.png"
+  },
+  {
+    "condition": "Basking in Loviatar's Love",
+    "file_name": "Basking in Loviatar's Love Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/26/Basking_in_Loviatar%27s_Love_Condition_Icon.webp",
+    "file": "Basking in Loviatar's Love.png"
+  },
+  {
+    "condition": "Bear's Endurance",
+    "file_name": "Bear's Endurance Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/ac/Bear%27s_Endurance_Condition_Icon.webp",
+    "file": "Bear's Endurance.png"
+  },
+  {
+    "condition": "Befuddled",
+    "file_name": "Befuddled Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/ab/Befuddled_Condition_Icon.webp",
+    "file": "Befuddled.png"
+  },
+  {
+    "condition": "Bend Luck Ability Check Bonus",
+    "file_name": "Bend Luck Ability Check Bonus Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/fb/Bend_Luck_Ability_Check_Bonus_Condition_Icon.webp",
+    "file": "Bend Luck Ability Check Bonus.png"
+  },
+  {
+    "condition": "Benign Transposition Spent",
+    "file_name": "Benign Transposition Spent Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4d/Benign_Transposition_Spent_Condition_Icon.webp",
+    "file": "Benign Transposition Spent.png"
+  },
+  {
+    "condition": "Bhaal's Edict",
+    "file_name": "Bhaal's Edict Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/3b/Bhaal%27s_Edict_Condition_Icon.webp",
+    "file": "Bhaal's Edict.png"
+  },
+  {
+    "condition": "Bhaalspawn Essence Amelyssan",
+    "file_name": "Bhaalspawn Essence Amelyssan Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/bc/Bhaalspawn_Essence_Amelyssan_Condition_Icon.webp",
+    "file": "Bhaalspawn Essence Amelyssan.png"
+  },
+  {
+    "condition": "Big Pig",
+    "file_name": "Big Pig Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/75/Big_Pig_Condition_Icon.webp",
+    "file": "Big Pig.png"
+  },
+  {
+    "condition": "Black Hole",
+    "file_name": "Black Hole Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/90/Black_Hole_Condition_Icon.webp",
+    "file": "Black Hole.png"
+  },
+  {
+    "condition": "Black Tentacles",
+    "file_name": "Black Tentacles Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/39/Black_Tentacles_Condition_Icon.webp",
+    "file": "Black Tentacles.png"
+  },
+  {
+    "condition": "Blade Barrier",
+    "file_name": "Blade Barrier Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4e/Blade_Barrier_Condition_Icon.webp",
+    "file": "Blade Barrier.png"
+  },
+  {
+    "condition": "Blade Ward",
+    "file_name": "Blade Ward Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/49/Blade_Ward_Condition_Icon.webp",
+    "file": "Blade Ward.png"
+  },
+  {
+    "condition": "Bladesinging",
+    "file_name": "Bladesinging Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/7d/Bladesinging_Condition_Icon.webp",
+    "file": "Bladesinging.png"
+  },
+  {
+    "condition": "Bladesong Damage Charge",
+    "file_name": "Bladesong Damage Charge Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b5/Bladesong_Damage_Charge_Condition_Icon.webp",
+    "file": "Bladesong Damage Charge.png"
+  },
+  {
+    "condition": "Bladesong Healing Charge",
+    "file_name": "Bladesong Healing Charge Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/7d/Bladesong_Healing_Charge_Condition_Icon.webp",
+    "file": "Bladesong Healing Charge.png"
+  },
+  {
+    "condition": "Bleeding",
+    "file_name": "Bleeding Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/25/Bleeding_Condition_Icon.webp",
+    "file": "Bleeding.png"
+  },
+  {
+    "condition": "Bless",
+    "file_name": "Bless Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/87/Bless_Condition_Icon.webp",
+    "file": "Bless.png"
+  },
+  {
+    "condition": "Blessing of the Trickster",
+    "file_name": "Blessing of the Trickster Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f1/Blessing_of_the_Trickster_Condition_Icon.webp",
+    "file": "Blessing of the Trickster.png"
+  },
+  {
+    "condition": "Blinded",
+    "file_name": "Blinded Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/70/Blinded_Condition_Icon.webp",
+    "file": "Blinded.png"
+  },
+  {
+    "condition": "Blindness",
+    "file_name": "Blindness Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f8/Blindness_Condition_Icon.webp",
+    "file": "Blindness.png"
+  },
+  {
+    "condition": "Blink",
+    "file_name": "Blink Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/ca/Blink_Condition_Icon.webp",
+    "file": "Blink.png"
+  },
+  {
+    "condition": "Bliss Spores",
+    "file_name": "Bliss Spores Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c2/Bliss_Spores_Condition_Icon.webp",
+    "file": "Bliss Spores.png"
+  },
+  {
+    "condition": "Bloated",
+    "file_name": "Bloated Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/78/Bloated_Condition_Icon.webp",
+    "file": "Bloated.png"
+  },
+  {
+    "condition": "Blood Elixir",
+    "file_name": "Blood Elixir Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/8e/Blood_Elixir_Condition_Icon.webp",
+    "file": "Blood Elixir.png"
+  },
+  {
+    "condition": "Bloodless",
+    "file_name": "Bloodless Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d8/Bloodless_Condition_Icon.webp",
+    "file": "Bloodless.png"
+  },
+  {
+    "condition": "Blurred",
+    "file_name": "Blurred Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d1/Blurred_Condition_Icon.webp",
+    "file": "Blurred.png"
+  },
+  {
+    "condition": "Bolstering Magic Boon",
+    "file_name": "Bolstering Magic Boon Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/21/Bolstering_Magic_Boon_Condition_Icon.webp",
+    "file": "Bolstering Magic Boon.png"
+  },
+  {
+    "condition": "Bone Chilled",
+    "file_name": "Bone Chilled Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a3/Bone_Chilled_Condition_Icon.webp",
+    "file": "Bone Chilled.png"
+  },
+  {
+    "condition": "Boon of Servitude",
+    "file_name": "Boon of Servitude Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/99/Boon_of_Servitude_Condition_Icon.webp",
+    "file": "Boon of Servitude.png"
+  },
+  {
+    "condition": "BOOOAL's Blessing",
+    "file_name": "BOOOAL's Blessing Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/56/BOOOAL%27s_Blessing_Condition_Icon.webp",
+    "file": "BOOOAL's Blessing.png"
+  },
+  {
+    "condition": "BOOOAL's Faithful",
+    "file_name": "BOOOAL's Faithful Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/5c/BOOOAL%27s_Faithful_Condition_Icon.webp",
+    "file": "BOOOAL's Faithful.png"
+  },
+  {
+    "condition": "Bound",
+    "file_name": "Bound Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/56/Bound_Condition_Icon.webp",
+    "file": "Bound.png"
+  },
+  {
+    "condition": "Braced",
+    "file_name": "Braced Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/83/Braced_Condition_Icon.webp",
+    "file": "Braced.png"
+  },
+  {
+    "condition": "Branding Smite",
+    "file_name": "Branding Smite Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/3e/Branding_Smite_Condition_Icon.webp",
+    "file": "Branding Smite.png"
+  },
+  {
+    "condition": "Bufotoxin",
+    "file_name": "Bufotoxin Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a3/Bufotoxin_Condition_Icon.webp",
+    "file": "Bufotoxin.png"
+  },
+  {
+    "condition": "Bulette Diamond Scales Icon",
+    "file_name": "Bulette Diamond Scales Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c8/Bulette_Diamond_Scales_Icon.webp",
+    "file": "Bulette Diamond Scales Icon.png"
+  },
+  {
+    "condition": "Bull's Strength",
+    "file_name": "Bull's Strength Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f9/Bull%27s_Strength_Condition_Icon.webp",
+    "file": "Bull's Strength.png"
+  },
+  {
+    "condition": "Burning",
+    "file_name": "Burning Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c8/Burning_Condition_Icon.webp",
+    "file": "Burning.png"
+  },
+  {
+    "condition": "Buthir's Wrath",
+    "file_name": "Buthir's Wrath Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/3f/Buthir%27s_Wrath_Condition_Icon.webp",
+    "file": "Buthir's Wrath.png"
+  },
+  {
+    "condition": "Call Lightning",
+    "file_name": "Call Lightning Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9f/Call_Lightning_Condition_Icon.webp",
+    "file": "Call Lightning.png"
+  },
+  {
+    "condition": "Calling Reinforcements",
+    "file_name": "Calling Reinforcements Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/27/Calling_Reinforcements_Condition_Icon.webp",
+    "file": "Calling Reinforcements.png"
+  },
+  {
+    "condition": "Calmed",
+    "file_name": "Calmed Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/fb/Calmed_Condition_Icon.webp",
+    "file": "Calmed.png"
+  },
+  {
+    "condition": "Cat's Grace",
+    "file_name": "Cat's Grace Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f7/Cat%27s_Grace_Condition_Icon.webp",
+    "file": "Cat's Grace.png"
+  },
+  {
+    "condition": "Cattle Prattle",
+    "file_name": "Cattle Prattle Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a1/Cattle_Prattle_Condition_Icon.webp",
+    "file": "Cattle Prattle.png"
+  },
+  {
+    "condition": "Champion Challenge",
+    "file_name": "Champion Challenge Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/32/Champion_Challenge_Condition_Icon.webp",
+    "file": "Champion Challenge.png"
+  },
+  {
+    "condition": "Charmed Charm Animals and Plants",
+    "file_name": "Charmed Charm Animals and Plants Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/5c/Charmed_Charm_Animals_and_Plants_Condition_Icon.webp",
+    "file": "Charmed Charm Animals and Plants.png"
+  },
+  {
+    "condition": "Charmed",
+    "file_name": "Charmed Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/47/Charmed_Condition_Icon.webp",
+    "file": "Charmed.png"
+  },
+  {
+    "condition": "Chest Trauma",
+    "file_name": "Chest Trauma Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9a/Chest_Trauma_Condition_Icon.webp",
+    "file": "Chest Trauma.png"
+  },
+  {
+    "condition": "Chicken Chaser",
+    "file_name": "Chicken Chaser Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/2e/Chicken_Chaser_Condition_Icon.webp",
+    "file": "Chicken Chaser.png"
+  },
+  {
+    "condition": "Chilled",
+    "file_name": "Chilled Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/50/Chilled_Condition_Icon.webp",
+    "file": "Chilled.png"
+  },
+  {
+    "condition": "Chilling Grace",
+    "file_name": "Chilling Grace Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d0/Chilling_Grace_Condition_Icon.webp",
+    "file": "Chilling Grace.png"
+  },
+  {
+    "condition": "Clear Area",
+    "file_name": "Clear Area Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/13/Clear_Area_Condition_Icon.webp",
+    "file": "Clear Area.png"
+  },
+  {
+    "condition": "Click Heels",
+    "file_name": "Click Heels Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/bf/Click_Heels_Condition_Icon.webp",
+    "file": "Click Heels.png"
+  },
+  {
+    "condition": "Cloak of Shadows",
+    "file_name": "Cloak of Shadows Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e5/Cloak_of_Shadows_Condition_Icon.webp",
+    "file": "Cloak of Shadows.png"
+  },
+  {
+    "condition": "Cloud of Daggers",
+    "file_name": "Cloud of Daggers Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/31/Cloud_of_Daggers_Condition_Icon.webp",
+    "file": "Cloud of Daggers.png"
+  },
+  {
+    "condition": "Cloudkill",
+    "file_name": "Cloudkill Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/52/Cloudkill_Condition_Icon.webp",
+    "file": "Cloudkill.png"
+  },
+  {
+    "condition": "Coated in Basic Poison",
+    "file_name": "Coated in Basic Poison Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f2/Coated_in_Basic_Poison_Condition_Icon.webp",
+    "file": "Coated in Basic Poison.png"
+  },
+  {
+    "condition": "Cocooned",
+    "file_name": "Cocooned Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/ca/Cocooned_Condition_Icon.webp",
+    "file": "Cocooned.png"
+  },
+  {
+    "condition": "Coerced",
+    "file_name": "Coerced Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f1/Coerced_Condition_Icon.webp",
+    "file": "Coerced.png"
+  },
+  {
+    "condition": "Cold Infusion",
+    "file_name": "Cold Infusion Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/1c/Cold_Infusion_Condition_Icon.webp",
+    "file": "Cold Infusion.png"
+  },
+  {
+    "condition": "Colour Spray",
+    "file_name": "Colour Spray Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d6/Colour_Spray_Condition_Icon.webp",
+    "file": "Colour Spray.png"
+  },
+  {
+    "condition": "Command Approach",
+    "file_name": "Command Approach Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4d/Command_Approach_Condition_Icon.webp",
+    "file": "Command Approach.png"
+  },
+  {
+    "condition": "Command Drop",
+    "file_name": "Command Drop Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/84/Command_Drop_Condition_Icon.webp",
+    "file": "Command Drop.png"
+  },
+  {
+    "condition": "Command Flee",
+    "file_name": "Command Flee Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/1e/Command_Flee_Condition_Icon.webp",
+    "file": "Command Flee.png"
+  },
+  {
+    "condition": "Command Grovel",
+    "file_name": "Command Grovel Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/79/Command_Grovel_Condition_Icon.webp",
+    "file": "Command Grovel.png"
+  },
+  {
+    "condition": "Command Halt",
+    "file_name": "Command Halt Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/21/Command_Halt_Condition_Icon.webp",
+    "file": "Command Halt.png"
+  },
+  {
+    "condition": "Compelled Duel",
+    "file_name": "Compelled Duel Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d2/Compelled_Duel_Condition_Icon.webp",
+    "file": "Compelled Duel.png"
+  },
+  {
+    "condition": "Confused",
+    "file_name": "Confused Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9a/Confused_Condition_Icon.webp",
+    "file": "Confused.png"
+  },
+  {
+    "condition": "Confused Stupor",
+    "file_name": "Confused Stupor Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/24/Confused_Stupor_Condition_Icon.webp",
+    "file": "Confused Stupor.png"
+  },
+  {
+    "condition": "Contagion Poisoned",
+    "file_name": "Contagion Poisoned Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/20/Contagion_Poisoned_Condition_Icon.webp",
+    "file": "Contagion Poisoned.png"
+  },
+  {
+    "condition": "Controlled",
+    "file_name": "Controlled Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/59/Controlled_Condition_Icon.webp",
+    "file": "Controlled.png"
+  },
+  {
+    "condition": "Cosmic Omen",
+    "file_name": "Cosmic Omen Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/70/Cosmic_Omen_Condition_Icon.webp",
+    "file": "Cosmic Omen.png"
+  },
+  {
+    "condition": "Countercharm",
+    "file_name": "Countercharm Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b6/Countercharm_Condition_Icon.webp",
+    "file": "Countercharm.png"
+  },
+  {
+    "condition": "Crawling Gnaw",
+    "file_name": "Crawling Gnaw Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/ef/Crawling_Gnaw_Condition_Icon.webp",
+    "file": "Crawling Gnaw.png"
+  },
+  {
+    "condition": "Crippled",
+    "file_name": "Crippled Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/51/Crippled_Condition_Icon.webp",
+    "file": "Crippled.png"
+  },
+  {
+    "condition": "Crown of Madness",
+    "file_name": "Crown of Madness Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/36/Crown_of_Madness_Condition_Icon.webp",
+    "file": "Crown of Madness.png"
+  },
+  {
+    "condition": "Crusader's Mantle",
+    "file_name": "Crusader's Mantle Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f7/Crusader%27s_Mantle_Condition_Icon.webp",
+    "file": "Crusader's Mantle.png"
+  },
+  {
+    "condition": "Curse of Regret",
+    "file_name": "Curse of Regret Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/76/Curse_of_Regret_Condition_Icon.webp",
+    "file": "Curse of Regret.png"
+  },
+  {
+    "condition": "Curse of the Dire Raven",
+    "file_name": "Curse of the Dire Raven Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f6/Curse_of_the_Dire_Raven_Condition_Icon.webp",
+    "file": "Curse of the Dire Raven.png"
+  },
+  {
+    "condition": "Cursed Ability",
+    "file_name": "Cursed Ability Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4e/Cursed_Ability_Condition_Icon.webp",
+    "file": "Cursed Ability.png"
+  },
+  {
+    "condition": "Cursed Additional Damage",
+    "file_name": "Cursed Additional Damage Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/2a/Cursed_Additional_Damage_Condition_Icon.webp",
+    "file": "Cursed Additional Damage.png"
+  },
+  {
+    "condition": "Cursed Attack Disadvantage",
+    "file_name": "Cursed Attack Disadvantage Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/06/Cursed_Attack_Disadvantage_Condition_Icon.webp",
+    "file": "Cursed Attack Disadvantage.png"
+  },
+  {
+    "condition": "Cursed Dread",
+    "file_name": "Cursed Dread Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/93/Cursed_Dread_Condition_Icon.webp",
+    "file": "Cursed Dread.png"
+  },
+  {
+    "condition": "Dancing Lights",
+    "file_name": "Dancing Lights Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/17/Dancing_Lights_Condition_Icon.webp",
+    "file": "Dancing Lights.png"
+  },
+  {
+    "condition": "Dark One's Blessing",
+    "file_name": "Dark One's Blessing Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a4/Dark_One%27s_Blessing_Condition_Icon.webp",
+    "file": "Dark One's Blessing.png"
+  },
+  {
+    "condition": "Darkveil Precision",
+    "file_name": "Darkveil Precision Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c8/Darkveil_Precision_Condition_Icon.webp",
+    "file": "Darkveil Precision.png"
+  },
+  {
+    "condition": "Darkvision",
+    "file_name": "Darkvision Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/cb/Darkvision_Condition_Icon.webp",
+    "file": "Darkvision.png"
+  },
+  {
+    "condition": "Dash",
+    "file_name": "Dash Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/42/Dash_Condition_Icon.webp",
+    "file": "Dash.png"
+  },
+  {
+    "condition": "Daylight",
+    "file_name": "Daylight Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/8c/Daylight_Condition_Icon.webp",
+    "file": "Daylight.png"
+  },
+  {
+    "condition": "Dazed",
+    "file_name": "Dazed Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a2/Dazed_Condition_Icon.webp",
+    "file": "Dazed.png"
+  },
+  {
+    "condition": "Dead",
+    "file_name": "Dead Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d5/Dead_Condition_Icon.webp",
+    "file": "Dead.png"
+  },
+  {
+    "condition": "Death Ward",
+    "file_name": "Death Ward Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/5a/Death_Ward_Condition_Icon.webp",
+    "file": "Death Ward.png"
+  },
+  {
+    "condition": "Death Wish",
+    "file_name": "Death Wish Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e1/Death_Wish_Condition_Icon.webp",
+    "file": "Death Wish.png"
+  },
+  {
+    "condition": "Defensive Flourish",
+    "file_name": "Defensive Flourish Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/2d/Defensive_Flourish_Condition_Icon.webp",
+    "file": "Defensive Flourish.png"
+  },
+  {
+    "condition": "Detect Evil and Good",
+    "file_name": "Detect Evil and Good Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/94/Detect_Evil_and_Good_Condition_Icon.webp",
+    "file": "Detect Evil and Good.png"
+  },
+  {
+    "condition": "Detect Thoughts",
+    "file_name": "Detect Thoughts Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f6/Detect_Thoughts_Condition_Icon.webp",
+    "file": "Detect Thoughts.png"
+  },
+  {
+    "condition": "Devoured Intellect",
+    "file_name": "Devoured Intellect Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/99/Devoured_Intellect_Condition_Icon.webp",
+    "file": "Devoured Intellect.png"
+  },
+  {
+    "condition": "Difficult Terrain",
+    "file_name": "Difficult Terrain Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e3/Difficult_Terrain_Condition_Icon.webp",
+    "file": "Difficult Terrain.png"
+  },
+  {
+    "condition": "Dipped in Fire",
+    "file_name": "Dipped in Fire Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/62/Dipped_in_Fire_Condition_Icon.webp",
+    "file": "Dipped in Fire.png"
+  },
+  {
+    "condition": "Disarmed",
+    "file_name": "Disarmed Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/41/Disarmed_Condition_Icon.webp",
+    "file": "Disarmed.png"
+  },
+  {
+    "condition": "Disengage",
+    "file_name": "Disengage Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4e/Disengage_Condition_Icon.webp",
+    "file": "Disengage.png"
+  },
+  {
+    "condition": "Disguise Self",
+    "file_name": "Disguise Self Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/2f/Disguise_Self_Condition_Icon.webp",
+    "file": "Disguise Self.png"
+  },
+  {
+    "condition": "Disintegrate",
+    "file_name": "Disintegrate Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/03/Disintegrate_Condition_Icon.webp",
+    "file": "Disintegrate.png"
+  },
+  {
+    "condition": "Dispel Evil and Good",
+    "file_name": "Dispel Evil and Good Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/2d/Dispel_Evil_and_Good_Condition_Icon.webp",
+    "file": "Dispel Evil and Good.png"
+  },
+  {
+    "condition": "Displace",
+    "file_name": "Displace Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/46/Displace_Condition_Icon.webp",
+    "file": "Displace.png"
+  },
+  {
+    "condition": "Distracted",
+    "file_name": "Distracted Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/18/Distracted_Condition_Icon.webp",
+    "file": "Distracted.png"
+  },
+  {
+    "condition": "Distressed",
+    "file_name": "Distressed Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/06/Distressed_Condition_Icon.webp",
+    "file": "Distressed.png"
+  },
+  {
+    "condition": "Divine Favour",
+    "file_name": "Divine Favour Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9a/Divine_Favour_Condition_Icon.webp",
+    "file": "Divine Favour.png"
+  },
+  {
+    "condition": "Divine Guardian",
+    "file_name": "Divine Guardian Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/cd/Divine_Guardian_Condition_Icon.webp",
+    "file": "Divine Guardian.png"
+  },
+  {
+    "condition": "Divine Intervention Miracle of Refuge",
+    "file_name": "Divine Intervention Miracle of Refuge Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/de/Divine_Intervention_Miracle_of_Refuge_Condition_Icon.webp",
+    "file": "Divine Intervention Miracle of Refuge.png"
+  },
+  {
+    "condition": "Divine Sense",
+    "file_name": "Divine Sense Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/ca/Divine_Sense_Condition_Icon.webp",
+    "file": "Divine Sense.png"
+  },
+  {
+    "condition": "Dominated",
+    "file_name": "Dominated Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f0/Dominated_Condition_Icon.webp",
+    "file": "Dominated.png"
+  },
+  {
+    "condition": "Dominated Dominate Beast",
+    "file_name": "Dominated Dominate Beast Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/ff/Dominated_Dominate_Beast_Condition_Icon.webp",
+    "file": "Dominated Dominate Beast.png"
+  },
+  {
+    "condition": "Downed",
+    "file_name": "Downed Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/66/Downed_Condition_Icon.webp",
+    "file": "Downed.png"
+  },
+  {
+    "condition": "Draconic Wrath",
+    "file_name": "Draconic Wrath Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c8/Draconic_Wrath_Condition_Icon.webp",
+    "file": "Draconic Wrath.png"
+  },
+  {
+    "condition": "Dread Ambusher",
+    "file_name": "Dread Ambusher Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/36/Dread_Ambusher_Condition_Icon.webp",
+    "file": "Dread Ambusher.png"
+  },
+  {
+    "condition": "Druidic Trance",
+    "file_name": "Druidic Trance Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/ee/Druidic_Trance_Condition_Icon.webp",
+    "file": "Druidic Trance.png"
+  },
+  {
+    "condition": "Drunken Technique",
+    "file_name": "Drunken Technique Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/5f/Drunken_Technique_Condition_Icon.webp",
+    "file": "Drunken Technique.png"
+  },
+  {
+    "condition": "Dying",
+    "file_name": "Dying Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e0/Dying_Condition_Icon.webp",
+    "file": "Dying.png"
+  },
+  {
+    "condition": "Eagle's Splendour",
+    "file_name": "Eagle's Splendour Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/61/Eagle%27s_Splendour_Condition_Icon.webp",
+    "file": "Eagle's Splendour.png"
+  },
+  {
+    "condition": "Eggbearer",
+    "file_name": "Eggbearer Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e9/Eggbearer_Condition_Icon.webp",
+    "file": "Eggbearer.png"
+  },
+  {
+    "condition": "Electrocuted",
+    "file_name": "Electrocuted Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/cd/Electrocuted_Condition_Icon.webp",
+    "file": "Electrocuted.png"
+  },
+  {
+    "condition": "Elemental Affinity Resistance",
+    "file_name": "Elemental Affinity Resistance Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/03/Elemental_Affinity_Resistance_Condition_Icon.webp",
+    "file": "Elemental Affinity Resistance.png"
+  },
+  {
+    "condition": "Elemental Cleaver Acid",
+    "file_name": "Elemental Cleaver Acid Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/91/Elemental_Cleaver_Acid_Condition_Icon.webp",
+    "file": "Elemental Cleaver Acid.png"
+  },
+  {
+    "condition": "Elemental Cleaver Cold",
+    "file_name": "Elemental Cleaver Cold Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/db/Elemental_Cleaver_Cold_Condition_Icon.webp",
+    "file": "Elemental Cleaver Cold.png"
+  },
+  {
+    "condition": "Elemental Cleaver Fire",
+    "file_name": "Elemental Cleaver Fire Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b8/Elemental_Cleaver_Fire_Condition_Icon.webp",
+    "file": "Elemental Cleaver Fire.png"
+  },
+  {
+    "condition": "Elemental Cleaver Lightning",
+    "file_name": "Elemental Cleaver Lightning Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e2/Elemental_Cleaver_Lightning_Condition_Icon.webp",
+    "file": "Elemental Cleaver Lightning.png"
+  },
+  {
+    "condition": "Elemental Cleaver Thunder",
+    "file_name": "Elemental Cleaver Thunder Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/42/Elemental_Cleaver_Thunder_Condition_Icon.webp",
+    "file": "Elemental Cleaver Thunder.png"
+  },
+  {
+    "condition": "Elemental Weapon Acid",
+    "file_name": "Elemental Weapon Acid Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d3/Elemental_Weapon_Acid_Condition_Icon.webp",
+    "file": "Elemental Weapon Acid.png"
+  },
+  {
+    "condition": "Elemental Weapon Cold",
+    "file_name": "Elemental Weapon Cold Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/63/Elemental_Weapon_Cold_Condition_Icon.webp",
+    "file": "Elemental Weapon Cold.png"
+  },
+  {
+    "condition": "Elemental Weapon Fire",
+    "file_name": "Elemental Weapon Fire Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/39/Elemental_Weapon_Fire_Condition_Icon.webp",
+    "file": "Elemental Weapon Fire.png"
+  },
+  {
+    "condition": "Elemental Weapon Lightning",
+    "file_name": "Elemental Weapon Lightning Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9a/Elemental_Weapon_Lightning_Condition_Icon.webp",
+    "file": "Elemental Weapon Lightning.png"
+  },
+  {
+    "condition": "Elemental Weapon Thunder",
+    "file_name": "Elemental Weapon Thunder Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/43/Elemental_Weapon_Thunder_Condition_Icon.webp",
+    "file": "Elemental Weapon Thunder.png"
+  },
+  {
+    "condition": "Encrusted with Frost",
+    "file_name": "Encrusted with Frost Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/95/Encrusted_with_Frost_Condition_Icon.webp",
+    "file": "Encrusted with Frost.png"
+  },
+  {
+    "condition": "Encumbered",
+    "file_name": "Encumbered Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f2/Encumbered_Condition_Icon.webp",
+    "file": "Encumbered.png"
+  },
+  {
+    "condition": "Endless Rage",
+    "file_name": "Endless Rage Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/88/Endless_Rage_Condition_Icon.webp",
+    "file": "Endless Rage.png"
+  },
+  {
+    "condition": "Enemy of Justice",
+    "file_name": "Enemy of Justice Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/67/Enemy_of_Justice_Condition_Icon.webp",
+    "file": "Enemy of Justice.png"
+  },
+  {
+    "condition": "Enhanced Armour Class",
+    "file_name": "Enhanced Armour Class Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e5/Enhanced_Armour_Class_Condition_Icon.webp",
+    "file": "Enhanced Armour Class.png"
+  },
+  {
+    "condition": "Enlarged",
+    "file_name": "Enlarged Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/13/Enlarged_Condition_Icon.webp",
+    "file": "Enlarged.png"
+  },
+  {
+    "condition": "Enlarged Duergar",
+    "file_name": "Enlarged Duergar Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/fe/Enlarged_Duergar_Condition_Icon.webp",
+    "file": "Enlarged Duergar.png"
+  },
+  {
+    "condition": "Ensnared",
+    "file_name": "Ensnared Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/75/Ensnared_Condition_Icon.webp",
+    "file": "Ensnared.png"
+  },
+  {
+    "condition": "Ensnaring Strike",
+    "file_name": "Ensnaring Strike Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/1e/Ensnaring_Strike_Condition_Icon.webp",
+    "file": "Ensnaring Strike.png"
+  },
+  {
+    "condition": "Enthralled",
+    "file_name": "Enthralled Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/8e/Enthralled_Condition_Icon.webp",
+    "file": "Enthralled.png"
+  },
+  {
+    "condition": "Entranced Murderer",
+    "file_name": "Entranced Murderer Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f2/Entranced_Murderer_Condition_Icon.webp",
+    "file": "Entranced Murderer.png"
+  },
+  {
+    "condition": "Entropic Ward",
+    "file_name": "Entropic Ward Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/de/Entropic_Ward_Condition_Icon.webp",
+    "file": "Entropic Ward.png"
+  },
+  {
+    "condition": "Enwebbed",
+    "file_name": "Enwebbed Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b9/Enwebbed_Condition_Icon.webp",
+    "file": "Enwebbed.png"
+  },
+  {
+    "condition": "Ephemeral Whispers",
+    "file_name": "Ephemeral Whispers Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/af/Ephemeral_Whispers_Condition_Icon.webp",
+    "file": "Ephemeral Whispers.png"
+  },
+  {
+    "condition": "Evasive Footwork",
+    "file_name": "Evasive Footwork Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/43/Evasive_Footwork_Condition_Icon.webp",
+    "file": "Evasive Footwork.png"
+  },
+  {
+    "condition": "Executioner",
+    "file_name": "Executioner Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/71/Executioner_Condition_Icon.webp",
+    "file": "Executioner.png"
+  },
+  {
+    "condition": "Exhausted",
+    "file_name": "Exhausted Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9b/Exhausted_Condition_Icon.webp",
+    "file": "Exhausted.png"
+  },
+  {
+    "condition": "Expeditious Retreat",
+    "file_name": "Expeditious Retreat Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/eb/Expeditious_Retreat_Condition_Icon.webp",
+    "file": "Expeditious Retreat.png"
+  },
+  {
+    "condition": "Exposing Bite",
+    "file_name": "Exposing Bite Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/7b/Exposing_Bite_Condition_Icon.webp",
+    "file": "Exposing Bite.png"
+  },
+  {
+    "condition": "Extra Bonus Action",
+    "file_name": "Extra Bonus Action Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/90/Extra_Bonus_Action_Condition_Icon.webp",
+    "file": "Extra Bonus Action.png"
+  },
+  {
+    "condition": "Eyebite",
+    "file_name": "Eyebite Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/72/Eyebite_Condition_Icon.webp",
+    "file": "Eyebite.png"
+  },
+  {
+    "condition": "Eyebite Sickened",
+    "file_name": "Eyebite Sickened Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/30/Eyebite_Sickened_Condition_Icon.webp",
+    "file": "Eyebite Sickened.png"
+  },
+  {
+    "condition": "Faerie Fire",
+    "file_name": "Faerie Fire Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a5/Faerie_Fire_Condition_Icon.webp",
+    "file": "Faerie Fire.png"
+  },
+  {
+    "condition": "False Life",
+    "file_name": "False Life Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4e/False_Life_Condition_Icon.webp",
+    "file": "False Life.png"
+  },
+  {
+    "condition": "Fangs of the Fire Snake",
+    "file_name": "Fangs of the Fire Snake Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4a/Fangs_of_the_Fire_Snake_Condition_Icon.webp",
+    "file": "Fangs of the Fire Snake.png"
+  },
+  {
+    "condition": "Fearful",
+    "file_name": "Fearful Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b5/Fearful_Condition_Icon.webp",
+    "file": "Fearful.png"
+  },
+  {
+    "condition": "Fearful Eyebite",
+    "file_name": "Fearful Eyebite Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/5a/Fearful_Eyebite_Condition_Icon.webp",
+    "file": "Fearful Eyebite.png"
+  },
+  {
+    "condition": "Fearful Intimidating Presence",
+    "file_name": "Fearful Intimidating Presence Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/30/Fearful_Intimidating_Presence_Condition_Icon.webp",
+    "file": "Fearful Intimidating Presence.png"
+  },
+  {
+    "condition": "Feather Fall",
+    "file_name": "Feather Fall Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d6/Feather_Fall_Condition_Icon.webp",
+    "file": "Feather Fall.png"
+  },
+  {
+    "condition": "Feeble",
+    "file_name": "Feeble Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d5/Feeble_Condition_Icon.webp",
+    "file": "Feeble.png"
+  },
+  {
+    "condition": "Feigning Death",
+    "file_name": "Feigning Death Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0f/Feigning_Death_Condition_Icon.webp",
+    "file": "Feigning Death.png"
+  },
+  {
+    "condition": "Fetcher's Favour",
+    "file_name": "Fetcher's Favour Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/68/Fetcher%27s_Favour_Condition_Icon.webp",
+    "file": "Fetcher's Favour.png"
+  },
+  {
+    "condition": "Fiendish Resilience Bludgeoning",
+    "file_name": "Fiendish Resilience Bludgeoning Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/5b/Fiendish_Resilience_Bludgeoning_Condition_Icon.webp",
+    "file": "Fiendish Resilience Bludgeoning.png"
+  },
+  {
+    "condition": "Fiendish Resilience Piercing",
+    "file_name": "Fiendish Resilience Piercing Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/71/Fiendish_Resilience_Piercing_Condition_Icon.webp",
+    "file": "Fiendish Resilience Piercing.png"
+  },
+  {
+    "condition": "Fiendish Resilience Slashing",
+    "file_name": "Fiendish Resilience Slashing Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b5/Fiendish_Resilience_Slashing_Condition_Icon.webp",
+    "file": "Fiendish Resilience Slashing.png"
+  },
+  {
+    "condition": "Fire Infusion",
+    "file_name": "Fire Infusion Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e0/Fire_Infusion_Condition_Icon.webp",
+    "file": "Fire Infusion.png"
+  },
+  {
+    "condition": "Fire Shield Chill",
+    "file_name": "Fire Shield Chill Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/63/Fire_Shield_Chill_Condition_Icon.webp",
+    "file": "Fire Shield Chill.png"
+  },
+  {
+    "condition": "Fire Shield Warm",
+    "file_name": "Fire Shield Warm Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f5/Fire_Shield_Warm_Condition_Icon.webp",
+    "file": "Fire Shield Warm.png"
+  },
+  {
+    "condition": "Firewine Belly",
+    "file_name": "Firewine Belly Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4b/Firewine_Belly_Condition_Icon.webp",
+    "file": "Firewine Belly.png"
+  },
+  {
+    "condition": "Flaming Sphere",
+    "file_name": "Flaming Sphere Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/2f/Flaming_Sphere_Condition_Icon.webp",
+    "file": "Flaming Sphere.png"
+  },
+  {
+    "condition": "Flesh Rot",
+    "file_name": "Flesh Rot Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d7/Flesh_Rot_Condition_Icon.webp",
+    "file": "Flesh Rot.png"
+  },
+  {
+    "condition": "Flesh to Stone",
+    "file_name": "Flesh to Stone Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/61/Flesh_to_Stone_Condition_Icon.webp",
+    "file": "Flesh to Stone.png"
+  },
+  {
+    "condition": "Flight",
+    "file_name": "Flight Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/65/Flight_Condition_Icon.webp",
+    "file": "Flight.png"
+  },
+  {
+    "condition": "Force Conduit",
+    "file_name": "Force Conduit Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0b/Force_Conduit_Condition_Icon.webp",
+    "file": "Force Conduit.png"
+  },
+  {
+    "condition": "Force Steadfast",
+    "file_name": "Force Steadfast Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d7/Force_Steadfast_Condition_Icon.webp",
+    "file": "Force Steadfast.png"
+  },
+  {
+    "condition": "Forced Manoeuvre",
+    "file_name": "Forced Manoeuvre Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/42/Forced_Manoeuvre_Condition_Icon.webp",
+    "file": "Forced Manoeuvre.png"
+  },
+  {
+    "condition": "Fox's Cunning",
+    "file_name": "Fox's Cunning Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0a/Fox%27s_Cunning_Condition_Icon.webp",
+    "file": "Fox's Cunning.png"
+  },
+  {
+    "condition": "Fractured Psyche",
+    "file_name": "Fractured Psyche Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/88/Fractured_Psyche_Condition_Icon.webp",
+    "file": "Fractured Psyche.png"
+  },
+  {
+    "condition": "Freedom of Movement",
+    "file_name": "Freedom of Movement Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/25/Freedom_of_Movement_Condition_Icon.webp",
+    "file": "Freedom of Movement.png"
+  },
+  {
+    "condition": "Frenzied",
+    "file_name": "Frenzied Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/18/Frenzied_Condition_Icon.webp",
+    "file": "Frenzied.png"
+  },
+  {
+    "condition": "Frenzied Fury",
+    "file_name": "Frenzied Fury Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/69/Frenzied_Fury_Condition_Icon.webp",
+    "file": "Frenzied Fury.png"
+  },
+  {
+    "condition": "Frenzied Strain",
+    "file_name": "Frenzied Strain Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/38/Frenzied_Strain_Condition_Icon.webp",
+    "file": "Frenzied Strain.png"
+  },
+  {
+    "condition": "Friends",
+    "file_name": "Friends Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/86/Friends_Condition_Icon.webp",
+    "file": "Friends.png"
+  },
+  {
+    "condition": "Frightened",
+    "file_name": "Frightened Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/75/Frightened_Condition_Icon.webp",
+    "file": "Frightened.png"
+  },
+  {
+    "condition": "Frostbite",
+    "file_name": "Frostbite Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f8/Frostbite_Condition_Icon.webp",
+    "file": "Frostbite.png"
+  },
+  {
+    "condition": "Frostbitten",
+    "file_name": "Frostbitten Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/07/Frostbitten_Condition_Icon.webp",
+    "file": "Frostbitten.png"
+  },
+  {
+    "condition": "Frozen",
+    "file_name": "Frozen Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c6/Frozen_Condition_Icon.webp",
+    "file": "Frozen.png"
+  },
+  {
+    "condition": "Fugitive",
+    "file_name": "Fugitive Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e5/Fugitive_Condition_Icon.webp",
+    "file": "Fugitive.png"
+  },
+  {
+    "condition": "Galerian Revelry",
+    "file_name": "Galerian Revelry Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/5d/Galerian_Revelry_Condition_Icon.webp",
+    "file": "Galerian Revelry.png"
+  },
+  {
+    "condition": "Galvanic Currents",
+    "file_name": "Galvanic Currents Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/fd/Galvanic_Currents_Condition_Icon.webp",
+    "file": "Galvanic Currents.png"
+  },
+  {
+    "condition": "Gaseous Form",
+    "file_name": "Gaseous Form Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/80/Gaseous_Form_Condition_Icon.webp",
+    "file": "Gaseous Form.png"
+  },
+  {
+    "condition": "Giant's Rage",
+    "file_name": "Giant's Rage Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/ff/Giant%27s_Rage_Condition_Icon.webp",
+    "file": "Giant's Rage.png"
+  },
+  {
+    "condition": "Githyanki War Magic",
+    "file_name": "Githyanki War Magic Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/7f/Githyanki_War_Magic_Condition_Icon.webp",
+    "file": "Githyanki War Magic.png"
+  },
+  {
+    "condition": "Goaded",
+    "file_name": "Goaded Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/ad/Goaded_Condition_Icon.webp",
+    "file": "Goaded.png"
+  },
+  {
+    "condition": "God of Ambition",
+    "file_name": "God of Ambition Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b3/God_of_Ambition_Condition_Icon.webp",
+    "file": "God of Ambition.png"
+  },
+  {
+    "condition": "Grappled",
+    "file_name": "Grappled Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/60/Grappled_Condition_Icon.webp",
+    "file": "Grappled.png"
+  },
+  {
+    "condition": "Greater Invisibility",
+    "file_name": "Greater Invisibility Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/86/Greater_Invisibility_Condition_Icon.webp",
+    "file": "Greater Invisibility.png"
+  },
+  {
+    "condition": "Greater Toughness",
+    "file_name": "Greater Toughness Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/3b/Greater_Toughness_Condition_Icon.webp",
+    "file": "Greater Toughness.png"
+  },
+  {
+    "condition": "Guidance",
+    "file_name": "Guidance Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/8c/Guidance_Condition_Icon.webp",
+    "file": "Guidance.png"
+  },
+  {
+    "condition": "Guided Strike Active",
+    "file_name": "Guided Strike Active Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/07/Guided_Strike_Active_Condition_Icon.webp",
+    "file": "Guided Strike Active.png"
+  },
+  {
+    "condition": "Guiding Bolt",
+    "file_name": "Guiding Bolt Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0e/Guiding_Bolt_Condition_Icon.webp",
+    "file": "Guiding Bolt.png"
+  },
+  {
+    "condition": "Hag's Pawn",
+    "file_name": "Hag's Pawn Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0d/Hag%27s_Pawn_Condition_Icon.webp",
+    "file": "Hag's Pawn.png"
+  },
+  {
+    "condition": "Hag's Trickery",
+    "file_name": "Hag's Trickery Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/32/Hag%27s_Trickery_Condition_Icon.webp",
+    "file": "Hag's Trickery.png"
+  },
+  {
+    "condition": "Hallucinating",
+    "file_name": "Hallucinating Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0b/Hallucinating_Condition_Icon.webp",
+    "file": "Hallucinating.png"
+  },
+  {
+    "condition": "Hamstrung",
+    "file_name": "Hamstrung Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e3/Hamstrung_Condition_Icon.webp",
+    "file": "Hamstrung.png"
+  },
+  {
+    "condition": "Hands Off, Petal",
+    "file_name": "Hands Off, Petal Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/6c/Hands_Off%2C_Petal_Condition_Icon.webp",
+    "file": "Hands Off, Petal.png"
+  },
+  {
+    "condition": "Happy",
+    "file_name": "Happy Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/61/Happy_Condition_Icon.webp",
+    "file": "Happy.png"
+  },
+  {
+    "condition": "Harm",
+    "file_name": "Harm Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/49/Harm_Condition_Icon.webp",
+    "file": "Harm.png"
+  },
+  {
+    "condition": "Harmonised",
+    "file_name": "Harmonised Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/bd/Harmonised_Condition_Icon.webp",
+    "file": "Harmonised.png"
+  },
+  {
+    "condition": "Haste Spores",
+    "file_name": "Haste Spores Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/7d/Haste_Spores_Condition_Icon.webp",
+    "file": "Haste Spores.png"
+  },
+  {
+    "condition": "Hastened",
+    "file_name": "Hastened Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/de/Hastened_Condition_Icon.webp",
+    "file": "Hastened.png"
+  },
+  {
+    "condition": "Healing Radiance",
+    "file_name": "Healing Radiance Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9f/Healing_Radiance_Condition_Icon.webp",
+    "file": "Healing Radiance.png"
+  },
+  {
+    "condition": "Heat",
+    "file_name": "Heat Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/3f/Heat_Condition_Icon.webp",
+    "file": "Heat.png"
+  },
+  {
+    "condition": "Heat Convergence",
+    "file_name": "Heat Convergence Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/62/Heat_Convergence_Condition_Icon.webp",
+    "file": "Heat Convergence.png"
+  },
+  {
+    "condition": "Heat Metal",
+    "file_name": "Heat Metal Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/be/Heat_Metal_Condition_Icon.webp",
+    "file": "Heat Metal.png"
+  },
+  {
+    "condition": "Heat Metal Reapply Damage",
+    "file_name": "Heat Metal Reapply Damage Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0c/Heat_Metal_Reapply_Damage_Condition_Icon.webp",
+    "file": "Heat Metal Reapply Damage.png"
+  },
+  {
+    "condition": "Heavily Encumbered",
+    "file_name": "Heavily Encumbered Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/ec/Heavily_Encumbered_Condition_Icon.webp",
+    "file": "Heavily Encumbered.png"
+  },
+  {
+    "condition": "Heavily Obscured",
+    "file_name": "Heavily Obscured Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b8/Heavily_Obscured_Condition_Icon.webp",
+    "file": "Heavily Obscured.png"
+  },
+  {
+    "condition": "Hellish Sphere",
+    "file_name": "Hellish Sphere Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/65/Hellish_Sphere_Condition_Icon.webp",
+    "file": "Hellish Sphere.png"
+  },
+  {
+    "condition": "Help",
+    "file_name": "Help Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e0/Help_Condition_Icon.webp",
+    "file": "Help.png"
+  },
+  {
+    "condition": "Her Voice Commanding",
+    "file_name": "Her Voice Commanding Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e1/Her_Voice_Commanding_Condition_Icon.webp",
+    "file": "Her Voice Commanding.png"
+  },
+  {
+    "condition": "Her Voice the End of All",
+    "file_name": "Her Voice the End of All Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/6e/Her_Voice_the_End_of_All_Condition_Icon.webp",
+    "file": "Her Voice the End of All.png"
+  },
+  {
+    "condition": "Her Voice Transforming",
+    "file_name": "Her Voice Transforming Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e0/Her_Voice_Transforming_Condition_Icon.webp",
+    "file": "Her Voice Transforming.png"
+  },
+  {
+    "condition": "Heroism",
+    "file_name": "Heroism Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/7f/Heroism_Condition_Icon.webp",
+    "file": "Heroism.png"
+  },
+  {
+    "condition": "Hexed Charisma",
+    "file_name": "Hexed Charisma Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/7a/Hexed_Charisma_Condition_Icon.webp",
+    "file": "Hexed Charisma.png"
+  },
+  {
+    "condition": "Hexed Constitution",
+    "file_name": "Hexed Constitution Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b1/Hexed_Constitution_Condition_Icon.webp",
+    "file": "Hexed Constitution.png"
+  },
+  {
+    "condition": "Hexed Dexterity",
+    "file_name": "Hexed Dexterity Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/2c/Hexed_Dexterity_Condition_Icon.webp",
+    "file": "Hexed Dexterity.png"
+  },
+  {
+    "condition": "Hexed Intelligence",
+    "file_name": "Hexed Intelligence Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/27/Hexed_Intelligence_Condition_Icon.webp",
+    "file": "Hexed Intelligence.png"
+  },
+  {
+    "condition": "Hexed Strength",
+    "file_name": "Hexed Strength Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/18/Hexed_Strength_Condition_Icon.webp",
+    "file": "Hexed Strength.png"
+  },
+  {
+    "condition": "Hexed Wisdom",
+    "file_name": "Hexed Wisdom Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/86/Hexed_Wisdom_Condition_Icon.webp",
+    "file": "Hexed Wisdom.png"
+  },
+  {
+    "condition": "Hide in Plain Sight",
+    "file_name": "Hide in Plain Sight Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/15/Hide_in_Plain_Sight_Condition_Icon.webp",
+    "file": "Hide in Plain Sight.png"
+  },
+  {
+    "condition": "Hideous Laughter",
+    "file_name": "Hideous Laughter Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a4/Hideous_Laughter_Condition_Icon.webp",
+    "file": "Hideous Laughter.png"
+  },
+  {
+    "condition": "Hiding",
+    "file_name": "Hiding Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/59/Hiding_Condition_Icon.webp",
+    "file": "Hiding.png"
+  },
+  {
+    "condition": "High Spirits",
+    "file_name": "High Spirits Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/cd/High_Spirits_Condition_Icon.webp",
+    "file": "High Spirits.png"
+  },
+  {
+    "condition": "Hold Monster",
+    "file_name": "Hold Monster Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/fb/Hold_Monster_Condition_Icon.webp",
+    "file": "Hold Monster.png"
+  },
+  {
+    "condition": "Hold Person",
+    "file_name": "Hold Person Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b6/Hold_Person_Condition_Icon.webp",
+    "file": "Hold Person.png"
+  },
+  {
+    "condition": "Holy Rebuke",
+    "file_name": "Holy Rebuke Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a8/Holy_Rebuke_Condition_Icon.webp",
+    "file": "Holy Rebuke.png"
+  },
+  {
+    "condition": "Horde Breaker",
+    "file_name": "Horde Breaker Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/fb/Horde_Breaker_Condition_Icon.webp",
+    "file": "Horde Breaker.png"
+  },
+  {
+    "condition": "Hunter's Mark Quarry",
+    "file_name": "Hunter's Mark Quarry Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/14/Hunter%27s_Mark_Quarry_Condition_Icon.webp",
+    "file": "Hunter's Mark Quarry.png"
+  },
+  {
+    "condition": "Hypnotic Gaze",
+    "file_name": "Hypnotic Gaze Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/df/Hypnotic_Gaze_Condition_Icon.webp",
+    "file": "Hypnotic Gaze.png"
+  },
+  {
+    "condition": "Hypnotised",
+    "file_name": "Hypnotised Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/07/Hypnotised_Condition_Icon.webp",
+    "file": "Hypnotised.png"
+  },
+  {
+    "condition": "Illusory Self",
+    "file_name": "Illusory Self Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/1e/Illusory_Self_Condition_Icon.webp",
+    "file": "Illusory Self.png"
+  },
+  {
+    "condition": "Incapacitated",
+    "file_name": "Incapacitated Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/98/Incapacitated_Condition_Icon.webp",
+    "file": "Incapacitated.png"
+  },
+  {
+    "condition": "Inciting Howl",
+    "file_name": "Inciting Howl Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/50/Inciting_Howl_Condition_Icon.webp",
+    "file": "Inciting Howl.png"
+  },
+  {
+    "condition": "Inevitable Resolve",
+    "file_name": "Inevitable Resolve Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a9/Inevitable_Resolve_Condition_Icon.webp",
+    "file": "Inevitable Resolve.png"
+  },
+  {
+    "condition": "Infected",
+    "file_name": "Infected Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/ae/Infected_Condition_Icon.webp",
+    "file": "Infected.png"
+  },
+  {
+    "condition": "Infernal Legion",
+    "file_name": "Infernal Legion Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9e/Infernal_Legion_Condition_Icon.webp",
+    "file": "Infernal Legion.png"
+  },
+  {
+    "condition": "Infested",
+    "file_name": "Infested Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/81/Infested_Condition_Icon.webp",
+    "file": "Infested.png"
+  },
+  {
+    "condition": "Ingested Poisoned Beer",
+    "file_name": "Ingested Poisoned Beer Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/34/Ingested_Poisoned_Beer_Condition_Icon.webp",
+    "file": "Ingested Poisoned Beer.png"
+  },
+  {
+    "condition": "Inquisitor's Might",
+    "file_name": "Inquisitor's Might Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e7/Inquisitor%27s_Might_Condition_Icon.webp",
+    "file": "Inquisitor's Might.png"
+  },
+  {
+    "condition": "Insect Plague",
+    "file_name": "Insect Plague Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/7f/Insect_Plague_Condition_Icon.webp",
+    "file": "Insect Plague.png"
+  },
+  {
+    "condition": "Inspiring Resolve",
+    "file_name": "Inspiring Resolve Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/28/Inspiring_Resolve_Condition_Icon.webp",
+    "file": "Inspiring Resolve.png"
+  },
+  {
+    "condition": "Invisible",
+    "file_name": "Invisible Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d7/Invisible_Condition_Icon.webp",
+    "file": "Invisible.png"
+  },
+  {
+    "condition": "Invisible Misty Escape",
+    "file_name": "Invisible Misty Escape Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/87/Invisible_Misty_Escape_Condition_Icon.webp",
+    "file": "Invisible Misty Escape.png"
+  },
+  {
+    "condition": "Invisible Weapon",
+    "file_name": "Invisible Weapon Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/3c/Invisible_Weapon_Condition_Icon.webp",
+    "file": "Invisible Weapon.png"
+  },
+  {
+    "condition": "Invulnerability",
+    "file_name": "Invulnerability Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/70/Invulnerability_Condition_Icon.webp",
+    "file": "Invulnerability.png"
+  },
+  {
+    "condition": "Invulnerable",
+    "file_name": "Invulnerable Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/fe/Invulnerable_Condition_Icon.webp",
+    "file": "Invulnerable.png"
+  },
+  {
+    "condition": "Jolted",
+    "file_name": "Jolted Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c5/Jolted_Condition_Icon.webp",
+    "file": "Jolted.png"
+  },
+  {
+    "condition": "Jump",
+    "file_name": "Jump Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/20/Jump_Condition_Icon.webp",
+    "file": "Jump.png"
+  },
+  {
+    "condition": "Ketheric Invulnerable",
+    "file_name": "Ketheric Invulnerable Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b7/Ketheric_Invulnerable_Condition_Icon.webp",
+    "file": "Ketheric Invulnerable.png"
+  },
+  {
+    "condition": "Knocked Out",
+    "file_name": "Knocked Out Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/97/Knocked_Out_Condition_Icon.webp",
+    "file": "Knocked Out.png"
+  },
+  {
+    "condition": "Knowledge of the Ages",
+    "file_name": "Knowledge of the Ages Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c9/Knowledge_of_the_Ages_Condition_Icon.webp",
+    "file": "Knowledge of the Ages.png"
+  },
+  {
+    "condition": "Known Enemy",
+    "file_name": "Known Enemy Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/03/Known_Enemy_Condition_Icon.webp",
+    "file": "Known Enemy.png"
+  },
+  {
+    "condition": "Lathander's Light",
+    "file_name": "Lathander's Light Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/fa/Lathander%27s_Light_Condition_Icon.webp",
+    "file": "Lathander's Light.png"
+  },
+  {
+    "condition": "Leadership Aura",
+    "file_name": "Leadership Aura Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c6/Leadership_Aura_Condition_Icon.webp",
+    "file": "Leadership Aura.png"
+  },
+  {
+    "condition": "Legendary Action Crowd Control",
+    "file_name": "Legendary Action Crowd Control Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9d/Legendary_Action_Crowd_Control_Condition_Icon.webp",
+    "file": "Legendary Action Crowd Control.png"
+  },
+  {
+    "condition": "Legendary Action Defensive",
+    "file_name": "Legendary Action Defensive Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0f/Legendary_Action_Defensive_Condition_Icon.webp",
+    "file": "Legendary Action Defensive.png"
+  },
+  {
+    "condition": "Legendary Action Fanatic Retaliation",
+    "file_name": "Legendary Action Fanatic Retaliation Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/88/Legendary_Action_Fanatic_Retaliation_Condition_Icon.webp",
+    "file": "Legendary Action Fanatic Retaliation.png"
+  },
+  {
+    "condition": "Legendary Action Galvanise",
+    "file_name": "Legendary Action Galvanise Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/41/Legendary_Action_Galvanise_Condition_Icon.webp",
+    "file": "Legendary Action Galvanise.png"
+  },
+  {
+    "condition": "Legendary Action Ocular Nightmare",
+    "file_name": "Legendary Action Ocular Nightmare Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b9/Legendary_Action_Ocular_Nightmare_Condition_Icon.webp",
+    "file": "Legendary Action Ocular Nightmare.png"
+  },
+  {
+    "condition": "Legendary Action Offensive",
+    "file_name": "Legendary Action Offensive Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/5b/Legendary_Action_Offensive_Condition_Icon.webp",
+    "file": "Legendary Action Offensive.png"
+  },
+  {
+    "condition": "Legendary Action Ptarian Dogma",
+    "file_name": "Legendary Action Ptarian Dogma Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a0/Legendary_Action_Ptarian_Dogma_Condition_Icon.webp",
+    "file": "Legendary Action Ptarian Dogma.png"
+  },
+  {
+    "condition": "Legendary Action Shredding Scales",
+    "file_name": "Legendary Action Shredding Scales Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d6/Legendary_Action_Shredding_Scales_Condition_Icon.webp",
+    "file": "Legendary Action Shredding Scales.png"
+  },
+  {
+    "condition": "Legendary Action Soul Sacrifice",
+    "file_name": "Legendary Action Soul Sacrifice Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/02/Legendary_Action_Soul_Sacrifice_Condition_Icon.webp",
+    "file": "Legendary Action Soul Sacrifice.png"
+  },
+  {
+    "condition": "Legendary Action Utility",
+    "file_name": "Legendary Action Utility Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/5c/Legendary_Action_Utility_Condition_Icon.webp",
+    "file": "Legendary Action Utility.png"
+  },
+  {
+    "condition": "Legendary Action Wretched Growth",
+    "file_name": "Legendary Action Wretched Growth Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/68/Legendary_Action_Wretched_Growth_Condition_Icon.webp",
+    "file": "Legendary Action Wretched Growth.png"
+  },
+  {
+    "condition": "Legions of Bone",
+    "file_name": "Legions of Bone Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/08/Legions_of_Bone_Condition_Icon.webp",
+    "file": "Legions of Bone.png"
+  },
+  {
+    "condition": "Lesser Restoration",
+    "file_name": "Lesser Restoration Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/6b/Lesser_Restoration_Condition_Icon.webp",
+    "file": "Lesser Restoration.png"
+  },
+  {
+    "condition": "Levitating",
+    "file_name": "Levitating Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/61/Levitating_Condition_Icon.webp",
+    "file": "Levitating.png"
+  },
+  {
+    "condition": "Life of the Party",
+    "file_name": "Life of the Party Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/19/Life_of_the_Party_Condition_Icon.webp",
+    "file": "Life of the Party.png"
+  },
+  {
+    "condition": "Light",
+    "file_name": "Light Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/13/Light_Condition_Icon.webp",
+    "file": "Light.png"
+  },
+  {
+    "condition": "Lightly Obscured",
+    "file_name": "Lightly Obscured Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b1/Lightly_Obscured_Condition_Icon.webp",
+    "file": "Lightly Obscured.png"
+  },
+  {
+    "condition": "Lightning Aura",
+    "file_name": "Lightning Aura Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/91/Lightning_Aura_Condition_Icon.webp",
+    "file": "Lightning Aura.png"
+  },
+  {
+    "condition": "Lightning Blast",
+    "file_name": "Lightning Blast Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e5/Lightning_Blast_Condition_Icon.webp",
+    "file": "Lightning Blast.png"
+  },
+  {
+    "condition": "Lightning Infusion",
+    "file_name": "Lightning Infusion Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f9/Lightning_Infusion_Condition_Icon.webp",
+    "file": "Lightning Infusion.png"
+  },
+  {
+    "condition": "Longstrider",
+    "file_name": "Longstrider Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/ad/Longstrider_Condition_Icon.webp",
+    "file": "Longstrider.png"
+  },
+  {
+    "condition": "Loviatar's Love",
+    "file_name": "Loviatar's Love Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4b/Loviatar%27s_Love_Condition_Icon.webp",
+    "file": "Loviatar's Love.png"
+  },
+  {
+    "condition": "Lured",
+    "file_name": "Lured Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/31/Lured_Condition_Icon.webp",
+    "file": "Lured.png"
+  },
+  {
+    "condition": "Luring Song",
+    "file_name": "Luring Song Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/8a/Luring_Song_Condition_Icon.webp",
+    "file": "Luring Song.png"
+  },
+  {
+    "condition": "Madness",
+    "file_name": "Madness Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/2f/Madness_Condition_Icon.webp",
+    "file": "Madness.png"
+  },
+  {
+    "condition": "Mage Armour",
+    "file_name": "Mage Armour Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/05/Mage_Armour_Condition_Icon.webp",
+    "file": "Mage Armour.png"
+  },
+  {
+    "condition": "Mage-Animated",
+    "file_name": "Mage-Animated Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d4/Mage-Animated_Condition_Icon.webp",
+    "file": "Mage-Animated.png"
+  },
+  {
+    "condition": "Magic Arrow",
+    "file_name": "Magic Arrow Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/3b/Magic_Arrow_Condition_Icon.webp",
+    "file": "Magic Arrow.png"
+  },
+  {
+    "condition": "Magic Awareness",
+    "file_name": "Magic Awareness Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/5d/Magic_Awareness_Condition_Icon.webp",
+    "file": "Magic Awareness.png"
+  },
+  {
+    "condition": "Magic Weapon",
+    "file_name": "Magic Weapon Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/df/Magic_Weapon_Condition_Icon.webp",
+    "file": "Magic Weapon.png"
+  },
+  {
+    "condition": "Magical Ambush",
+    "file_name": "Magical Ambush Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/89/Magical_Ambush_Condition_Icon.webp",
+    "file": "Magical Ambush.png"
+  },
+  {
+    "condition": "Magmatic Disturbance",
+    "file_name": "Magmatic Disturbance Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/1a/Magmatic_Disturbance_Condition_Icon.webp",
+    "file": "Magmatic Disturbance.png"
+  },
+  {
+    "condition": "Magmatic Regeneration",
+    "file_name": "Magmatic Regeneration Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f4/Magmatic_Regeneration_Condition_Icon.webp",
+    "file": "Magmatic Regeneration.png"
+  },
+  {
+    "condition": "Manoeuvring Attack",
+    "file_name": "Manoeuvring Attack Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/69/Manoeuvring_Attack_Condition_Icon.webp",
+    "file": "Manoeuvring Attack.png"
+  },
+  {
+    "condition": "Mantle of Inspiration",
+    "file_name": "Mantle of Inspiration Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4c/Mantle_of_Inspiration_Condition_Icon.webp",
+    "file": "Mantle of Inspiration.png"
+  },
+  {
+    "condition": "Mantle of Majesty",
+    "file_name": "Mantle of Majesty Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d2/Mantle_of_Majesty_Condition_Icon.webp",
+    "file": "Mantle of Majesty.png"
+  },
+  {
+    "condition": "Marshal Undead",
+    "file_name": "Marshal Undead Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/5d/Marshal_Undead_Condition_Icon.webp",
+    "file": "Marshal Undead.png"
+  },
+  {
+    "condition": "Martial Arts Unarmed Strike",
+    "file_name": "Martial Arts Unarmed Strike Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/ba/Martial_Arts_Unarmed_Strike_Condition_Icon.webp",
+    "file": "Martial Arts Unarmed Strike.png"
+  },
+  {
+    "condition": "Medium Toughness",
+    "file_name": "Medium Toughness Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/7a/Medium_Toughness_Condition_Icon.webp",
+    "file": "Medium Toughness.png"
+  },
+  {
+    "condition": "Melf's Acid Arrow",
+    "file_name": "Melf's Acid Arrow Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/8f/Melf%27s_Acid_Arrow_Condition_Icon.webp",
+    "file": "Melf's Acid Arrow.png"
+  },
+  {
+    "condition": "Melt the Earth",
+    "file_name": "Melt the Earth Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0e/Melt_the_Earth_Condition_Icon.webp",
+    "file": "Melt the Earth.png"
+  },
+  {
+    "condition": "Melting",
+    "file_name": "Melting Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0d/Melting_Condition_Icon.webp",
+    "file": "Melting.png"
+  },
+  {
+    "condition": "Mind Flayer Form",
+    "file_name": "Mind Flayer Form Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/fd/Mind_Flayer_Form_Condition_Icon.webp",
+    "file": "Mind Flayer Form.png"
+  },
+  {
+    "condition": "Mindbroken",
+    "file_name": "Mindbroken Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/20/Mindbroken_Condition_Icon.webp",
+    "file": "Mindbroken.png"
+  },
+  {
+    "condition": "Mindstruck",
+    "file_name": "Mindstruck Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f2/Mindstruck_Condition_Icon.webp",
+    "file": "Mindstruck.png"
+  },
+  {
+    "condition": "Mirror Image",
+    "file_name": "Mirror Image Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/af/Mirror_Image_Condition_Icon.webp",
+    "file": "Mirror Image.png"
+  },
+  {
+    "condition": "Missing Pets",
+    "file_name": "Missing Pets Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4e/Missing_Pets_Condition_Icon.webp",
+    "file": "Missing Pets.png"
+  },
+  {
+    "condition": "Mobile Flourish Target",
+    "file_name": "Mobile Flourish Target Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/ed/Mobile_Flourish_Target_Condition_Icon.webp",
+    "file": "Mobile Flourish Target.png"
+  },
+  {
+    "condition": "Momentum",
+    "file_name": "Momentum Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0e/Momentum_Condition_Icon.webp",
+    "file": "Momentum.png"
+  },
+  {
+    "condition": "Moonshield",
+    "file_name": "Moonshield Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/cf/Moonshield_Condition_Icon.webp",
+    "file": "Moonshield.png"
+  },
+  {
+    "condition": "Mud-Drenched",
+    "file_name": "Mud-Drenched Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/13/Mud-Drenched_Condition_Icon.webp",
+    "file": "Mud-Drenched.png"
+  },
+  {
+    "condition": "Muddy",
+    "file_name": "Muddy Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/23/Muddy_Condition_Icon.webp",
+    "file": "Muddy.png"
+  },
+  {
+    "condition": "Multiattack Defence",
+    "file_name": "Multiattack Defence Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/90/Multiattack_Defence_Condition_Icon.webp",
+    "file": "Multiattack Defence.png"
+  },
+  {
+    "condition": "Muscular",
+    "file_name": "Muscular Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c9/Muscular_Condition_Icon.webp",
+    "file": "Muscular.png"
+  },
+  {
+    "condition": "Muscular Icon",
+    "file_name": "Muscular Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/bc/Muscular_Icon.webp",
+    "file": "Muscular Icon.png"
+  },
+  {
+    "condition": "Nature's Wrath",
+    "file_name": "Nature's Wrath Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/cc/Nature%27s_Wrath_Condition_Icon.webp",
+    "file": "Nature's Wrath.png"
+  },
+  {
+    "condition": "Nauseated",
+    "file_name": "Nauseated Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/04/Nauseated_Condition_Icon.webp",
+    "file": "Nauseated.png"
+  },
+  {
+    "condition": "Nauseous",
+    "file_name": "Nauseous Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9f/Nauseous_Condition_Icon.webp",
+    "file": "Nauseous.png"
+  },
+  {
+    "condition": "Necrotic Aura",
+    "file_name": "Necrotic Aura Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/5c/Necrotic_Aura_Condition_Icon.webp",
+    "file": "Necrotic Aura.png"
+  },
+  {
+    "condition": "Nimble Alchemist Icon",
+    "file_name": "Nimble Alchemist Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/76/Nimble_Alchemist_Icon.webp",
+    "file": "Nimble Alchemist Icon.png"
+  },
+  {
+    "condition": "Non-Lethal Damage",
+    "file_name": "Non-Lethal Damage Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/3e/Non-Lethal_Damage_Condition_Icon.webp",
+    "file": "Non-Lethal Damage.png"
+  },
+  {
+    "condition": "Noxious Fumes",
+    "file_name": "Noxious Fumes Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/2a/Noxious_Fumes_Condition_Icon.webp",
+    "file": "Noxious Fumes.png"
+  },
+  {
+    "condition": "Numbed",
+    "file_name": "Numbed Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/55/Numbed_Condition_Icon.webp",
+    "file": "Numbed.png"
+  },
+  {
+    "condition": "Oath Broken",
+    "file_name": "Oath Broken Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/53/Oath_Broken_Condition_Icon.webp",
+    "file": "Oath Broken.png"
+  },
+  {
+    "condition": "Off Balance",
+    "file_name": "Off Balance Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/3e/Off_Balance_Condition_Icon.webp",
+    "file": "Off Balance.png"
+  },
+  {
+    "condition": "Ogre's Mark Icon",
+    "file_name": "Ogre's Mark Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/24/Ogre%27s_Mark_Icon.webp",
+    "file": "Ogre's Mark Icon.png"
+  },
+  {
+    "condition": "One with the Shadows",
+    "file_name": "One with the Shadows Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/54/One_with_the_Shadows_Condition_Icon.webp",
+    "file": "One with the Shadows.png"
+  },
+  {
+    "condition": "Onus of Battle",
+    "file_name": "Onus of Battle Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/db/Onus_of_Battle_Condition_Icon.webp",
+    "file": "Onus of Battle.png"
+  },
+  {
+    "condition": "Open Hand Technique Staggered",
+    "file_name": "Open Hand Technique Staggered Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/19/Open_Hand_Technique_Staggered_Condition_Icon.webp",
+    "file": "Open Hand Technique Staggered.png"
+  },
+  {
+    "condition": "Open Wound",
+    "file_name": "Open Wound Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/ab/Open_Wound_Condition_Icon.webp",
+    "file": "Open Wound.png"
+  },
+  {
+    "condition": "Otherworldly Miasma",
+    "file_name": "Otherworldly Miasma Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/ee/Otherworldly_Miasma_Condition_Icon.webp",
+    "file": "Otherworldly Miasma.png"
+  },
+  {
+    "condition": "Otherworldly Miasma Githyanki",
+    "file_name": "Otherworldly Miasma Githyanki Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c9/Otherworldly_Miasma_Githyanki_Condition_Icon.webp",
+    "file": "Otherworldly Miasma Githyanki.png"
+  },
+  {
+    "condition": "Otiluke's Resilient Sphere",
+    "file_name": "Otiluke's Resilient Sphere Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/49/Otiluke%27s_Resilient_Sphere_Condition_Icon.webp",
+    "file": "Otiluke's Resilient Sphere.png"
+  },
+  {
+    "condition": "Otto's Irresistible Dance",
+    "file_name": "Otto's Irresistible Dance Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/1b/Otto%27s_Irresistible_Dance_Condition_Icon.webp",
+    "file": "Otto's Irresistible Dance.png"
+  },
+  {
+    "condition": "Owl's Wisdom",
+    "file_name": "Owl's Wisdom Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0f/Owl%27s_Wisdom_Condition_Icon.webp",
+    "file": "Owl's Wisdom.png"
+  },
+  {
+    "condition": "Owlbear's Rage",
+    "file_name": "Owlbear's Rage Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/fd/Owlbear%27s_Rage_Condition_Icon.webp",
+    "file": "Owlbear's Rage.png"
+  },
+  {
+    "condition": "Owlbears Rage",
+    "file_name": "Owlbears Rage Condition Icon.png",
+    "url": "https://bg3.wiki/w/images/3/34/Owlbears_Rage_Condition_Icon.png",
+    "file": "Owlbears Rage.png"
+  },
+  {
+    "condition": "Pacified",
+    "file_name": "Pacified Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/34/Pacified_Condition_Icon.webp",
+    "file": "Pacified.png"
+  },
+  {
+    "condition": "Pack Tactics",
+    "file_name": "Pack Tactics Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/71/Pack_Tactics_Condition_Icon.webp",
+    "file": "Pack Tactics.png"
+  },
+  {
+    "condition": "Pact Weapon",
+    "file_name": "Pact Weapon Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/6d/Pact_Weapon_Condition_Icon.webp",
+    "file": "Pact Weapon.png"
+  },
+  {
+    "condition": "Paid the Price",
+    "file_name": "Paid the Price Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c4/Paid_the_Price_Condition_Icon.webp",
+    "file": "Paid the Price.png"
+  },
+  {
+    "condition": "Panicked Sentinel",
+    "file_name": "Panicked Sentinel Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a6/Panicked_Sentinel_Condition_Icon.webp",
+    "file": "Panicked Sentinel.png"
+  },
+  {
+    "condition": "Paralysed",
+    "file_name": "Paralysed Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/09/Paralysed_Condition_Icon.webp",
+    "file": "Paralysed.png"
+  },
+  {
+    "condition": "Parried",
+    "file_name": "Parried Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9a/Parried_Condition_Icon.webp",
+    "file": "Parried.png"
+  },
+  {
+    "condition": "Parry",
+    "file_name": "Parry Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/1e/Parry_Condition_Icon.webp",
+    "file": "Parry.png"
+  },
+  {
+    "condition": "Pass Without Trace",
+    "file_name": "Pass Without Trace Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0d/Pass_Without_Trace_Condition_Icon.webp",
+    "file": "Pass Without Trace.png"
+  },
+  {
+    "condition": "Patient Defence",
+    "file_name": "Patient Defence Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/12/Patient_Defence_Condition_Icon.webp",
+    "file": "Patient Defence.png"
+  },
+  {
+    "condition": "Perform Lute",
+    "file_name": "Perform Lute Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/59/Perform_Lute_Condition_Icon.webp",
+    "file": "Perform Lute.png"
+  },
+  {
+    "condition": "Performing 'Bard Dance'",
+    "file_name": "Performing 'Bard Dance' Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/7d/Performing_%27Bard_Dance%27_Condition_Icon.webp",
+    "file": "Performing 'Bard Dance'.png"
+  },
+  {
+    "condition": "Performing 'Of Divinity and Sin'",
+    "file_name": "Performing 'Of Divinity and Sin' Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e5/Performing_%27Of_Divinity_and_Sin%27_Condition_Icon.webp",
+    "file": "Performing 'Of Divinity and Sin'.png"
+  },
+  {
+    "condition": "Performing 'Old Time Battles'",
+    "file_name": "Performing 'Old Time Battles' Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/fd/Performing_%27Old_Time_Battles%27_Condition_Icon.webp",
+    "file": "Performing 'Old Time Battles'.png"
+  },
+  {
+    "condition": "Performing 'Sing for Me'",
+    "file_name": "Performing 'Sing for Me' Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/82/Performing_%27Sing_for_Me%27_Condition_Icon.webp",
+    "file": "Performing 'Sing for Me'.png"
+  },
+  {
+    "condition": "Performing 'The Power'",
+    "file_name": "Performing 'The Power' Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e9/Performing_%27The_Power%27_Condition_Icon.webp",
+    "file": "Performing 'The Power'.png"
+  },
+  {
+    "condition": "Performing 'The Queen's High Seas'",
+    "file_name": "Performing 'The Queen's High Seas' Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/70/Performing_%27The_Queen%27s_High_Seas%27_Condition_Icon.webp",
+    "file": "Performing 'The Queen's High Seas'.png"
+  },
+  {
+    "condition": "Perilous Stakes",
+    "file_name": "Perilous Stakes Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/45/Perilous_Stakes_Condition_Icon.webp",
+    "file": "Perilous Stakes.png"
+  },
+  {
+    "condition": "Petrified",
+    "file_name": "Petrified Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c0/Petrified_Condition_Icon.webp",
+    "file": "Petrified.png"
+  },
+  {
+    "condition": "Phalanx Formation Icon",
+    "file_name": "Phalanx Formation Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/20/Phalanx_Formation_Icon.webp",
+    "file": "Phalanx Formation Icon.png"
+  },
+  {
+    "condition": "Phantasmal Force",
+    "file_name": "Phantasmal Force Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d4/Phantasmal_Force_Condition_Icon.webp",
+    "file": "Phantasmal Force.png"
+  },
+  {
+    "condition": "Phantasmal Killer",
+    "file_name": "Phantasmal Killer Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/60/Phantasmal_Killer_Condition_Icon.webp",
+    "file": "Phantasmal Killer.png"
+  },
+  {
+    "condition": "Pinched",
+    "file_name": "Pinched Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a8/Pinched_Condition_Icon.webp",
+    "file": "Pinched.png"
+  },
+  {
+    "condition": "Pinned",
+    "file_name": "Pinned Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/75/Pinned_Condition_Icon.webp",
+    "file": "Pinned.png"
+  },
+  {
+    "condition": "Pinned Down",
+    "file_name": "Pinned Down Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a7/Pinned_Down_Condition_Icon.webp",
+    "file": "Pinned Down.png"
+  },
+  {
+    "condition": "Poisoned",
+    "file_name": "Poisoned Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e9/Poisoned_Condition_Icon.webp",
+    "file": "Poisoned.png"
+  },
+  {
+    "condition": "Polymorphed",
+    "file_name": "Polymorphed Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/10/Polymorphed_Condition_Icon.webp",
+    "file": "Polymorphed.png"
+  },
+  {
+    "condition": "Polymorphed Tressym",
+    "file_name": "Polymorphed Tressym Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/58/Polymorphed_Tressym_Condition_Icon.webp",
+    "file": "Polymorphed Tressym.png"
+  },
+  {
+    "condition": "Poor Performance",
+    "file_name": "Poor Performance Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/de/Poor_Performance_Condition_Icon.webp",
+    "file": "Poor Performance.png"
+  },
+  {
+    "condition": "Precision Attack",
+    "file_name": "Precision Attack Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/36/Precision_Attack_Condition_Icon.webp",
+    "file": "Precision Attack.png"
+  },
+  {
+    "condition": "Prepared",
+    "file_name": "Prepared Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0c/Prepared_Condition_Icon.webp",
+    "file": "Prepared.png"
+  },
+  {
+    "condition": "Prime Target",
+    "file_name": "Prime Target Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/ab/Prime_Target_Condition_Icon.webp",
+    "file": "Prime Target.png"
+  },
+  {
+    "condition": "Produce Flame",
+    "file_name": "Produce Flame Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/2c/Produce_Flame_Condition_Icon.webp",
+    "file": "Produce Flame.png"
+  },
+  {
+    "condition": "Projected Image",
+    "file_name": "Projected Image Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f1/Projected_Image_Condition_Icon.webp",
+    "file": "Projected Image.png"
+  },
+  {
+    "condition": "Prone",
+    "file_name": "Prone Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/8e/Prone_Condition_Icon.webp",
+    "file": "Prone.png"
+  },
+  {
+    "condition": "Protection from Energy Acid",
+    "file_name": "Protection from Energy Acid Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4c/Protection_from_Energy_Acid_Condition_Icon.webp",
+    "file": "Protection from Energy Acid.png"
+  },
+  {
+    "condition": "Protection from Energy Cold",
+    "file_name": "Protection from Energy Cold Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/02/Protection_from_Energy_Cold_Condition_Icon.webp",
+    "file": "Protection from Energy Cold.png"
+  },
+  {
+    "condition": "Protection from Energy Fire",
+    "file_name": "Protection from Energy Fire Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c2/Protection_from_Energy_Fire_Condition_Icon.webp",
+    "file": "Protection from Energy Fire.png"
+  },
+  {
+    "condition": "Protection from Energy Lightning",
+    "file_name": "Protection from Energy Lightning Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/95/Protection_from_Energy_Lightning_Condition_Icon.webp",
+    "file": "Protection from Energy Lightning.png"
+  },
+  {
+    "condition": "Protection from Energy Thunder",
+    "file_name": "Protection from Energy Thunder Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/36/Protection_from_Energy_Thunder_Condition_Icon.webp",
+    "file": "Protection from Energy Thunder.png"
+  },
+  {
+    "condition": "Protection from Evil and Good",
+    "file_name": "Protection from Evil and Good Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/59/Protection_from_Evil_and_Good_Condition_Icon.webp",
+    "file": "Protection from Evil and Good.png"
+  },
+  {
+    "condition": "Protection from Missiles",
+    "file_name": "Protection from Missiles Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/5b/Protection_from_Missiles_Condition_Icon.webp",
+    "file": "Protection from Missiles.png"
+  },
+  {
+    "condition": "Protection from Poison",
+    "file_name": "Protection from Poison Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/ea/Protection_from_Poison_Condition_Icon.webp",
+    "file": "Protection from Poison.png"
+  },
+  {
+    "condition": "Pursuit Protocol",
+    "file_name": "Pursuit Protocol Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/44/Pursuit_Protocol_Condition_Icon.webp",
+    "file": "Pursuit Protocol.png"
+  },
+  {
+    "condition": "Quickspell Flinger",
+    "file_name": "Quickspell Flinger Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b9/Quickspell_Flinger_Condition_Icon.webp",
+    "file": "Quickspell Flinger.png"
+  },
+  {
+    "condition": "Radiating Orb",
+    "file_name": "Radiating Orb Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b3/Radiating_Orb_Condition_Icon.webp",
+    "file": "Radiating Orb.png"
+  },
+  {
+    "condition": "Rage Bear Heart",
+    "file_name": "Rage Bear Heart Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/51/Rage_Bear_Heart_Condition_Icon.webp",
+    "file": "Rage Bear Heart.png"
+  },
+  {
+    "condition": "Rage Boar",
+    "file_name": "Rage Boar Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f4/Rage_Boar_Condition_Icon.webp",
+    "file": "Rage Boar.png"
+  },
+  {
+    "condition": "Rage",
+    "file_name": "Rage Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/54/Rage_Condition_Icon.webp",
+    "file": "Rage.png"
+  },
+  {
+    "condition": "Rage Eagle Heart",
+    "file_name": "Rage Eagle Heart Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d6/Rage_Eagle_Heart_Condition_Icon.webp",
+    "file": "Rage Eagle Heart.png"
+  },
+  {
+    "condition": "Rage Elk Heart",
+    "file_name": "Rage Elk Heart Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/16/Rage_Elk_Heart_Condition_Icon.webp",
+    "file": "Rage Elk Heart.png"
+  },
+  {
+    "condition": "Rage Impeded",
+    "file_name": "Rage Impeded Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/95/Rage_Impeded_Condition_Icon.webp",
+    "file": "Rage Impeded.png"
+  },
+  {
+    "condition": "Rage Tiger Heart",
+    "file_name": "Rage Tiger Heart Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/30/Rage_Tiger_Heart_Condition_Icon.webp",
+    "file": "Rage Tiger Heart.png"
+  },
+  {
+    "condition": "Rage Wolf Heart",
+    "file_name": "Rage Wolf Heart Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/cd/Rage_Wolf_Heart_Condition_Icon.webp",
+    "file": "Rage Wolf Heart.png"
+  },
+  {
+    "condition": "Rallied",
+    "file_name": "Rallied Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/1d/Rallied_Condition_Icon.webp",
+    "file": "Rallied.png"
+  },
+  {
+    "condition": "Rampage",
+    "file_name": "Rampage Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/24/Rampage_Condition_Icon.webp",
+    "file": "Rampage.png"
+  },
+  {
+    "condition": "Rampart Aura",
+    "file_name": "Rampart Aura Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/38/Rampart_Aura_Condition_Icon.webp",
+    "file": "Rampart Aura.png"
+  },
+  {
+    "condition": "Rapport Spores",
+    "file_name": "Rapport Spores Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/ed/Rapport_Spores_Condition_Icon.webp",
+    "file": "Rapport Spores.png"
+  },
+  {
+    "condition": "Ray of Frost",
+    "file_name": "Ray of Frost Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/40/Ray_of_Frost_Condition_Icon.webp",
+    "file": "Ray of Frost.png"
+  },
+  {
+    "condition": "Reapply Hex",
+    "file_name": "Reapply Hex Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/7e/Reapply_Hex_Condition_Icon.webp",
+    "file": "Reapply Hex.png"
+  },
+  {
+    "condition": "Recast Speak with Dead",
+    "file_name": "Recast Speak with Dead Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/96/Recast_Speak_with_Dead_Condition_Icon.webp",
+    "file": "Recast Speak with Dead.png"
+  },
+  {
+    "condition": "Reckless Attack",
+    "file_name": "Reckless Attack Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/6e/Reckless_Attack_Condition_Icon.webp",
+    "file": "Reckless Attack.png"
+  },
+  {
+    "condition": "Reckless Roar",
+    "file_name": "Reckless Roar Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4d/Reckless_Roar_Condition_Icon.webp",
+    "file": "Reckless Roar.png"
+  },
+  {
+    "condition": "Reckless Warcry",
+    "file_name": "Reckless Warcry Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/3c/Reckless_Warcry_Condition_Icon.webp",
+    "file": "Reckless Warcry.png"
+  },
+  {
+    "condition": "Reduced",
+    "file_name": "Reduced Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/67/Reduced_Condition_Icon.webp",
+    "file": "Reduced.png"
+  },
+  {
+    "condition": "Reduced Duergar",
+    "file_name": "Reduced Duergar Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9f/Reduced_Duergar_Condition_Icon.webp",
+    "file": "Reduced Duergar.png"
+  },
+  {
+    "condition": "Reeling",
+    "file_name": "Reeling Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/40/Reeling_Condition_Icon.webp",
+    "file": "Reeling.png"
+  },
+  {
+    "condition": "Reflective Mucus",
+    "file_name": "Reflective Mucus Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/99/Reflective_Mucus_Condition_Icon.webp",
+    "file": "Reflective Mucus.png"
+  },
+  {
+    "condition": "Reflective Shell",
+    "file_name": "Reflective Shell Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9f/Reflective_Shell_Condition_Icon.webp",
+    "file": "Reflective Shell.png"
+  },
+  {
+    "condition": "Refreshed",
+    "file_name": "Refreshed Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b3/Refreshed_Condition_Icon.webp",
+    "file": "Refreshed.png"
+  },
+  {
+    "condition": "Regeneration",
+    "file_name": "Regeneration Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b0/Regeneration_Condition_Icon.webp",
+    "file": "Regeneration.png"
+  },
+  {
+    "condition": "Relentless Avenger",
+    "file_name": "Relentless Avenger Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/30/Relentless_Avenger_Condition_Icon.webp",
+    "file": "Relentless Avenger.png"
+  },
+  {
+    "condition": "Resistance",
+    "file_name": "Resistance Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/7f/Resistance_Condition_Icon.webp",
+    "file": "Resistance.png"
+  },
+  {
+    "condition": "Resisted the Song",
+    "file_name": "Resisted the Song Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a1/Resisted_the_Song_Condition_Icon.webp",
+    "file": "Resisted the Song.png"
+  },
+  {
+    "condition": "Resonating Ki",
+    "file_name": "Resonating Ki Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/33/Resonating_Ki_Condition_Icon.webp",
+    "file": "Resonating Ki.png"
+  },
+  {
+    "condition": "Restrained",
+    "file_name": "Restrained Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/20/Restrained_Condition_Icon.webp",
+    "file": "Restrained.png"
+  },
+  {
+    "condition": "Revitalising Gore",
+    "file_name": "Revitalising Gore Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4a/Revitalising_Gore_Condition_Icon.webp",
+    "file": "Revitalising Gore.png"
+  },
+  {
+    "condition": "Right Behind You",
+    "file_name": "Right Behind You Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/53/Right_Behind_You_Condition_Icon.webp",
+    "file": "Right Behind You.png"
+  },
+  {
+    "condition": "Righteous Clarity",
+    "file_name": "Righteous Clarity Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e5/Righteous_Clarity_Condition_Icon.webp",
+    "file": "Righteous Clarity.png"
+  },
+  {
+    "condition": "Roiling Hellfire",
+    "file_name": "Roiling Hellfire Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/27/Roiling_Hellfire_Condition_Icon.webp",
+    "file": "Roiling Hellfire.png"
+  },
+  {
+    "condition": "Rotting",
+    "file_name": "Rotting Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/1e/Rotting_Condition_Icon.webp",
+    "file": "Rotting.png"
+  },
+  {
+    "condition": "Sacred Weapon",
+    "file_name": "Sacred Weapon Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e7/Sacred_Weapon_Condition_Icon.webp",
+    "file": "Sacred Weapon.png"
+  },
+  {
+    "condition": "Sanctuary",
+    "file_name": "Sanctuary Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/85/Sanctuary_Condition_Icon.webp",
+    "file": "Sanctuary.png"
+  },
+  {
+    "condition": "Sapped",
+    "file_name": "Sapped Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d6/Sapped_Condition_Icon.webp",
+    "file": "Sapped.png"
+  },
+  {
+    "condition": "Scarlet Remittance +1",
+    "file_name": "Scarlet Remittance +1 Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/73/Scarlet_Remittance_%2B1_Condition_Icon.webp",
+    "file": "Scarlet Remittance +1.png"
+  },
+  {
+    "condition": "Scarlet Remittance +2",
+    "file_name": "Scarlet Remittance +2 Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/12/Scarlet_Remittance_%2B2_Condition_Icon.webp",
+    "file": "Scarlet Remittance +2.png"
+  },
+  {
+    "condition": "Scarlet Remittance +3",
+    "file_name": "Scarlet Remittance +3 Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d9/Scarlet_Remittance_%2B3_Condition_Icon.webp",
+    "file": "Scarlet Remittance +3.png"
+  },
+  {
+    "condition": "Scarlet Saturation",
+    "file_name": "Scarlet Saturation Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0e/Scarlet_Saturation_Condition_Icon.webp",
+    "file": "Scarlet Saturation.png"
+  },
+  {
+    "condition": "Scarlet Stupor",
+    "file_name": "Scarlet Stupor Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b0/Scarlet_Stupor_Condition_Icon.webp",
+    "file": "Scarlet Stupor.png"
+  },
+  {
+    "condition": "Scratch's Sniff",
+    "file_name": "Scratch's Sniff Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/3b/Scratch%27s_Sniff_Condition_Icon.webp",
+    "file": "Scratch's Sniff.png"
+  },
+  {
+    "condition": "See Invisibility",
+    "file_name": "See Invisibility Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/30/See_Invisibility_Condition_Icon.webp",
+    "file": "See Invisibility.png"
+  },
+  {
+    "condition": "Seething Fury",
+    "file_name": "Seething Fury Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/2e/Seething_Fury_Condition_Icon.webp",
+    "file": "Seething Fury.png"
+  },
+  {
+    "condition": "Seized By Planar Binding",
+    "file_name": "Seized By Planar Binding Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/ab/Seized_By_Planar_Binding_Condition_Icon.webp",
+    "file": "Seized By Planar Binding.png"
+  },
+  {
+    "condition": "Selune's Blessing",
+    "file_name": "Selune's Blessing Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9b/Selune%27s_Blessing_Condition_Icon.webp",
+    "file": "Selune's Blessing.png"
+  },
+  {
+    "condition": "Selune's Blessing Lunar Brand",
+    "file_name": "Selune's Blessing Lunar Brand Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/26/Selune%27s_Blessing_Lunar_Brand_Condition_Icon.webp",
+    "file": "Selune's Blessing Lunar Brand.png"
+  },
+  {
+    "condition": "Selûne's Seal",
+    "file_name": "Selûne's Seal Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b2/Sel%C3%BBne%27s_Seal_Condition_Icon.webp",
+    "file": "Selûne's Seal.png"
+  },
+  {
+    "condition": "Sentinel Foe",
+    "file_name": "Sentinel Foe Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/16/Sentinel_Foe_Condition_Icon.webp",
+    "file": "Sentinel Foe.png"
+  },
+  {
+    "condition": "Septic",
+    "file_name": "Septic Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/51/Septic_Condition_Icon.webp",
+    "file": "Septic.png"
+  },
+  {
+    "condition": "Shackled",
+    "file_name": "Shackled Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/08/Shackled_Condition_Icon.webp",
+    "file": "Shackled.png"
+  },
+  {
+    "condition": "Shadow Curse",
+    "file_name": "Shadow Curse Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/af/Shadow_Curse_Condition_Icon.webp",
+    "file": "Shadow Curse.png"
+  },
+  {
+    "condition": "Shadow Step",
+    "file_name": "Shadow Step Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/1c/Shadow_Step_Condition_Icon.webp",
+    "file": "Shadow Step.png"
+  },
+  {
+    "condition": "Shadow-Cursed Undead",
+    "file_name": "Shadow-Cursed Undead Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/3e/Shadow-Cursed_Undead_Condition_Icon.webp",
+    "file": "Shadow-Cursed Undead.png"
+  },
+  {
+    "condition": "Shapechanged",
+    "file_name": "Shapechanged Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/47/Shapechanged_Condition_Icon.webp",
+    "file": "Shapechanged.png"
+  },
+  {
+    "condition": "Shar's Embrace",
+    "file_name": "Shar's Embrace Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e0/Shar%27s_Embrace_Condition_Icon.webp",
+    "file": "Shar's Embrace.png"
+  },
+  {
+    "condition": "Shattered",
+    "file_name": "Shattered Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/ec/Shattered_Condition_Icon.webp",
+    "file": "Shattered.png"
+  },
+  {
+    "condition": "Shattered Psyche",
+    "file_name": "Shattered Psyche Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b9/Shattered_Psyche_Condition_Icon.webp",
+    "file": "Shattered Psyche.png"
+  },
+  {
+    "condition": "Shield",
+    "file_name": "Shield Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a7/Shield_Condition_Icon.webp",
+    "file": "Shield.png"
+  },
+  {
+    "condition": "Shield Master Shove",
+    "file_name": "Shield Master Shove Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/dc/Shield_Master_Shove_Condition_Icon.webp",
+    "file": "Shield Master Shove.png"
+  },
+  {
+    "condition": "Shield of Faith",
+    "file_name": "Shield of Faith Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/98/Shield_of_Faith_Condition_Icon.webp",
+    "file": "Shield of Faith.png"
+  },
+  {
+    "condition": "Shield of Screams",
+    "file_name": "Shield of Screams Condition Icon.png",
+    "url": "https://bg3.wiki/w/images/b/b9/Shield_of_Screams_Condition_Icon.png",
+    "file": "Shield of Screams.png"
+  },
+  {
+    "condition": "Shielded",
+    "file_name": "Shielded Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0c/Shielded_Condition_Icon.webp",
+    "file": "Shielded.png"
+  },
+  {
+    "condition": "Shillelagh",
+    "file_name": "Shillelagh Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f8/Shillelagh_Condition_Icon.webp",
+    "file": "Shillelagh.png"
+  },
+  {
+    "condition": "Shocked",
+    "file_name": "Shocked Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f3/Shocked_Condition_Icon.webp",
+    "file": "Shocked.png"
+  },
+  {
+    "condition": "Shocking Grasp",
+    "file_name": "Shocking Grasp Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f2/Shocking_Grasp_Condition_Icon.webp",
+    "file": "Shocking Grasp.png"
+  },
+  {
+    "condition": "Sickened",
+    "file_name": "Sickened Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/82/Sickened_Condition_Icon.webp",
+    "file": "Sickened.png"
+  },
+  {
+    "condition": "Silvanus' Blessing",
+    "file_name": "Silvanus' Blessing Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/1a/Silvanus%27_Blessing_Condition_Icon.webp",
+    "file": "Silvanus' Blessing.png"
+  },
+  {
+    "condition": "Simple Toxin",
+    "file_name": "Simple Toxin Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/80/Simple_Toxin_Condition_Icon.webp",
+    "file": "Simple Toxin.png"
+  },
+  {
+    "condition": "Singing",
+    "file_name": "Singing Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/fb/Singing_Condition_Icon.webp",
+    "file": "Singing.png"
+  },
+  {
+    "condition": "Singing Sword Shriek",
+    "file_name": "Singing Sword Shriek Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a7/Singing_Sword_Shriek_Condition_Icon.webp",
+    "file": "Singing Sword Shriek.png"
+  },
+  {
+    "condition": "Singing Sword Singing",
+    "file_name": "Singing Sword Singing Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/54/Singing_Sword_Singing_Condition_Icon.webp",
+    "file": "Singing Sword Singing.png"
+  },
+  {
+    "condition": "Slam",
+    "file_name": "Slam Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/22/Slam_Condition_Icon.webp",
+    "file": "Slam.png"
+  },
+  {
+    "condition": "Slayer Form",
+    "file_name": "Slayer Form Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/51/Slayer_Form_Condition_Icon.webp",
+    "file": "Slayer Form.png"
+  },
+  {
+    "condition": "Sleep",
+    "file_name": "Sleep Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0d/Sleep_Condition_Icon.webp",
+    "file": "Sleep.png"
+  },
+  {
+    "condition": "Sleeping",
+    "file_name": "Sleeping Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/35/Sleeping_Condition_Icon.webp",
+    "file": "Sleeping.png"
+  },
+  {
+    "condition": "Sleet Storm",
+    "file_name": "Sleet Storm Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9c/Sleet_Storm_Condition_Icon.webp",
+    "file": "Sleet Storm.png"
+  },
+  {
+    "condition": "Sluggardly",
+    "file_name": "Sluggardly Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/57/Sluggardly_Condition_Icon.webp",
+    "file": "Sluggardly.png"
+  },
+  {
+    "condition": "Smelly",
+    "file_name": "Smelly Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b4/Smelly_Condition_Icon.webp",
+    "file": "Smelly.png"
+  },
+  {
+    "condition": "Sneaking",
+    "file_name": "Sneaking Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/61/Sneaking_Condition_Icon.webp",
+    "file": "Sneaking.png"
+  },
+  {
+    "condition": "Soul Branding",
+    "file_name": "Soul Branding Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/00/Soul_Branding_Condition_Icon.webp",
+    "file": "Soul Branding.png"
+  },
+  {
+    "condition": "Soul Oath",
+    "file_name": "Soul Oath Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/dc/Soul_Oath_Condition_Icon.webp",
+    "file": "Soul Oath.png"
+  },
+  {
+    "condition": "Sovereign's Protection",
+    "file_name": "Sovereign's Protection Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/be/Sovereign%27s_Protection_Condition_Icon.webp",
+    "file": "Sovereign's Protection.png"
+  },
+  {
+    "condition": "Speak with Animals",
+    "file_name": "Speak with Animals Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/53/Speak_with_Animals_Condition_Icon.webp",
+    "file": "Speak with Animals.png"
+  },
+  {
+    "condition": "Spider Queen's Wrath",
+    "file_name": "Spider Queen's Wrath Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d3/Spider_Queen%27s_Wrath_Condition_Icon.webp",
+    "file": "Spider Queen's Wrath.png"
+  },
+  {
+    "condition": "Spike Growth",
+    "file_name": "Spike Growth Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f4/Spike_Growth_Condition_Icon.webp",
+    "file": "Spike Growth.png"
+  },
+  {
+    "condition": "Spindleweb Sanctuary",
+    "file_name": "Spindleweb Sanctuary Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a0/Spindleweb_Sanctuary_Condition_Icon.webp",
+    "file": "Spindleweb Sanctuary.png"
+  },
+  {
+    "condition": "Spirit Guardians Aura",
+    "file_name": "Spirit Guardians Aura Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/91/Spirit_Guardians_Aura_Condition_Icon.webp",
+    "file": "Spirit Guardians Aura.png"
+  },
+  {
+    "condition": "Spirit Guardians",
+    "file_name": "Spirit Guardians Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/08/Spirit_Guardians_Condition_Icon.webp",
+    "file": "Spirit Guardians.png"
+  },
+  {
+    "condition": "Spiteful Suffering",
+    "file_name": "Spiteful Suffering Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/1e/Spiteful_Suffering_Condition_Icon.webp",
+    "file": "Spiteful Suffering.png"
+  },
+  {
+    "condition": "Splinter Shadow",
+    "file_name": "Splinter Shadow Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/7b/Splinter_Shadow_Condition_Icon.webp",
+    "file": "Splinter Shadow.png"
+  },
+  {
+    "condition": "Spore Servant",
+    "file_name": "Spore Servant Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/84/Spore_Servant_Condition_Icon.webp",
+    "file": "Spore Servant.png"
+  },
+  {
+    "condition": "Spreading Spores",
+    "file_name": "Spreading Spores Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4a/Spreading_Spores_Condition_Icon.webp",
+    "file": "Spreading Spores.png"
+  },
+  {
+    "condition": "Staggering Smite",
+    "file_name": "Staggering Smite Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/8a/Staggering_Smite_Condition_Icon.webp",
+    "file": "Staggering Smite.png"
+  },
+  {
+    "condition": "Starry Form Archer",
+    "file_name": "Starry Form Archer Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/07/Starry_Form_Archer_Condition_Icon.webp",
+    "file": "Starry Form Archer.png"
+  },
+  {
+    "condition": "Starry Form Chalice",
+    "file_name": "Starry Form Chalice Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/47/Starry_Form_Chalice_Condition_Icon.webp",
+    "file": "Starry Form Chalice.png"
+  },
+  {
+    "condition": "Starry Form Dragon",
+    "file_name": "Starry Form Dragon Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/fe/Starry_Form_Dragon_Condition_Icon.webp",
+    "file": "Starry Form Dragon.png"
+  },
+  {
+    "condition": "Stasis",
+    "file_name": "Stasis Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/27/Stasis_Condition_Icon.webp",
+    "file": "Stasis.png"
+  },
+  {
+    "condition": "Static Discharge Aura",
+    "file_name": "Static Discharge Aura Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/30/Static_Discharge_Aura_Condition_Icon.webp",
+    "file": "Static Discharge Aura.png"
+  },
+  {
+    "condition": "Static Discharge Electroshock",
+    "file_name": "Static Discharge Electroshock Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/af/Static_Discharge_Electroshock_Condition_Icon.webp",
+    "file": "Static Discharge Electroshock.png"
+  },
+  {
+    "condition": "Static Discharge Supercharge",
+    "file_name": "Static Discharge Supercharge Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/83/Static_Discharge_Supercharge_Condition_Icon.webp",
+    "file": "Static Discharge Supercharge.png"
+  },
+  {
+    "condition": "Step of the Wind",
+    "file_name": "Step of the Wind Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/1f/Step_of_the_Wind_Condition_Icon.webp",
+    "file": "Step of the Wind.png"
+  },
+  {
+    "condition": "Stoneskin",
+    "file_name": "Stoneskin Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/bd/Stoneskin_Condition_Icon.webp",
+    "file": "Stoneskin.png"
+  },
+  {
+    "condition": "Stormheart Resolve",
+    "file_name": "Stormheart Resolve Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c0/Stormheart_Resolve_Condition_Icon.webp",
+    "file": "Stormheart Resolve.png"
+  },
+  {
+    "condition": "Strengthened Shillelagh",
+    "file_name": "Strengthened Shillelagh Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/3d/Strengthened_Shillelagh_Condition_Icon.webp",
+    "file": "Strengthened Shillelagh.png"
+  },
+  {
+    "condition": "Stricken With Blinding Sickness",
+    "file_name": "Stricken With Blinding Sickness Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/30/Stricken_With_Blinding_Sickness_Condition_Icon.webp",
+    "file": "Stricken With Blinding Sickness.png"
+  },
+  {
+    "condition": "Stricken With Filth Fever",
+    "file_name": "Stricken With Filth Fever Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/10/Stricken_With_Filth_Fever_Condition_Icon.webp",
+    "file": "Stricken With Filth Fever.png"
+  },
+  {
+    "condition": "Stricken With Flesh Rot",
+    "file_name": "Stricken With Flesh Rot Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4f/Stricken_With_Flesh_Rot_Condition_Icon.webp",
+    "file": "Stricken With Flesh Rot.png"
+  },
+  {
+    "condition": "Stricken With Mindfire",
+    "file_name": "Stricken With Mindfire Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c8/Stricken_With_Mindfire_Condition_Icon.webp",
+    "file": "Stricken With Mindfire.png"
+  },
+  {
+    "condition": "Stricken With Seizures",
+    "file_name": "Stricken With Seizures Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/bc/Stricken_With_Seizures_Condition_Icon.webp",
+    "file": "Stricken With Seizures.png"
+  },
+  {
+    "condition": "Stricken With Slimy Doom",
+    "file_name": "Stricken With Slimy Doom Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/c4/Stricken_With_Slimy_Doom_Condition_Icon.webp",
+    "file": "Stricken With Slimy Doom.png"
+  },
+  {
+    "condition": "Stunned",
+    "file_name": "Stunned Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/32/Stunned_Condition_Icon.webp",
+    "file": "Stunned.png"
+  },
+  {
+    "condition": "Sturdy",
+    "file_name": "Sturdy Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/32/Sturdy_Condition_Icon.webp",
+    "file": "Sturdy.png"
+  },
+  {
+    "condition": "Sunbeam",
+    "file_name": "Sunbeam Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f9/Sunbeam_Condition_Icon.webp",
+    "file": "Sunbeam.png"
+  },
+  {
+    "condition": "Superheated",
+    "file_name": "Superheated Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/2d/Superheated_Condition_Icon.webp",
+    "file": "Superheated.png"
+  },
+  {
+    "condition": "Surprised",
+    "file_name": "Surprised Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/2c/Surprised_Condition_Icon.webp",
+    "file": "Surprised.png"
+  },
+  {
+    "condition": "Survival Instinct",
+    "file_name": "Survival Instinct Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/37/Survival_Instinct_Condition_Icon.webp",
+    "file": "Survival Instinct.png"
+  },
+  {
+    "condition": "Sussur Flower Antimagic Field",
+    "file_name": "Sussur Flower Antimagic Field Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/41/Sussur_Flower_Antimagic_Field_Condition_Icon.webp",
+    "file": "Sussur Flower Antimagic Field.png"
+  },
+  {
+    "condition": "Symbiotic Entity",
+    "file_name": "Symbiotic Entity Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/63/Symbiotic_Entity_Condition_Icon.webp",
+    "file": "Symbiotic Entity.png"
+  },
+  {
+    "condition": "Telekinesis",
+    "file_name": "Telekinesis Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/33/Telekinesis_Condition_Icon.webp",
+    "file": "Telekinesis.png"
+  },
+  {
+    "condition": "Tempestuous Magic Flight",
+    "file_name": "Tempestuous Magic Flight Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/12/Tempestuous_Magic_Flight_Condition_Icon.webp",
+    "file": "Tempestuous Magic Flight.png"
+  },
+  {
+    "condition": "Temporarily Hostile",
+    "file_name": "Temporarily Hostile Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/39/Temporarily_Hostile_Condition_Icon.webp",
+    "file": "Temporarily Hostile.png"
+  },
+  {
+    "condition": "Temporary Hit Points",
+    "file_name": "Temporary Hit Points Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/10/Temporary_Hit_Points_Condition_Icon.webp",
+    "file": "Temporary Hit Points.png"
+  },
+  {
+    "condition": "Thaumaturgy",
+    "file_name": "Thaumaturgy Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a9/Thaumaturgy_Condition_Icon.webp",
+    "file": "Thaumaturgy.png"
+  },
+  {
+    "condition": "Third Eye Darkvision",
+    "file_name": "Third Eye Darkvision Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/bf/Third_Eye_Darkvision_Condition_Icon.webp",
+    "file": "Third Eye Darkvision.png"
+  },
+  {
+    "condition": "Thoroughly Stuffed",
+    "file_name": "Thoroughly Stuffed Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/3d/Thoroughly_Stuffed_Condition_Icon.webp",
+    "file": "Thoroughly Stuffed.png"
+  },
+  {
+    "condition": "Threatened",
+    "file_name": "Threatened Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/13/Threatened_Condition_Icon.webp",
+    "file": "Threatened.png"
+  },
+  {
+    "condition": "Thunder Infusion",
+    "file_name": "Thunder Infusion Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d2/Thunder_Infusion_Condition_Icon.webp",
+    "file": "Thunder Infusion.png"
+  },
+  {
+    "condition": "Tides of Chaos",
+    "file_name": "Tides of Chaos Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/c/ca/Tides_of_Chaos_Condition_Icon.webp",
+    "file": "Tides of Chaos.png"
+  },
+  {
+    "condition": "Toad Mode",
+    "file_name": "Toad Mode Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4c/Toad_Mode_Condition_Icon.webp",
+    "file": "Toad Mode.png"
+  },
+  {
+    "condition": "Transmuter's Stone Constitution",
+    "file_name": "Transmuter's Stone Constitution Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/35/Transmuter%27s_Stone_Constitution_Condition_Icon.webp",
+    "file": "Transmuter's Stone Constitution.png"
+  },
+  {
+    "condition": "Transmuter's Stone Darkvision",
+    "file_name": "Transmuter's Stone Darkvision Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/6b/Transmuter%27s_Stone_Darkvision_Condition_Icon.webp",
+    "file": "Transmuter's Stone Darkvision.png"
+  },
+  {
+    "condition": "Transmuter's Stone Depleted Magic",
+    "file_name": "Transmuter's Stone Depleted Magic Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b7/Transmuter%27s_Stone_Depleted_Magic_Condition_Icon.webp",
+    "file": "Transmuter's Stone Depleted Magic.png"
+  },
+  {
+    "condition": "Transmuter's Stone Resistance",
+    "file_name": "Transmuter's Stone Resistance Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/58/Transmuter%27s_Stone_Resistance_Condition_Icon.webp",
+    "file": "Transmuter's Stone Resistance.png"
+  },
+  {
+    "condition": "Transmuter's Stone Speed",
+    "file_name": "Transmuter's Stone Speed Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b4/Transmuter%27s_Stone_Speed_Condition_Icon.webp",
+    "file": "Transmuter's Stone Speed.png"
+  },
+  {
+    "condition": "True Strike",
+    "file_name": "True Strike Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/ef/True_Strike_Condition_Icon.webp",
+    "file": "True Strike.png"
+  },
+  {
+    "condition": "Tu'narath's Embrace",
+    "file_name": "Tu'narath's Embrace Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a7/Tu%27narath%27s_Embrace_Condition_Icon.webp",
+    "file": "Tu'narath's Embrace.png"
+  },
+  {
+    "condition": "Turned",
+    "file_name": "Turned Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f3/Turned_Condition_Icon.webp",
+    "file": "Turned.png"
+  },
+  {
+    "condition": "Turned to Gold",
+    "file_name": "Turned to Gold Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/98/Turned_to_Gold_Condition_Icon.webp",
+    "file": "Turned to Gold.png"
+  },
+  {
+    "condition": "Tyrant Tongue",
+    "file_name": "Tyrant Tongue Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/8b/Tyrant_Tongue_Condition_Icon.webp",
+    "file": "Tyrant Tongue.png"
+  },
+  {
+    "condition": "Umbral Shroud",
+    "file_name": "Umbral Shroud Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f1/Umbral_Shroud_Condition_Icon.webp",
+    "file": "Umbral Shroud.png"
+  },
+  {
+    "condition": "Uncanny Sight",
+    "file_name": "Uncanny Sight Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a2/Uncanny_Sight_Condition_Icon.webp",
+    "file": "Uncanny Sight.png"
+  },
+  {
+    "condition": "Unconscious",
+    "file_name": "Unconscious Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a6/Unconscious_Condition_Icon.webp",
+    "file": "Unconscious.png"
+  },
+  {
+    "condition": "Under Operation",
+    "file_name": "Under Operation Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0c/Under_Operation_Condition_Icon.webp",
+    "file": "Under Operation.png"
+  },
+  {
+    "condition": "Unmovable",
+    "file_name": "Unmovable Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4a/Unmovable_Condition_Icon.webp",
+    "file": "Unmovable.png"
+  },
+  {
+    "condition": "Unrelenting Storm",
+    "file_name": "Unrelenting Storm Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/06/Unrelenting_Storm_Condition_Icon.webp",
+    "file": "Unrelenting Storm.png"
+  },
+  {
+    "condition": "Unstoppable",
+    "file_name": "Unstoppable Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/27/Unstoppable_Condition_Icon.webp",
+    "file": "Unstoppable.png"
+  },
+  {
+    "condition": "Vampire Bat Form",
+    "file_name": "Vampire Bat Form Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/0/0c/Vampire_Bat_Form_Condition_Icon.webp",
+    "file": "Vampire Bat Form.png"
+  },
+  {
+    "condition": "Vampiric Touch",
+    "file_name": "Vampiric Touch Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/64/Vampiric_Touch_Condition_Icon.webp",
+    "file": "Vampiric Touch.png"
+  },
+  {
+    "condition": "Vicious Mockery",
+    "file_name": "Vicious Mockery Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b6/Vicious_Mockery_Condition_Icon.webp",
+    "file": "Vicious Mockery.png"
+  },
+  {
+    "condition": "Virulent Venom",
+    "file_name": "Virulent Venom Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/38/Virulent_Venom_Condition_Icon.webp",
+    "file": "Virulent Venom.png"
+  },
+  {
+    "condition": "Voice Of Reason",
+    "file_name": "Voice Of Reason Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/bd/Voice_Of_Reason_Condition_Icon.webp",
+    "file": "Voice Of Reason.png"
+  },
+  {
+    "condition": "Voice of the Circle",
+    "file_name": "Voice of the Circle Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/5e/Voice_of_the_Circle_Condition_Icon.webp",
+    "file": "Voice of the Circle.png"
+  },
+  {
+    "condition": "Volatile Shield",
+    "file_name": "Volatile Shield Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a8/Volatile_Shield_Condition_Icon.webp",
+    "file": "Volatile Shield.png"
+  },
+  {
+    "condition": "Volo's Guide to Monsters Icon",
+    "file_name": "Volo's Guide to Monsters Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/26/Volo%27s_Guide_to_Monsters_Icon.webp",
+    "file": "Volo's Guide to Monsters Icon.png"
+  },
+  {
+    "condition": "Vow of Enmity",
+    "file_name": "Vow of Enmity Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d4/Vow_of_Enmity_Condition_Icon.webp",
+    "file": "Vow of Enmity.png"
+  },
+  {
+    "condition": "Wall of Fire",
+    "file_name": "Wall of Fire Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/23/Wall_of_Fire_Condition_Icon.webp",
+    "file": "Wall of Fire.png"
+  },
+  {
+    "condition": "Wall of Thorns",
+    "file_name": "Wall of Thorns Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/66/Wall_of_Thorns_Condition_Icon.webp",
+    "file": "Wall of Thorns.png"
+  },
+  {
+    "condition": "War Paint",
+    "file_name": "War Paint Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/80/War_Paint_Condition_Icon.webp",
+    "file": "War Paint.png"
+  },
+  {
+    "condition": "Warden of Vitality",
+    "file_name": "Warden of Vitality Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/5b/Warden_of_Vitality_Condition_Icon.webp",
+    "file": "Warden of Vitality.png"
+  },
+  {
+    "condition": "Warding Bond",
+    "file_name": "Warding Bond Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/95/Warding_Bond_Condition_Icon.webp",
+    "file": "Warding Bond.png"
+  },
+  {
+    "condition": "Weak Grip",
+    "file_name": "Weak Grip Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4e/Weak_Grip_Condition_Icon.webp",
+    "file": "Weak Grip.png"
+  },
+  {
+    "condition": "Weapon Dropped!",
+    "file_name": "Weapon Dropped! Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/39/Weapon_Dropped%21_Condition_Icon.webp",
+    "file": "Weapon Dropped!.png"
+  },
+  {
+    "condition": "Wet",
+    "file_name": "Wet Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9d/Wet_Condition_Icon.webp",
+    "file": "Wet.png"
+  },
+  {
+    "condition": "Whirlwind",
+    "file_name": "Whirlwind Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/27/Whirlwind_Condition_Icon.webp",
+    "file": "Whirlwind.png"
+  },
+  {
+    "condition": "Wholeness of Body",
+    "file_name": "Wholeness of Body Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d3/Wholeness_of_Body_Condition_Icon.webp",
+    "file": "Wholeness of Body.png"
+  },
+  {
+    "condition": "Wild Magic Burning",
+    "file_name": "Wild Magic Burning Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/34/Wild_Magic_Burning_Condition_Icon.webp",
+    "file": "Wild Magic Burning.png"
+  },
+  {
+    "condition": "Wild Magic Dark Tendrils",
+    "file_name": "Wild Magic Dark Tendrils Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/65/Wild_Magic_Dark_Tendrils_Condition_Icon.webp",
+    "file": "Wild Magic Dark Tendrils.png"
+  },
+  {
+    "condition": "Wild Magic Enchant Weapons",
+    "file_name": "Wild Magic Enchant Weapons Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/fb/Wild_Magic_Enchant_Weapons_Condition_Icon.webp",
+    "file": "Wild Magic Enchant Weapons.png"
+  },
+  {
+    "condition": "Wild Magic Explosive Healing",
+    "file_name": "Wild Magic Explosive Healing Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/24/Wild_Magic_Explosive_Healing_Condition_Icon.webp",
+    "file": "Wild Magic Explosive Healing.png"
+  },
+  {
+    "condition": "Wild Magic Intangible Spirit",
+    "file_name": "Wild Magic Intangible Spirit Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b6/Wild_Magic_Intangible_Spirit_Condition_Icon.webp",
+    "file": "Wild Magic Intangible Spirit.png"
+  },
+  {
+    "condition": "Wild Magic Light Bolt",
+    "file_name": "Wild Magic Light Bolt Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/3b/Wild_Magic_Light_Bolt_Condition_Icon.webp",
+    "file": "Wild Magic Light Bolt.png"
+  },
+  {
+    "condition": "Wild Magic Protective Lights",
+    "file_name": "Wild Magic Protective Lights Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/4b/Wild_Magic_Protective_Lights_Condition_Icon.webp",
+    "file": "Wild Magic Protective Lights.png"
+  },
+  {
+    "condition": "Wild Magic Sorcery Points",
+    "file_name": "Wild Magic Sorcery Points Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/2e/Wild_Magic_Sorcery_Points_Condition_Icon.webp",
+    "file": "Wild Magic Sorcery Points.png"
+  },
+  {
+    "condition": "Wild Magic Swap",
+    "file_name": "Wild Magic Swap Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d7/Wild_Magic_Swap_Condition_Icon.webp",
+    "file": "Wild Magic Swap.png"
+  },
+  {
+    "condition": "Wild Magic Teleport",
+    "file_name": "Wild Magic Teleport Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9d/Wild_Magic_Teleport_Condition_Icon.webp",
+    "file": "Wild Magic Teleport.png"
+  },
+  {
+    "condition": "Wild Magic Turn Magic",
+    "file_name": "Wild Magic Turn Magic Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a1/Wild_Magic_Turn_Magic_Condition_Icon.webp",
+    "file": "Wild Magic Turn Magic.png"
+  },
+  {
+    "condition": "Wild Magic Vine Growth",
+    "file_name": "Wild Magic Vine Growth Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/8a/Wild_Magic_Vine_Growth_Condition_Icon.webp",
+    "file": "Wild Magic Vine Growth.png"
+  },
+  {
+    "condition": "Wild Shape Air Myrmidon",
+    "file_name": "Wild Shape Air Myrmidon Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/f2/Wild_Shape_Air_Myrmidon_Condition_Icon.webp",
+    "file": "Wild Shape Air Myrmidon.png"
+  },
+  {
+    "condition": "Wild Shape Badger",
+    "file_name": "Wild Shape Badger Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/27/Wild_Shape_Badger_Condition_Icon.webp",
+    "file": "Wild Shape Badger.png"
+  },
+  {
+    "condition": "Wild Shape Boar",
+    "file_name": "Wild Shape Boar Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/4/40/Wild_Shape_Boar_Condition_Icon.webp",
+    "file": "Wild Shape Boar.png"
+  },
+  {
+    "condition": "Wild Shape Cat",
+    "file_name": "Wild Shape Cat Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d6/Wild_Shape_Cat_Condition_Icon.webp",
+    "file": "Wild Shape Cat.png"
+  },
+  {
+    "condition": "Wild Shape Cave Bear",
+    "file_name": "Wild Shape Cave Bear Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/6e/Wild_Shape_Cave_Bear_Condition_Icon.webp",
+    "file": "Wild Shape Cave Bear.png"
+  },
+  {
+    "condition": "Wild Shape Deep Rothé",
+    "file_name": "Wild Shape Deep Rothé Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/19/Wild_Shape_Deep_Roth%C3%A9_Condition_Icon.webp",
+    "file": "Wild Shape Deep Rothé.png"
+  },
+  {
+    "condition": "Wild Shape Dilophosaurus",
+    "file_name": "Wild Shape Dilophosaurus Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/9/9c/Wild_Shape_Dilophosaurus_Condition_Icon.webp",
+    "file": "Wild Shape Dilophosaurus.png"
+  },
+  {
+    "condition": "Wild Shape Dire Raven",
+    "file_name": "Wild Shape Dire Raven Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/bd/Wild_Shape_Dire_Raven_Condition_Icon.webp",
+    "file": "Wild Shape Dire Raven.png"
+  },
+  {
+    "condition": "Wild Shape Dire Wolf",
+    "file_name": "Wild Shape Dire Wolf Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/60/Wild_Shape_Dire_Wolf_Condition_Icon.webp",
+    "file": "Wild Shape Dire Wolf.png"
+  },
+  {
+    "condition": "Wild Shape Earth Myrmidon",
+    "file_name": "Wild Shape Earth Myrmidon Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/3f/Wild_Shape_Earth_Myrmidon_Condition_Icon.webp",
+    "file": "Wild Shape Earth Myrmidon.png"
+  },
+  {
+    "condition": "Wild Shape Fire Myrmidon",
+    "file_name": "Wild Shape Fire Myrmidon Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/a/a8/Wild_Shape_Fire_Myrmidon_Condition_Icon.webp",
+    "file": "Wild Shape Fire Myrmidon.png"
+  },
+  {
+    "condition": "Wild Shape Giant Spider",
+    "file_name": "Wild Shape Giant Spider Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/28/Wild_Shape_Giant_Spider_Condition_Icon.webp",
+    "file": "Wild Shape Giant Spider.png"
+  },
+  {
+    "condition": "Wild Shape Owlbear",
+    "file_name": "Wild Shape Owlbear Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/e/e4/Wild_Shape_Owlbear_Condition_Icon.webp",
+    "file": "Wild Shape Owlbear.png"
+  },
+  {
+    "condition": "Wild Shape Panther",
+    "file_name": "Wild Shape Panther Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/2/22/Wild_Shape_Panther_Condition_Icon.webp",
+    "file": "Wild Shape Panther.png"
+  },
+  {
+    "condition": "Wild Shape Polar Bear",
+    "file_name": "Wild Shape Polar Bear Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/50/Wild_Shape_Polar_Bear_Condition_Icon.webp",
+    "file": "Wild Shape Polar Bear.png"
+  },
+  {
+    "condition": "Wild Shape Rat",
+    "file_name": "Wild Shape Rat Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d1/Wild_Shape_Rat_Condition_Icon.webp",
+    "file": "Wild Shape Rat.png"
+  },
+  {
+    "condition": "Wild Shape Sabre-Toothed Tiger",
+    "file_name": "Wild Shape Sabre-Toothed Tiger Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/5/5d/Wild_Shape_Sabre-Toothed_Tiger_Condition_Icon.webp",
+    "file": "Wild Shape Sabre-Toothed Tiger.png"
+  },
+  {
+    "condition": "Wild Shape Water Myrmidon",
+    "file_name": "Wild Shape Water Myrmidon Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/d/d3/Wild_Shape_Water_Myrmidon_Condition_Icon.webp",
+    "file": "Wild Shape Water Myrmidon.png"
+  },
+  {
+    "condition": "Wild Shape Wolf",
+    "file_name": "Wild Shape Wolf Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/63/Wild_Shape_Wolf_Condition_Icon.webp",
+    "file": "Wild Shape Wolf.png"
+  },
+  {
+    "condition": "Within the Mind Sanctuary",
+    "file_name": "Within the Mind Sanctuary Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/6/62/Within_the_Mind_Sanctuary_Condition_Icon.webp",
+    "file": "Within the Mind Sanctuary.png"
+  },
+  {
+    "condition": "Witness",
+    "file_name": "Witness Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/b/b6/Witness_Condition_Icon.webp",
+    "file": "Witness.png"
+  },
+  {
+    "condition": "Wrath",
+    "file_name": "Wrath Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/f/fc/Wrath_Condition_Icon.webp",
+    "file": "Wrath.png"
+  },
+  {
+    "condition": "Wretched Growth",
+    "file_name": "Wretched Growth Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/8/88/Wretched_Growth_Condition_Icon.webp",
+    "file": "Wretched Growth.png"
+  },
+  {
+    "condition": "Yeenoghu's Blessing",
+    "file_name": "Yeenoghu's Blessing Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/1/16/Yeenoghu%27s_Blessing_Condition_Icon.webp",
+    "file": "Yeenoghu's Blessing.png"
+  },
+  {
+    "condition": "Yeenoghu's Gift",
+    "file_name": "Yeenoghu's Gift Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/3/31/Yeenoghu%27s_Gift_Condition_Icon.webp",
+    "file": "Yeenoghu's Gift.png"
+  },
+  {
+    "condition": "Yeenoghu's Hunger",
+    "file_name": "Yeenoghu's Hunger Condition Icon.webp",
+    "url": "https://bg3.wiki/w/images/7/7d/Yeenoghu%27s_Hunger_Condition_Icon.webp",
+    "file": "Yeenoghu's Hunger.png"
+  }
+]

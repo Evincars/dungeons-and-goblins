@@ -18,6 +18,7 @@ import { createPlayer } from '../entities/PlayerFactory';
 import { bindingFor, cleanName, settings } from '../game/Settings';
 import { camera, GAME_HEIGHT, GAME_WIDTH, viewHeight, viewWidth, zoomBy } from '../render/Camera';
 import { TILE_WIDTH, TILE_HEIGHT, FOG_REVEAL_TILES } from '../level/TileType';
+import { cancelThrow } from '../game/ThrowAim';
 import { initInput, pointerFree, resetInput, setInputCaptured, setPanelsOpen } from '../systems/InputSystem';
 import { runCommand } from '../game/Console';
 import { ConsoleView } from '../ui/ConsoleView';
@@ -60,7 +61,10 @@ import { setDifficulty } from '../game/Difficulty';
 import { ResultPanel } from '../ui/ResultPanel';
 import { updateSeeThrough } from '../systems/SeeThroughSystem';
 import { attempt, report, reportRejection } from '../core/errors';
+import { inDarkness } from '../ai/perception/obscured';
 
+/** The terrain's walls in the game layer: over all that lies flat on the floor (FLAT_Z -0.5, condition rings -0.4), under all that stands (0 and up). */
+const WALLS_Z = -0.3;
 /** The Third Eye's darkvision lifts the fog this many times as far round its hero. */
 const DARKVISION_FACTOR = 2;
 /** Tiles revealed around each player when the level starts (every tick after, FOG_REVEAL_TILES). */
@@ -289,7 +293,7 @@ export class InGameScene implements Scene {
   }
 
   /**
-   * Escape closes one thing a press, the topmost first: a spell waiting for its square, a sub-screen over the pause
+   * Escape closes one thing a press, the topmost first: a spell waiting for its square, a throw held ready, a sub-screen over the pause
    * menu, the pause menu's confirmation and then the menu itself; with no menu, a dialog inside a panel, the panel (the
    * inventory, the shop), the HUD's dialogs and drop-downs. Only with nothing open does it bring up the pause menu.
    */
@@ -304,6 +308,8 @@ export class InGameScene implements Scene {
       cancelBinding();
       return;
     }
+    // A throw held ready is put away.
+    if (cancelThrow()) return;
     if (this.manager.hasOverlay) {
       this.manager.escapeOverlay();
       return;
@@ -408,11 +414,15 @@ export class InGameScene implements Scene {
   private mountTerrain(): void {
     if (this.terrain) {
       this.terrain.base.destroy({ children: true });
+      this.terrain.walls.destroy({ children: true });
       for (const o of this.terrain.occluders) o.destroy({ children: true });
     }
     this.terrain = buildLevelView(this.level);
     this.terrain.base.zIndex = -1;
     this.gameLayer.addChildAt(this.terrain.base, 0);
+    // The walls lie over whatever is flat on the floor (puddles, webs, rugs at -0.5, rings at -0.4) and under all that stands.
+    this.terrain.walls.zIndex = WALLS_Z;
+    this.gameLayer.addChild(this.terrain.walls);
     for (const o of this.terrain.occluders) this.gameLayer.addChild(o);
   }
 
@@ -540,13 +550,17 @@ export class InGameScene implements Scene {
     return this.lightPool[i] ?? (this.lightPool[i] = { x: 0, y: 0, radius: 0, kind: 0 });
   }
 
-  /** Every light this frame: wall torches, each hero's torch, and glowing entities (spell bolts, candles, lanterns). */
+  /**
+   * Every light this frame: wall torches, each hero's torch, and glowing entities (spell bolts, candles, lanterns) — but none
+   * inside magical darkness (Darkness), which no light shines in.
+   */
   private gatherLights(): LightSource[] {
     const lights = this.frameLights;
     lights.length = 0;
-    for (const torch of this.torchSources) lights.push(torch);
+    for (const torch of this.torchSources) if (!inDarkness(torch.x, torch.y)) lights.push(torch);
     let used = 0;
     for (const p of q.players) {
+      if (inDarkness(p.position.x, p.position.y)) continue;
       const torch = this.pooledLight(used);
       torch.x = p.position.x;
       torch.y = p.position.y - HERO_TORCH_LIFT;
@@ -557,6 +571,7 @@ export class InGameScene implements Scene {
       used++;
     }
     for (const e of q.glowing) {
+      if (inDarkness(e.position.x, e.position.y)) continue;
       const light = this.pooledLight(used++);
       light.x = e.position.x;
       light.y = e.position.y - (e.yOffset ?? 0);

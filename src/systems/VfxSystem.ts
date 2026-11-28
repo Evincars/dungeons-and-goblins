@@ -4,7 +4,11 @@ import type { Entity } from '../world';
 import { world } from '../world';
 import { TICKS_PER_SECOND } from '../rules/Spells';
 import { vfxEffect, vfxPoint, vfxRenderer } from '../render/Vfx';
-import { AURA_BUFFS, BUFF_AURAS, SPELL_VFX } from '../render/SpellVfx';
+import { AFFLICTION_VFX, AURA_BUFFS, AURA_HOLDS, BUFF_AURAS, FLASK_FLIGHT, HOLD_AURAS, LASTING_VFX, SHEEN_RADIUS, SPELL_VFX } from '../render/SpellVfx';
+import { AFFLICTION_KINDS } from '../world';
+import { hiddenHere } from './Invisibility';
+import { heldIn } from './SpellHolds';
+import { signLift } from './WeaponSignSystem';
 import type { VfxEffectId } from '../render/Vfx';
 import { takeQueuedVfx } from '../render/VfxPlayer';
 import type { VfxShot } from '../render/VfxPlayer';
@@ -51,12 +55,21 @@ function start(definition: unknown, gameLayer: Container, x: number, y: number, 
   return effect;
 }
 
-/** Drops the sparks of fires that are gone (a new level was built). */
+/**
+ * Drops the sparks of fires that are gone (a new level was built); a fire blown out (systems/Snuff.ts) throws no more, its
+ * last sparks and embers dying away where they are. Lit again, it throws them anew (`lightFires`).
+ */
 function dropStale(gameLayer: Container): void {
   for (const [fire, effect] of loops) {
-    if (world.id(fire) !== undefined && effect.root.parent === gameLayer) continue;
-    vfxRenderer().removeEffect(effect, true);
+    const here = world.id(fire) !== undefined && effect.root.parent === gameLayer;
+    if (here && fire.sparks) continue;
     loops.delete(fire);
+    if (!here) {
+      vfxRenderer().removeEffect(effect, true);
+      continue;
+    }
+    effect.stop();
+    fading.push(effect);
   }
 }
 
@@ -126,10 +139,53 @@ function followShots(gameLayer: Container): void {
   }
 }
 
-/** Lets an effect that followed something stop and fade out. */
-function letGo(effect: PixiVfxEffectInstance): void {
+/**
+ * Followers whose body is still there as they fade: their root goes on following it (its last particles stay on it rather
+ * than hanging in the air where it stood), by how far over its feet the effect played.
+ */
+const fadingOn: { effect: PixiVfxEffectInstance; body: Entity; lift: number; dx: number }[] = [];
+/** The tick each follower was last asked for: one not asked for this tick has lost what held it, and fades. */
+const lastAsked = new WeakMap<PixiVfxEffectInstance, number>();
+let tickNo = 0;
+
+/** Lets an effect that followed something stop and fade out (on the body, if it is still there). */
+function letGo(effect: PixiVfxEffectInstance, body?: Entity): void {
   effect.stop();
   fading.push(effect);
+  const at = body?.position;
+  if (body && at && world.id(body) !== undefined && !body.removed) {
+    fadingOn.push({ effect, body, lift: at.y - effect.root.y, dx: effect.root.x - at.x });
+  }
+}
+
+/** Fading followers keep to their body until their last particles are gone (or the body is). */
+function moveFadingOn(): void {
+  for (let i = fadingOn.length - 1; i >= 0; i--) {
+    const { effect, body, lift, dx } = fadingOn[i];
+    const at = body.position;
+    if (!effect.isActive || effect.root.destroyed || !at || world.id(body) === undefined || body.removed) {
+      fadingOn.splice(i, 1);
+      continue;
+    }
+    effect.root.position.set(at.x + dx, at.y - lift);
+  }
+}
+
+/**
+ * A follower not asked for this tick has lost what held it (the body left the query when its burning, mark or hold ended):
+ * it stops and fades on its body. Without this it would go on emitting where it last stood.
+ */
+function letGoUnasked(): void {
+  for (const [entity, mine] of following) letGoUnaskedOf(entity, mine);
+}
+
+/** One entity's followers not asked for this tick fade on it. */
+function letGoUnaskedOf(entity: Entity, mine: Map<string, PixiVfxEffectInstance>): void {
+  for (const [key, effect] of mine) {
+    if (lastAsked.get(effect) === tickNo) continue;
+    letGo(effect, entity);
+    mine.delete(key);
+  }
 }
 
 /** Effects following entities that are gone (or were left on another level) fade out. */
@@ -147,12 +203,15 @@ function dropLeftBehind(mine: Map<string, PixiVfxEffectInstance>, gameLayer: Con
   for (const [key, effect] of mine) if (effect.root.parent !== gameLayer) mine.delete(key);
 }
 
-/** While `holds`, `look` follows `entity` with its root at (x, y), drawn by depth z; once it does not, it fades out. */
-function follow(entity: Entity, key: string, look: VfxEffectId, holds: boolean, at: { x: number; y: number; z: number }, gameLayer: Container): void {
+/**
+ * While `holds`, `look` follows `entity` with its root at (x, y), drawn by depth z (and scaled by `s`, if given); once it does
+ * not, it fades out.
+ */
+function follow(entity: Entity, key: string, look: VfxEffectId, holds: boolean, at: { x: number; y: number; z: number; s?: number }, gameLayer: Container): void {
   const mine = following.get(entity) ?? following.set(entity, new Map()).get(entity);
   const effect = mine?.get(key);
   if (!mine || !holds) {
-    if (effect) letGo(effect);
+    if (effect) letGo(effect, entity);
     mine?.delete(key);
     return;
   }
@@ -160,20 +219,24 @@ function follow(entity: Entity, key: string, look: VfxEffectId, holds: boolean, 
   const shown = effect ?? (definition ? start(definition, gameLayer, at.x, at.y, at.z) : undefined);
   if (!shown) return;
   mine.set(key, shown);
+  lastAsked.set(shown, tickNo);
   shown.root.position.set(at.x, at.y);
   shown.root.zIndex = at.z;
+  if (at.s !== undefined) shown.root.scale.set(at.s);
 }
 
 /** Where a follower goes this tick (reused: written, then read at once). */
-const spot = { x: 0, y: 0, z: 0 };
+const spot: { x: number; y: number; z: number; s?: number } = { x: 0, y: 0, z: 0 };
 
-/** Each hero's lasting buffs keep their auras round them; each zone its particles over it. */
+/** Each hero's lasting buffs keep their auras round them (an invisible one's shimmer only); each zone its particles over it. */
 function followLasting(gameLayer: Container): void {
   for (const hero of buffed) {
     spot.x = hero.position.x;
     spot.y = hero.position.y - BODY_MIDDLE;
     spot.z = hero.position.y + IN_FRONT;
-    for (const buff of AURA_BUFFS) follow(hero, buff, BUFF_AURAS[buff], (hero.buffs[buff] ?? 0) > 0 && !hero.removed, spot, gameLayer);
+    const shown = !hero.removed && !hiddenHere(hero);
+    for (const buff of AURA_BUFFS) follow(hero, buff, BUFF_AURAS[buff], (hero.buffs[buff] ?? 0) > 0 && shown, spot, gameLayer);
+    followSigns(hero, shown, gameLayer);
   }
   for (const zone of zones) {
     const look = SPELL_VFX[zone.zone.spell]?.zone;
@@ -185,14 +248,147 @@ function followLasting(gameLayer: Container): void {
   }
 }
 
+const burningSurfaces = world.with('position', 'surface');
+const fogClouds = world.with('position', 'fogCloud');
+const marked = world.with('position', 'status');
+/** A sleeper's motes rise from this far above its feet. */
+const SLEEPER_HEAD = 26;
+/** The sheen on a puddle is drawn with the puddles, under everyone standing (render systems' FLAT_Z is -0.5). */
+const FLOOR_Z = -0.45;
+const burningBodies = world.with('position', 'burning');
+const wisps = world.with('position', 'wisp');
+const flasks = world.with('position', 'thrown');
+/** A wisp of Dancing Lights hovers this far above the floor (px). */
+const WISP_HEIGHT = 18;
+
+/**
+ * What burns and glows for as long as it lasts: fire on the floor its flames, a body on fire the flames on it, each light of
+ * Dancing Lights its glimmer, each flask in the air its trail.
+ */
+function followFires(gameLayer: Container): void {
+  for (const patch of burningSurfaces) {
+    spot.x = patch.position.x;
+    spot.y = patch.position.y;
+    spot.z = patch.position.y + IN_FRONT;
+    follow(patch, 'fire', 'fire-surface', patch.surface.kind === 'fire' && !patch.removed, spot, gameLayer);
+    // Grease and still water wink with glints all over them, the sheen scaled to the patch (drawn under whoever stands in it).
+    const kind = patch.surface.kind;
+    spot.s = patch.surface.radius / SHEEN_RADIUS;
+    spot.z = FLOOR_Z;
+    follow(patch, 'sheen', kind === 'grease' ? LASTING_VFX.grease : LASTING_VFX.water, (kind === 'grease' || kind === 'water') && !patch.removed, spot, gameLayer);
+    spot.s = undefined;
+  }
+  for (const body of burningBodies) {
+    spot.x = body.position.x;
+    spot.y = body.position.y - BODY_MIDDLE;
+    spot.z = body.position.y + IN_FRONT;
+    follow(body, 'burning', 'burning', !body.removed && (body.health?.current ?? 0) > 0, spot, gameLayer);
+  }
+}
+
+/** Each fog cloud's drifting banks over it (Darkness's inky ones); each sleeping foe's motes over its head. */
+function followFogAndSleep(gameLayer: Container): void {
+  for (const cloud of fogClouds) {
+    spot.x = cloud.position.x;
+    spot.y = cloud.position.y;
+    // Over everyone in it: the fog lies over the fight.
+    spot.z = cloud.position.y + cloud.fogCloud.radius;
+    follow(cloud, 'fog', cloud.fogCloud.dark ? LASTING_VFX.darkness : LASTING_VFX.fog, !cloud.removed, spot, gameLayer);
+  }
+  for (const foe of marked) {
+    spot.x = foe.position.x;
+    spot.y = foe.position.y - SLEEPER_HEAD;
+    spot.z = foe.position.y + IN_FRONT;
+    follow(foe, 'sleep', LASTING_VFX.sleep, !foe.removed && (foe.status.asleep ?? 0) > 0, spot, gameLayer);
+  }
+}
+
+function followLights(gameLayer: Container): void {
+  for (const wisp of wisps) {
+    spot.x = wisp.position.x;
+    spot.y = wisp.position.y - (wisp.yOffset ?? WISP_HEIGHT);
+    spot.z = wisp.position.y + IN_FRONT;
+    follow(wisp, 'wisp', 'dancing-light', !wisp.removed, spot, gameLayer);
+  }
+  for (const flask of flasks) {
+    spot.x = flask.position.x;
+    spot.y = flask.position.y - (flask.yOffset ?? 0);
+    spot.z = flask.position.y + IN_FRONT;
+    // A potion or anything else a hero throws flies as its own picture, with no trail.
+    const trail = FLASK_FLIGHT[flask.thrown.item];
+    if (trail) follow(flask, 'flask', trail, !flask.removed, spot, gameLayer);
+  }
+}
+
+const heldBodies = world.with('position', 'spellHolds');
+const markedBodies = world.with('position', 'afflicted');
+const seers = world.with('position', 'seesInvisible');
+/** The sword over a hero's head has its middle this far above its foot (px). */
+const SIGN_MIDDLE = 9;
+/** A seer's glimmer is at their eyes, this far above their feet. */
+const EYES = 26;
+/** The key each hold's aura and each mark follows its body by (made once, so following allocates nothing). */
+const HOLD_KEYS = { paralyzed: 'hold:paralyzed', laughing: 'hold:laughing', maddened: 'hold:maddened', enfeebled: 'hold:enfeebled' } as const;
+const MARK_KEYS = { fire: 'mark:fire', poison: 'mark:poison', acid: 'mark:acid', cold: 'mark:cold', lightning: 'mark:lightning' } as const;
+
+/** The sword over the head of a hero whose weapon a spell shapes: its glints (Magic Weapon) or gloom (Shadow Blade). */
+function followSigns(hero: (typeof buffed)['entities'][number], shown: boolean, gameLayer: Container): void {
+  // The sign's middle: half its blade under its point.
+  spot.y = hero.position.y - signLift(hero) - SIGN_MIDDLE;
+  const blade = (hero.buffs.shadowBlade ?? 0) > 0;
+  follow(hero, 'sign:blade', LASTING_VFX.shadowBlade, shown && blade, spot, gameLayer);
+  follow(hero, 'sign:magic', LASTING_VFX.magicWeapon, shown && !blade && (hero.buffs.magicWeapon ?? 0) > 0, spot, gameLayer);
+}
+
+/**
+ * What holds a body and the marks on it: a hold's aura round it (Hold Person's runes, Tasha's bubbles, the crown of madness,
+ * the enfeebled's motes), a blow's mark for a round (fire, poison or acid, cold, lightning: systems/Afflictions.ts), a seer's
+ * glimmer at the eyes. Nothing on a body this screen does not see (an invisible foe).
+ */
+function followHoldsAndMarks(gameLayer: Container): void {
+  for (const body of heldBodies) {
+    bodySpot(body.position);
+    const shown = !body.removed && !hiddenHere(body);
+    for (const kind of AURA_HOLDS) follow(body, HOLD_KEYS[kind], HOLD_AURAS[kind], shown && heldIn(body, kind), spot, gameLayer);
+  }
+  for (const body of markedBodies) {
+    bodySpot(body.position);
+    // A body already on fire shows those flames, not the mark's.
+    const shown = !body.removed && !hiddenHere(body) && (body.health?.current ?? 0) > 0;
+    for (const kind of AFFLICTION_KINDS) {
+      const on = shown && body.afflicted.kind === kind && !(kind === 'fire' && body.burning);
+      follow(body, MARK_KEYS[kind], AFFLICTION_VFX[kind], on, spot, gameLayer);
+    }
+  }
+  for (const seer of seers) {
+    bodySpot(seer.position);
+    spot.y = seer.position.y - EYES;
+    follow(seer, 'seer', LASTING_VFX.seer, !seer.removed && !hiddenHere(seer), spot, gameLayer);
+  }
+}
+
+/** The spot for a body's aura: its middle, just in front of it. */
+function bodySpot(at: { x: number; y: number }): void {
+  spot.x = at.x;
+  spot.y = at.y - BODY_MIDDLE;
+  spot.z = at.y + IN_FRONT;
+}
+
 /** Once a tick: sparks for each new fire, trails behind flying spells, the one-shots asked for, and all of them moved on by a tick. */
 export function updateVfx(gameLayer: Container): void {
+  tickNo++;
   dropStale(gameLayer);
   lightFires(gameLayer);
   letTrailsFade(gameLayer);
   dropGoneFollowers(gameLayer);
   followShots(gameLayer);
   followLasting(gameLayer);
+  followFires(gameLayer);
+  followFogAndSleep(gameLayer);
+  followHoldsAndMarks(gameLayer);
+  followLights(gameLayer);
+  letGoUnasked();
+  moveFadingOn();
   playShots(gameLayer);
   if (loops.size || shots.length || trails.size || fading.length || following.size) vfxRenderer().update(TICK_SECONDS);
 }

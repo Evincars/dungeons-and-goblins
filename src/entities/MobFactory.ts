@@ -7,7 +7,7 @@ import { GOBLIN_GRUNT, GOBLIN_ROGUE, GOBLIN_WARRIOR } from '../characters/Goblin
 import { EVIL_WIZARD, GHOST_WIZARD } from '../characters/Wizards';
 import { GRICK, SHADE } from '../characters/IsoFoes';
 import { NEVER_TICK, SENSE_TICKS } from '../ai/constants';
-import { MONSTERS, randomMonsterWeapon } from '../rules/Monsters';
+import { MONSTERS, randomMonsterThrowable, randomMonsterWeapon } from '../rules/Monsters';
 import { difficulty, enemyHealthScale } from '../game/Difficulty';
 
 /** Gap between the top of the head and the health bar. */
@@ -113,6 +113,12 @@ export function casterOf(type: MobType): Pick<Entity, 'mobCaster'> {
   return { mobCaster: { level: difficulty.partyLevel, ability: caster.ability, spells: [...caster.spells], recovery: caster.spells.map(() => 0) } };
 }
 
+/** The flask a new enemy carries to throw, now and then (src/data/stats.json `throwables`). */
+export function throwableOf(type: MobType): Pick<Entity, 'mobThrowable'> {
+  const item = randomMonsterThrowable(type);
+  return item ? { mobThrowable: { item, count: 1 } } : {};
+}
+
 export function createMob(_level: Level, type: MobType, x: number, y: number): Entity {
   const cfg: MobConfig = MOB_CONFIGS[type];
   const def = characterDef(cfg.character);
@@ -144,6 +150,7 @@ export function createMob(_level: Level, type: MobType, x: number, y: number): E
     chasing: false,
     ai: createMobAI(),
     ...casterOf(type),
+    ...throwableOf(type),
     ...characterComponents(cfg.character, cfg.scale),
     // The kind's own scale may differ from the character's, so the lift comes from the table.
     yOffset: cfg.yOffset,

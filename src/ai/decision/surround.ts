@@ -1,8 +1,9 @@
 import type { Mob } from '../../world';
 import type { Squad } from './squads';
+import { engagementOf } from './engagement';
 
 /**
- * Surrounding the target: every member of a squad is given its own place in a ring round the player it hunts,
+ * Surrounding the target: every member of a squad pressing in hand to hand is given its own place in a ring round the player it hunts,
  * the places spread evenly, so a pack closes in from every side instead of piling up on one, and each of them
  * ends up within reach. Members keep the order they already stand in round the target (nobody has to cross
  * another's path), and the ring is turned to sit where the pack already is, so the fewest steps put them in place.
@@ -19,10 +20,12 @@ const pool: Bearing[] = [];
 const ranked: Bearing[] = [];
 const byAngle = (a: Bearing, b: Bearing): number => a.angle - b.angle;
 
-function rank(squad: Squad): void {
+/** The squad's members pressing in hand to hand (decision/engagement.ts), ranked by the angle they stand at round the target. */
+function rank(squad: Squad, tick: number): void {
   const t = squad.target.position;
   ranked.length = 0;
   for (const mob of squad.members) {
+    if (engagementOf(mob, tick) !== 'press') continue;
     const bearing = pool[ranked.length] ?? (pool[ranked.length] = { mob: null, angle: 0 });
     bearing.mob = mob;
     bearing.angle = Math.atan2(mob.position.y - t.y, mob.position.x - t.x);
@@ -48,8 +51,8 @@ function ringTurn(step: number): number {
 
 /** Hands every member of the squad its place in the ring round its target for this tick. */
 export function surround(squad: Squad, tick: number): void {
-  if (squad.members.length === 0) return;
-  rank(squad);
+  rank(squad, tick);
+  if (ranked.length === 0) return;
   const step = (2 * Math.PI) / ranked.length;
   const turn = ringTurn(step);
   for (let k = 0; k < ranked.length; k++) {

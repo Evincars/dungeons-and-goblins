@@ -26,6 +26,7 @@ import { isCatalogSpell, quickBinding } from '../rules/Spellbook';
 import { ARCANE_RECOVERY_TOP_LEVEL } from '../rules/Schools';
 import { shelteredBySculpt, useSchoolFeature } from './SchoolSystem';
 import { raiseUndead } from './SummonSystem';
+import { failsSave, saveMode } from './SpellHolds';
 
 /**
  * The active class features (rules/ClassFeatures.ts), used from the quick bar with the cast key. Each does its work
@@ -224,16 +225,33 @@ export function athleteSpeedFactor(hero: Pick<Player, 'athleteBoost'>): number {
  * for a saving throw yet; whatever comes to will roll it here.
  */
 export function heroSavingThrow(hero: Player, stat: StatName, dc: number, die: DieRoller = rollDie, spellBy?: Entity): boolean {
-  // An evoker's Sculpt Spells bubble: whoever stands in it succeeds.
-  if (shelteredBySculpt(hero)) return true;
+  return heroSaveRoll(hero, stat, dc, die, spellBy).success;
+}
+
+/**
+ * A hero's saving throw with what it came to (to show over their head): the d20 and their save bonus against the DC, Indomitable
+ * rolling a failure again. In an evoker's Sculpt Spells bubble it succeeds without a roll (its total is the DC).
+ */
+export function heroSaveRoll(hero: Player, stat: StatName, dc: number, die: DieRoller = rollDie, spellBy?: Entity): { total: number; success: boolean } {
+  if (shelteredBySculpt(hero)) return { total: dc, success: true };
+  // Paralysed (Hold Person), Strength and Dexterity saves fail outright.
+  if (failsSave(hero, stat)) return { total: 0, success: false };
   const sheet = characterSheet(hero);
   const bonus = sheet.saves[stat].bonus + shieldSave(hero, sheet.feats.shieldSaves, stat);
-  const mode = mageSlayerMode(hero, sheet.feats.mageSlayer, spellBy);
-  if (rollD20(mode, die) + bonus >= dc) return true;
-  if ((hero.indomitableCooldown ?? 0) > 0 || !featureOn(hero, 'indomitable')) return false;
+  const mode = withRestraint(mageSlayerMode(hero, sheet.feats.mageSlayer, spellBy), saveMode(hero, stat));
+  const first = rollD20(mode, die) + bonus;
+  if (first >= dc) return { total: first, success: true };
+  if ((hero.indomitableCooldown ?? 0) > 0 || !featureOn(hero, 'indomitable')) return { total: first, success: false };
   hero.indomitableCooldown = INDOMITABLE_COOLDOWN_TICKS;
   recordEvent(hero, 'feature', { item: nameOfFeature(hero, 'indomitable') });
-  return rollD20(mode, die) + bonus >= dc;
+  const again = rollD20(mode, die) + bonus;
+  return { total: again, success: again >= dc };
+}
+
+/** A restrained hero's Dexterity save at disadvantage, which cancels an advantage. */
+function withRestraint(mode: D20Mode, held: D20Mode): D20Mode {
+  if (held !== 'disadvantage') return mode;
+  return mode === 'advantage' ? 'normal' : 'disadvantage';
 }
 
 /** Shield Master: what a shield carried adds to Dexterity saving throws. */

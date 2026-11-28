@@ -8,6 +8,7 @@ import { WEAPON_BASES, weaponStats } from '../rules/WeaponTable';
 import { ARMOR_BASES, armorStats } from '../rules/ArmorTable';
 import type { ArmorBase } from '../rules/ArmorTable';
 import medals from '../data/medals.json';
+import { THROWABLE_IDS, THROWABLES, throwableIconKey } from '../rules/Throwables';
 
 /**
  * Every weapon, shield, suit of armour and medal the game knows. Weapons, shields and armour are made from the rules'
@@ -107,6 +108,15 @@ export const SHIELDS: readonly InventoryItem[] = shieldItems();
 export const ARMORS: readonly InventoryItem[] = armorItems();
 export const MEDALS: readonly InventoryItem[] = medals.items.flatMap((raw: unknown) => readItem(raw) ?? []);
 
+/** The flasks and potions (src/data/throwables.json): thrown out of the bag, the potions drunk too (game/PlayerActions.ts). */
+export function consumable(id: (typeof THROWABLE_IDS)[number]): InventoryItem {
+  const def = THROWABLES[id];
+  return { id, type: 'consumable', name: def.name, value: priceInGold(def.cost), weight: def.weight, icon: throwableIconKey(id), kind: id, stats: {} };
+}
+
+/** One of every flask and potion. */
+export const CONSUMABLES: readonly InventoryItem[] = THROWABLE_IDS.map(consumable);
+
 /** Weapons to fight with (not shields). */
 export const HAND_WEAPONS: readonly InventoryItem[] = WEAPONS.filter((item) => item.gear === 'weapon');
 
@@ -115,7 +125,8 @@ export function catalogIconSources(): Array<{ key: string; src: string }> {
   const weapons = WEAPON_BASES.flatMap((base) => (base === 'unarmed' ? [] : weaponStats(base).art.map((src, i) => ({ key: `weapon_${base}_${numbered(i)}`, src }))));
   const shields = ARMOR_BASES.flatMap((base) => (armorStats(base).category === 'shield' ? armorStats(base).art.map((src, i) => ({ key: `${base}_${numbered(i)}`, src })) : []));
   const medalArt = medals.items.flatMap((raw: unknown) => (isRecord(raw) && typeof raw.src === 'string' && typeof raw.icon === 'string' ? [{ key: raw.icon, src: raw.src }] : []));
-  return [...weapons, ...shields, ...medalArt];
+  const flasks = THROWABLE_IDS.map((id) => ({ key: throwableIconKey(id), src: THROWABLES[id].icon }));
+  return [...weapons, ...shields, ...medalArt, ...flasks];
 }
 
 /** The colours each suit of armour comes in, by its id. */

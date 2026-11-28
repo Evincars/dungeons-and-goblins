@@ -6,6 +6,7 @@ import { isShopOpen } from './ShopSystem';
 import { isInventoryOpen } from './InventorySystem';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { MAX_MOB_RADIUS } from '../entities/MobFactory';
+import { hiddenHere } from './Invisibility';
 
 /** How far from the player something can be used through the crosshair. */
 export const REACH = 44;
@@ -109,8 +110,9 @@ function nearestUsable(player: Player): Entity | null {
   return best;
 }
 
+/** A live enemy this screen sees (an invisible one it does not see is never framed nor picked). */
 function isLiveEnemy(e: Entity): boolean {
-  return !!e.ai && (e.health?.current ?? 0) > 0 && !e.removed;
+  return !!e.ai && (e.health?.current ?? 0) > 0 && !e.removed && !hiddenHere(e);
 }
 
 /** How far the crosshair is from an entity's drawn body (which sits yOffset above its ground position). */

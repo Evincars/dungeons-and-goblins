@@ -1,0 +1,30 @@
+{
+  "$comment": "Flasks and potions: enemies carry the flasks and throw them at the heroes (src/data/stats.json `throwables`; systems/ThrowSystem.ts); heroes carry all of them in the bag, throw any (the inventory's Throw) and drink the potions. After the D&D 5e Player's Handbook and Baldur's Gate 3. rangeFeet: how far one is thrown. radiusFeet: how wide it splashes where it lands. save and dc: the saving throw everyone in the splash makes (none for a potion). damage and damageType: what the splash deals on a failed save (none on a success). burnSeconds: how long a body that failed burns, taking burnDamage each round (6 s; standing in water puts it out). surface: what it leaves on the floor (systems/Surfaces.ts; none for a potion), surfaceSeconds how long that lasts (0: for good) and surfaceDc the save it asks of whoever enters it (grease: DEX or fall prone). Fire sets grease alight. heal: what a potion restores to whoever drinks it, and to every creature its splash wets when thrown (foes too). cost (gold), weight (kg) and icon (under public/, from scripts/download-potion-icons.py and scripts/potion-icons.sh): the item in the bag.",
+  "alchemists_fire": {
+    "name": "Alchemist's Fire", "rangeFeet": 60, "radiusFeet": 10, "save": "dexterity", "dc": 10,
+    "damage": "1d4", "damageType": "fire", "burnSeconds": 18, "burnDamage": "1d4",
+    "surface": "fire", "surfaceSeconds": 18, "surfaceDc": 10,
+    "cost": 50, "weight": 0.5, "icon": "/potions/grenades/alchemists-fire_pixelart.png"
+  },
+  "grease_bottle": {
+    "name": "Grease Bottle", "rangeFeet": 60, "radiusFeet": 10, "save": "dexterity", "dc": 12,
+    "surface": "grease", "surfaceSeconds": 60, "surfaceDc": 12,
+    "cost": 20, "weight": 0.5, "icon": "/potions/grenades/grease-bottle_pixelart.png"
+  },
+  "potion_of_healing": {
+    "name": "Potion of Healing", "rangeFeet": 60, "radiusFeet": 5, "heal": "2d4+2",
+    "cost": 50, "weight": 0.5, "icon": "/potions/potions/potion-of-healing_pixelart.png"
+  },
+  "potion_of_greater_healing": {
+    "name": "Potion of Greater Healing", "rangeFeet": 60, "radiusFeet": 5, "heal": "4d4+4",
+    "cost": 150, "weight": 0.5, "icon": "/potions/potions/potion-of-greater-healing_pixelart.png"
+  },
+  "potion_of_superior_healing": {
+    "name": "Potion of Superior Healing", "rangeFeet": 60, "radiusFeet": 5, "heal": "8d4+8",
+    "cost": 450, "weight": 0.5, "icon": "/potions/potions/potion-of-superior-healing_pixelart.png"
+  },
+  "potion_of_supreme_healing": {
+    "name": "Potion of Supreme Healing", "rangeFeet": 60, "radiusFeet": 5, "heal": "10d4+20",
+    "cost": 1350, "weight": 0.5, "icon": "/potions/potions/potion-of-supreme-healing_pixelart.png"
+  }
+}

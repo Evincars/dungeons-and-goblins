@@ -3,6 +3,7 @@
  */
 
 import { context2d, createCanvas } from '../render/canvas';
+import { PUDDLE_ART_RADIUS } from '../world';
 
 function mkCanvas(w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const c = createCanvas(w, h);
@@ -397,34 +398,142 @@ export function genArrowSprite(): HTMLCanvasElement {
 }
 
 
-/** A puddle's size: 64×32, a flat ellipse on the floor (a radius-32 puddle at scale 1). */
-const PUDDLE_W = 64;
-const PUDDLE_H = 32;
-/** Water: deep blue rimmed lighter, with glints; charged water: the same lit cold blue with white sparks. */
-const PUDDLE_FRAMES = [
-  { deep: 'rgba(40,78,130,0.70)', rim: 'rgba(120,170,220,0.55)', glint: 'rgba(210,235,255,0.75)', sparks: 0 },
-  { deep: 'rgba(70,120,210,0.78)', rim: 'rgba(170,215,255,0.80)', glint: 'rgba(255,255,255,0.95)', sparks: 9 },
-] as const;
+/** A puddle's frame: a square, the patch a circle filling it (a radius-PUDDLE_ART_RADIUS patch at scale 1, as round as the aim guide's). */
+const PUDDLE_SIZE = PUDDLE_ART_RADIUS * 2;
 
-/** The puddle Create Water leaves: frame 0 water, frame 1 water charged with lightning (systems/LastingSpells.ts). */
-export function genPuddleSheet(): HTMLCanvasElement {
-  const [c, ctx] = mkCanvas(PUDDLE_W * PUDDLE_FRAMES.length, PUDDLE_H);
-  PUDDLE_FRAMES.forEach((frame, i) => {
-    const cx = i * PUDDLE_W + PUDDLE_W / 2;
-    const cy = PUDDLE_H / 2;
-    ctx.fillStyle = frame.rim;
-    ctx.beginPath(); ctx.ellipse(cx, cy, PUDDLE_W / 2 - 1, PUDDLE_H / 2 - 1, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = frame.deep;
-    ctx.beginPath(); ctx.ellipse(cx, cy + 1, PUDDLE_W / 2 - 4, PUDDLE_H / 2 - 4, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = frame.glint;
-    ctx.fillRect(cx - 12, cy - 5, 6, 1);
-    ctx.fillRect(cx + 6, cy + 3, 4, 1);
-    for (let s = 0; s < frame.sparks; s++) {
-      const sx = cx + (noise(s + 1) - 0.5) * (PUDDLE_W - 16);
-      const sy = cy + (noise(s + 31) - 0.5) * (PUDDLE_H - 10);
-      ctx.fillRect(Math.round(sx), Math.round(sy), 2, 1);
-      ctx.fillRect(Math.round(sx) + 1, Math.round(sy) - 1, 1, 3);
+/**
+ * Each patch's look: its colour from the middle out to its rim (`stops`: share of the radius, colour), a bright ring just
+ * inside the edge, and what lies on it — ripples on water, crackling bolts on charged water, swirls of oily sheen on grease,
+ * glowing cracks in scorched floor.
+ */
+type PuddleLook = { stops: readonly (readonly [number, string])[]; rim: string; marks: 'ripples' | 'bolts' | 'swirls' | 'cracks'; mark: string; glint: string };
+const PUDDLE_LOOKS: readonly PuddleLook[] = [
+  { stops: [[0, 'rgba(34,72,124,0.74)'], [0.7, 'rgba(46,96,156,0.66)'], [0.92, 'rgba(84,140,200,0.6)'], [1, 'rgba(84,140,200,0)']],
+    rim: 'rgba(170,215,250,0.55)', marks: 'ripples', mark: 'rgba(160,205,245,0.28)', glint: 'rgba(230,245,255,0.85)' },
+  { stops: [[0, 'rgba(70,130,230,0.8)'], [0.7, 'rgba(80,150,240,0.72)'], [0.92, 'rgba(140,200,255,0.7)'], [1, 'rgba(140,200,255,0)']],
+    rim: 'rgba(220,240,255,0.85)', marks: 'bolts', mark: 'rgba(240,250,255,0.9)', glint: 'rgba(255,255,255,0.95)' },
+  // Grease: a slick of brown-amber fat, darker where it lies thick, swirls of a sickly, oily sheen on it.
+  { stops: [[0, 'rgba(62,44,16,0.8)'], [0.6, 'rgba(92,68,26,0.74)'], [0.9, 'rgba(132,102,44,0.66)'], [1, 'rgba(132,102,44,0)']],
+    rim: 'rgba(196,164,92,0.6)', marks: 'swirls', mark: 'rgba(214,190,120,0.32)', glint: 'rgba(245,228,170,0.8)' },
+  // Fire: the floor scorched black, cracks glowing in it (the flames themselves are particles, systems/VfxSystem.ts).
+  { stops: [[0, 'rgba(18,9,5,0.86)'], [0.65, 'rgba(34,15,8,0.8)'], [0.9, 'rgba(90,32,10,0.6)'], [1, 'rgba(90,32,10,0)']],
+    rim: 'rgba(160,60,16,0.5)', marks: 'cracks', mark: 'rgba(255,140,50,0.85)', glint: 'rgba(255,200,110,0.95)' },
+];
+
+/** A wandering line out from (x, y) at `angle`, `steps` steps of `step` px, turning by noise (a crack, a bolt). */
+function wander(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, steps: number, step: number, seed: number): void {
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  let a = angle;
+  for (let i = 0; i < steps; i++) {
+    a += (noise(seed + i * 7.3) - 0.5) * 1.4;
+    x += Math.cos(a) * step;
+    y += Math.sin(a) * step;
+    ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+/** What lies on a patch, drawn within its circle (r) round (cx, cy). */
+function drawPuddleMarks(ctx: CanvasRenderingContext2D, look: PuddleLook, cx: number, cy: number, r: number, seed: number): void {
+  ctx.strokeStyle = look.mark;
+  ctx.lineWidth = 1;
+  if (look.marks === 'ripples') {
+    for (const share of [0.32, 0.56, 0.78]) {
+      ctx.beginPath(); ctx.arc(cx, cy, r * share, 0, Math.PI * 2); ctx.stroke();
     }
+  } else if (look.marks === 'swirls') {
+    for (let i = 0; i < 5; i++) {
+      const a = noise(seed + i) * Math.PI * 2;
+      const d = r * (0.2 + noise(seed + i + 11) * 0.55);
+      ctx.beginPath(); ctx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, r * (0.12 + noise(seed + i + 23) * 0.18), a, a + Math.PI * 1.2); ctx.stroke();
+    }
+  } else {
+    // Bolts or cracks: lines wandering out from near the middle towards the rim.
+    ctx.lineWidth = look.marks === 'bolts' ? 1.2 : 1.5;
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * Math.PI * 2 + noise(seed + i) * 0.6;
+      wander(ctx, cx + Math.cos(a) * r * 0.12, cy + Math.sin(a) * r * 0.12, a, 7, r * 0.11, seed + i * 31);
+    }
+  }
+}
+
+/** A few glints of light on the patch: a bright arc up and left, as of a light above, and specks. */
+function drawPuddleGlints(ctx: CanvasRenderingContext2D, look: PuddleLook, cx: number, cy: number, r: number, seed: number): void {
+  ctx.strokeStyle = look.glint;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(cx, cy, r * 0.7, Math.PI * 1.1, Math.PI * 1.4); ctx.stroke();
+  ctx.fillStyle = look.glint;
+  for (let i = 0; i < 6; i++) {
+    const a = noise(seed + i * 3) * Math.PI * 2;
+    const d = r * noise(seed + i * 5 + 1) * 0.8;
+    ctx.fillRect(Math.round(cx + Math.cos(a) * d), Math.round(cy + Math.sin(a) * d), 2, 1);
+  }
+}
+
+/** Webs: this many strands out from the middle, this many rings of silk round it, their silk and the haze under them. */
+const WEB_SPOKES = 16;
+const WEB_RINGS = 7;
+const WEB_SILK = 'rgba(236,236,228,0.8)';
+const WEB_HAZE = 'rgba(220,220,210,0.18)';
+/** A ring sags to this share of its reach between two strands, and wobbles by this share either way. */
+const WEB_SAG = 0.93;
+const WEB_WOBBLE = 0.08;
+
+/**
+ * Web's webs, filling the square (a cube on the map, as the aim guide shows it): a pale haze of silk, strands out from the middle
+ * to the edges and corners, and rings of it sagging between them, a little ragged.
+ */
+function drawWeb(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, seed: number): void {
+  ctx.fillStyle = WEB_HAZE;
+  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  ctx.strokeStyle = WEB_SILK;
+  ctx.lineWidth = 1;
+  const reach = (a: number): number => r / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a)));
+  for (let i = 0; i < WEB_SPOKES; i++) {
+    const a = (i / WEB_SPOKES) * Math.PI * 2 + (noise(seed + i) - 0.5) * 0.15;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * reach(a), cy + Math.sin(a) * reach(a)); ctx.stroke();
+  }
+  for (let ring = 1; ring <= WEB_RINGS; ring++) drawWebRing(ctx, cx, cy, ring / (WEB_RINGS + 0.4), reach, seed + ring * 13);
+}
+
+/** One ring of silk round the web's middle at a share of the way out, sagging a little between strands and wobbling by noise. */
+function drawWebRing(ctx: CanvasRenderingContext2D, cx: number, cy: number, share: number, reach: (a: number) => number, seed: number): void {
+  ctx.beginPath();
+  for (let i = 0; i <= WEB_SPOKES; i++) {
+    const a = (i / WEB_SPOKES) * Math.PI * 2;
+    const sag = i % 2 === 0 ? 1 : WEB_SAG;
+    const d = reach(a) * share * sag * (1 - WEB_WOBBLE / 2 + noise(seed + i) * WEB_WOBBLE);
+    if (i === 0) ctx.moveTo(cx + Math.cos(a) * d, cy + Math.sin(a) * d);
+    else ctx.lineTo(cx + Math.cos(a) * d, cy + Math.sin(a) * d);
+  }
+  ctx.stroke();
+}
+
+/**
+ * The patches of floor spells and flasks leave, each a circle as round and as wide as the aim guide showed it: frame 0 water
+ * (Create Water), 1 water charged with lightning, 2 grease, 3 burning floor (systems/LastingSpells.ts, systems/Surfaces.ts);
+ * frame 4 Web's webs, a square (its cube).
+ */
+export function genPuddleSheet(): HTMLCanvasElement {
+  const [c, ctx] = mkCanvas(PUDDLE_SIZE * (PUDDLE_LOOKS.length + 1), PUDDLE_SIZE);
+  drawWeb(ctx, PUDDLE_LOOKS.length * PUDDLE_SIZE + PUDDLE_ART_RADIUS, PUDDLE_ART_RADIUS, PUDDLE_ART_RADIUS - 1, 977);
+  const r = PUDDLE_ART_RADIUS;
+  PUDDLE_LOOKS.forEach((look, i) => {
+    const cx = i * PUDDLE_SIZE + r;
+    const cy = r;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip();
+    const fill = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    for (const [at, colour] of look.stops) fill.addColorStop(at, colour);
+    ctx.fillStyle = fill;
+    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+    drawPuddleMarks(ctx, look, cx, cy, r, i * 101 + 7);
+    drawPuddleGlints(ctx, look, cx, cy, r, i * 53 + 3);
+    ctx.strokeStyle = look.rim;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, r - 3, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
   });
   return c;
 }

@@ -9,6 +9,12 @@ import stats from '../data/stats.json';
 import { isRecord } from '../core/guards';
 import { isSpellId } from './Spells';
 import type { SpellId } from './Spells';
+import { DAMAGE_TYPES, PHYSICAL_DAMAGE_TYPES } from './DamageTypes';
+import type { DamageType, PhysicalDamageType } from './DamageTypes';
+import { isThrowableId } from './Throwables';
+import type { ThrowableId } from './Throwables';
+import { isCondition, isCreatureType } from './Conditions';
+import type { Condition, CreatureType } from './Conditions';
 
 /**
  * Enemies as the tabletop rules see them, from the SRD monster blocks in src/data/stats.json: Armor Class,
@@ -16,8 +22,9 @@ import type { SpellId } from './Spells';
  */
 
 export type MonsterStats = {
-  /** The SRD monster it is copied from. */
+  /** The SRD monster it is copied from, and its creature type. */
   source: string;
+  creature: CreatureType;
   health: number;
   ac: number;
   proficiency: number;
@@ -31,7 +38,21 @@ export type MonsterStats = {
   ranged: { weapons: readonly WeaponBase[]; share: number } | null;
   /** Casts the heroes' spells (systems/EnemyRangedSystem.ts): with this ability, these spells, at the party's level. */
   caster: { ability: StatName; spells: readonly SpellId[] } | null;
+  /** The flasks a share of this kind carry to throw at the heroes (systems/ThrowSystem.ts), if any. */
+  throwables: { items: readonly ThrowableId[]; share: number } | null;
+  /** The kinds of damage it resists, is immune to or vulnerable to (SRD), and the weapon damage it resists only when nonmagical. */
+  defences: MonsterDefences;
 };
+
+/** A monster's resistances, immunities and vulnerabilities (rules/Resistances.ts), and the conditions it is immune to. */
+export type MonsterDefences = {
+  resist: readonly DamageType[]; immune: readonly DamageType[]; vulnerable: readonly DamageType[]; resistNonmagical: readonly PhysicalDamageType[];
+  conditions: readonly Condition[];
+};
+
+const NO_DEFENCES: MonsterDefences = { resist: [], immune: [], vulnerable: [], resistNonmagical: [], conditions: [] };
+const isDamageType = (v: unknown): v is DamageType => DAMAGE_TYPES.some((t) => t === v);
+const isPhysical = (v: unknown): v is PhysicalDamageType => PHYSICAL_DAMAGE_TYPES.some((t) => t === v);
 
 type RawMonster = (typeof stats.mobs)[MobType];
 
@@ -52,16 +73,57 @@ function readCaster(type: MobType, raw: unknown): MonsterStats['caster'] {
   return { ability: stat ?? 'charisma', spells: Array.isArray(spells) ? spells.filter(isSpellId) : [] };
 }
 
+/** A kind's flasks, if its block lists any. */
+function readThrowables(type: MobType, raw: unknown): MonsterStats['throwables'] {
+  if (!isRecord(raw) || !isRecord(raw.throwables)) return null;
+  const { items, share } = raw.throwables;
+  ensure(Array.isArray(items) && items.every(isThrowableId) && typeof share === 'number', `Bad throwables block for ${type}`, { type });
+  return { items: Array.isArray(items) ? items.filter(isThrowableId) : [], share: typeof share === 'number' ? share : 0 };
+}
+
+/** A list of damage types from a defences block, checked. */
+function typeList<T extends DamageType>(type: MobType, field: string, raw: unknown, guard: (v: unknown) => v is T): T[] {
+  if (raw === undefined) return [];
+  ensure(Array.isArray(raw) && raw.every(guard), `Bad ${field} defences for ${type}`, { type, field });
+  return Array.isArray(raw) ? raw.filter(guard) : [];
+}
+
+/** A kind's resistances, immunities and vulnerabilities, if its block lists any. */
+function readDefences(type: MobType, raw: unknown): MonsterDefences {
+  if (!isRecord(raw) || !isRecord(raw.defences)) return NO_DEFENCES;
+  const d = raw.defences;
+  return {
+    resist: typeList(type, 'resist', d.resist, isDamageType),
+    immune: typeList(type, 'immune', d.immune, isDamageType),
+    vulnerable: typeList(type, 'vulnerable', d.vulnerable, isDamageType),
+    resistNonmagical: typeList(type, 'resistNonmagical', d.resistNonmagical, isPhysical),
+    conditions: conditionList(type, d.conditions),
+  };
+}
+
+/** The conditions a defences block makes it immune to, checked. */
+function conditionList(type: MobType, raw: unknown): Condition[] {
+  if (raw === undefined) return [];
+  ensure(Array.isArray(raw) && raw.every(isCondition), `Bad condition immunities for ${type}`, { type });
+  return Array.isArray(raw) ? raw.filter(isCondition) : [];
+}
+
+/** Whether a kind of enemy is immune to a condition (SRD). */
+export function immuneTo(type: MobType, condition: Condition): boolean {
+  return MONSTERS[type].defences.conditions.includes(condition);
+}
+
 function readMonster(type: MobType, raw: RawMonster): MonsterStats {
   const abilities: Record<StatName, number> = raw.abilities;
   ensure(STAT_NAMES.every((stat) => Number.isFinite(abilities[stat])), `Missing ability score for ${type}`, { type });
   ensure(raw.weapons.length > 0 && raw.weapons.every(isWeaponBase), `Unknown weapon for ${type}`, { type, weapons: raw.weapons.join(', ') });
   const modifiers = { ...abilities };
   for (const stat of STAT_NAMES) modifiers[stat] = abilityModifier(abilities[stat]);
+  ensure(isCreatureType(raw.creature), `Unknown creature type for ${type}`, { type });
   return {
-    source: raw.source, health: raw.health, ac: raw.ac, proficiency: raw.proficiency,
+    source: raw.source, creature: isCreatureType(raw.creature) ? raw.creature : 'humanoid', health: raw.health, ac: raw.ac, proficiency: raw.proficiency,
     abilities, modifiers, weapons: raw.weapons.filter(isWeaponBase), xp: raw.xp, deathPoints: raw.deathPoints,
-    ranged: readRanged(type, raw), caster: readCaster(type, raw),
+    ranged: readRanged(type, raw), caster: readCaster(type, raw), throwables: readThrowables(type, raw), defences: readDefences(type, raw),
   };
 }
 
@@ -78,6 +140,13 @@ export const MONSTERS = {
   shade: readMonster('shade', stats.mobs.shade),
   grick: readMonster('grick', stats.mobs.grick),
 } as const satisfies Record<MobType, MonsterStats>;
+
+/** The flask a new enemy of this kind carries, now and then (a kind that carries some), or null. */
+export function randomMonsterThrowable(type: MobType, roll = Math.random()): ThrowableId | null {
+  const carried = MONSTERS[type].throwables;
+  if (!carried || carried.items.length === 0 || roll >= carried.share) return null;
+  return carried.items[Math.floor((roll / carried.share) * carried.items.length) % carried.items.length];
+}
 
 /** One of the weapons this kind of enemy may carry, picked at random: now and then a bow, for a kind that has some. */
 export function randomMonsterWeapon(type: MobType): WeaponBase {

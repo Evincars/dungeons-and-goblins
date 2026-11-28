@@ -775,6 +775,15 @@ export const POSTS: PropKind[] = ['post', 'post2', 'post_cauldron', 'post_chain'
 export const CATACOMB_FIXTURES: PropKind[] = ['cauldron', 'cauldron_water', 'shackles', 'chain', 'chain_short', 'hook_bracket'];
 /** Burnt-out candles, left on crypt floors. */
 export const COLD_CANDLES: PropKind[] = ['candles_cold', 'candles_cold2', 'candle_cold', 'candle_stub'];
+/**
+ * The props that burn with an open flame (candles, candelabras, wall candles): animated, with firelight. The wind blows them
+ * out and fire lights them again (systems/Snuff.ts); their art without the flame is made at load (`prop_<kind>_out`). The
+ * mines' lanterns burn behind glass and the crystals are no flame at all.
+ */
+export const FLAME_PROPS: PropKind[] = keysOf(PROPS).filter((kind) => {
+  const def: PropDef = PROPS[kind];
+  return def.frames !== undefined && def.glow !== undefined && !def.coolGlow;
+});
 /** Whether a prop belongs to the castle (its images are the castle's own, never seen in the catacombs). */
 export function isCastleProp(kind: PropKind): boolean {
   const image: PropImage = PROPS[kind].image;

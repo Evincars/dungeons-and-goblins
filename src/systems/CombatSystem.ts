@@ -1,4 +1,5 @@
 import { Rectangle } from 'pixi.js';
+import { traumaSlowdown } from './WeaponMarks';
 import { world, q, isActivePlayer, isMob, isPlayer } from '../world';
 import type { Entity, Player, Summon } from '../world';
 import type { Level } from '../level/Level';
@@ -24,9 +25,14 @@ import { keepConcentration } from './LastingSpells';
 import { damageTaken } from '../rules/Resistances';
 import type { DamageType } from '../rules/DamageTypes';
 import { weaponStats } from '../rules/WeaponTable';
-import { logLine } from './RollLogSystem';
+import { logHurt, logLine } from './RollLogSystem';
 import { text } from '../core/texts';
 import { damageTypeName } from '../rules/Names';
+import { enfeebledDamage, incapacitated, shakeOff } from './SpellHolds';
+import { afflict } from './Afflictions';
+import { madTarget, sparedBy } from './Madness';
+import { revealOnAct } from './Invisibility';
+import { hitMob } from './Hits';
 
 const PLAYER_HURT_TIME = 25;
 const PLAYER_FREEZE_TIME = 15;
@@ -90,7 +96,8 @@ function enemiesTouching(player: Player): readonly Entity[] {
 
 /** An enemy starts an attack: the next may begin a second from now, even if a hit cuts this one short. */
 function beginAttack(mob: Entity): void {
-  mob.attackCooldown = ATTACK_PERIOD;
+  // Chest Trauma (a hero's Heartstopper) costs it an action: it strikes half as often (systems/WeaponMarks.ts).
+  mob.attackCooldown = ATTACK_PERIOD * traumaSlowdown(mob);
 }
 
 /**
@@ -132,13 +139,14 @@ function mobStrike(mob: Entity, player: Player): void {
     hurtPlayer(player, mob, MIN_HIT_DAMAGE, 'bludgeoning');
     return;
   }
-  // An enchanter's Instinctive Charm may turn the blow on another foe.
+  // An enchanter's Instinctive Charm may turn the blow on another foe. A blow ends the striker's invisibility.
   if (charmedAway(mob, player)) return;
+  revealOnAct(mob);
   const base = monsterAttack(mob.mobType, mob.mobWeapon);
   const attack = protectFrom(player) ? { ...base, mode: 'disadvantage' as const } : base;
   // A diviner's Portent die or an illusionist's double may turn a blow that hit.
   const outcome = turnBlow(player, attack, strike(player, attack, mob));
-  if (outcome.hit && !duelistTurnsAside(player, outcome)) landBlow(player, mob, outcome.damage, weaponStats(mob.mobWeapon).type);
+  if (outcome.hit && !duelistTurnsAside(player, outcome)) landBlow(player, mob, enfeebledDamage(mob, outcome.damage), weaponStats(mob.mobWeapon).type);
   else missBlow(player, mob);
 }
 
@@ -168,19 +176,23 @@ export function updateContactDamage(level: Level): void {
   }
   for (const undead of q.summons) swingAtUndead(undead);
   strikeDecoys();
+  strikeInMadness();
 }
 
-/** Every enemy touching the player swings (one touching two heroes only once), each blow landing in its own time; a charmed one does not. */
+/**
+ * Every enemy touching the player swings (one touching two heroes only once), each blow landing in its own time; a charmed
+ * one does not, nor a maddened one going for one of its own or touching its charmer.
+ */
 function swingAt(player: Player): void {
   for (const mob of enemiesTouching(player)) {
-    if (swung.has(mob) || charmed(mob) || mob.lured !== undefined) continue;
+    if (swung.has(mob) || charmed(mob) || mob.lured !== undefined || madTarget(mob) || sparedBy(mob, world.id(player))) continue;
     swung.add(mob);
     if (strikeLands(mob)) mobStrike(mob, player);
   }
 }
 
-/** A foe held by a charm (Hypnotic Gaze, an illusion) strikes nobody. */
-const charmed = (mob: Entity): boolean => (mob.status?.charmed ?? 0) > 0;
+/** A foe held by a charm (Hypnotic Gaze, an illusion, Charm Person), asleep (Sleep) or incapacitated (Hold Person, Tasha's) strikes nobody. */
+const charmed = (mob: Entity): boolean => (mob.status?.charmed ?? 0) > 0 || (mob.status?.asleep ?? 0) > 0 || incapacitated(mob);
 
 /** Every live enemy whose body overlaps the undead's (into the shared `touching` list). */
 function enemiesTouchingUndead(undead: Summon): readonly Entity[] {
@@ -230,6 +242,23 @@ function strikeDecoys(): void {
   }
 }
 
+const maddened = world.with('spellHolds', 'position', 'radius', 'health');
+
+/** A maddened foe (Crown of Madness) strikes the creature it went for once its body reaches it. */
+function strikeInMadness(): void {
+  for (const mob of maddened) {
+    if (swung.has(mob) || mob.health.current <= 0 || charmed(mob) || !mob.mobType || !mob.mobWeapon) continue;
+    const victim = madTarget(mob);
+    if (!victim?.position || !victim.radius) continue;
+    const reach = mob.radius.x + victim.radius.x + CONTACT_REACH + DECOY_REACH;
+    if (Math.hypot(victim.position.x - mob.position.x, victim.position.y - mob.position.y) > reach) continue;
+    swung.add(mob);
+    if (!strikeLands(mob)) continue;
+    const outcome = strike(victim, monsterAttack(mob.mobType, mob.mobWeapon), mob);
+    if (outcome.hit) hitMob(victim, mob, enfeebledDamage(mob, outcome.damage), false, weaponStats(mob.mobWeapon).type);
+  }
+}
+
 function knockBack(player: Entity, source: Entity): void {
   const spos = source.position;
   const ppos = player.position;
@@ -271,9 +300,13 @@ export function hurtPlayer(player: Entity, source: Entity, damage: number, type:
   if (absorbed > 0) player.tempHealth = (player.tempHealth ?? 0) - absorbed;
 
   h.current = Math.max(0, h.current - (finalDamage - absorbed));
+  // The damage over the hero's head, in red (with its kind, unless a weapon's).
+  logHurt(player, finalDamage, type);
   stagger(player, source);
-  // A spell held by concentration may slip (a Constitution save).
+  // A spell held by concentration may slip (a Constitution save); fits of laughter may be shaken off.
   if (isPlayer(player)) keepConcentration(player, finalDamage);
+  shakeOff(player);
+  afflict(player, type);
 
   if (player.position) sound.playSound('hurt', player.position.x, player.position.y);
 }

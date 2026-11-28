@@ -60,6 +60,31 @@ export const RING_ARRIVED = 4;
  */
 export const RING_WALK_ROUND = Math.PI / 4;
 export const RING_WALK_WIDEN = 1.8;
+/**
+ * At most this many enemies fight a hero hand to hand at once (the nearest of its squad); the rest of the melee fighters
+ * hold off at WAIT_RADIUS round the fight and step in as a place frees up — or go for another hero with room round them
+ * (decision/engagement.ts).
+ */
+export const MELEE_SLOTS = 3;
+/** Enemies waiting their turn stand this far from the hero they hunt (px), and go to it once within this much of their spot. */
+export const WAIT_RADIUS = 4 * TILE_WIDTH;
+export const WAIT_ARRIVED = 10;
+/**
+ * A waiting enemy goes for another hero instead when one with a free place stands within this range and in its sight
+ * (looked for this often, ticks).
+ */
+export const RETARGET_RANGE = 9 * TILE_WIDTH;
+export const RETARGET_TICKS = 30;
+/**
+ * Enemies that fight from afar (a bow, a crossbow, spells) keep between these distances from their target (px): nearer,
+ * they back off (a ranged attack within 5 feet of a foe has disadvantage, rules/CloseQuarters.ts); further, or out of
+ * sight, they close in.
+ */
+export const SKIRMISH_MIN = 4.5 * TILE_WIDTH;
+export const SKIRMISH_MAX = 8 * TILE_WIDTH;
+/** How far past SKIRMISH_MIN an enemy backing off aims to get, so it does not stop at the very edge (px). */
+export const BACK_OFF_MARGIN = TILE_WIDTH;
+
 /** An ally below this share of its health, or fighting alone, gets help. */
 export const SUPPORT_HEALTH = 0.6;
 /** Supporters head for allies no farther than this. */

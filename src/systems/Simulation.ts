@@ -21,10 +21,12 @@ import { updateTraps } from './TrapSystem';
 import { updateMist } from './MistSystem';
 import { updateVfx } from './VfxSystem';
 import { updateAimGuide } from './AimGuideSystem';
+import { updateThrowAim } from './ThrowAimSystem';
 import { updateShop } from './ShopSystem';
 import { animateTraders } from './TraderSystem';
 import { updateRespawns } from './RespawnSystem';
 import { updateSprites } from './SpriteSystem';
+import { updateCorpses } from './CorpseSystem';
 import { updateFx } from './FxSystem';
 import { animateDummies, updateDummies } from './DummySystem';
 import { updateCharacterFacing } from './CharacterFacingSystem';
@@ -49,13 +51,28 @@ import { updateParty } from '../game/Party';
 import { updateLootRolls } from '../game/LootRoll';
 import { updateStashes } from './StashSystem';
 import { updateMarker } from './MarkerSystem';
+import { updateConditionRings } from './ConditionRingSystem';
 import { updateBuildLock } from '../game/Customize';
 import { updateSafeRooms } from './SafeRoomSystem';
 import { updateProtection } from './ProtectionSystem';
 import { updateManeuvers } from './ManeuverSystem';
+import { updateWeaponActions } from './WeaponActions';
+import { updateWeaponMarks } from './WeaponMarks';
+import { hitMob } from './Hits';
 import { updateFeatureTimers, updateSurvivor } from './FeatureSystem';
 import { updateSchools } from './SchoolSystem';
 import { updateLastingSpells } from './LastingSpells';
+import { updateSurfaces } from './Surfaces';
+import { updateDancingLights } from './DancingLights';
+import { updateFogClouds } from './FogCloud';
+import { updateSpellHolds } from './SpellHolds';
+import { updateInvisibility } from './Invisibility';
+import { updateGusts } from './GustOfWind';
+import { updateAfflictions } from './Afflictions';
+import { updateImages } from './ImageSystem';
+import { updateWeaponSigns } from './WeaponSignSystem';
+import { updateClouds } from './CloudSystem';
+import { updateThrows } from './ThrowSystem';
 import { updateSummons } from './SummonSystem';
 import { updateMusic } from './MusicSystem';
 import { updateAmbience } from './AmbienceSystem';
@@ -80,6 +97,7 @@ export const SIMULATION: readonly System[] = [
   () => beginPerception(),
   ({ dt }) => updateRespawns(dt),
   () => updateInput(),
+  () => updateThrowAim(),
   () => updateTargeting(),
   () => resolveUses(),
   ({ level }) => updateInventory(level),
@@ -88,6 +106,7 @@ export const SIMULATION: readonly System[] = [
   ({ level }) => updateEnemyRanged(level),
   ({ level }) => updateSummons(level),
   () => updateDecoys(),
+  ({ level, tick }) => updateThrows(level, tick),
   () => updateInitiative(),
   () => updateArrows(),
   () => updateSword(),
@@ -122,15 +141,26 @@ export const SIMULATION: readonly System[] = [
   ({ level }) => updateSafeRooms(level),
   () => updateProtection(),
   () => updateManeuvers(),
+  () => updateWeaponActions(),
+  // Bleeding foes bleed: its slashing damage, credited to whoever opened the wound.
+  () => updateWeaponMarks((foe, by, damage) => hitMob(foe, by, damage, true, 'slashing')),
   () => updateSurvivor(),
   () => updateFeatureTimers(),
   () => updateSchools(),
-  () => updateLastingSpells(),
+  ({ level }) => updateLastingSpells(level),
+  () => updateSpellHolds(),
+  ({ level }) => updateInvisibility(level),
+  () => updateGusts(),
+  () => updateAfflictions(),
+  () => updateSurfaces(),
+  ({ tick }) => updateDancingLights(tick),
+  () => updateFogClouds(),
   (ctx) => { if (ctx.level.tilesDirty) ctx.rebuildTerrain(); },
 ];
 
 export const PRESENTATION: readonly System[] = [
   ({ gameLayer }) => updateSprites(gameLayer),
+  ({ gameLayer }) => updateCorpses(gameLayer),
   () => updateFx(),
   () => animateDummies(),
   () => animateTraders(),
@@ -139,10 +169,14 @@ export const PRESENTATION: readonly System[] = [
   () => updateCharacterAnimation(),
   () => updateAnimation(),
   ({ level }) => updateRender(level),
+  () => updateImages(),
+  ({ gameLayer }) => updateWeaponSigns(gameLayer),
+  ({ gameLayer }) => updateClouds(gameLayer),
   ({ gameLayer }) => updateBars(gameLayer),
   ({ gameLayer }) => updateRollTexts(gameLayer),
+  ({ gameLayer }) => updateConditionRings(gameLayer),
   ({ gameLayer }) => updateMarker(gameLayer),
-  ({ overLayer }) => updateAimGuide(overLayer),
+  ({ overLayer, level }) => updateAimGuide(overLayer, level),
   ({ gameLayer, tick }) => updateMist(gameLayer, tick),
   ({ gameLayer }) => updateVfx(gameLayer),
   () => updateMusic(),

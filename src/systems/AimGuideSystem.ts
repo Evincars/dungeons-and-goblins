@@ -1,6 +1,5 @@
 import { Graphics } from 'pixi.js';
 import type { Container } from 'pixi.js';
-import { localPlayer } from '../world';
 import type { Entity, Player } from '../world';
 import { screenToWorld } from '../render/Camera';
 import { heldQuickSlot, pointer, pointerFree } from './InputSystem';
@@ -22,13 +21,24 @@ import { SPELL_STATS } from '../entities/WeaponStats';
 import { AIM_HEIGHT } from '../entities/ProjectileFactory';
 import { nearby, Sense } from '../ai/perception/spatial';
 import { PixelLabel } from '../ui/PixelText';
+import { bracketPath } from './MarkerSystem';
+import { allyAt } from './AllySpells';
+import { foeAt, hexTargets } from './SpellHolds';
+import { hiddenHere } from './Invisibility';
+import { stepTarget } from './MistyStep';
+import type { Level } from '../level/Level';
+import { q, isActivePlayer, localPlayer } from '../world';
+import type { InventoryItem } from '../world';
+import { readiedThrow } from '../game/ThrowAim';
+import { foeHitAt, landingPoint, throwRadius, throwReach, thrownKindOf } from './ThrowSystem';
 
 /**
  * Where a shot will go, shown faintly while the hero aims. A bolt, darts or an arrow fly straight: a dotted line from the
  * hero's hands the way they aim, as far as the shot flies (it goes off there if it strikes nothing on the way) — grey, and
  * amber past a bow's normal range, where shots roll with disadvantage. A spell with an area shows only that area where it
  * will go off — a circle, a square (a cube), or a cone or a line from the hands — at the crosshair, or as far towards it as it reaches,
- * a faint mark under each enemy it would catch, and how far off it is, in feet. A spell's guide shows while its quick-bar key
+ * a faint mark under each enemy it would catch, and how far off it is, in feet. A spell for a companion (Longstrider,
+ * Protection from Evil and Good) frames the hero it would go to in corner brackets, red beyond its reach. A spell's guide shows while its quick-bar key
  * is held (let go, it casts) or while it is cast; a bow's or crossbow's while it is in hand. Drawn on this screen only.
  */
 
@@ -50,6 +60,13 @@ const CAUGHT_RY = 3;
 /** The distance label sits this far right of and above the point it measures to. */
 const LABEL_DX = 6;
 const LABEL_DY = -12;
+/** The brackets round a companion an ally spell would go to: half their body's breadth and height, its middle this far up. */
+const ALLY_BOX = { halfW: 11, halfH: 17, lift: 15 };
+/** A foe's brackets stand this far out from its body each side, at least as wide as a hero's. */
+const BOX_MARGIN = 4;
+/** Where Misty Step comes out, a mark on the floor this wide and deep. */
+const STEP_RX = 9;
+const STEP_RY = 4;
 /** Over the world, under the fog and the HUD (as the corner brackets). */
 const GUIDE_Z = 999_999;
 
@@ -58,7 +75,13 @@ const GUIDE_Z = 999_999;
  * for a shot that flies straight). `radius` and `landsWhere` describe that area: its breadth, and whether it is thrown at
  * the crosshair or wrapped round the caster.
  */
-export type Aim = { reach: number; normal: number; radius: number; landsWhere: 'target' | 'caster'; area: AreaShape | null };
+export type Aim = {
+  reach: number; normal: number; radius: number; landsWhere: 'target' | 'caster' | 'ally' | 'foe' | 'step' | 'throw'; area: AreaShape | null;
+  /** The spell aimed, for a step (Misty Step: where it lands is worked out as the cast will) or a hex (the foes it takes). */
+  spell?: SpellDef;
+  /** The item held ready to throw (the inventory's Throw, game/ThrowAim.ts). */
+  item?: InventoryItem;
+};
 
 let guide: Graphics | null = null;
 let label: PixelLabel | null = null;
@@ -74,7 +97,8 @@ const caught: Entity[] = [];
 function aimedSpell(player: Player, binding: QuickBinding): SpellDef | null {
   if (!isSpellId(binding.spell)) return null;
   const def = castDef(SPELLS[binding.spell], binding.level, player.playerStats.level);
-  if (def.kind === 'buff') return null;
+  // See Invisibility shows how far round the caster it sees; no other buff is aimed.
+  if (def.kind === 'buff') return def.buff === 'see_invisibility' ? def : null;
   return def.kind === 'heal' && def.radius <= 0 ? null : def;
 }
 
@@ -84,9 +108,15 @@ function areaAim(area: AreaShape): Aim {
   return { reach: area.range, normal: area.range, radius: area.radius, landsWhere: thrown ? 'target' : 'caster', area };
 }
 
-/** A shot that flies straight (as far as a spell bolt flies), or a spell's area. */
+/** Whether a spell flies straight as a bolt does (Sleep's mote too). */
+const fliesStraight = (def: SpellDef): boolean => def.kind === 'bolt' || def.kind === 'missiles' || def.kind === 'sleep';
+
+/** A shot that flies straight (as far as a spell bolt flies), a companion to touch, or a spell's area. */
 function spellAim(def: SpellDef): Aim {
-  if (def.kind !== 'bolt' && def.kind !== 'missiles') return areaAim(def);
+  if (def.kind === 'ally') return { reach: def.range, normal: def.range, radius: 0, landsWhere: 'ally', area: null };
+  if (def.kind === 'hex') return { reach: def.range, normal: def.range, radius: 0, landsWhere: 'foe', area: null, spell: def };
+  if (def.kind === 'teleport') return { reach: def.range, normal: def.range, radius: 0, landsWhere: 'step', area: null, spell: def };
+  if (!fliesStraight(def)) return areaAim(def);
   const reach = SPELL_STATS.boltSpeed * SPELL_STATS.boltLife;
   return { reach, normal: reach, radius: 0, landsWhere: 'target', area: null };
 }
@@ -102,8 +132,17 @@ function slotAim(player: Player, slot: number): Aim | null {
   return spell ? spellAim(spell) : null;
 }
 
-/** What the hero aims now, if anything: the spell or feature being cast or whose key is held, else the bow in hand. */
+/** The item the hero holds ready to throw, if it is still where it was taken from. */
+function itemToThrow(player: Player): InventoryItem | null {
+  const place = readiedThrow();
+  if (!place) return null;
+  return ('bag' in place ? player.inventory?.[place.bag] : player.equipped?.[place.slot]) ?? null;
+}
+
+/** What the hero aims now, if anything: an item held ready to throw, the spell or feature being cast or whose key is held, else the bow in hand. */
 export function currentAim(player: Player): Aim | null {
+  const item = itemToThrow(player);
+  if (item) return { reach: throwReach(item), normal: throwReach(item), radius: throwRadius(item), landsWhere: 'throw', area: null, item };
   const slot = player.casting ? player.playerInput.spellSlot : heldQuickSlot();
   const aimed = slotAim(player, slot);
   if (aimed) return aimed;
@@ -153,18 +192,45 @@ function drawLine(g: Graphics, x0: number, y0: number, ux: number, uy: number, a
   g.circle(x0 + ux * a.reach, y0 + uy * a.reach, END_RADIUS).stroke({ color: end, alpha: RING_ALPHA * 2, width: 1 });
 }
 
-/** A spell's area as it will go off: a circle, a square (a cube), or a cone or a line from the caster's hands. */
+/** The corners of an area's outline are rounded this much (px), no more than this share of its breadth (a small area stays a shape). */
+const CORNER_RADIUS = 6;
+const CORNER_SHARE = 0.3;
+/** A soft halo round the area's edge, this wide and this faint, and a second faint line this far inside it. */
+const HALO_WIDTH = 4;
+const HALO_ALPHA = 0.08;
+const INSET = 3;
+const INSET_ALPHA = 0.14;
+/** The mark at the middle of an area thrown at a point: a small diamond this big. */
+const MIDDLE_MARK = 2.5;
+
+/** How round an area's corners are: CORNER_RADIUS, smaller for a small area. */
+const cornerOf = (def: AreaShape): number => Math.min(CORNER_RADIUS, def.radius * CORNER_SHARE);
+
+/** Traces an area's outline, `inset` px inside its edge (a circle and a square only), with rounded corners. */
+function traceShape(g: Graphics, def: AreaShape, from: Point, at: Point, inset: number): void {
+  const corner = cornerOf(def);
+  const r = def.radius - inset;
+  if (def.area === 'cube') g.roundRect(at.x - r, at.y - r, r * 2, r * 2, Math.max(0, corner - inset));
+  else if (def.area === 'sphere') g.circle(at.x, at.y, r);
+  else if (def.area === 'line') g.roundShape(lineCorners(def, from, at, lineEnds), corner);
+  else g.roundShape(coneCorners(def, from, at, corners), corner);
+}
+
+/**
+ * A spell's area as it will go off: a circle, a square (a cube), or a cone or a line from the caster's hands, its corners
+ * rounded, a faint fill under a soft halo and a clean edge; a circle or a square has a faint line just inside its edge and a
+ * small mark at its middle.
+ */
 function drawShape(g: Graphics, def: AreaShape, from: Point, at: Point): void {
-  if (def.area === 'cube') g.rect(at.x - def.radius, at.y - def.radius, def.radius * 2, def.radius * 2);
-  else if (def.area === 'sphere') g.circle(at.x, at.y, def.radius);
-  else if (def.area === 'line') {
-    const [a, b, c, d] = lineCorners(def, from, at, lineEnds);
-    g.poly([a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y]);
-  } else {
-    const [a, b, c] = coneCorners(def, from, at, corners);
-    g.poly([a.x, a.y, b.x, b.y, c.x, c.y]);
-  }
-  g.fill({ color: IN_REACH, alpha: FILL_ALPHA }).stroke({ color: IN_REACH, alpha: RING_ALPHA, width: 1 });
+  traceShape(g, def, from, at, 0);
+  g.stroke({ color: IN_REACH, alpha: HALO_ALPHA, width: HALO_WIDTH })
+    .fill({ color: IN_REACH, alpha: FILL_ALPHA })
+    .stroke({ color: IN_REACH, alpha: RING_ALPHA, width: 1 });
+  if (fromHands(def) || def.radius <= INSET * 2) return;
+  traceShape(g, def, from, at, INSET);
+  g.stroke({ color: IN_REACH, alpha: INSET_ALPHA, width: 1 });
+  g.poly([at.x, at.y - MIDDLE_MARK, at.x + MIDDLE_MARK, at.y, at.x, at.y + MIDDLE_MARK, at.x - MIDDLE_MARK, at.y])
+    .fill({ color: IN_REACH, alpha: RING_ALPHA });
 }
 
 /** The area, and a faint mark under each enemy standing in it. */
@@ -172,7 +238,7 @@ function drawArea(g: Graphics, def: AreaShape, from: Point, at: Point): void {
   drawShape(g, def, from, at);
   const near = areaBounds(def, from, at, bounds);
   for (const foe of nearby(near.x, near.y, near.r, Sense.mob, caught)) {
-    if (!foe.position || (foe.health?.current ?? 0) <= 0) continue;
+    if (!foe.position || (foe.health?.current ?? 0) <= 0 || hiddenHere(foe)) continue;
     if (inArea(def, from, at, foe.position.x, foe.position.y)) g.ellipse(foe.position.x, foe.position.y, CAUGHT_RX, CAUGHT_RY);
   }
   g.stroke({ color: OUT_OF_REACH, alpha: CAUGHT_ALPHA, width: 1 });
@@ -199,8 +265,104 @@ function guideArea(g: Graphics, text: PixelLabel, player: Player, def: AreaShape
   showDistance(text, centre.x, centre.y, dist, IN_REACH);
 }
 
+/**
+ * A spell for a companion: corner brackets round the hero it would go to (the one under the crosshair, else the caster), grey
+ * within its reach, red beyond it, and how far off they are.
+ */
+function guideAlly(g: Graphics, text: PixelLabel, player: Player, a: Aim): void {
+  const ally = allyAt(player, aim.x, aim.y);
+  const x = ally.position.x;
+  const y = ally.position.y - ALLY_BOX.lift;
+  const dist = Math.hypot(ally.position.x - player.position.x, ally.position.y - player.position.y);
+  const colour = ally === player || dist <= a.reach ? IN_REACH : OUT_OF_REACH;
+  bracketPath(g, x, y, ALLY_BOX.halfW, ALLY_BOX.halfH).stroke({ color: colour, alpha: RING_ALPHA * 2, width: 1 });
+  if (ally !== player) showDistance(text, x + ALLY_BOX.halfW, y - ALLY_BOX.halfH, dist, colour);
+}
+
+/** Corner brackets round a foe's body standing at (x, y), in a colour; returns how wide they stand either side of it. */
+function frameFoe(g: Graphics, foe: Entity, x: number, y: number, colour: number, alpha: number): number {
+  const halfW = Math.max(ALLY_BOX.halfW, (foe.radius?.x ?? 0) + BOX_MARGIN);
+  bracketPath(g, x, y - ALLY_BOX.lift, halfW, ALLY_BOX.halfH).stroke({ color: colour, alpha, width: 1 });
+  return halfW;
+}
+
+/**
+ * A hex (Hold Person, Charm Person…): corner brackets round the foe it would go to (the one under the crosshair), grey within
+ * its range, red beyond it, and how far off it is; cast above its level, fainter brackets round each other foe it would take
+ * too (the nearest to the first, as the cast picks them). With no foe there, a small red mark at the crosshair.
+ */
+function guideFoe(g: Graphics, text: PixelLabel, player: Player, a: Aim): void {
+  const foe = foeAt(aim.x, aim.y);
+  if (!foe?.position) {
+    g.circle(aim.x, aim.y, END_RADIUS).stroke({ color: OUT_OF_REACH, alpha: RING_ALPHA * 2, width: 1 });
+    return;
+  }
+  const dist = Math.hypot(foe.position.x - player.position.x, foe.position.y - player.position.y);
+  const colour = dist <= a.reach ? IN_REACH : OUT_OF_REACH;
+  const halfW = frameFoe(g, foe, foe.position.x, foe.position.y, colour, RING_ALPHA * 2);
+  showDistance(text, foe.position.x + halfW, foe.position.y - ALLY_BOX.lift - ALLY_BOX.halfH, dist, colour);
+  if (!a.spell || colour !== IN_REACH) return;
+  for (const other of hexTargets(a.spell, foe)) {
+    if (other !== foe && other.position) frameFoe(g, other, other.position.x, other.position.y, IN_REACH, RING_ALPHA);
+  }
+}
+
+/** A companion a thrown potion or flask would wet: a green mark under their feet (a foe's is red). */
+const FRIEND = 0x6ad86a;
+const landed = { x: 0, y: 0 };
+
+/** A mark under a body the throw would reach, in its side's colour. */
+function markBody(g: Graphics, at: Point, colour: number): void {
+  g.ellipse(at.x, at.y, CAUGHT_RX, CAUGHT_RY).fill({ color: colour, alpha: FILL_ALPHA * 2 }).stroke({ color: colour, alpha: CAUGHT_ALPHA, width: 1 });
+}
+
+/**
+ * Something thrown (the inventory's Throw): dots from the hands to where it lands (the crosshair, or as far that way as it
+ * flies), its splash there — a potion's small, a flask's wider — with a mark under everyone it would wet, green under the
+ * heroes and red under foes; anything else, a small ring and a red mark under the foe it would strike. How far, in feet.
+ */
+function guideThrow(g: Graphics, text: PixelLabel, player: Player, a: Aim): void {
+  if (!a.item) return;
+  const from = player.position;
+  const to = landingPoint(from, a.reach, aim.x, aim.y, landed);
+  const dist = Math.hypot(to.x - from.x, to.y - from.y);
+  // From the hands down to where it lands.
+  const handY = from.y - AIM_HEIGHT;
+  const flight = Math.hypot(to.x - from.x, to.y - handY);
+  if (flight > 0) dots(g, from.x, handY, (to.x - from.x) / flight, (to.y - handY) / flight, 0, flight, IN_REACH);
+  g.circle(to.x, to.y, a.radius).stroke({ color: IN_REACH, alpha: HALO_ALPHA, width: HALO_WIDTH })
+    .fill({ color: IN_REACH, alpha: FILL_ALPHA }).stroke({ color: IN_REACH, alpha: RING_ALPHA, width: 1 });
+  showDistance(text, to.x, to.y, dist, IN_REACH);
+  if (thrownKindOf(a.item) === 'object') {
+    const foe = foeHitAt(to.x, to.y, -1);
+    if (foe?.position && !hiddenHere(foe)) markBody(g, foe.position, OUT_OF_REACH);
+    return;
+  }
+  for (const hero of q.players) {
+    if (isActivePlayer(hero) && Math.hypot(hero.position.x - to.x, hero.position.y - to.y) <= a.radius) markBody(g, hero.position, FRIEND);
+  }
+  for (const foe of nearby(to.x, to.y, a.radius + CAUGHT_RX, Sense.mob, caught)) {
+    if (!foe.position || (foe.health?.current ?? 0) <= 0 || hiddenHere(foe)) continue;
+    if (Math.hypot(foe.position.x - to.x, foe.position.y - to.y) <= a.radius) markBody(g, foe.position, OUT_OF_REACH);
+  }
+}
+
+/** Misty Step: dots to where the caster would come out of the mist, a ring there and how far it is; red at the crosshair if nowhere. */
+function guideStep(g: Graphics, text: PixelLabel, player: Player, a: Aim, level: Level | undefined): void {
+  const to = level && a.spell ? stepTarget(level, player, a.spell, aim.x, aim.y) : null;
+  if (!to) {
+    g.circle(aim.x, aim.y, END_RADIUS).stroke({ color: OUT_OF_REACH, alpha: RING_ALPHA * 2, width: 1 });
+    return;
+  }
+  const { x, y } = player.position;
+  const dist = Math.hypot(to.x - x, to.y - y);
+  if (dist > 0) dots(g, x, y, (to.x - x) / dist, (to.y - y) / dist, 0, dist, IN_REACH);
+  g.ellipse(to.x, to.y, STEP_RX, STEP_RY).fill({ color: IN_REACH, alpha: FILL_ALPHA }).stroke({ color: IN_REACH, alpha: RING_ALPHA * 2, width: 1 });
+  showDistance(text, to.x, to.y, dist, IN_REACH);
+}
+
 /** Once a tick: the guide for what this screen's hero aims, or nothing. */
-export function updateAimGuide(gameLayer: Container): void {
+export function updateAimGuide(gameLayer: Container, level?: Level): void {
   const { g, text } = layers(gameLayer);
   g.clear();
   text.visible = false;
@@ -211,6 +373,22 @@ export function updateAimGuide(gameLayer: Container): void {
   screenToWorld(p.x, p.y, aim);
   if (a.area) {
     guideArea(g, text, player, a.area, a.landsWhere === 'target');
+    return;
+  }
+  if (a.landsWhere === 'ally') {
+    guideAlly(g, text, player, a);
+    return;
+  }
+  if (a.landsWhere === 'foe') {
+    guideFoe(g, text, player, a);
+    return;
+  }
+  if (a.landsWhere === 'step') {
+    guideStep(g, text, player, a, level);
+    return;
+  }
+  if (a.landsWhere === 'throw') {
+    guideThrow(g, text, player, a);
     return;
   }
   // A shot leaves from hand height and flies at the crosshair (the hero's aim is taken from there, MovementSystem.ts), so

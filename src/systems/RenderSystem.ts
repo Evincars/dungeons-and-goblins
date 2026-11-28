@@ -74,6 +74,8 @@ function syncOverlay(entity: Entity, sprite: Sprite): void {
 
 /** Rugs lie between the terrain (at -1) and everything that stands, which sorts by its feet (0 and down the map). */
 const FLAT_Z = -0.5;
+/** The dead lie on the floor (systems/CorpseSystem.ts): over their pool of blood, under everyone standing and under the walls. */
+const CORPSE_Z = -0.48;
 /** A faller fades out over the last part of the drop (from this share of it), into the dark of the pit. */
 const FADE_FROM = 0.55;
 /** The mask over a pit reaches this far into its top, besides everything straight above it (the faller's upper body). */
@@ -147,6 +149,7 @@ function syncFall(entity: Entity, sprite: Sprite, level: Level): void {
  */
 function drawOrder(entity: Entity, pos: { x: number; y: number }): number {
   if (entity.flat) return FLAT_Z;
+  if (entity.corpse) return CORPSE_Z;
   const fx = entity.fx;
   if (fx?.orderId === undefined) return pos.y;
   return (world.entity(fx.orderId)?.position?.y ?? pos.y) + (fx.orderBias ?? 0);

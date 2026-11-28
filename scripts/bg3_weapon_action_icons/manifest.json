@@ -1,0 +1,102 @@
+[
+  {
+    "action": "Backbreaker",
+    "url": "https://bg3.wiki/w/images/e/e0/Backbreaker_Icon.webp",
+    "file": "Backbreaker.png"
+  },
+  {
+    "action": "Brace (Melee)",
+    "url": "https://bg3.wiki/w/images/f/fd/Brace_Melee_Icon.webp",
+    "file": "Brace (Melee).png"
+  },
+  {
+    "action": "Cleave",
+    "url": "https://bg3.wiki/w/images/a/a7/Cleave_Icon.webp",
+    "file": "Cleave.png"
+  },
+  {
+    "action": "Concussive Smash",
+    "url": "https://bg3.wiki/w/images/5/57/Concussive_Smash_Icon.webp",
+    "file": "Concussive Smash.png"
+  },
+  {
+    "action": "Maiming Strike",
+    "url": "https://bg3.wiki/w/images/b/bc/Crippling_Strike_Icon.webp",
+    "file": "Maiming Strike.png"
+  },
+  {
+    "action": "Disarming Strike",
+    "url": "https://bg3.wiki/w/images/0/0b/Disarming_Attack_Melee_Icon.webp",
+    "file": "Disarming Strike.png"
+  },
+  {
+    "action": "Flourish",
+    "url": "https://bg3.wiki/w/images/2/26/Flourish_Icon.webp",
+    "file": "Flourish.png"
+  },
+  {
+    "action": "Heartstopper",
+    "url": "https://bg3.wiki/w/images/5/5a/Heartstopper_Icon.webp",
+    "file": "Heartstopper.png"
+  },
+  {
+    "action": "Lacerate",
+    "url": "https://bg3.wiki/w/images/a/af/Lacerate_Icon.webp",
+    "file": "Lacerate.png"
+  },
+  {
+    "action": "Piercing Strike",
+    "url": "https://bg3.wiki/w/images/c/c4/Piercing_Strike_Icon.webp",
+    "file": "Piercing Strike.png"
+  },
+  {
+    "action": "Pommel Strike",
+    "url": "https://bg3.wiki/w/images/1/1e/Pommel_Strike_Icon.webp",
+    "file": "Pommel Strike.png"
+  },
+  {
+    "action": "Prepare",
+    "url": "https://bg3.wiki/w/images/3/3c/Prepare_Icon.webp",
+    "file": "Prepare.png"
+  },
+  {
+    "action": "Rush Attack",
+    "url": "https://bg3.wiki/w/images/1/1a/Rush_Attack_Icon.webp",
+    "file": "Rush Attack.png"
+  },
+  {
+    "action": "Tenacity",
+    "url": "https://bg3.wiki/w/images/8/86/Tenacity_Icon.webp",
+    "file": "Tenacity.png"
+  },
+  {
+    "action": "Topple",
+    "url": "https://bg3.wiki/w/images/c/c8/Topple_Icon.webp",
+    "file": "Topple.png"
+  },
+  {
+    "action": "Weakening Strike",
+    "url": "https://bg3.wiki/w/images/8/86/Weakening_Strike_Icon.webp",
+    "file": "Weakening Strike.png"
+  },
+  {
+    "action": "Brace (Ranged)",
+    "url": "https://bg3.wiki/w/images/1/19/Brace_Ranged_Icon.webp",
+    "file": "Brace (Ranged).png"
+  },
+  {
+    "action": "Hamstring Shot",
+    "url": "https://bg3.wiki/w/images/f/fa/Hamstring_Shot_Icon.webp",
+    "file": "Hamstring Shot.png"
+  },
+  {
+    "action": "Mobile Shot",
+    "url": "https://bg3.wiki/w/images/9/9b/Mobile_Shot_Icon.webp",
+    "file": "Mobile Shot.png"
+  },
+  {
+    "action": "Piercing Shot",
+    "url": "https://bg3.wiki/w/images/9/90/Piercing_Shot_Icon.webp",
+    "file": "Piercing Shot.png"
+  }
+]

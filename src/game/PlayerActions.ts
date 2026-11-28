@@ -1,4 +1,9 @@
-import { q, isPlayer } from '../world';
+import { q, isActivePlayer, isPlayer } from '../world';
+import { THROWABLES, isThrowableId } from '../rules/Throwables';
+import { quaff, throwItem } from '../systems/ThrowSystem';
+import { heroHeld } from '../systems/SpellHolds';
+import { bindingActionId, weaponsWithAction } from '../rules/WeaponActions';
+import type { WeaponActionId } from '../rules/WeaponActions';
 import type { BagSquare, EquipSlot, Entity, InventoryItem, Player, PlayerSlot } from '../world';
 import { sound } from '../audio/SoundPlayer';
 import { coop } from '../network/CoopSession';
@@ -19,16 +24,20 @@ import { chooseLoot } from './LootRoll';
 import { applyCustomization, isCustomizeCommand } from './Customize';
 import { EMPTY_SQUARE, UNBOUND, canBind, featSpellBindable, roomToBind, spellListOf } from '../rules/Spellbook';
 import type { QuickBinding } from '../rules/Spellbook';
+import type { DamageType } from '../rules/DamageTypes';
+import { validChoice } from '../rules/DamageChoice';
 import { bindingFeatureId, canToggle, hasClassFeature } from '../rules/ClassFeatures';
 import { FEATS, bindingFeatId } from '../rules/Feats';
 import type { FeatId } from '../rules/Feats';
 import { passiveFeats } from '../rules/Build';
-import { heroClass } from '../rules/Classes';
+import { heroClass, weaponProficient } from '../rules/Classes';
 import { chooseDeparture } from '../systems/ExitSystem';
 import { characterSheet } from '../rules/CharacterSheet';
 import { endMageArmour } from '../systems/LastingSpells';
 import { needsBothHands, strengthNeeded, strongEnough } from '../rules/Equipment';
 import { MAX_CARRY_KG as CARRY_KG } from '../rules/Encumbrance';
+import { validVariant } from '../rules/SpellVariants';
+import type { SpellVariant } from '../rules/SpellVariants';
 
 /**
  * What players do from the shop and inventory panels. In a lone game or on the host it happens at once;
@@ -105,16 +114,63 @@ export function receiveItem(player: Player, item: InventoryItem): boolean {
   return true;
 }
 
-/** The inventory's "Drop": the item leaves the bag (or the body) and is set down at the hero's feet, to be taken again with E. */
-export function dropItem(player: Player, from: ItemPlace): boolean {
+/** The item on a square of the bag (or worn) taken out of the hero's hands, if there is one there. */
+function takeOut(player: Player, from: ItemPlace): InventoryItem | null {
   const loadout: Loadout = { inventory: [...(player.inventory ?? [])], equipped: { ...player.equipped } };
   const item = itemAt(loadout, from);
-  if (!item) return false;
+  if (!item) return null;
   if ('bag' in from) loadout.inventory[from.bag] = null;
   else delete loadout.equipped[from.slot];
   applyLoadout(player, { inventory: trimmed(loadout.inventory), equipped: loadout.equipped });
+  return item;
+}
+
+/** The inventory's "Drop": the item leaves the bag (or the body) and is set down at the hero's feet, to be taken again with E. */
+export function dropItem(player: Player, from: ItemPlace): boolean {
+  const item = takeOut(player, from);
+  if (!item) return false;
   setDownItem(player.position.x, player.position.y, item);
   return true;
+}
+
+/** Whether the hero can throw or drink now: on their feet, not held by a spell, their arm free of a swing or a throw. */
+function handsFree(player: Player): boolean {
+  return isActivePlayer(player) && !heroHeld(player) && (player.attackCooldown ?? 0) <= 0;
+}
+
+/**
+ * The inventory's "Throw", aimed in the world (game/ThrowAim.ts): the item leaves the hero's hands towards (x, y), as far as
+ * it can be thrown (systems/ThrowSystem.ts). Not while the hero cannot throw. Returns whether it flew.
+ */
+export function throwFromBag(player: Player, from: ItemPlace, x: number, y: number): boolean {
+  if (!handsFree(player)) return false;
+  const item = takeOut(player, from);
+  if (!item) return false;
+  throwItem(player, item, x, y);
+  return true;
+}
+
+/** The inventory's "Drink": a potion of healing heals the hero who drinks it, and is gone. Returns whether it was drunk. */
+export function drinkPotion(player: Player, from: ItemPlace): boolean {
+  const kind = itemAt({ inventory: player.inventory ?? [], equipped: player.equipped ?? {} }, from)?.kind;
+  if (!isThrowableId(kind) || !THROWABLES[kind].heal || !handsFree(player)) return false;
+  if (!takeOut(player, from)) return false;
+  logLine(player, text('roll.drinks', { item: THROWABLES[kind].name }), 'heal');
+  sound.playSound('cast_healing_word', player.position.x, player.position.y);
+  quaff(player, THROWABLES[kind]);
+  return true;
+}
+
+/** "Throw" aimed: at once here, or asked of the host for a guest. */
+export function requestThrow(player: Player, from: ItemPlace, x: number, y: number): void {
+  if (coop.role === 'guest') coop.sendCommand({ kind: 'throw', from, x, y });
+  else throwFromBag(player, from, x, y);
+}
+
+/** "Drink": at once here, or asked of the host for a guest. */
+export function requestDrink(player: Player, from: ItemPlace): void {
+  if (coop.role === 'guest') coop.sendCommand({ kind: 'drink', from });
+  else drinkPotion(player, from);
 }
 
 /** The inventory's "Drop": at once here, or asked of the host for a guest. */
@@ -411,7 +467,7 @@ export function preparesSpells(player: Player): boolean {
 
 /** Whether this may go on the quick bar now: a spell only in a safe room, a class feature or a Passive Feat anywhere. */
 export function mayPrepare(player: Player, spell: string): boolean {
-  return bindingFeatureId(spell) !== null || bindingFeatId(spell) !== null || preparesSpells(player);
+  return bindingFeatureId(spell) !== null || bindingFeatId(spell) !== null || bindingActionId(spell) !== null || preparesSpells(player);
 }
 
 /** A Passive Feat the hero has that is switched or used from the quick bar (Great Weapon Master, Charger) may be bound; at level 0. */
@@ -421,19 +477,35 @@ function featBindable(player: Player, feat: FeatId, level: number): boolean {
   return level === 0 && (kind === 'toggle' || kind === 'active') && passiveFeats(cls, player.playerStats.level, player.build).includes(feat);
 }
 
-/** Puts a spell, cast at a level, on a quick-bar square if the hero has learnt it, may cast it there and is in a safe room. */
-export function bindSpell(player: Player, slot: number, spell: string, level: number): boolean {
+/**
+ * A weapon action may be bound (at level 0) by a hero proficient with a weapon that unlocks it, whatever they hold now: it is
+ * used only with that weapon in the main hand (systems/WeaponActions.ts).
+ */
+function actionBindable(player: Player, id: WeaponActionId, level: number): boolean {
+  if (level !== 0) return false;
+  const sheet = characterSheet(player);
+  const cls = heroClass(player.heroClass);
+  return weaponsWithAction(id).some((base) => weaponProficient(cls, base, sheet.feats.weapons));
+}
+
+/**
+ * Puts a spell, cast at a level (and, for a spell whose caster picks its damage, of the type chosen), on a quick-bar square
+ * if the hero has learnt it, may cast it there and is in a safe room.
+ */
+export function bindSpell(player: Player, slot: number, spell: string, level: number, damageType?: DamageType, variant?: SpellVariant): boolean {
+  if (!validChoice(spell, damageType) || !validVariant(spell, variant)) return false;
   const list = spellListOf(heroClass(player.heroClass).dndClass, player.build);
   if (!Number.isInteger(slot) || slot < 0 || slot >= QUICK_SLOTS || !mayPrepare(player, spell)) return false;
   const feat = bindingFeatId(spell);
-  const allowed = feat ? featBindable(player, feat, level)
+  const action = bindingActionId(spell);
+  const allowed = action ? actionBindable(player, action, level) : feat ? featBindable(player, feat, level)
     : canBind(list, player.playerStats.level, spell, level, player.build?.spells) || featSpellBindable(player, spell, level);
   if (!allowed) return false;
   const feature = bindingFeatureId(spell);
   if (feature !== null && !hasClassFeature(player, feature)) return false;
   // A wizard keeps only so many cantrips and spells of each level on the bar.
   if (!roomToBind(player, spell, level, slot)) return false;
-  putOnSquare(player, slot, { spell, level });
+  putOnSquare(player, slot, { spell, level, ...(damageType ? { damageType } : {}), ...(variant ? { variant } : {}) });
   return true;
 }
 
@@ -467,7 +539,7 @@ export function loadBindings(player: Player, bound: readonly (QuickBinding | nul
   const book = player.spellbook ?? (player.spellbook = { recovery: Array.from({ length: QUICK_SLOTS }, () => 0) });
   book.bound = Array.from({ length: QUICK_SLOTS }, () => EMPTY_SQUARE);
   bound.forEach((binding, slot) => {
-    if (binding && binding.spell !== UNBOUND) bindSpell(player, slot, binding.spell, binding.level);
+    if (binding && binding.spell !== UNBOUND) bindSpell(player, slot, binding.spell, binding.level, binding.damageType, binding.variant);
   });
   const loaded = book.bound;
   book.bound = loaded.map((binding, slot) => (bound[slot] === null ? null : binding));
@@ -502,9 +574,9 @@ export function requestToggleFeature(player: Player, feature: string): void {
 }
 
 /** The quick bar: bound at once here, or asked of the host for a guest (whose copy the host's next update corrects if refused). */
-export function requestBind(player: Player, slot: number, spell: string, level: number): void {
-  if (coop.role === 'guest') coop.sendCommand({ kind: 'bind_spell', slot, spell, level });
-  else bindSpell(player, slot, spell, level);
+export function requestBind(player: Player, slot: number, spell: string, level: number, damageType?: DamageType, variant?: SpellVariant): void {
+  if (coop.role === 'guest') coop.sendCommand({ kind: 'bind_spell', slot, spell, level, ...(damageType ? { damageType } : {}), ...(variant ? { variant } : {}) });
+  else bindSpell(player, slot, spell, level, damageType, variant);
 }
 
 /** Host: carries out what a guest asked for, if it is allowed for that guest's character. */
@@ -526,6 +598,14 @@ export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): voi
     dropItem(player, command.from);
     return;
   }
+  if (command.kind === 'throw') {
+    throwFromBag(player, command.from, command.x, command.y);
+    return;
+  }
+  if (command.kind === 'drink') {
+    drinkPotion(player, command.from);
+    return;
+  }
   if (isCustomizeCommand(command)) {
     applyCustomization(player, command);
     return;
@@ -536,7 +616,7 @@ export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): voi
     return;
   }
   if (command.kind === 'bind_spell') {
-    bindSpell(player, command.slot, command.spell, command.level);
+    bindSpell(player, command.slot, command.spell, command.level, command.damageType, command.variant);
     return;
   }
   if (command.kind === 'unbind_spell') {

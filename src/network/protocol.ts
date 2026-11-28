@@ -1,4 +1,5 @@
 import { isDepartChoice, isEquipSlot, isGearKind, isItemType, isPlayerSlot, isRestKind, isStatName, PLAYER_SLOTS, QUICK_SLOTS, STAT_NAMES } from '../world';
+import { bindingActionId } from '../rules/WeaponActions';
 import type { BagSquare, DepartChoice, EquipSlot, InventoryItem, PlayerInput, PlayerSlot, RestKind, StatName } from '../world';
 import { validImprovement, validScores } from '../rules/Build';
 import type { Improvement } from '../rules/Build';
@@ -19,8 +20,14 @@ import { isFiniteNumber, isRecord } from '../core/guards';
 import { isItemBase, isMagicBonus } from '../rules/Equipment';
 import { isCatalogSpell, knightListed, MAX_SPELL_LEVEL, UNBOUND } from '../rules/Spellbook';
 import type { QuickBinding } from '../rules/Spellbook';
+import type { DamageType } from '../rules/DamageTypes';
+import { validChoice } from '../rules/DamageChoice';
 import { bindingFeatureId, isFeatureId } from '../rules/ClassFeatures';
 import { bindingFeatId } from '../rules/Feats';
+import { validVariant } from '../rules/SpellVariants';
+import type { SpellVariant } from '../rules/SpellVariants';
+import { isDamageType } from '../rules/DamageTypes';
+import { isDieSides } from '../rules/Dice';
 
 /**
  * What co-op peers say to each other, and the checks every incoming message passes before the game
@@ -62,6 +69,9 @@ export type GuestCommand =
   | { kind: 'give'; from: ItemSquare; to: PlayerSlot }
   /** Drop the item on a square of the inventory at the hero's feet. */
   | { kind: 'drop'; from: ItemSquare }
+  /** Throw the item on a square of the inventory at a point of the world; drink the potion on one. */
+  | { kind: 'throw'; from: ItemSquare; x: number; y: number }
+  | { kind: 'drink'; from: ItemSquare }
   /** Need or Pass on a rare find the party is rolling for (by the id the host gave the roll). */
   | { kind: 'loot'; roll: number; need: boolean }
   /** The hero's bought ability scores, their fighting style, an Ability Score Improvement or a feat (rules/Build.ts). */
@@ -75,7 +85,7 @@ export type GuestCommand =
   /** Save the starting choices for good before leaving the first safe room. */
   | { kind: 'lock_build' }
   /** Put a spell, cast at a level, on a quick-bar square (the host checks the hero may). */
-  | { kind: 'bind_spell'; slot: number; spell: string; level: number }
+  | { kind: 'bind_spell'; slot: number; spell: string; level: number; damageType?: DamageType; variant?: SpellVariant }
   /** Empty a quick-bar square (a right click on it). */
   | { kind: 'unbind_spell'; slot: number }
   /** Put a saved preset on the quick bar: what every square of both rows holds (null: the class's own); in a safe room only. */
@@ -105,6 +115,8 @@ export type Message =
   | { type: 'sound'; name: SfxName; x?: number; y?: number }
   /** A one-shot particle effect the host played (render/VfxPlayer.ts): each guest renders it itself. */
   | { type: 'vfx'; shot: unknown }
+  /** Fire lit the flames the wind blew out within `radius` px of (x, y): each guest lights its own (systems/Snuff.ts). */
+  | { type: 'kindle'; x: unknown; y: unknown; radius: unknown }
   | { type: 'ping' };
 
 const BUTTONS = ['up', 'down', 'left', 'right', 'attack', 'use', 'sprint', 'mouseAiming'] as const satisfies readonly (keyof PlayerInput)[];
@@ -181,6 +193,16 @@ function validStats(stats: unknown): boolean {
     || (isFiniteNumber(stats[k]) && Math.abs(Number(stats[k])) <= MAX_ITEM_STAT));
 }
 
+/** A weapon's extra damage dice can be at most this many (a +3 weapon's 3d6 and then some). */
+const MAX_EXTRA_DICE = 4;
+
+/** A weapon's damage of another kind: none, or a few dice of a real die and a known damage type. */
+function validExtraDamage(value: unknown): boolean {
+  if (value === undefined) return true;
+  return isRecord(value) && Number.isInteger(value.count) && Number(value.count) >= 1 && Number(value.count) <= MAX_EXTRA_DICE
+    && isDieSides(value.sides) && isDamageType(value.type);
+}
+
 export function isInventoryItem(value: unknown): value is InventoryItem {
   if (!isRecord(value) || !isItemType(value.type) || typeof value.name !== 'string' || value.name.length > MAX_ITEM_NAME) return false;
   if (!isFiniteNumber(value.value) || value.value < 0 || value.value > MAX_ITEM_VALUE) return false;
@@ -189,7 +211,7 @@ export function isInventoryItem(value: unknown): value is InventoryItem {
   const idOk = (value.id === undefined || isShortKey(value.id)) && (value.kind === undefined || isShortKey(value.kind));
   const weightOk = value.weight === undefined || (isFiniteNumber(value.weight) && Number(value.weight) >= 0 && Number(value.weight) <= MAX_ITEM_WEIGHT);
   const rulesOk = (value.base === undefined || isItemBase(value.base)) && (value.bonus === undefined || isMagicBonus(value.bonus));
-  return gearOk && iconOk && idOk && weightOk && rulesOk && validStats(value.stats);
+  return gearOk && iconOk && idOk && weightOk && rulesOk && validStats(value.stats) && validExtraDamage(value.extraDamage);
 }
 
 function validEquipped(value: unknown): value is Partial<Record<EquipSlot, InventoryItem>> {
@@ -208,16 +230,18 @@ function isItemSquare(value: unknown): value is ItemSquare {
 }
 
 /** A spell on the quick bar: one of the lists' spells, at a level from 0 to 9 (or a square the player emptied). */
-export function validBinding(spell: unknown, level: unknown): boolean {
-  if (spell === UNBOUND) return level === 0;
-  const named = typeof spell === 'string' && (bindingFeatureId(spell) !== null ? isFeatureId(bindingFeatureId(spell)) : bindingFeatId(spell) !== null || isCatalogSpell(spell));
+export function validBinding(spell: unknown, level: unknown, damageType?: unknown, variant?: unknown): boolean {
+  if (spell === UNBOUND) return level === 0 && damageType === undefined && variant === undefined;
+  if (typeof spell === 'string' && (!validChoice(spell, damageType) || !validVariant(spell, variant))) return false;
+  const named = typeof spell === 'string' && (bindingFeatureId(spell) !== null ? isFeatureId(bindingFeatureId(spell))
+    : bindingFeatId(spell) !== null || bindingActionId(spell) !== null || isCatalogSpell(spell));
   return named && Number.isInteger(level) && Number(level) >= 0 && Number(level) <= MAX_SPELL_LEVEL;
 }
 
 /** A whole quick bar a guest sent: a square for each of both rows, each empty (null) or a binding there may be. */
 function validBindings(bound: unknown): boolean {
   if (!Array.isArray(bound) || bound.length !== QUICK_SLOTS) return false;
-  return bound.every((b) => b === null || (isRecord(b) && validBinding(b.spell, b.level)));
+  return bound.every((b) => b === null || (isRecord(b) && validBinding(b.spell, b.level, b.damageType, b.variant)));
 }
 
 /** The most maneuvers or spells a hero picks at once. */
@@ -237,7 +261,8 @@ export function validCommand(value: unknown): value is GuestCommand {
   if (value.kind === 'vote_answer') return typeof value.agree === 'boolean' && (value.dice === undefined || isDiceCount(value.dice));
   if (value.kind === 'pause') return typeof value.paused === 'boolean';
   if (value.kind === 'give') return isItemSquare(value.from) && isPlayerSlot(value.to);
-  if (value.kind === 'drop') return isItemSquare(value.from);
+  if (value.kind === 'drop' || value.kind === 'drink') return isItemSquare(value.from);
+  if (value.kind === 'throw') return isItemSquare(value.from) && isFiniteNumber(value.x) && isFiniteNumber(value.y) && Math.abs(value.x) <= MAX_AIM && Math.abs(value.y) <= MAX_AIM;
   if (value.kind === 'loot') return Number.isSafeInteger(value.roll) && Number(value.roll) >= 0 && typeof value.need === 'boolean';
   if (value.kind === 'scores') return validScores(value.scores);
   if (value.kind === 'fighting_style' || value.kind === 'extra_style') return isFightingStyle(value.style);
@@ -249,13 +274,23 @@ export function validCommand(value: unknown): value is GuestCommand {
   if (value.kind === 'depart') return isDepartChoice(value.choice);
   if (value.kind === 'unbind_spell') return Number.isInteger(value.slot) && Number(value.slot) >= 0 && Number(value.slot) < QUICK_SLOTS;
   if (value.kind === 'load_bindings') return validBindings(value.bound);
-  if (value.kind === 'bind_spell') return validBinding(value.spell, value.level) && Number.isInteger(value.slot) && Number(value.slot) >= 0 && Number(value.slot) < QUICK_SLOTS;
+  if (value.kind === 'bind_spell') return validBinding(value.spell, value.level, value.damageType, value.variant) && Number.isInteger(value.slot) && Number(value.slot) >= 0 && Number(value.slot) < QUICK_SLOTS;
   if (value.kind !== 'loadout' || !Array.isArray(value.inventory) || value.inventory.length > MAX_ITEMS) return false;
   return value.inventory.every(isBagSquare) && validEquipped(value.equipped);
 }
 
 export function validSound(name: unknown, x: unknown, y: unknown, isSfx: (v: unknown) => v is SfxName): boolean {
   return isSfx(name) && (x === undefined || isFiniteNumber(x)) && (y === undefined || isFiniteNumber(y));
+}
+
+/** No fire the game makes reaches further than this (px): a bigger one is no honest message. */
+const MAX_KINDLE_RADIUS = 1024;
+
+/** Where fire lit flames again: a point within the world and a reach no fire exceeds. */
+export function validKindle(fire: { x: unknown; y: unknown; radius: unknown }): fire is { x: number; y: number; radius: number } {
+  const { x, y, radius } = fire;
+  if (!isFiniteNumber(x) || !isFiniteNumber(y) || !isFiniteNumber(radius)) return false;
+  return Math.abs(x) <= MAX_AIM && Math.abs(y) <= MAX_AIM && radius >= 0 && radius <= MAX_KINDLE_RADIUS;
 }
 
 /** How far a one-shot may go off above its feet, and how far from a unit vector its facing may stray (rounding). */

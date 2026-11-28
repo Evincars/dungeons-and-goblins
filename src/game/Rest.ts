@@ -1,4 +1,5 @@
 import { q, localPlayer, REST_KINDS, isRestKind } from '../world';
+import { restoreActions } from '../systems/WeaponActions';
 import type { HitDiceChoices, Player, PlayerSlot, RestKind, RestNotice } from '../world';
 import type { Level } from '../level/Level';
 import { coop } from '../network/CoopSession';
@@ -148,6 +149,7 @@ function restHero(player: Player, kind: RestKind, dice: number): void {
   restSchool(player, kind === 'long');
   if (kind === 'long') endUntilRest(player);
   restoreDice(player);
+  restoreActions(player);
   const spent = kind === 'long' ? 0 : spendHitDice(player, dice);
   if (kind === 'long') wake(player);
   else if (characterSheet(player).feats.shortRestFullHeal) player.health.current = player.health.max;

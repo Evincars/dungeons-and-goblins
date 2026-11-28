@@ -1,5 +1,6 @@
 import { rollAttack, rollDice, rollDie } from './Dice';
 import type { AttackRoll, D20Mode, Dice, DieRoller, DieSides } from './Dice';
+import type { DamageType } from './DamageTypes';
 
 /**
  * One blow under the tabletop rules, at the speed of an action game: d20 + attack bonus against the target's
@@ -24,6 +25,10 @@ export type AttackProfile = {
   precisionSides?: DieSides;
   /** The damage dice are rolled twice and the higher total kept (the Savage Attacker feat). */
   savage?: boolean;
+  /** Any hit is a critical hit (a blow from within 5 feet at an unconscious target). */
+  critOnHit?: boolean;
+  /** The weapon's damage of another kind on a hit (a flaming sword's 1d4 fire), dealt on its own (systems/WeaponHits.ts). */
+  elemental?: { dice: Dice; type: DamageType };
 };
 
 export type AttackOutcome = AttackRoll & {
@@ -53,7 +58,8 @@ function damageRoll(attack: AttackProfile, critical: boolean, die: DieRoller): n
 export function resolveAttack(attack: AttackProfile, targetAC: number, die: DieRoller = rollDie): AttackOutcome {
   const rolled = rollAttack(attack.attackBonus, targetAC, attack.mode, die, attack.critFrom);
   const precision = precisionBonus(attack, rolled, targetAC, die);
-  const roll = precision > 0 ? { ...rolled, total: rolled.total + precision, hit: true } : rolled;
+  const lifted = precision > 0 ? { ...rolled, total: rolled.total + precision, hit: true } : rolled;
+  const roll = attack.critOnHit && lifted.hit && !lifted.critical ? { ...lifted, critical: true } : lifted;
   const damageDice = roll.critical ? { ...attack.damage, count: attack.damage.count * 2 } : attack.damage;
   const extra = attack.extra && roll.hit ? rollDice(attack.extra, roll.critical, die) : 0;
   const damage = roll.hit ? Math.max(MIN_HIT_DAMAGE, damageRoll(attack, roll.critical, die) + extra) : 0;

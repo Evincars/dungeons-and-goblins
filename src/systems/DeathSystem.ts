@@ -5,6 +5,7 @@ import { killReward } from '../entities/LootFactory';
 import { spawnDrops } from '../entities/Drops';
 import { pay } from '../game/Purse';
 import { createDeathFx } from '../entities/FxFactory';
+import { createCorpse } from '../entities/Corpse';
 import { sound } from '../audio/SoundPlayer';
 import { BOSS_FOES, MOB_CRIES } from '../audio/SoundBank';
 import { destroyAttachments } from './BarSystem';
@@ -19,8 +20,6 @@ import { recordEvent } from './CombatLogSystem';
 import { text } from '../core/texts';
 import { isStanding, leaveBelongings, standingHeroes } from '../game/Fallen';
 
-/** Ticks a dead mob stays on its last death frame before it is cleared away. */
-const CORPSE_LINGER = 60;
 
 /** A destroyed nest is worth this many times its own death points in experience. */
 const NEST_XP_FACTOR = 3;
@@ -129,22 +128,27 @@ function die(entity: Entity, pos: { x: number; y: number }): void {
   }
 }
 
-/** A mob with a death clip lies there while it plays, then is cleared away; others vanish at once. */
+/** A mob with a death clip plays it where it fell, then lies there as a corpse; others vanish at once. */
 function killMob(entity: Entity): void {
   const clipTicks = entity.character && entity.ai ? stateDuration(entity.character.def, 'death') : 0;
   if (clipTicks === 0) {
     world.addComponent(entity, 'removed', true);
     return;
   }
-  world.addComponent(entity, 'respawnTicks', clipTicks + CORPSE_LINGER);
+  world.addComponent(entity, 'respawnTicks', clipTicks);
   entity.hurtTime = 0;
   entity.attackTime = 0;
 }
 
-/** Counts down a dead mob's clip and linger time, then clears it away (players wait on {@link updateRespawns}). */
+/**
+ * Counts down a dead mob's clip; played out, the mob gives way to its corpse, lying on its last frame (entities/Corpse.ts).
+ * Players wait on {@link updateRespawns}.
+ */
 function tickCorpse(entity: Entity): void {
   if (entity.playerInput || entity.respawnTicks === undefined) return;
-  if (--entity.respawnTicks <= 0) world.addComponent(entity, 'removed', true);
+  if (--entity.respawnTicks > 0) return;
+  createCorpse(entity);
+  world.addComponent(entity, 'removed', true);
 }
 
 export function updateDeath(level: Level): void {

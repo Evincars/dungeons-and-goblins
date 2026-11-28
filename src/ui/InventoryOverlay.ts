@@ -15,13 +15,16 @@ import { armorClassTopic, armorTrainingTopic, damageTopic, hitPointsTopic, statT
 import { ProficiencyPanel } from './ProficiencyPanel';
 import { SpellsPanel } from './SpellsPanel';
 import { HudDialog } from './HudDialog';
-import { claimPointer } from '../systems/InputSystem';
+import { claimPointer, isAltHeld } from '../systems/InputSystem';
 import { ABILITY_CELL_H, AbilityGrid } from './AbilityGrid';
 import { SheetInfoPanel } from './SheetInfoPanel';
 import { text } from '../core/texts';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
-import { INVENTORY_COLS, MAX_CARRY_KG, MAX_INVENTORY, carriedWeight, freeSquare, moveWorn, requestDrop, requestGive, requestLoadout } from '../game/PlayerActions';
+import { INVENTORY_COLS, MAX_CARRY_KG, MAX_INVENTORY, carriedWeight, freeSquare, moveWorn, requestDrink, requestDrop, requestGive, requestLoadout } from '../game/PlayerActions';
+import { readyThrow } from '../game/ThrowAim';
+import { closeInventory } from '../systems/InventorySystem';
+import { THROWABLES, isThrowableId } from '../rules/Throwables';
 import { seatOf } from '../game/Party';
 import { PopupMenu } from './PopupMenu';
 import type { MenuRow } from './PopupMenu';
@@ -30,7 +33,7 @@ import { fitsSlot, itemIcon, slotFor, slotLabel } from '../entities/Items';
 import { characterSheet } from '../rules/CharacterSheet';
 import type { CharacterSheet } from '../rules/CharacterSheet';
 import { formatDamage } from '../rules/Dice';
-import { heroName } from '../rules/Names';
+import { heroName, spellName } from '../rules/Names';
 import { sound } from '../audio/SoundPlayer';
 import { context2d, createCanvas, imageOf } from '../render/canvas';
 import { TextBox } from './TextBox';
@@ -39,8 +42,12 @@ import { fuzzyMatch } from '../core/fuzzy';
 import { BAG_SORTS, bagView } from '../game/BagView';
 import type { BagSort } from '../game/BagView';
 import { itemTrained } from '../rules/Classes';
-import { pendingBinding } from '../game/SpellBinding';
+import { beginBinding, pendingBinding } from '../game/SpellBinding';
+import { actionBinding, weaponAction } from '../rules/WeaponActions';
+import type { WeaponActionId } from '../rules/WeaponActions';
+import { actionTopic } from './ActionTopic';
 import { QuickBarPage } from './QuickBarPage';
+import { wornCounterpart } from '../game/ItemCompare';
 
 /** inventory.png, measured in its own pixels: the leather bag panel, the cloth gear panel, and its two tabs. */
 const ART = { w: 2752, h: 1536 };
@@ -226,6 +233,10 @@ const GLYPH_H = 8;
 const MAX_QUERY = 24;
 /** An item marked (clicked, or Ctrl+clicked to mark one more) is tinted gold this much and framed in gold. */
 const MARK_ALPHA = 0.28;
+/** The square under the pointer is edged faintly (a whisper of fill inside); a dragged item's landing square brighter, in gold. */
+const HOVER_FILL_ALPHA = 0.08;
+const HOVER_ALPHA = 0.55;
+const LANDING_ALPHA = 0.95;
 const GHOST_ALPHA = 0.85;
 /**
  * Gear the hero is not trained in has a red aura behind its picture, so it shows at a glance: this colour, filling its
@@ -239,7 +250,7 @@ const AURA_HOLD = 0.6;
 type Rect = { x: number; y: number; w: number; h: number };
 /** `page`: the tab page the square is on (bag squares are always shown). */
 /** `box` is the square drawn; `zone` the area that takes a dropped item (a gear slot's whole row). */
-type Square = { place: ItemPlace; box: Rectangle; zone: Rectangle; icon: Sprite; aura: Sprite; mark: Graphics; page: Container | null };
+type Square = { place: ItemPlace; box: Rectangle; zone: Rectangle; icon: Sprite; aura: Sprite; mark: Graphics; hover: Graphics; page: Container | null };
 
 /** A filter over the bag: the kinds of item it shows (null: everything, empty squares too). */
 type BagFilter = { label: string; types: readonly ItemType[] | null };
@@ -248,7 +259,7 @@ const BAG_FILTERS: readonly BagFilter[] = [
   { label: text('inventory.filter.weapons'), types: ['weapon'] },
   { label: text('inventory.filter.armour'), types: ['helmet', 'armor', 'boots'] },
   { label: text('inventory.filter.shields'), types: ['shield'] },
-  { label: text('inventory.filter.other'), types: ['ring', 'medal'] },
+  { label: text('inventory.filter.other'), types: ['ring', 'medal', 'consumable'] },
 ];
 
 /** What the "Equip" menu calls the hands, when a weapon may go in either. */
@@ -671,6 +682,8 @@ export class InventoryOverlay {
   /** What the rules make of the player's gear, as last drawn (for the tooltips). */
   private sheet: CharacterSheet | null = null;
   private readonly infoTip = new InfoTooltip();
+  /** A weapon action's tooltip, beside its icon in the item's tooltip while Alt is held. */
+  private readonly actionTip = new InfoTooltip();
   /** An item's right-click menu (send it to another player). */
   private readonly itemMenu = new PopupMenu();
   private readonly gold = new PixelLabel('', { color: 0xffcc00, align: 'right', shadow: true });
@@ -774,8 +787,9 @@ export class InventoryOverlay {
     if (this.search) this.search.clickable = !this.itemMenu.open;
     if (this.activeTab === SKILLS_TAB) this.spells?.animate();
     if (this.activeTab === QUICK_BAR_TAB) this.quickBarPage?.update(player);
-    // Alt held or let go: the tooltip up shows its whole story, or its short one again.
+    // Alt held or let go: the tooltip up shows its whole story, or its short one again; an action's goes with Alt.
     this.infoTip.refresh();
+    if (!isAltHeld()) this.releaseActions();
     const inventory = player.inventory ?? [];
     const equipped = player.equipped ?? {};
     const contents = contentsMark(inventory, equipped);
@@ -825,7 +839,7 @@ export class InventoryOverlay {
     this.ghost.anchor.set(0.5);
     this.ghost.alpha = GHOST_ALPHA;
     this.ghost.visible = false;
-    this.top.addChild(this.ghost, this.tooltip.view, this.compareTip.view, this.infoTip.view, this.itemMenu.view);
+    this.top.addChild(this.ghost, this.tooltip.view, this.compareTip.view, this.infoTip.view, this.actionTip.view, this.itemMenu.view);
     this.container.addChild(this.top);
   }
 
@@ -1015,7 +1029,7 @@ export class InventoryOverlay {
       label: `${sort === this.sort ? '> ' : ''}${text(`inventory.sort.${sort}`)}`,
       action: () => this.setSort(sort),
     }));
-    this.tooltip.hide();
+    this.hideItemTips();
     this.itemMenu.show(rows, x, y, { w: DESIGN_W, h: DESIGN_H });
   }
 
@@ -1054,10 +1068,19 @@ export class InventoryOverlay {
     this.shown = null;
   }
 
-  /** What an item's tooltip is told: the hero (training, STR), the letters a search matched, the item it is compared with. */
+  /**
+   * What an item's tooltip is told: the hero (training, STR, the abilities its damage adds), the letters a search matched, the
+   * item it is compared with, and — worn — who wears it and the spells on it now.
+   */
   private tipContext(item: InventoryItem, against?: InventoryItem): TooltipContext {
     const sheet = this.sheet;
-    return { cls: sheet?.heroClass, strength: sheet?.scores.strength, featArmor: sheet?.feats.armor, featWeapons: sheet?.feats.weapons, matched: this.matchedLetters(item), against };
+    const player = localPlayer();
+    const worn = !!player && Object.values(player.equipped ?? {}).includes(item);
+    const wearer = worn && player ? { wearer: player.playerName || heroName(player.heroClass ?? 'fighter'), enchantments: spellsOn(player, item) } : {};
+    return {
+      cls: sheet?.heroClass, strength: sheet?.scores.strength, modifiers: sheet?.modifiers, featArmor: sheet?.feats.armor, featWeapons: sheet?.feats.weapons,
+      matched: this.matchedLetters(item), against, ...wearer,
+    };
   }
 
   /** The letters of an item's name the search matched (none while nothing is typed). */
@@ -1225,9 +1248,13 @@ export class InventoryOverlay {
     const mark = new Graphics().rect(x, y, size, height).fill({ color: THEME.title, alpha: MARK_ALPHA })
       .stroke({ color: THEME.title, width: 1, alignment: 1 });
     mark.visible = false;
-    (page ?? this.root).addChild(frame, aura, icon, mark);
+    // Edged under the pointer, or as the square a dragged item would land in (drawn white, tinted then).
+    const hover = new Graphics().rect(x, y, size, height).fill({ color: 0xffffff, alpha: HOVER_FILL_ALPHA })
+      .stroke({ color: 0xffffff, width: 1, alignment: 1 });
+    hover.visible = false;
+    (page ?? this.root).addChild(frame, aura, icon, mark, hover);
     const box = new Rectangle(x, y, size, height);
-    const square: Square = { place, box, zone: zone ?? box, icon, aura, mark, page };
+    const square: Square = { place, box, zone: zone ?? box, icon, aura, mark, hover, page };
     this.squares.push(square);
     return square;
   }
@@ -1362,6 +1389,9 @@ export class InventoryOverlay {
     const equip = 'bag' in place ? this.equipRow(player, place, item) : null;
     if (equip) rows.push(equip);
     if ('slot' in place && freeSquare(player.inventory ?? []) >= 0) rows.push({ label: text('inventory.menu.take_off'), action: () => this.quickMove(player, place) });
+    // A potion of healing is drunk; anything is thrown, aimed in the world with the inventory put away.
+    if (isThrowableId(item.kind) && THROWABLES[item.kind].heal) rows.push({ label: text('inventory.menu.drink'), action: () => requestDrink(player, place) });
+    rows.push({ label: text('inventory.menu.throw'), action: () => this.aimThrow(place) });
     rows.push(
       { label: text('inventory.menu.drop'), action: () => requestDrop(player, place) },
       { label: text('inventory.menu.compare'), action: null, submenu: this.compareRows(player, item, p.x, p.y) },
@@ -1371,7 +1401,7 @@ export class InventoryOverlay {
       const name = other.playerName ?? '';
       rows.push({ label: text('inventory.menu.send_to', { name }), action: () => requestGive(player, place, seatOf(other)) });
     }
-    this.tooltip.hide();
+    this.hideItemTips();
     this.itemMenu.show(rows, p.x, p.y, { w: DESIGN_W, h: DESIGN_H });
   }
 
@@ -1406,7 +1436,7 @@ export class InventoryOverlay {
       const label = text('inventory.menu.send_marked_to', { count, name: other.playerName ?? '' });
       rows.push({ label, action: () => this.forMarked(places, (place) => requestGive(player, place, seatOf(other))) });
     }
-    this.tooltip.hide();
+    this.hideItemTips();
     this.itemMenu.show(rows, x, y, { w: DESIGN_W, h: DESIGN_H });
   }
 
@@ -1450,6 +1480,12 @@ export class InventoryOverlay {
     this.compare(first, second, x, y);
   }
 
+  /** "Throw": the item is held ready and the inventory put away, so the next click on the world says where it goes. */
+  private aimThrow(place: ItemPlace): void {
+    readyThrow(place);
+    closeInventory();
+  }
+
   /** "Compare": every other item of the same kind the hero has (weapon with weapon, armour with armour), worn ones marked. */
   private compareRows(player: Player, item: InventoryItem, x: number, y: number): MenuRow[] {
     const rows: MenuRow[] = [];
@@ -1468,12 +1504,17 @@ export class InventoryOverlay {
    * second marked where it beats the first or falls short of it (green and red arrows, for two of a kind).
    */
   private compare(item: InventoryItem, other: InventoryItem, x: number, y: number): void {
-    const bounds = { w: DESIGN_W, h: DESIGN_H };
     this.comparing = true;
-    this.tooltip.show(item, x, y, bounds, this.tipContext(item));
+    this.sideBySide(item, other, x, y, this.tipContext(item), this.tipContext(other, item));
+  }
+
+  /** Two tooltips side by side: the first at the pointer, the second right of it (or left, where there is no room). */
+  private sideBySide(item: InventoryItem, other: InventoryItem, x: number, y: number, about: TooltipContext, otherAbout: TooltipContext): void {
+    const bounds = { w: DESIGN_W, h: DESIGN_H };
+    this.tooltip.show(item, x, y, bounds, about);
     const first = this.tooltip.view;
     const right = first.x + first.width + COMPARE_GAP;
-    this.compareTip.show(other, right - ItemTooltip.OFFSET, y, bounds, this.tipContext(other, item));
+    this.compareTip.show(other, right - ItemTooltip.OFFSET, y, bounds, otherAbout);
     if (this.compareTip.view.x < right) this.compareTip.view.x = Math.max(0, first.x - this.compareTip.view.width - COMPARE_GAP);
     this.compareTip.view.y = first.y;
   }
@@ -1526,6 +1567,7 @@ export class InventoryOverlay {
 
   private startDrag(e: FederatedPointerEvent): void {
     const player = localPlayer();
+    if (e.button !== RIGHT_BUTTON && this.bindActionAt(e)) return;
     // A press on the menu is for its rows; anywhere else closes the menu.
     if (this.itemMenu.covers(e.global)) return;
     this.itemMenu.hide();
@@ -1587,12 +1629,106 @@ export class InventoryOverlay {
     this.ghost.position.set(p.x, p.y);
     const player = localPlayer();
     const square = this.squareAt(e);
+    // While Alt is held the tooltips stay put for their weapon actions (a comparison's too).
+    if (!this.dragging && this.pinnedForActions(e)) return;
     if (this.comparing) return;
     if (this.activeTab === SKILLS_TAB) this.spells?.hover(p.x, p.y);
     const item = player && square && !this.dragging && !this.itemMenu.open ? this.itemIn(player, square.place) : undefined;
-    if (item) this.tooltip.show(item, p.x, p.y, { w: DESIGN_W, h: DESIGN_H }, this.tipContext(item));
-    else this.tooltip.hide();
+    // The square under the pointer is edged; while an item is dragged, the square it would land in.
+    this.highlight(this.dragging ? this.squareAt(e, true) : item ? square : undefined, !!this.dragging);
+    if (player && square && item) this.showItem(player, square.place, item, p.x, p.y);
+    else this.hideItemTips();
     this.updateInfoTip(p.x, p.y);
+  }
+
+  /**
+   * The tooltip of the item under the pointer; one in the bag that would take the place of something worn (a weapon, body
+   * armour, headwear) is shown beside the worn one, arrows saying where it is better or worse.
+   */
+  private showItem(player: Player, place: ItemPlace, item: InventoryItem, x: number, y: number): void {
+    const worn = 'bag' in place ? wornCounterpart(player.equipped ?? {}, item) : undefined;
+    if (!worn) {
+      this.compareTip.hide();
+      this.tooltip.show(item, x, y, { w: DESIGN_W, h: DESIGN_H }, this.tipContext(item));
+      return;
+    }
+    this.sideBySide(item, worn, x, y, this.tipContext(item, worn), this.tipContext(worn));
+  }
+
+  private hideItemTips(): void {
+    this.tooltip.hide();
+    this.compareTip.hide();
+    this.actionTip.hide();
+  }
+
+  /**
+   * While Alt is held an item's tooltip stays where it is, so the pointer can go over the weapon actions it unlocks: the one
+   * under it is edged and shows its own tooltip beside it. Returns whether the tooltip is held so (the item under the pointer
+   * is not looked for).
+   */
+  private pinnedForActions(e: FederatedPointerEvent): boolean {
+    const player = localPlayer();
+    if (!isAltHeld() || !(this.tooltip.visible || this.compareTip.visible) || !player) {
+      this.releaseActions();
+      return false;
+    }
+    const at = this.actionUnder(e);
+    // Only the tooltip under the pointer edges an action; the other forgets its edge.
+    for (const tip of [this.tooltip, this.compareTip]) tip.hoverAction(at?.tip === tip ? at.id : null);
+    const box = at ? at.tip.actionBox(at.id) : null;
+    if (!at || !box) {
+      this.actionTip.hide();
+      return true;
+    }
+    this.actionTip.showAt(actionTopic(weaponAction(at.id), player), box, { w: DESIGN_W, h: DESIGN_H }, 'beside');
+    return true;
+  }
+
+  /** The weapon action under the pointer in either item tooltip (the item's, or the one it is compared with), and which. */
+  private actionUnder(e: FederatedPointerEvent): { tip: ItemTooltip; id: WeaponActionId } | null {
+    for (const tip of [this.tooltip, this.compareTip]) {
+      const id = tip.actionAt(e.global);
+      if (id) return { tip, id };
+    }
+    return null;
+  }
+
+  /** Alt let go: the action's tooltip goes and the items' follow the pointer again. */
+  private releaseActions(): void {
+    this.actionTip.hide();
+    this.tooltip.hoverAction(null);
+    this.compareTip.hoverAction(null);
+  }
+
+  /**
+   * A click on a weapon action's icon while Alt holds the item's tooltip: the action waits for a quick-bar square, as a spell
+   * does (game/SpellBinding.ts; the host checks the hero may bind it). Locked (untrained), it says so. Returns whether the
+   * click was for an action.
+   */
+  private bindActionAt(e: FederatedPointerEvent): boolean {
+    if (!isAltHeld()) return false;
+    const at = this.actionUnder(e);
+    if (!at) return false;
+    const { tip, id } = at;
+    if (!tip.actionsUnlocked) {
+      sound.playLocal('fail');
+      return true;
+    }
+    this.endCompare();
+    this.hideItemTips();
+    beginBinding({ spell: actionBinding(id), level: 0 });
+    return true;
+  }
+
+  /** Edges the square (the pointer's, or a dragged item's landing place, in gold) and no other. */
+  private highlight(square: Square | undefined, landing: boolean): void {
+    for (const s of this.squares) {
+      const lit = s === square;
+      s.hover.visible = lit;
+      if (!lit) continue;
+      s.hover.tint = landing ? THEME.title : 0xffffff;
+      s.hover.alpha = landing ? LANDING_ALPHA : HOVER_ALPHA;
+    }
   }
 
   /**
@@ -1660,6 +1796,7 @@ export class InventoryOverlay {
   }
 
   private endDrag(): void {
+    this.highlight(undefined, false);
     this.bagScrollbar?.hold(false);
     this.sheetScrollbar?.hold(false);
     this.dragging = null;
@@ -1667,4 +1804,14 @@ export class InventoryOverlay {
     for (const square of this.squares) square.icon.alpha = 1;
     this.shown = null;
   }
+}
+
+/** The spells on a worn item now, by name: Magic Weapon or Shadow Blade on the weapon in the main hand. */
+function spellsOn(player: Player, item: InventoryItem): string[] {
+  const buffs = player.buffs;
+  if (!buffs || player.equipped?.primary !== item) return [];
+  const spells: string[] = [];
+  if ((buffs.magicWeapon ?? 0) > 0) spells.push(spellName('magic_weapon'));
+  if ((buffs.shadowBlade ?? 0) > 0) spells.push(spellName('shadow_blade'));
+  return spells;
 }

@@ -1,4 +1,7 @@
 import { Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
+import { actionIconKey, bindingActionId, weaponAction } from '../rules/WeaponActions';
+import { actionAvailable, actionOff, actionSpent } from '../systems/WeaponActions';
+import { actionTopic } from './ActionTopic';
 import { QUICK_ROW } from '../world';
 import type { Player } from '../world';
 import { GAME_HEIGHT, GAME_WIDTH } from '../render/Camera';
@@ -24,10 +27,12 @@ import { text } from '../core/texts';
 import { InfoTooltip } from './InfoTooltip';
 import type { TipTopic } from './InfoTooltip';
 import { PixelLabel } from './PixelText';
-import { featTopic, featureTopic, spellTopic } from './SpellTopics';
+import { featTopic, featureTopic, spellTopic, withChosenDamage } from './SpellTopics';
 import { bindingFeatId } from '../rules/Feats';
-import { featName } from '../rules/Names';
+import { damageTypeName, featName } from '../rules/Names';
 import { THEME } from './Theme';
+import { DAMAGE_COLORS } from './TipText';
+import { RING_COLOURS } from '../systems/ConditionRingSystem';
 
 /** The squares: this big, this far apart, this far up from the bottom edge (the bar shrinks when the screen is too narrow). */
 const SLOT = 22;
@@ -57,6 +62,8 @@ const BREATH_SWELL = 0.25;
 const PROMPT_GAP = 14;
 /** A square's charges count sits this far down from its top (in its top right corner). */
 const CHARGES_TAG_Y = 2;
+/** The corner that shows the kind of damage chosen for a spell (Chromatic Orb), this long on each side. */
+const TYPE_MARK = 7;
 /** A square of the second row names its key with this before it ("sQ": Shift and Q). */
 const SHIFT_MARK = 's';
 
@@ -72,6 +79,8 @@ type SlotView = {
   keyTag: PixelLabel;
   /** A feature used by charges (Bladesong): how many are left, top right. */
   chargesTag: PixelLabel;
+  /** The kind of damage chosen for the spell (Chromatic Orb): a corner of its colour, bottom left. */
+  typeMark: Graphics;
   charges: number | null;
   /** While it recovers, the time left, in its middle over the shade; and what that was last written for (`timeShown`). */
   timeTag: PixelLabel;
@@ -108,7 +117,7 @@ function showEffect(view: SlotView, def: SpellDef): void {
   reportRejection(requestArt(key).then(show), `Spell icon ${def.id} did not load`, 'render');
 }
 
-const bindingKey = (b: QuickBinding | null): string | null => (b ? `${b.spell}/${b.level}` : null);
+const bindingKey = (b: QuickBinding | null): string | null => (b ? `${b.spell}/${b.level}/${b.damageType ?? ''}/${b.variant ?? ''}` : null);
 
 /** The class feature a binding names, for a hero of this class. */
 function featureOfBinding(binding: QuickBinding | null, castWith: Player['heroClass']): FeatureDef | null {
@@ -118,6 +127,8 @@ function featureOfBinding(binding: QuickBinding | null, castWith: Player['heroCl
 
 /** The icon a binding shows (a spell's own, or its class feature's), if it has one. */
 export function bindingIconKey(binding: QuickBinding, castWith: Player['heroClass']): string | null {
+  const action = bindingActionId(binding.spell);
+  if (action) return actionIconKey(action);
   return spellIconKey(binding.spell) ?? featureOfBinding(binding, castWith)?.icon ?? null;
 }
 
@@ -125,13 +136,27 @@ export function bindingIconKey(binding: QuickBinding, castWith: Player['heroClas
 export function bindingName(binding: QuickBinding, castWith: Player['heroClass']): string {
   const feat = bindingFeatId(binding.spell);
   if (feat) return featName(feat);
+  const action = bindingActionId(binding.spell);
+  if (action) return weaponAction(action).name;
   return featureOfBinding(binding, castWith)?.name ?? CATALOG[binding.spell]?.name ?? binding.spell;
 }
 
+/**
+ * Whether a weapon action's square can't be used now: its weapon is not in the main hand, the hero is not proficient with it,
+ * or it works by itself and is switched off (Tenacity). One used until a rest is shaded instead.
+ */
+function actionBlocked(player: Player, binding: QuickBinding): boolean {
+  const action = bindingActionId(binding.spell);
+  if (!action) return false;
+  const can = actionAvailable(player, action);
+  return (can !== 'ok' && can !== 'spent') || actionOff(player, action);
+}
+
 /** What a square's spell does, for its tooltip, with a line telling that a right click empties the square. */
-function slotTopic(binding: QuickBinding | null, heroLevel: number, castWith: Player['heroClass'], featsOn: readonly string[] = []): TipTopic {
+function slotTopic(binding: QuickBinding | null, player: Player): TipTopic {
   if (!binding) return { title: text('hud.slot.empty'), body: text('hud.slot.empty_body') };
-  const topic = boundTopic(binding, heroLevel, castWith, featsOn);
+  const action = bindingActionId(binding.spell);
+  const topic = action ? actionTopic(weaponAction(action), player) : boundTopic(binding, player.playerStats.level, player.heroClass, player.featsOn ?? []);
   return { ...topic, detail: [...(topic.detail ?? []), { text: text('hud.slot.unbind_hint'), color: THEME.muted }] };
 }
 
@@ -144,8 +169,25 @@ function boundTopic(binding: QuickBinding, heroLevel: number, castWith: Player['
   const spell: CatalogSpell = CATALOG[binding.spell];
   const cls = heroClass(castWith);
   const learntAt = isSpellId(binding.spell) ? spellLevelFor(cls, binding.spell) : undefined;
-  const topic = spellTopic(spell, binding.level, heroLevel, learntAt);
+  const topic = withVariant(withChosenType(spellTopic(spell, binding.level, heroLevel, learntAt), binding), binding);
   return isSpellId(binding.spell) ? topic : { ...topic, detail: [...(topic.detail ?? []), text('hud.slot.not_worked')] };
+}
+
+/** A spell bound to do one of its choices (Blindness or Deafness) says which, in its condition's colour. */
+function withVariant(topic: TipTopic, binding: QuickBinding): TipTopic {
+  const variant = binding.variant;
+  if (!variant) return topic;
+  const line = { text: text('hud.slot.variant', { condition: text(`condition.${variant}.name`) }), color: RING_COLOURS[variant] };
+  return { ...topic, detail: [line, ...(topic.detail ?? [])] };
+}
+
+/** A spell bound with a kind of damage chosen for it (Chromatic Orb) says which, in that kind's colour. */
+function withChosenType(topic: TipTopic, binding: QuickBinding): TipTopic {
+  const type = binding.damageType;
+  if (!type) return topic;
+  const line = { text: text('hud.slot.damage_type', { type: damageTypeName(type) }), color: DAMAGE_COLORS[type] };
+  const chosen = withChosenDamage(topic, type);
+  return { ...chosen, detail: [line, ...(chosen.detail ?? [])] };
 }
 
 /**
@@ -253,7 +295,8 @@ export class QuickBar {
     chargesTag.position.set(SLOT - 1, CHARGES_TAG_Y);
     const timeTag = new PixelLabel('', { color: THEME.title, align: 'center', outline: true });
     timeTag.position.set(SLOT / 2, SLOT / 2 - 4);
-    square.addChild(frame, mask, icon, initials, shade, levelTag, keyTag, chargesTag, timeTag);
+    const typeMark = new Graphics();
+    square.addChild(frame, mask, icon, initials, shade, typeMark, levelTag, keyTag, chargesTag, timeTag);
     square.eventMode = 'static';
     square.cursor = 'pointer';
     square.hitArea = new Rectangle(0, 0, SLOT, SLOT);
@@ -261,7 +304,7 @@ export class QuickBar {
     square.on('pointerout', () => { if (this.hovered === i) this.hovered = -1; claimPointer(square, false); setOverQuickSquare(false); });
     square.on('pointertap', () => this.pick(i));
     square.on('rightclick', () => this.unbind(i));
-    this.slots.push({ square, frame, icon, shade, initials, levelTag, keyTag, chargesTag, charges: null, timeTag, timeShown: 0, bound: null, active: false, locked: false, shadeH: -1 });
+    this.slots.push({ square, frame, icon, shade, initials, levelTag, keyTag, chargesTag, typeMark, charges: null, timeTag, timeShown: 0, bound: null, active: false, locked: false, shadeH: -1 });
     this.row.addChild(square);
     this.drawFrame(this.slots[i]);
   }
@@ -298,6 +341,12 @@ export class QuickBar {
     else if (binding && isSpellId(binding.spell)) showEffect(view, SPELLS[binding.spell]);
     view.initials.text = binding && !pictured ? bindingName(binding, castWith).slice(0, INITIALS).toUpperCase() : '';
     view.levelTag.text = binding && spell && binding.level > spell.level ? text('skills.cast_level', { level: binding.level }) : '';
+    view.typeMark.clear();
+    const type = binding?.damageType;
+    if (type) view.typeMark.poly([1, SLOT - 1 - TYPE_MARK, 1 + TYPE_MARK, SLOT - 1, 1, SLOT - 1]).fill({ color: DAMAGE_COLORS[type] });
+    // What the spell was bound to do (Blindness or Deafness), a corner in its condition's colour.
+    const variant = binding?.variant;
+    if (variant) view.typeMark.poly([1, SLOT - 1 - TYPE_MARK, 1 + TYPE_MARK, SLOT - 1, 1, SLOT - 1]).fill({ color: RING_COLOURS[variant] });
   }
 
   /** One square for the player's spell in it: its picture, whether it is picked, learnt and recovering. */
@@ -309,7 +358,9 @@ export class QuickBar {
       view.active = active;
       this.drawFrame(view);
     }
-    const locked = !!binding && isSpellId(binding.spell) && player.playerStats.level < spellLevelFor(heroClass(player.heroClass), binding.spell);
+    const locked = !!binding && (isSpellId(binding.spell)
+      ? player.playerStats.level < spellLevelFor(heroClass(player.heroClass), binding.spell)
+      : actionBlocked(player, binding));
     if (view.locked !== locked) {
       view.locked = locked;
       view.icon.alpha = locked ? LOCKED_ALPHA : 1;
@@ -341,11 +392,16 @@ export class QuickBar {
   }
 
   /** The shade over a spell recovering, by the share of its recovery left. */
-  private updateShade(view: SlotView, binding: QuickBinding | null, left: number, player: Player): void {
+  private updateShade(view: SlotView, binding: QuickBinding | null, recovering: number, player: Player): void {
+    let left = recovering;
     const spell = binding && isSpellId(binding.spell) ? castDef(SPELLS[binding.spell], binding.level, player.playerStats.level) : null;
     const feature = featureOfBinding(binding, player.heroClass);
     const total = spell ? spell.recoveryTicks : feature ? featureCooldown(feature, player.playerStats.level) * TICKS_PER_SECOND : 0;
-    const shadeH = total > 0 && left > 0 ? Math.ceil(SLOT * Math.min(1, left / total)) : 0;
+    // A weapon action used is shaded whole until a short rest gives it back.
+    const action = binding ? bindingActionId(binding.spell) : null;
+    const used = !!action && actionSpent(player, action);
+    const shadeH = used ? SLOT : total > 0 && left > 0 ? Math.ceil(SLOT * Math.min(1, left / total)) : 0;
+    if (used) left = 0;
     this.updateTime(view, shadeH > 0 ? left : 0);
     if (view.shadeH === shadeH) return;
     view.shadeH = shadeH;
@@ -404,7 +460,7 @@ export class QuickBar {
     const slot = this.slotAt(this.hovered);
     const shown = this.topic;
     if (!shown || shown.slot !== slot || shown.bound !== view.bound || shown.level !== level) {
-      const tip = slotTopic(quickBinding(player, slot), level, player.heroClass, player.featsOn);
+      const tip = slotTopic(quickBinding(player, slot), player);
       this.topic = { slot, bound: view.bound, level, tip };
     }
     // Asked for at the bar itself, it is kept inside the area above it: just over the squares.

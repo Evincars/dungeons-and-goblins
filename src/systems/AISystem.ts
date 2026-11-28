@@ -4,9 +4,13 @@ import type { Level } from '../level/Level';
 import { formSquads, droppedThisTick } from '../ai/decision/squads';
 import { assignRoles } from '../ai/decision/tactics';
 import { surround } from '../ai/decision/surround';
+import { shareFights } from '../ai/decision/engagement';
 import { agentOf } from '../ai/decision/states';
 import { cheats } from '../game/Cheats';
 import { followLure } from './DecoySystem';
+import { isDown } from './Surfaces';
+import { followLights } from './DancingLights';
+import { followMadness } from './Madness';
 
 /** Frozen by the console (/freeze): every enemy stops where it stands and thinks of nothing. */
 function holdStill(): void {
@@ -19,6 +23,8 @@ function holdStill(): void {
 /** Whether the enemy gets to act this tick: alive and not stunned by a hit. It walks on steadily: its stride counts up. */
 function canAct(mob: Mob): boolean {
   if (mob.removed || mob.health.current <= 0 || (mob.freezeTime ?? 0) > 0) return false;
+  // Prone (slipped on grease, tripped): it gets up before it does anything else.
+  if (isDown(mob)) return false;
   mob.walkTime = (mob.walkTime ?? 0) + 1;
   return true;
 }
@@ -36,11 +42,18 @@ export function updateAI(level: Level, tick: number): void {
   const squads = formSquads();
   for (const mob of droppedThisTick()) agentOf(mob).go('idle');
   assignRoles(squads, tick);
+  // Who presses in, who waits a turn, who keeps its distance; the waiting look for another hero now and then. Only those
+  // pressing in take places in the ring round the hero.
+  shareFights(level, squads, tick);
   for (const squad of squads.values()) surround(squad, tick);
   for (const mob of q.walkingMobs) {
     if (!canAct(mob)) continue;
     // A foe lured by an illusion goes for the dummy and thinks of nothing else.
     if (followLure(mob)) continue;
+    // A foe drawn to Dancing Lights drifts over to stare at them.
+    if (followLights(mob)) continue;
+    // A foe maddened by Crown of Madness goes for the nearest of its own.
+    if (followMadness(mob)) continue;
     agentOf(mob).think(level, tick);
   }
 }

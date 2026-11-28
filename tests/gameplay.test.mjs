@@ -17,6 +17,7 @@ const { DungeonBuilder } = await load('level/generators/DungeonBuilder');
 const { DEFAULT_CONFIG } = await load('level/generators/DungeonConfig');
 const { createPlayer } = await load('entities/PlayerFactory');
 const { createMob } = await load('entities/MobFactory');
+const MonstersModule = await load('rules/Monsters');
 const { nearby, beginPerception, Sense } = await load('ai/perception/spatial');
 const { canSee, spotPlayer } = await load('ai/perception/sight');
 const { mobStepCosts, mobRoute } = await load('ai/perception/navigation');
@@ -91,8 +92,11 @@ function wallRect(level, x0, y0, x1, y1) {
 /** Facing enum for a unit heading: north, east, south, west. */
 const facingOf = ({ x, y }) => (Math.abs(x) > Math.abs(y) ? (x > 0 ? 1 : 3) : (y > 0 ? 2 : 0));
 
+/** An enemy standing on a tile, with the first melee weapon of its kind (no bow, no flask to throw: the same every run). */
 function mobAt(level, type, tx, ty, heading = { x: 1, y: 0 }) {
   const mob = createMob(level, type, centre(tx), centre(ty));
+  mob.mobWeapon = MonstersModule.MONSTERS[type].weapons[0];
+  world.removeComponent(mob, 'mobThrowable');
   mob.aimVector = { ...heading };
   mob.facing = facingOf(heading);
   return mob;
@@ -889,11 +893,15 @@ test('weapons and armour come from their JSON tables alone: D&D stats, the table
   assert.equal(ARMOR_BASES.includes('robe') && ARMOR_BASES.includes('shield') && ARMOR_BASES.includes('tower_shield'), true);
 });
 
-test('a new run starts with one of each weapon, shield and armour the hero is trained in, light enough not to slow them', async () => {
+test('a new run starts with two flasks of Alchemist\'s Fire and one of each weapon, shield and armour the hero is trained in, light enough not to slow them', async () => {
   const { itemTrained, heroClass } = await load('rules/Classes');
   const { MAX_CARRY_KG, LOAD_EASY } = await load('rules/Encumbrance');
   const wizard = playerAt(2, 2, 'wizard');
   giveStartingKit(wizard);
+  const flasks = wizard.inventory.filter((i) => i.type === 'consumable');
+  assert.deepEqual(flasks.map((i) => i.kind), ['alchemists_fire', 'alchemists_fire'], 'two flasks of Alchemist\'s Fire');
+  assert.equal(wizard.inventory[0].kind, 'alchemists_fire', 'at the top of the bag');
+  wizard.inventory = wizard.inventory.filter((i) => i.type !== 'consumable');
   const bases = new Set(wizard.inventory.map((i) => i.base));
   for (const base of ['dagger', 'quarterstaff', 'light_crossbow', 'robe']) assert.ok(bases.has(base), `a wizard has a ${base}`);
   for (const base of ['longsword', 'plate', 'shield']) assert.ok(!bases.has(base), `but no ${base}`);
@@ -904,7 +912,8 @@ test('a new run starts with one of each weapon, shield and armour the hero is tr
   const kg = fighter.inventory.reduce((sum, i) => sum + (i.weight ?? 0), 0);
   assert.ok(kg <= MAX_CARRY_KG * LOAD_EASY, `a fighter's kit is not a burden: ${kg} kg`);
   assert.ok(fighter.inventory.some((i) => i.base === 'longsword'), 'martial arms');
-  assert.notEqual(fighter.inventory[0], HAND_WEAPONS.find((w) => w.base === fighter.inventory[0].base), 'copies, not the catalogue entries');
+  const sword = fighter.inventory.find((i) => i.base === 'longsword');
+  assert.notEqual(sword, HAND_WEAPONS.find((w) => w.base === 'longsword'), 'copies, not the catalogue entries');
 });
 
 test('a load past 80 % of what a hero carries slows them, to a walk at all of it; then they cannot sprint', async () => {
@@ -1371,11 +1380,11 @@ test('every blow is rolled and shown over the attacker: hits hurt, misses do not
   updateSword();
   updateSword();
   assert.equal(goblin.health.current, goblin.health.max - 4, 'a bare-handed fighter punches for 1 + STR +3');
-  assert.equal(player.rollLog.at(-2).text, '20 to hit', 'd20 15 + proficiency 2 + STR 3 against the goblin\'s AC 15');
-  assert.deepEqual([player.rollLog.at(-1).text, player.rollLog.at(-1).tone], ['4 dmg', 'damage']);
+  assert.deepEqual([player.rollLog.at(-1).text, player.rollLog.at(-1).tone], ['20 to hit', 'hit'], 'd20 15 + proficiency 2 + STR 3 against the goblin\'s AC 15; a hit says no more');
+  assert.deepEqual([goblin.rollLog.at(-1).text, goblin.rollLog.at(-1).tone], ['4', 'damage'], 'the damage shows over the goblin it hurt, in red');
 });
 
-test('a pack spreads round the player instead of piling up on one side, and every one of them strikes', async () => {
+test('a pack spreads round the player: three press in from every side and strike, the rest wait their turn a little way off', async () => {
   const { updateCombatTimers } = await load('systems/CombatSystem');
   const level = arena(16, 12);
   const player = playerAt(9, 6);
@@ -1388,9 +1397,25 @@ test('a pack spreads round the player instead of piling up on one side, and ever
     updateCombatTimers();
     updateContactDamage(level);
   }
-  pack.forEach((mob, i) => assert.ok(mob.rollLog?.length, `goblin ${i} got to strike`));
+  const { MELEE_SLOTS, WAIT_RADIUS } = C;
+  const struck = pack.filter((mob) => mob.rollLog?.length);
+  assert.equal(struck.length, MELEE_SLOTS, 'as many strike as there are places round the hero');
   const quarter = (m) => (((Math.round(Math.atan2(m.position.y - player.position.y, m.position.x - player.position.x) / (Math.PI / 2))) % 4) + 4) % 4;
-  assert.ok(new Set(pack.map(quarter)).size >= 3, 'they came at the player from three sides or more');
+  assert.ok(new Set(struck.map(quarter)).size >= 3, 'they came at the player from three sides');
+  const waiting = pack.filter((mob) => !mob.rollLog?.length);
+  for (const mob of waiting) {
+    const d = Math.hypot(mob.position.x - player.position.x, mob.position.y - player.position.y);
+    assert.ok(Math.abs(d - WAIT_RADIUS) < TILE_WIDTH, `a waiting goblin holds off round the fight (${Math.round(d)} px)`);
+  }
+  // One of those pressing in falls: a waiting one steps in to take its place.
+  world.remove(struck[0]);
+  for (let tick = 601; tick <= 900; tick++) {
+    tickWorld(level, tick);
+    for (const mob of pack) mob.ai.lastSeenTick = tick;
+    updateCombatTimers();
+    updateContactDamage(level);
+  }
+  assert.ok(waiting.some((mob) => mob.rollLog?.length), 'a waiting goblin stepped in and struck');
 });
 
 test('an enemy that touches the player rolls against their Armor Class, and the roll shows over its head', () => {
@@ -4425,7 +4450,8 @@ test('with a melee weapon in each hand one click makes an attack with each, roll
   }
   const entries = currentLog().entries.filter((e) => e.seq > before);
   assert.equal(entries.length, 2, 'both weapons swing for the one click');
-  assert.equal(hero.rollLog.length, 4, 'and both show over the hero head: a roll to hit and a result each');
+  assert.equal(hero.rollLog.length, 2, 'and both show over the hero head: a roll to hit each (their damage over the dummy)');
+  assert.equal(dummy.rollLog.length, 2, 'the dummy shows the damage of each');
   assert.equal(entries.map((e) => e.result).join(), 'hit,hit', 'the second hits although the first just struck');
   assert.equal(dummy.health.current, dummy.health.max - entries[0].damage - entries[1].damage, 'and both damage rolls count');
   assert.ok(rolled.filter((sides) => sides === 20).length >= 2, 'each rolls its own d20');
@@ -5965,7 +5991,7 @@ test('every blow of a swing during the Bladesong (Extra Attack\'s too) gathers a
   assert.equal(usedFeature(singer, 'bladesong_climax', 12, level, dummy.position), 'ok');
   const lines = rollLines(dummy);
   assert.ok(lines.some((line) => line.startsWith('save')), 'the save over the dummy');
-  assert.ok(lines.some((line) => line.endsWith('dmg')), 'and the damage under it');
+  assert.ok(lines.some((line) => /^\d+( [a-z]+)?$/.test(line)), 'and the damage under it, as it is dealt ("9 force")');
 });
 
 test('a level box of a spell tells only what that level changes: dice, darts and cooldown', async () => {
@@ -6140,7 +6166,7 @@ test('Magic Initiate and Spell Sniper teach the spells picked with them, bound a
   hero.playerStats.level = 4;
   const build = hero.build;
   const cleric = FeatPicks.pickOptions(FeatClasses.wizard, 'magic_initiate_cleric');
-  assert.deepEqual(FeatPicks.picksWanted('magic_initiate_cleric', cleric), { cantrip: 1, spell: 1, weapon: 0, element: 0 }, 'the one cleric cantrip the game casts yet');
+  assert.deepEqual(FeatPicks.picksWanted('magic_initiate_cleric', cleric), { cantrip: 1, spell: 1, weapon: 0, element: 0 }, 'the one cleric cantrip the game casts: Sacred Flame');
   assert.ok(cleric.some((o) => o.id === 'guiding_bolt' && o.open));
   assert.ok(cleric.some((o) => o.id === 'bless' && !o.open), 'a spell not in the game yet is greyed out');
   assert.equal(FeatBuild.takeImprovement(FeatClasses.wizard, build, 4, { feat: 'magic_initiate_cleric' }), false, 'its picks are needed');
@@ -6718,8 +6744,13 @@ test('a goblin with a bow shoots only at a hero who can see it; a caster picks t
   const before = a.health.current;
   beginPerception();
   updateEnemyRanged(level);
+  assert.ok(ghost.invisible, 'the ghost knows Invisibility: it turns invisible first, to stalk the heroes');
+  ghost.attackCooldown = 0;
+  beginPerception();
+  updateEnemyRanged(level);
   const cast = world.entities.filter((e) => e.projectile?.team === 2);
   assert.ok(cast.length > 0 || a.health.current < before, 'the ghost casts at the heroes');
+  assert.equal(ghost.invisible, undefined, 'casting at them ends its invisibility');
   setDifficulty({ depth: 1, players: 1, partyLevel: 1 });
 });
 
@@ -6851,7 +6882,7 @@ test('a spell cast on oneself shows in particles alone (no halo of library art);
   assert.deepEqual(sent, ['blade-ward', 'shield', 'mage-armor'], 'each flashes up once, in its own particles');
   assert.equal(world.entities.filter((e) => e.fx).length, 0, 'and no library halo or effect is spawned with them');
   assert.ok(wizard.buffs.bladeWard > 0 && wizard.buffs.shield > 0, 'their auras show while these last');
-  assert.deepEqual(Object.keys(BUFF_AURAS).sort(), ['bladeWard', 'shield', 'stoneskin'], 'Mage Armour, for a whole day, keeps none; Stoneskin, for a minute, does');
+  assert.deepEqual(Object.keys(BUFF_AURAS).sort(), ['bladeWard', 'blur', 'longstrider', 'protection', 'shield', 'stoneskin', 'trueStrike'], 'Mage Armour, for a whole day, keeps none; Stoneskin, True Strike, Longstrider, the ward and Blur, while they last, do');
   assert.equal(SPELL_VFX.cloud_of_daggers.zone, 'cloud-of-daggers');
 
   sent.length = 0;
@@ -6901,4 +6932,882 @@ test('the level panel tells every kind of pick by its colour and names it first 
   const topic = withKind({ title: 'Fire Bolt', body: '…', detail: ['Evocation cantrip'] }, 'cantrip');
   assert.deepEqual(topic.detail[0], { text: 'Cantrip', color: PICK_KIND_COLORS.cantrip }, 'the kind comes first, in its colour');
   assert.equal(topic.detail[1], 'Evocation cantrip', 'the rest follows');
+});
+
+// ── Close quarters, skirmishers, flasks, grease and fire, the dungeon's cantrips ───────────────────────────────────────────
+
+const CloseQuarters = await load('systems/CloseQuarters');
+const Surfaces = await load('systems/Surfaces');
+const Throw = await load('systems/ThrowSystem');
+const Lights = await load('systems/DancingLights');
+const Lasting = await load('systems/LastingSpells');
+const { THROWABLES } = await load('rules/Throwables');
+/** Every d20 a 1 (every save fails), every other die its top face. */
+const SURE_FAIL = (sides) => (sides === 20 ? 1 : sides);
+
+test('a ranged attack with a hostile creature within 5 feet is at disadvantage; a melee spell attack is not', () => {
+  const level = arena(12, 8);
+  const archer = playerAt(4, 4);
+  const goblin = mobAt(level, 'goblin', 5, 4);
+  beginPerception();
+  assert.equal(CloseQuarters.pressedInMelee(archer), true, 'a goblin at arm\'s length presses the shooter');
+  assert.equal(CloseQuarters.pressedInMelee(archer, 'shocking_grasp'), false, 'a melee spell attack is made at arm\'s length anyway');
+  const shot = { life: 30, team: 0, attack: { attackBonus: 5, damage: { count: 1, sides: 8, bonus: 0 }, mode: 'normal' }, pressed: true };
+  assert.equal(CloseQuarters.shotAttack(shot).mode, 'disadvantage');
+  assert.equal(CloseQuarters.shotAttack({ ...shot, pressed: false }).mode, 'normal');
+  goblin.position.x = centre(9);
+  beginPerception();
+  assert.equal(CloseQuarters.pressedInMelee(archer), false, 'nobody near: a clean shot');
+  assert.equal(CloseQuarters.pressedInMelee(goblin), false);
+  archer.position.x = centre(8.6);
+  assert.equal(CloseQuarters.pressedInMelee(goblin), true, 'and an enemy archer is pressed by a hero beside it');
+});
+
+test('an enemy archer keeps its distance: it backs off from a hero who comes close, and holds to shoot from further off', async () => {
+  const { isBackingOff } = await load('ai/execution/skirmish');
+  const { engagementOf } = await load('ai/decision/engagement');
+  const level = arena(24, 10);
+  const hero = playerAt(10, 5);
+  hero.godMode = true;
+  const archer = mobAt(level, 'goblin', 11, 5);
+  archer.mobWeapon = 'shortbow';
+  engage(archer, hero, 0);
+  tickWorld(level, 1);
+  assert.equal(engagementOf(archer, 1), 'skirmish', 'a bow fights from afar');
+  assert.ok(isBackingOff(archer), 'too close to shoot well: it backs off');
+  for (let tick = 2; tick <= 240; tick++) {
+    tickWorld(level, tick);
+    archer.ai.lastSeenTick = tick;
+  }
+  const d = Math.hypot(archer.position.x - hero.position.x, archer.position.y - hero.position.y);
+  assert.ok(d >= C.SKIRMISH_MIN, `it got its distance (${Math.round(d)} px)`);
+  assert.equal(isBackingOff(archer), false, 'and holds there to shoot');
+});
+
+test('a waiting enemy goes for another hero with room round them rather than piling on one', () => {
+  const level = arena(30, 12);
+  const first = playerAt(6, 6);
+  const second = playerAt(17, 6);
+  first.godMode = second.godMode = true;
+  const pack = [[3, 5], [3, 6], [3, 7], [4, 6], [12, 6]].map(([x, y]) => mobAt(level, 'goblin_grunt', x, y));
+  for (const mob of pack) engage(mob, first, 0);
+  for (let tick = 1; tick <= C.RETARGET_TICKS * 3; tick++) {
+    tickWorld(level, tick);
+    for (const mob of pack) if (mob.ai.targetId === world.id(first)) mob.ai.lastSeenTick = tick;
+  }
+  assert.ok(pack.some((mob) => mob.ai.targetId === world.id(second)), 'one of those waiting turned to the second hero');
+  assert.ok(pack.filter((mob) => mob.ai.targetId === world.id(first)).length <= C.MELEE_SLOTS + 1);
+});
+
+test('Alchemist\'s Fire: the splash burns and sets alight whoever fails the save; the floor burns on; water puts a burning hero out', () => {
+  const level = arena(14, 8);
+  const hero = playerAt(8, 4);
+  const goblin = mobAt(level, 'goblin_grunt', 3, 4);
+  beginPerception();
+  useDieRoller(SURE_FAIL);
+  const before = hero.health.current;
+  Throw.land('alchemists_fire', hero.position.x, hero.position.y, world.id(goblin));
+  assert.ok(hero.health.current < before, 'the splash burned the hero');
+  assert.ok(hero.burning?.ticks > 0, 'and set them alight');
+  const fire = world.entities.find((e) => e.surface?.kind === 'fire');
+  assert.ok(fire && fire.glow, 'the floor burns, lighting the dark');
+  assert.equal(fire.surface.ticks, THROWABLES.alchemists_fire.surfaceTicks);
+  const hurt = hero.health.current;
+  hero.position.x = centre(12);
+  hero.burning.pulse = 1;
+  Surfaces.updateSurfaces();
+  assert.ok(hero.health.current < hurt, 'burning, they burn on');
+  Lasting.createPuddle(hero, hero.position.x, hero.position.y, 20);
+  Surfaces.updateSurfaces();
+  assert.equal(hero.burning, undefined, 'water puts it out');
+});
+
+test('a thrown flask flies in an arc to where it was thrown and bursts there', () => {
+  const level = arena(14, 8);
+  const goblin = mobAt(level, 'goblin_grunt', 3, 4);
+  goblin.mobThrowable = { item: 'grease_bottle', count: 1 };
+  Throw.throwFlask(goblin, THROWABLES.grease_bottle, centre(9), centre(4));
+  assert.equal(goblin.mobThrowable.count, 0, 'thrown: no flask left');
+  const flask = world.entities.find((e) => e.thrown);
+  let peak = 0;
+  for (let t = 0; t < flask.thrown.total; t++) {
+    Throw.updateThrows(level, 1);
+    peak = Math.max(peak, flask.yOffset);
+  }
+  assert.ok(peak > 20, 'it rose in an arc');
+  assert.ok(flask.removed, 'and burst where it landed');
+  assert.ok(world.entities.some((e) => e.surface?.kind === 'grease' && Math.abs(e.position.x - centre(9)) < 1), 'leaving grease there');
+});
+
+test('a hero throws a potion of healing: it flies to the crosshair and heals everyone its splash wets, a foe too; drunk, it heals the drinker', async () => {
+  const { consumable } = await load('entities/ItemCatalog');
+  const level = arena(16, 8);
+  const hero = playerAt(3, 4);
+  const friend = playerAt(10, 4);
+  const goblin = mobAt(level, 'goblin_grunt', 10, 5);
+  const far = mobAt(level, 'goblin_grunt', 14, 6);
+  for (const body of [friend, goblin, far]) body.health.current = 1;
+  hero.inventory = [consumable('potion_of_healing'), consumable('potion_of_healing')];
+  beginPerception();
+  assert.ok(PlayerActions.throwFromBag(hero, { bag: 0 }, friend.position.x, friend.position.y + 6));
+  assert.equal(hero.inventory[0], null, 'out of the bag');
+  const potion = world.entities.find((e) => e.thrown);
+  assert.equal(potion.thrown.item, 'potion_of_healing');
+  for (let t = 0; t <= potion.thrown.total; t++) Throw.updateThrows(level, 1);
+  assert.equal(friend.health.current, 1 + 10, 'the companion healed (2d4+2 at its top: 10)');
+  assert.equal(goblin.health.current, Math.min(goblin.health.max, 11), 'the goblin in the splash too');
+  assert.equal(far.health.current, 1, 'not one out of it');
+  hero.attackCooldown = 0;
+  hero.health.current = 1;
+  assert.ok(PlayerActions.drinkPotion(hero, { bag: 1 }));
+  assert.equal(hero.health.current, 11, 'drunk, it heals the drinker');
+  assert.equal(hero.inventory.length, 0, 'and is gone');
+});
+
+test('Alchemist\'s Fire splashes 10 feet round, a potion of healing 5; a throw lands no further than the item flies', async () => {
+  const { THROWABLES } = await load('rules/Throwables');
+  const { feetToPx } = await load('rules/Scale');
+  assert.equal(THROWABLES.alchemists_fire.radius, feetToPx(10));
+  assert.equal(THROWABLES.potion_of_healing.radius, feetToPx(5));
+  const out = { x: 0, y: 0 };
+  Throw.landingPoint({ x: 0, y: 0 }, 100, 300, 0, out);
+  assert.deepEqual(out, { x: 100, y: 0 }, 'as far that way as it flies');
+  Throw.landingPoint({ x: 0, y: 0 }, 100, 30, 40, out);
+  assert.deepEqual(out, { x: 30, y: 40 }, 'within reach: where aimed');
+});
+
+test('anything else thrown strikes the foe it lands on, rolled to hit as an improvised weapon (a dagger as its own), and lies where it fell', async () => {
+  const { layDownItems } = await load('entities/LootFactory');
+  const level = arena(16, 8);
+  const hero = playerAt(3, 4);
+  const goblin = mobAt(level, 'goblin_grunt', 7, 4);
+  goblin.health.current = goblin.health.max = 50;
+  const boot = { type: 'boots', name: 'Old Boot', value: 1, weight: 1 };
+  const dagger = HAND_WEAPONS.find((w) => w.base === 'dagger');
+  hero.inventory = [boot, { ...dagger }];
+  beginPerception();
+  const improvised = Throw.objectAttack(hero, boot, 40);
+  assert.equal(improvised.type, 'bludgeoning');
+  assert.equal(improvised.attack.damage.sides, 4, '1d4 + STR');
+  assert.equal(Throw.objectAttack(hero, dagger, 40).type, 'piercing', 'a dagger as its own');
+  assert.equal(Throw.objectAttack(hero, boot, 300).attack.mode, 'disadvantage', 'past 20 feet: with disadvantage');
+  assert.ok(PlayerActions.throwFromBag(hero, { bag: 0 }, goblin.position.x, goblin.position.y));
+  const thrown = world.entities.find((e) => e.thrown);
+  assert.equal(thrown.thrown.item, 'object');
+  for (let t = 0; t <= thrown.thrown.total; t++) Throw.updateThrows(level, 1);
+  assert.ok(goblin.health.current < 50, 'the boot struck the goblin');
+  layDownItems(undefined);
+  assert.ok(world.entities.some((e) => e.item?.name === 'Old Boot'), 'and lies on the floor');
+});
+
+test('grease: half pace in it, a save or a fall on stepping in; fire sets it alight', () => {
+  const level = arena(14, 8);
+  const hero = playerAt(3, 4);
+  useDieRoller(SURE_FAIL);
+  const grease = Surfaces.spreadSurface('grease', centre(8), centre(4), 40, -1, 600, 12);
+  assert.equal(Surfaces.terrainPace(centre(8), centre(4)), 0.5, 'difficult terrain');
+  assert.equal(Surfaces.terrainPace(centre(3), centre(4)), 1);
+  Surfaces.updateSurfaces();
+  assert.equal(hero.knockedDown, undefined, 'outside it, nothing happens');
+  hero.position.x = centre(8);
+  beginPerception();
+  Surfaces.updateSurfaces();
+  assert.ok(hero.knockedDown > 0, 'stepping in, the hero failed the save and slipped');
+  assert.ok(Surfaces.isDown(hero));
+  for (let t = 0; t < Surfaces.SLIP_TICKS; t++) Surfaces.updateSurfaces();
+  assert.equal(hero.knockedDown, undefined, 'and is up again a moment later');
+  Surfaces.igniteGrease(centre(8), centre(4), 8, -1);
+  assert.equal(grease.surface.kind, 'fire', 'fire took the grease');
+  assert.ok(grease.glow, 'and it burns, lighting the dark');
+});
+
+test('the Grease spell lays grease where the caster aims, asking saves against the caster\'s spell DC', () => {
+  const wizard = playerAt(3, 4, 'wizard');
+  Lasting.castGrease(wizard, SPELLS.grease, centre(6), centre(4));
+  const grease = world.entities.find((e) => e.surface?.kind === 'grease');
+  assert.ok(grease, 'grease where aimed');
+  assert.equal(grease.surface.ticks, SPELLS.grease.durationTicks, 'for a minute');
+  assert.equal(grease.surface.dc, spellcastingFor(sheetOf(wizard), 'grease').dc);
+});
+
+test('Dancing Lights: four lights round the caster, or sent off, where foes that fail a Wisdom save are drawn to them', () => {
+  const level = arena(20, 10);
+  const wizard = playerAt(3, 5, 'wizard');
+  Lights.castDancingLights(wizard, SPELLS.dancing_lights, wizard.position.x, wizard.position.y);
+  const wisps = () => world.entities.filter((e) => e.wisp && !e.removed);
+  assert.equal(wisps().length, 4, 'four lights');
+  assert.ok(wisps().every((w) => w.glow?.radius > 0), 'each sheds light');
+  const anchor = world.entities.find((e) => e.dancingLights);
+  assert.equal(anchor.dancingLights.orbit, true, 'aimed at the caster: they circle them');
+  assert.equal(wizard.concentration.spell, 'dancing_lights', 'held by concentration');
+  const goblin = mobAt(level, 'goblin_grunt', 12, 5);
+  beginPerception();
+  useDieRoller(SURE_FAIL);
+  Lights.castDancingLights(wizard, SPELLS.dancing_lights, centre(11), centre(5));
+  Lights.updateDancingLights(1);
+  Lights.updateDancingLights(2);
+  assert.ok(anchor.removed, 'the lights called before went out');
+  assert.equal(wisps().length, 4);
+  assert.ok(goblin.entranced !== undefined, 'the goblin failed its save and is drawn to them');
+  assert.equal(Lights.followLights(goblin), true, 'it drifts over to stare instead of thinking for itself');
+  Lasting.endConcentration(wizard);
+  Lights.updateDancingLights(3);
+  assert.equal(wisps().length, 0, 'concentration lost: the lights go out');
+  assert.equal(goblin.entranced, undefined, 'and the goblin comes to');
+});
+
+test('True Strike gives the next attack roll advantage, and is spent on it', () => {
+  const wizard = playerAt(3, 4, 'wizard');
+  Lasting.castBuff(wizard, SPELLS.true_strike);
+  assert.ok(wizard.buffs.trueStrike > 0);
+  const target = playerAt(4, 4);
+  const modes = [];
+  useDieRoller((sides) => { modes.push(sides); return sides === 20 ? 10 : 1; });
+  const outcome = Strike.strike(target, { attackBonus: 0, damage: { count: 1, sides: 4, bonus: 0 }, mode: 'normal' }, wizard);
+  assert.equal(modes.filter((s) => s === 20).length, 2, 'two d20s rolled: advantage');
+  assert.equal(wizard.buffs.trueStrike, 0, 'spent');
+  assert.ok(outcome);
+});
+
+test('Chromatic Orb: its kind of damage is chosen when it is bound, kept on the quick bar and cast with it', async () => {
+  const Choice = await load('rules/DamageChoice');
+  assert.deepEqual([...Choice.damageChoices('chromatic_orb')].sort(), ['acid', 'cold', 'fire', 'lightning', 'poison', 'thunder']);
+  assert.deepEqual([...Choice.damageChoices('fire_bolt')], [], 'a spell of one kind offers none');
+  const wizard = createPlayer(0, 0, 'wizard');
+  wizard.inSafeRoom = true;
+  assert.equal(bindSpell(wizard, 0, 'chromatic_orb', 1, 'fire'), true);
+  assert.deepEqual(Spellbook.quickBinding(wizard, 0), { spell: 'chromatic_orb', level: 1, damageType: 'fire' });
+  assert.equal(bindSpell(wizard, 1, 'chromatic_orb', 1, 'radiant'), false, 'not a kind it offers');
+  assert.equal(bindSpell(wizard, 1, 'fire_bolt', 0, 'cold'), false, 'nor on a spell without a choice');
+  assert.equal(Choice.withDamageType(SPELLS.chromatic_orb, 'cold').damageType, 'cold');
+  assert.equal(Choice.withDamageType(SPELLS.fire_bolt, 'cold').damageType, 'fire');
+  assert.ok(validCommand({ kind: 'bind_spell', slot: 0, spell: 'chromatic_orb', level: 1, damageType: 'thunder' }));
+  assert.equal(validCommand({ kind: 'bind_spell', slot: 0, spell: 'chromatic_orb', level: 1, damageType: 'holy' }), false);
+});
+
+test('monster defences are read from the SRD blocks and worked out, ready for play', async () => {
+  const R = await load('rules/Resistances');
+  assert.equal(R.monsterResponse('skeleton', 'bludgeoning', false), 'vulnerable');
+  assert.equal(R.monsterResponse('skeleton', 'poison', false), 'immune');
+  assert.equal(R.monsterResponse('shade', 'radiant', true), 'vulnerable');
+  assert.equal(R.monsterResponse('ghost_wizard', 'necrotic', true), 'immune');
+  assert.equal(R.monsterResponse('grick', 'slashing', false), 'resistant', 'a nonmagical blade');
+  assert.equal(R.monsterResponse('grick', 'slashing', true), 'normal', 'a magical one cuts true');
+  assert.equal(R.monsterResponse('orc', 'fire', false), 'normal');
+  assert.deepEqual([R.adjustDamage(9, 'immune'), R.adjustDamage(9, 'resistant'), R.adjustDamage(9, 'vulnerable'), R.adjustDamage(9, 'normal')], [0, 4, 18, 9]);
+  assert.equal(R.monsterDamageTaken('skeleton', 5, 'bludgeoning', false), 10);
+});
+
+test('Friends, Light, Mage Hand, Minor Illusion, Bursting Sinew and the 1st-level spells with no part here are kept but left out of the Skills tab; the new spells are cast', () => {
+  const hidden = ['friends', 'light', 'mage_hand', 'minor_illusion', 'bursting_sinew', 'disguise_self', 'jump', 'expeditious_retreat', 'feather_fall', 'find_familiar'];
+  for (const id of hidden) assert.ok(Spellbook.CATALOG[id].hidden, `${id} is kept`);
+  const listed = Spellbook.listedSpells('wizard', 12).flat().map((s) => s.id);
+  for (const id of hidden) assert.equal(listed.includes(id), false, `${id} is not listed`);
+  for (const id of ['dancing_lights', 'true_strike', 'grease', 'sleep', 'longstrider', 'protection_from_evil_and_good', 'fog_cloud']) {
+    assert.ok(listed.includes(id), `${id} is listed`);
+    assert.ok(Spellbook.CATALOG[id].castable, `${id} is cast`);
+  }
+});
+
+// ── Concentration, ally spells, Sleep, Fog Cloud, saves over heads, conditions ─────────────────────────────────────────────
+
+const Ally = await load('systems/AllySpells');
+const Sleep = await load('systems/SleepSpell');
+const Fog = await load('systems/FogCloud');
+const Obscured = await load('ai/perception/obscured');
+const Sight = await load('ai/perception/sight');
+const Conditions = await load('systems/Conditions');
+const { durationOf } = await load('ui/HudTime');
+const { text } = await load('core/texts');
+/** Loaded dice: the d20s come up as listed, one after another (then 10s); every other die its top face. */
+const d20s = (...faces) => (sides) => (sides === 20 ? faces.shift() ?? 10 : sides);
+const blow = { attackBonus: 5, damage: { count: 1, sides: 6, bonus: 0 }, mode: 'normal' };
+
+test('concentration holds one spell at a time: True Strike after Dancing Lights puts the lights out; spent or run out, it ends', () => {
+  arena(20, 10);
+  const wizard = playerAt(3, 5, 'wizard');
+  Lights.castDancingLights(wizard, SPELLS.dancing_lights, wizard.position.x, wizard.position.y);
+  const anchor = world.entity(wizard.concentration.zone);
+  assert.equal(wizard.concentration.spell, 'dancing_lights');
+  assert.equal(wizard.concentration.ticks, SPELLS.dancing_lights.durationTicks, 'its time is counted for the HUD');
+  Lasting.castBuff(wizard, SPELLS.true_strike);
+  assert.equal(wizard.concentration.spell, 'true_strike', 'concentrating on True Strike now');
+  assert.ok(anchor.removed, 'so the lights went out');
+  assert.ok(wizard.buffs.trueStrike > 0);
+  const goblin = mobAt(arena(20, 10), 'goblin', 4, 5);
+  Strike.strike(goblin, blow, wizard);
+  assert.equal(wizard.buffs.trueStrike, 0, 'spent on the next attack');
+  Lasting.updateLastingSpells();
+  assert.equal(wizard.concentration, undefined, 'with nothing left to hold, the concentration ends');
+  Lasting.castBuff(wizard, SPELLS.true_strike);
+  wizard.concentration.ticks = 1;
+  Lasting.updateLastingSpells();
+  assert.equal(wizard.concentration, undefined, 'its time ran out');
+  assert.equal(wizard.buffs.trueStrike, 0, 'and its buff with it');
+});
+
+test('Protection from Evil and Good wards the companion picked: undead attack them at disadvantage, until the caster concentrates on another spell', () => {
+  const level = arena(14, 8);
+  const cleric = playerAt(3, 4, 'cleric');
+  const ally = playerAt(4, 4);
+  const far = playerAt(10, 4);
+  const def = SPELLS.protection_from_evil_and_good;
+  assert.equal(Ally.allyAt(cleric, ally.position.x, ally.position.y - 14), ally, 'the hero under the crosshair');
+  assert.equal(Ally.allyAt(cleric, centre(7), centre(2)), cleric, 'nobody there: the caster');
+  assert.equal(Ally.allyInReach(cleric, far, def), false, 'a touch reaches no further');
+  assert.equal(Ally.castOnAlly(cleric, def, far.position.x, far.position.y - 14), false);
+  assert.equal(Ally.castOnAlly(cleric, def, ally.position.x, ally.position.y - 14), true);
+  assert.ok(ally.buffs.protection > 0, 'the companion is warded');
+  assert.equal(cleric.concentration.zone, world.id(ally), 'held by the caster\'s concentration');
+  const skeleton = mobAt(level, 'skeleton', 5, 4);
+  const goblin = mobAt(level, 'goblin', 5, 5);
+  useDieRoller(d20s(19, 1));
+  assert.equal(Strike.strike(ally, blow, skeleton).hit, false, 'the undead rolls twice and keeps the 1');
+  useDieRoller(d20s(19, 1));
+  assert.equal(Strike.strike(ally, blow, goblin).hit, true, 'a goblin is no fiend nor undead');
+  Fog.castFogCloud(cleric, SPELLS.fog_cloud, centre(10), centre(2));
+  assert.equal(ally.buffs.protection, 0, 'another spell held by concentration ended the ward');
+});
+
+test('Longstrider: the companion touched walks 10 feet faster for an hour, with no concentration', () => {
+  arena(14, 8);
+  const wizard = playerAt(3, 4, 'wizard');
+  const ally = playerAt(4, 4);
+  assert.equal(Ally.longstriderFactor(ally), 1);
+  assert.equal(Ally.castOnAlly(wizard, SPELLS.longstrider, ally.position.x, ally.position.y - 14), true);
+  assert.equal(ally.buffs.longstrider, SPELLS.longstrider.durationTicks);
+  assert.ok(Math.abs(Ally.longstriderFactor(ally) - 40 / 30) < 1e-9, '40 feet where they walked 30');
+  assert.equal(wizard.concentration, undefined);
+  Lasting.updateLastingSpells();
+  assert.equal(ally.buffs.longstrider, SPELLS.longstrider.durationTicks - 1, 'it runs down');
+  assert.equal(durationOf(SPELLS.longstrider.durationTicks), '60:00', 'an hour is told in minutes');
+  assert.equal(durationOf(90), '1.5s');
+});
+
+test('Sleep: its mote lulls the first foe it touches if its hit points are few enough; a blow wakes it; the undead never sleep', () => {
+  const level = arena(16, 8);
+  const wizard = boundOn(casterAt(2, 4, 'wizard', 0), 0, 'sleep');
+  wizard.playerStats.level = 3;
+  const goblin = mobAt(level, 'goblin', 5, 4);
+  cast(level, wizard);
+  assert.ok(goblin.status?.asleep > 0, 'the goblin sleeps');
+  assert.ok(rollLines(goblin).includes(text('roll.asleep')));
+  assert.equal(goblin.health.current, goblin.health.max, 'Sleep does no harm');
+  assert.ok(Surfaces.isDown(goblin), 'it neither moves nor acts');
+  const fighter = playerAt(4, 4);
+  useDieRoller(d20s(10, 10));
+  const outcome = Strike.strike(goblin, { ...blow, attackBonus: 10 }, fighter);
+  assert.ok(outcome.critical, 'a hit from within 5 feet on a sleeper is a critical hit');
+  hitMob(goblin, fighter, 1, true);
+  assert.equal(goblin.status.asleep, 0, 'the blow woke it');
+  assert.equal(Sleep.sleepless(mobAt(level, 'skeleton', 8, 4)), true, 'an undead is not affected');
+  assert.equal(Sleep.sleepless(goblin), false);
+  assert.equal(Sleep.sleepPool(3).count, 9, 'cast two levels up, 2d8 more for each');
+  const troll = mobAt(level, 'troll', 8, 5);
+  Sleep.lull(troll, 1, wizard);
+  assert.equal(troll.status?.asleep ?? 0, 0, 'a troll has far more hit points than 5d8');
+});
+
+test('Fog Cloud heavily obscures: attacks into it or out of it are at disadvantage, and foes do not see a hero in it or behind it', () => {
+  const level = arena(24, 10);
+  const wizard = playerAt(12, 5, 'wizard');
+  const goblin = mobAt(level, 'goblin', 7, 5);
+  beginPerception();
+  assert.equal(Sight.canSee(level, goblin, wizard), true, 'in the open it sees the wizard');
+  Fog.castFogCloud(wizard, SPELLS.fog_cloud, wizard.position.x, wizard.position.y);
+  assert.equal(wizard.concentration.spell, 'fog_cloud');
+  assert.equal(Obscured.inFog(wizard.position.x, wizard.position.y), true);
+  assert.equal(Sight.canSee(level, goblin, wizard), false, 'the fog hides them');
+  useDieRoller(d20s(19, 1));
+  assert.equal(Strike.strike(wizard, blow, goblin).hit, false, 'the goblin swings into the fog at disadvantage');
+  assert.deepEqual(Conditions.conditionsOn(wizard, []), ['blinded'], 'whoever is in it is blinded');
+  goblin.position.x = wizard.position.x - 30;
+  assert.equal(Sight.canSee(level, goblin, wizard), true, 'within 5 feet it hears and feels them');
+  Lasting.endConcentration(wizard);
+  Fog.updateFogClouds();
+  assert.equal(Obscured.inFog(wizard.position.x, wizard.position.y), false, 'the fog lifted with the concentration');
+});
+
+test('saving throws against slipping show over heroes\' and foes\' heads; a specter floats over grease; conditions are named for their rings', () => {
+  const level = arena(14, 8);
+  const hero = playerAt(8, 4);
+  const goblin = mobAt(level, 'goblin', 8, 5);
+  const specter = mobAt(level, 'ghost_wizard', 7, 4);
+  beginPerception();
+  useDieRoller(SURE_FAIL);
+  Surfaces.spreadSurface('grease', centre(8), centre(4), 48, -1, 600, 12);
+  assert.ok(rollLines(hero).some((line) => line.startsWith('DEX save')), 'the hero\'s save over their head');
+  assert.ok(rollLines(goblin).some((line) => line.startsWith('DEX save')), 'and the goblin\'s');
+  assert.ok(rollLines(hero).includes(text('roll.slipped')));
+  assert.equal(specter.status?.prone ?? 0, 0, 'a specter is never prone');
+  assert.deepEqual(Conditions.conditionsOn(hero, []), ['prone']);
+  assert.deepEqual(Conditions.conditionsOn(goblin, []), ['prone']);
+  goblin.status.asleep = 60;
+  world.addComponent(goblin, 'burning', { ticks: 60, pulse: 60, by: -1 });
+  assert.deepEqual(Conditions.conditionsOn(goblin, []), ['unconscious', 'prone', 'burning']);
+});
+
+const Holds = await load('systems/SpellHolds');
+const Invis = await load('systems/Invisibility');
+const Illusions = await load('systems/Illusions');
+const Gust = await load('systems/GustOfWind');
+const Misty = await load('systems/MistyStep');
+const Afflictions = await load('systems/Afflictions');
+const Madness = await load('systems/Madness');
+const SpellWeapons = await load('rules/SpellWeapons');
+const Variants = await load('rules/SpellVariants');
+const { updateMovement: moveAll } = await load('systems/MovementSystem');
+
+/** Aims a caster's crosshair at the middle of a body (where a hex picks its foe). */
+function aimAtBody(caster, body) {
+  caster.aimWorld.x = body.position.x;
+  caster.aimWorld.y = body.position.y - 14;
+}
+
+test('Hold Person paralyses a humanoid that fails its save: it stands frozen, blows at it have advantage and crit from close by; it lets go with the concentration', () => {
+  const level = arena(16, 8);
+  const wizard = boundOn(casterAt(3, 4, 'wizard', 0), 0, 'hold_person');
+  wizard.playerStats.level = 3;
+  const goblin = mobAt(level, 'goblin', 6, 4);
+  aimAtBody(wizard, goblin);
+  useDieRoller(SURE_FAIL);
+  cast(level, wizard);
+  assert.ok(Holds.heldIn(goblin, 'paralyzed'), 'the goblin is paralysed');
+  assert.equal(wizard.concentration?.spell, 'hold_person');
+  assert.ok(Surfaces.isDown(goblin), 'it neither moves nor acts');
+  assert.ok(Conditions.conditionsOn(goblin, []).includes('paralyzed'), 'its ring names it');
+  const fighter = playerAt(5, 4);
+  useDieRoller(d20s(10, 10));
+  assert.ok(Strike.strike(goblin, { ...blow, attackBonus: 10 }, fighter).critical, 'a hit from within 5 feet is a critical hit');
+  assert.equal(Holds.failsSave(goblin, 'dexterity'), true, 'it fails Dexterity saves');
+  Lasting.endConcentration(wizard);
+  assert.equal(Holds.heldIn(goblin, 'paralyzed'), false, 'the concentration ended: it is free');
+  const skeleton = mobAt(level, 'skeleton', 9, 4);
+  assert.equal(Holds.takes(SPELLS.hold_person, 'paralyzed', skeleton), false, 'an undead is no humanoid');
+  useDieRoller(SURE_HIT);
+});
+
+test('a held foe saves again at the end of each of its turns; Tasha\'s laughter is shaken off when hurt; a dim creature does not laugh', () => {
+  const level = arena(16, 8);
+  const wizard = playerAt(3, 4, 'wizard');
+  const goblin = mobAt(level, 'goblin', 6, 4);
+  useDieRoller(SURE_FAIL);
+  assert.equal(Holds.castHex(wizard, SPELLS.tashas_hideous_laughter, goblin.position.x, goblin.position.y - 14, 'laughing'), true);
+  assert.ok(Holds.heldIn(goblin, 'laughing'));
+  assert.deepEqual(Conditions.conditionsOn(goblin, []), ['laughing'], 'its ring is the laughter');
+  useDieRoller(SURE_HIT);
+  hitMob(goblin, wizard, 1, true);
+  assert.equal(Holds.heldIn(goblin, 'laughing'), false, 'hurt, it saved (with advantage) and stopped laughing');
+  const grick = mobAt(level, 'grick', 9, 4);
+  assert.equal(Holds.takes(SPELLS.tashas_hideous_laughter, 'laughing', grick), false, 'Intelligence 3: nothing is funny');
+  useDieRoller(SURE_FAIL);
+  Holds.holdBody(goblin, 'blinded', 'blindness', world.id(wizard), 30, 6000);
+  for (let t = 0; t < Holds.TURN_TICKS - 1; t++) Holds.updateSpellHolds();
+  assert.ok(Holds.heldIn(goblin, 'blinded'), 'no save until its turn ends');
+  useDieRoller(SURE_HIT);
+  Holds.holdBody(goblin, 'blinded', 'blindness', world.id(wizard), 10, 6000);
+  for (let t = 0; t < Holds.TURN_TICKS; t++) Holds.updateSpellHolds();
+  assert.equal(Holds.heldIn(goblin, 'blinded'), false, 'at its turn\'s end it saved');
+});
+
+test('Charm Person charms humanoids only; Blindness is bound to blind or to deafen; a blinded foe sees nobody beyond 5 feet', () => {
+  const level = arena(20, 8);
+  const wizard = playerAt(3, 4, 'wizard');
+  const goblin = mobAt(level, 'goblin', 7, 4);
+  useDieRoller(SURE_FAIL);
+  Holds.castHex(wizard, SPELLS.charm_person, goblin.position.x, goblin.position.y - 14, 'charmed');
+  assert.ok(goblin.status?.charmed > 0, 'charmed: it stands by');
+  assert.equal(Holds.takes(SPELLS.charm_person, 'charmed', mobAt(level, 'skeleton', 9, 4)), false);
+  assert.deepEqual(Variants.variantChoices('blindness'), ['blinded', 'deafened']);
+  assert.equal(Variants.validVariant('blindness', 'deafened'), true);
+  assert.equal(Variants.validVariant('fire_bolt', 'deafened'), false, 'no other spell takes a choice');
+  assert.equal(Variants.boundVariant({ spell: 'blindness' }), 'blinded', 'unbound, it blinds');
+  const orc = mobAt(level, 'orc', 8, 5);
+  beginPerception();
+  assert.equal(Sight.canSee(level, orc, wizard), true);
+  Holds.holdBody(orc, 'blinded', 'blindness', world.id(wizard), 12, 600);
+  assert.equal(Sight.canSee(level, orc, wizard), false, 'blinded, it cannot see the wizard');
+  Holds.holdBody(orc, 'deafened', 'blindness', world.id(wizard), 12, 600);
+  assert.ok(Conditions.conditionsOn(orc, []).includes('deafened'));
+  useDieRoller(SURE_HIT);
+});
+
+test('Crown of Madness turns a foe on the nearest of its own; Ray of Enfeeblement halves its Strength blows', () => {
+  const level = arena(20, 8);
+  const wizard = playerAt(3, 4, 'wizard');
+  const orc = mobAt(level, 'orc', 8, 4);
+  const goblin = mobAt(level, 'goblin', 10, 4);
+  beginPerception();
+  Holds.holdBody(orc, 'maddened', 'crown_of_madness', world.id(wizard), 12, 600);
+  assert.equal(Madness.madTarget(orc), goblin, 'it goes for the goblin');
+  assert.equal(Madness.sparedBy(orc, world.id(wizard)), true, 'never its charmer');
+  Holds.holdBody(orc, 'enfeebled', 'ray_of_enfeeblement', world.id(wizard), 12, 600);
+  assert.equal(Holds.enfeebledDamage(orc, 9), 4, 'an orc\'s greataxe uses Strength: half');
+  assert.equal(SPELLS.ray_of_enfeeblement.kind, 'bolt');
+  assert.equal(SPELLS.ray_of_enfeeblement.condition, 'enfeebled');
+});
+
+test('Mirror Image: a blow may go for a duplicate, which a hit destroys; Blur puts attackers at disadvantage', () => {
+  const level = arena(14, 8);
+  const wizard = playerAt(5, 4, 'wizard');
+  const goblin = mobAt(level, 'goblin', 6, 4);
+  Lasting.castBuff(wizard, SPELLS.mirror_image);
+  assert.equal(Illusions.imagesLeft(wizard), 3, 'three duplicates');
+  useDieRoller(() => 20);
+  const outcome = Strike.strike(wizard, blow, goblin);
+  assert.equal(outcome.hit, false, 'the blow went for a duplicate: the wizard is unhurt');
+  assert.equal(Illusions.imagesLeft(wizard), 2, 'and destroyed it');
+  wizard.buffs.images = 0;
+  Lasting.castBuff(wizard, SPELLS.blur);
+  assert.equal(wizard.concentration.spell, 'blur');
+  useDieRoller(d20s(19, 1));
+  assert.equal(Strike.strike(wizard, blow, goblin).hit, false, 'blurred, the blow is rolled at disadvantage');
+  useDieRoller(SURE_HIT);
+});
+
+test('Shadow Blade puts a 2d8 psychic blade in the hand; Magic Weapon makes a plain weapon +1 (more cast higher)', () => {
+  arena(10, 6);
+  const wizard = playerAt(3, 3, 'wizard');
+  Lasting.castBuff(wizard, SPELLS.shadow_blade);
+  const sheet = sheetOf(wizard);
+  assert.equal(sheet.attack.damage.count, 2);
+  assert.equal(sheet.attack.damage.sides, 8);
+  assert.ok(sheet.attack.rule.properties.includes('finesse'));
+  assert.equal(SpellWeapons.bladeDamageType(wizard), 'psychic');
+  assert.equal(SpellWeapons.bladeDice(3), 3, 'cast at the 3rd level, 3d8');
+  assert.equal(SpellWeapons.bladeDice(7), 5);
+  Lasting.endConcentration(wizard);
+  assert.equal(SpellWeapons.bladeDamageType(wizard), undefined, 'gone with the concentration');
+  const fighter = playerAt(4, 3, 'fighter');
+  fighter.equipped = { primary: { ...HAND_WEAPONS.find((w) => w.base === 'longsword') } };
+  const plain = sheetOf(fighter).attack;
+  assert.equal(Ally.castOnAlly(wizard, SPELLS.magic_weapon, fighter.position.x, fighter.position.y - 14), true);
+  const magic = sheetOf(fighter).attack;
+  assert.equal(magic.attackBonus, plain.attackBonus + 1);
+  assert.equal(magic.damage.bonus, plain.damage.bonus + 1);
+  assert.equal(SpellWeapons.weaponBonus(4), 2);
+  assert.equal(SpellWeapons.weaponBonus(6), 3);
+});
+
+test('Invisibility hides a hero until they attack; See Invisibility reveals an invisible foe to everyone', () => {
+  const level = arena(24, 10);
+  const wizard = playerAt(12, 5, 'wizard');
+  const goblin = mobAt(level, 'goblin', 7, 5);
+  beginPerception();
+  assert.equal(Ally.castOnAlly(wizard, SPELLS.invisibility, wizard.position.x, wizard.position.y - 14), true);
+  assert.ok(wizard.invisible, 'invisible');
+  assert.equal(Sight.canSee(level, goblin, wizard), false, 'the goblin sees nobody there');
+  assert.equal(Invis.shownAlpha(wizard), Invis.SHIMMER_ALPHA, 'a hero shows as a shimmer');
+  useDieRoller(d20s(19, 1));
+  assert.equal(Strike.strike(wizard, blow, goblin).hit, false, 'blows at the unseen are at disadvantage');
+  Invis.revealOnAct(wizard);
+  assert.equal(wizard.invisible, undefined, 'an attack or a spell ends it');
+  assert.equal(wizard.concentration, undefined, 'and the concentration on it');
+  Invis.makeInvisible(goblin, world.id(goblin), 600);
+  assert.equal(Invis.shownAlpha(goblin), 0, 'an invisible foe is not drawn');
+  assert.equal(Invis.hiddenHere(goblin), true);
+  goblin.position.x = wizard.position.x - 60;
+  Invis.castSeeInvisibility(wizard, SPELLS.see_invisibility);
+  assert.equal(Invis.shownAlpha(goblin), Invis.SHIMMER_ALPHA, 'the seer sees it as a shimmer');
+  useDieRoller(SURE_FAIL);
+  Invis.updateInvisibility(level);
+  assert.equal(goblin.invisible, undefined, 'it failed its save: revealed to all');
+  useDieRoller(SURE_HIT);
+});
+
+test('Gust of Wind blows a foe that fails its save back along the line, over a pit\'s brink if one lies there, and scatters fog', () => {
+  const level = arena(30, 8);
+  const wizard = playerAt(4, 4, 'wizard');
+  const goblin = mobAt(level, 'goblin', 7, 4);
+  const fog = world.add({ position: { x: centre(9), y: centre(4) }, fogCloud: { owner: -1, radius: 32, ticks: 600 } });
+  beginPerception();
+  useDieRoller(SURE_FAIL);
+  const from = goblin.position.x;
+  Gust.castGust(wizard, SPELLS.gust_of_wind, 1, 0);
+  assert.equal(wizard.concentration.spell, 'gust_of_wind');
+  assert.ok(goblin.shove, 'it is blown back');
+  assert.ok(fog.removed, 'the fog is scattered');
+  for (let t = 0; t < 40; t++) moveAll(level);
+  assert.ok(goblin.position.x - from >= SPELLS.gust_of_wind.push - 12, '15 feet along the line');
+  assert.equal(Gust.dropAlong(level, centre(4), centre(4), 1, 0, 144), false, 'no drop that way');
+  useDieRoller(SURE_HIT);
+});
+
+test('Misty Step finds a free place in sight within 30 feet, short of a wall', () => {
+  const level = arena(20, 8);
+  wallRect(level, 10, 1, 10, 6);
+  const wizard = playerAt(4, 4, 'wizard');
+  const to = Misty.stepTarget(level, wizard, SPELLS.misty_step, centre(15), centre(4));
+  assert.ok(to && to.x < 10 * TILE_WIDTH, 'not through the wall: short of it');
+  Misty.castMistyStep(wizard, to.x, to.y);
+  assert.equal(wizard.position.x, to.x);
+});
+
+test('Web restrains whoever fails a Dexterity save in it; a Strength check breaks free; fire burns it away', () => {
+  const level = arena(16, 8);
+  const goblin = mobAt(level, 'goblin', 8, 4);
+  beginPerception();
+  useDieRoller(SURE_FAIL);
+  Surfaces.spreadSurface('web', goblin.position.x, goblin.position.y, 48, -1, 600, 12);
+  assert.ok(Holds.heldIn(goblin, 'restrained'), 'caught in the webs');
+  assert.ok(Surfaces.isDown(goblin), 'it cannot move');
+  assert.equal(Surfaces.terrainPace(goblin.position.x, goblin.position.y), 0.5, 'difficult terrain');
+  const before = goblin.health.current;
+  useDieRoller(SURE_HIT);
+  Surfaces.igniteGrease(goblin.position.x, goblin.position.y, 8, -1);
+  assert.ok(goblin.health.current < before, 'the burning webs scorch it');
+  Holds.updateSpellHolds();
+  assert.equal(Holds.heldIn(goblin, 'restrained'), false, 'no webs, no hold');
+});
+
+test('a blow of fire, poison, acid, cold or lightning leaves its mark for a round; Darkness swallows the light', () => {
+  const level = arena(14, 8);
+  const goblin = mobAt(level, 'goblin', 5, 4);
+  const wizard = playerAt(3, 4, 'wizard');
+  hitMob(goblin, wizard, 1, true, 'cold');
+  assert.equal(goblin.afflicted?.kind, 'cold');
+  for (let t = 0; t < Afflictions.AFFLICTION_TICKS; t++) Afflictions.updateAfflictions();
+  assert.equal(goblin.afflicted, undefined, 'it fades after a round');
+  hitMob(goblin, wizard, 1, true, 'slashing');
+  assert.equal(goblin.afflicted, undefined, 'a blade leaves none');
+  Fog.castFogCloud(wizard, SPELLS.darkness, goblin.position.x, goblin.position.y);
+  assert.equal(Obscured.inDarkness(goblin.position.x, goblin.position.y), true);
+  assert.equal(Obscured.inFog(goblin.position.x, goblin.position.y), true, 'heavily obscured, as fog is');
+  assert.equal(Obscured.inDimLight(goblin.position.x, goblin.position.y), true, 'Shadow Blade strikes there at advantage');
+});
+
+test('the six 2nd-level spells the game has no use for are kept but hidden', async () => {
+  const { readFileSync } = await import('node:fs');
+  const list = JSON.parse(readFileSync(new URL('../src/data/spell-list.json', import.meta.url), 'utf8')).spells;
+  for (const id of ['arcane_lock', 'darkvision', 'detect_thoughts', 'enlarge_reduce', 'knock', 'phantasmal_force']) assert.equal(list[id].hidden, true, id);
+  for (const id of ['blur', 'web', 'hold_person', 'charm_person', 'tashas_hideous_laughter']) assert.ok(!list[id].hidden, id);
+});
+
+const WeaponActionsModule = await load('rules/WeaponActions');
+const Rarity = await load('rules/Rarity');
+const ItemCompareModule = await load('game/ItemCompare');
+const WeaponHits = await load('systems/WeaponHits');
+const Protocol = await load('network/protocol');
+
+test('weapon actions follow Baldur\'s Gate 3: each weapon\'s own, once a short rest, Tenacity at will; bound to the quick bar as action:<id>', () => {
+  const ids = (base) => WeaponActionsModule.weaponActions(base).map((a) => a.id);
+  assert.deepEqual(ids('greatsword'), ['cleave', 'lacerate', 'pommel_strike']);
+  assert.deepEqual(ids('longsword'), ['lacerate', 'rush_attack', 'pommel_strike']);
+  assert.deepEqual(ids('quarterstaff'), ['topple']);
+  assert.deepEqual(ids('heavy_crossbow'), ['brace_ranged', 'piercing_shot']);
+  for (const base of ['whip', 'lance', 'net', 'sling', 'dart', 'blowgun', 'unarmed']) assert.equal(ids(base).length, 0, `${base} unlocks none`);
+  const lacerate = WeaponActionsModule.weaponAction('lacerate');
+  assert.equal(lacerate.condition, 'bleeding');
+  assert.equal(lacerate.save, 'constitution');
+  assert.equal(lacerate.perRest, true);
+  assert.equal(WeaponActionsModule.weaponAction('tenacity').perRest, false, 'Tenacity: unlimited use');
+  assert.equal(WeaponActionsModule.weaponActionDc(lacerate, 2, 3, 1), 8 + 2 + 3 + 2, '8 + proficiency + the better of STR and DEX + its own +2');
+  assert.equal(WeaponActionsModule.bindingActionId('action:lacerate'), 'lacerate');
+  assert.equal(Protocol.validBinding('action:lacerate', 0), true);
+  assert.equal(Protocol.validBinding('action:nonsense', 0), false);
+});
+
+test('an item\'s rarity follows its magic; a weapon dealing damage of another kind is a step rarer', () => {
+  const sword = { ...HAND_WEAPONS.find((w) => w.base === 'longsword') };
+  assert.equal(Rarity.rarityOf(sword), 'common');
+  assert.equal(Rarity.rarityOf({ ...sword, bonus: 1 }), 'uncommon');
+  assert.equal(Rarity.rarityOf({ ...sword, bonus: 1, extraDamage: { count: 1, sides: 4, type: 'fire' } }), 'rare');
+  assert.equal(Rarity.rarityOf({ ...sword, bonus: 3, extraDamage: { count: 1, sides: 4, type: 'fire' } }), 'very_rare');
+  assert.equal(Protocol.isInventoryItem({ ...sword, extraDamage: { count: 1, sides: 4, type: 'fire' } }), true);
+  assert.equal(Protocol.isInventoryItem({ ...sword, extraDamage: { count: 1, sides: 5, type: 'fire' } }), false, 'no five-sided die');
+  assert.equal(Protocol.isInventoryItem({ ...sword, extraDamage: { count: 1, sides: 4, type: 'hellfire' } }), false);
+});
+
+test('an item looked at in the bag is compared with what it would replace: a weapon with the main hand\'s, armour with the armour, headwear with the head\'s', () => {
+  const sword = { ...HAND_WEAPONS.find((w) => w.base === 'longsword') };
+  const axe = { ...HAND_WEAPONS.find((w) => w.base === 'battleaxe') };
+  const mail = { type: 'armor', name: 'Chain mail', value: 75, gear: 'armor', base: 'chain_mail' };
+  const shirt = { type: 'armor', name: 'Chain shirt', value: 50, gear: 'armor', base: 'chain_shirt' };
+  const equipped = { primary: sword, armor: mail };
+  assert.equal(ItemCompareModule.wornCounterpart(equipped, axe), sword);
+  assert.equal(ItemCompareModule.wornCounterpart(equipped, shirt), mail);
+  assert.equal(ItemCompareModule.wornCounterpart(equipped, sword), undefined, 'not with itself');
+  assert.equal(ItemCompareModule.wornCounterpart({}, axe), undefined, 'nothing worn: nothing to compare');
+  const shield = { ...SHIELDS[0] };
+  assert.equal(ItemCompareModule.wornCounterpart({ secondary: shield }, { ...shield }), undefined, 'the off hand is not compared yet');
+});
+
+test('a weapon dealing fire deals it on every hit and sets the one struck alight for a couple of rounds, hero or foe', () => {
+  const level = arena(12, 6);
+  const fighter = playerAt(3, 3, 'fighter');
+  fighter.equipped = { primary: { ...HAND_WEAPONS.find((w) => w.base === 'longsword'), extraDamage: { count: 1, sides: 4, type: 'fire' } } };
+  const attack = sheetOf(fighter).attack;
+  assert.deepEqual(attack.elemental, { dice: { count: 1, sides: 4, bonus: 0 }, type: 'fire' });
+  const goblin = mobAt(level, 'goblin', 4, 3);
+  const before = goblin.health.current;
+  WeaponHits.elementalHit(goblin, fighter, attack, false);
+  assert.ok(goblin.health.current < before, 'the fire hurts');
+  assert.equal(goblin.burning?.ticks, WeaponHits.WEAPON_BURN_TICKS, 'and it burns on');
+  assert.equal(goblin.afflicted?.kind, 'fire');
+  const hero = playerAt(6, 3);
+  WeaponHits.elementalHit(hero, goblin, { ...blow, elemental: { dice: { count: 1, sides: 4, bonus: 0 }, type: 'fire' } }, false);
+  assert.ok(hero.burning, 'a hero struck by a fiery weapon burns too');
+  const cold = { ...blow, elemental: { dice: { count: 1, sides: 4, bonus: 0 }, type: 'cold' } };
+  const orc = mobAt(level, 'orc', 8, 3);
+  WeaponHits.elementalHit(orc, fighter, cold, false);
+  assert.equal(orc.burning, undefined, 'cold sets nothing alight');
+});
+
+const WeaponActionSystem = await load('systems/WeaponActions');
+const WeaponMarks = await load('systems/WeaponMarks');
+const ConditionsModule = await load('systems/Conditions');
+const Snuff = await load('systems/Snuff');
+const { characterSheet: characterSheetOf } = await load('rules/CharacterSheet');
+
+/** A hero with a longsword in the main hand, beside a goblin. */
+function swordsmanBeside(level) {
+  const hero = playerAt(4, 4);
+  hero.equipped = { primary: { ...HAND_WEAPONS.find((w) => w.base === 'longsword') } };
+  const goblin = mobAt(level, 'goblin', 5, 4);
+  goblin.health.current = goblin.health.max = 200;
+  return { hero, goblin };
+}
+
+test('Lacerate is readied from the quick bar and spent on the next blow: a hit the foe fails to save against leaves it Bleeding, 2 slashing a turn; a rest gives it back', () => {
+  const level = arena(12, 8);
+  const { hero, goblin } = swordsmanBeside(level);
+  assert.equal(PlayerActions.bindSpell(hero, 3, 'action:lacerate', 0), true, 'a fighter trained in a longsword binds it');
+  assert.equal(WeaponActionSystem.actionAvailable(hero, 'lacerate'), 'ok');
+  assert.equal(WeaponActionSystem.actionAvailable(hero, 'topple'), 'no_weapon', 'Topple needs a quarterstaff in the main hand');
+  hero.swordSwing = { delay: 1, ticks: 1, dirX: 1, dirY: 0, range: 1, hitIds: [], blow: 0, blows: 1, offHand: false, tempo: 1 };
+  assert.equal(WeaponActionSystem.useWeaponAction(hero, 'lacerate', level, { x: goblin.position.x, y: goblin.position.y }), 'ok');
+  assert.equal(hero.weaponAction?.id, 'lacerate', 'readied for the next blow');
+  assert.equal(WeaponActionSystem.actionAvailable(hero, 'lacerate'), 'spent', 'once a short rest');
+  useDieRoller(d20s(19, 1));
+  const outcome = Strike.strike(goblin, characterSheetOf(hero).attack, hero);
+  useDieRoller(SURE_HIT);
+  assert.ok(outcome.hit);
+  assert.equal(hero.weaponAction, undefined, 'spent on the blow');
+  assert.ok(WeaponMarks.marked(goblin, 'bleeding'), 'it failed its Constitution save: bleeding');
+  assert.ok(ConditionsModule.conditionsOn(goblin, []).includes('bleeding'), 'its ring and card name it');
+  const before = goblin.health.current;
+  const hurt = (foe, by, damage) => { foe.health.current -= damage; };
+  for (let t = 0; t < 360; t++) WeaponMarks.updateWeaponMarks(hurt);
+  assert.equal(goblin.health.current, before - 2, '2 slashing at the end of the turn');
+  WeaponActionSystem.restoreActions(hero);
+  assert.equal(WeaponActionSystem.actionAvailable(hero, 'lacerate'), 'ok', 'a rest gives it back');
+});
+
+test('Off Balance is not ended by the blow that laid it, but by the next damage; Gaping Wounds add 2 to every later blow', () => {
+  const level = arena(12, 8);
+  const { hero, goblin } = swordsmanBeside(level);
+  const id = world.id(hero);
+  WeaponMarks.markFoe(goblin, 'off_balance', 2, id);
+  WeaponMarks.markFoe(goblin, 'gaping_wounds', 2, id);
+  assert.equal(WeaponMarks.woundedFurther(goblin, 5), 5, 'the blow that laid them: no more');
+  assert.ok(WeaponMarks.marked(goblin, 'off_balance'));
+  assert.equal(WeaponMarks.markedAttackMode('normal', hero, goblin), 'advantage', 'attacks against it have advantage');
+  WeaponMarks.updateWeaponMarks(() => {});
+  assert.equal(WeaponMarks.woundedFurther(goblin, 5), 7, 'Gaping Wounds: 2 piercing more');
+  assert.equal(WeaponMarks.marked(goblin, 'off_balance'), false, 'the hurt ended Off Balance');
+});
+
+test('a dead enemy stays where it fell: once its death has played it lies there as a corpse, as many as a level keeps', async () => {
+  const { MAX_CORPSES } = await load('entities/Corpse');
+  const level = arena(12, 8);
+  playerAt(2, 2);
+  const goblin = mobAt(level, 'goblin_grunt', 6, 4);
+  goblin.character.flipX = true;
+  goblin.health.current = 0;
+  for (let t = 0; t < 400 && !goblin.removed; t++) updateDeath(level);
+  const corpse = world.entities.find((e) => e.corpse);
+  assert.ok(corpse, 'a corpse lies there');
+  assert.equal(corpse.corpse.def, goblin.character.def);
+  assert.equal(corpse.corpse.flipX, true, 'facing as it fell');
+  assert.equal(corpse.position.x, centre(6));
+  assert.equal(world.entities.includes(goblin), false, 'the goblin itself is gone');
+  assert.equal(corpse.health, undefined, 'nothing to strike');
+  assert.ok(MAX_CORPSES >= 40);
+});
+
+test('Gust of Wind blows out the wall torches and campfires along its line, and no others', () => {
+  const near = createTorch(centre(8), centre(4));
+  const far = createTorch(centre(8), centre(12));
+  assert.equal(Snuff.snuffAlong(centre(3), centre(4), 1, 0), 1);
+  assert.equal(near.torch, undefined, 'no more light');
+  assert.equal(near.sparks, undefined, 'no more sparks');
+  assert.equal(near.visual.sheet, 'torch_out');
+  assert.ok(far.torch, 'out of the line, it burns on');
+});
+
+test('the wind blows out candles too, and fire lights every flame it blew out again, sparks and light and all', async () => {
+  const { createProp } = await load('entities/DungeonFactory');
+  arena(16, 10);
+  const torch = createTorch(centre(8), centre(4));
+  const candle = createProp({ kind: 'candle', tx: 6, ty: 4 });
+  const lantern = createProp({ kind: 'mine_lantern', tx: 7, ty: 4 });
+  Snuff.snuffAlong(centre(3), centre(4), 1, 0);
+  assert.equal(candle.glow, undefined, 'the candle gives no more light');
+  assert.equal(candle.animation, undefined, 'nor flickers');
+  assert.equal(candle.visual.sheet, 'prop_candle_out');
+  assert.ok(lantern.glow, 'a lantern burns behind its glass');
+  assert.equal(Snuff.kindleAround(centre(12), centre(8), 8), 0, 'fire out of reach lights nothing');
+  Surfaces.spreadSurface('fire', torch.position.x, torch.position.y, 12, -1, 0);
+  assert.ok(torch.torch, 'the torch burns again');
+  assert.equal(torch.sparks?.effect, 'torch-sparks', 'throwing its sparks');
+  assert.equal(torch.visual.sheet, 'torch');
+  assert.equal(torch.snuffed, undefined);
+  assert.equal(candle.glow, undefined, 'the candle was out of the fire\'s reach');
+  Surfaces.igniteGrease(candle.position.x, candle.position.y, 8, -1);
+  assert.ok(candle.glow, 'a fire spell lights the candle');
+  assert.ok(candle.animation, 'and its flame flickers again');
+  assert.equal(candle.visual.sheet, 'prop_candle');
+});
+
+
+test('a body on fire burns at the end of every round, the last round too, and the damage shows over its own head with its kind', () => {
+  const level = arena(12, 8);
+  const hero = playerAt(3, 3);
+  const goblin = mobAt(level, 'goblin', 6, 3);
+  goblin.health.current = goblin.health.max = 100;
+  Surfaces.setAlight(goblin, world.id(hero), 2 * 360);
+  goblin.rollLog = [];
+  for (let t = 0; t < 2 * 360 + 5; t++) Surfaces.updateSurfaces();
+  assert.equal(goblin.burning, undefined, 'it burnt out after two rounds');
+  const burns = goblin.rollLog.filter((line) => / fire$/.test(line.text));
+  assert.equal(burns.length, 2, 'two rounds alight: burnt twice');
+  assert.ok(burns.every((line) => line.tone === 'damage'), 'in red');
+  assert.equal(goblin.health.current, 100 - burns.reduce((sum, line) => sum + Number(line.text.split(' ')[0]), 0));
+  assert.ok(!(hero.rollLog ?? []).some((line) => /dmg/.test(line.text)), 'nothing over the one who lit it');
+});
+
+test('a hit shows its damage over the one it hurts, plain red figures for a weapon\'s; the attacker keeps only its roll to hit', () => {
+  const level = arena(12, 8);
+  const hero = playerAt(3, 3);
+  const goblin = mobAt(level, 'goblin', 4, 3);
+  goblin.health.current = goblin.health.max = 100;
+  useDieRoller(SURE_HIT);
+  const outcome = Strike.strike(goblin, blow, hero);
+  hitMob(goblin, hero, outcome.damage, true, 'slashing');
+  assert.deepEqual(hero.rollLog.map((l) => l.text), ['24 to hit'.replace('24', String(outcome.total))]);
+  assert.equal(goblin.rollLog.at(-1).text, String(outcome.damage));
+  assert.equal(goblin.rollLog.at(-1).tone, 'damage');
+});
+
+test('Hold Person takes the foe under the crosshair alone at 2nd level; cast at 3rd, the foe nearest it as well', () => {
+  const level = arena(16, 8);
+  const goblins = [mobAt(level, 'goblin', 6, 3), mobAt(level, 'goblin', 7, 3), mobAt(level, 'goblin', 9, 3)];
+  beginPerception();
+  const at2 = { ...SPELLS.hold_person, level: 2 };
+  assert.deepEqual([...Holds.hexTargets(at2, goblins[0])], [goblins[0]]);
+  const at3 = { ...SPELLS.hold_person, level: 3 };
+  assert.deepEqual([...Holds.hexTargets(at3, goblins[0])], [goblins[0], goblins[1]], 'the nearest one more');
+});
+
+test('in the caverns a cliff ending beside open floor has cave ground under its end, not the dark', async () => {
+  const { groundAt } = await load('level/TerrainAutotile');
+  const level = arena(8, 8);
+  wallRect(level, 1, 1, 6, 2);
+  for (let i = 0; i < level.width * level.height; i++) level.caveZone.add(i);
+  // The cliff of row 2 ends at x = 4 beside open floor at (5, 2).
+  level.setTile(5, 2, createTile(TileType.Floor));
+  level.caveFloor.add(5 + 2 * level.width);
+  assert.ok(groundAt(level, 4, 2), 'its end is floored');
+  assert.equal(groundAt(level, 2, 2), null, 'a cliff running on is not');
+  assert.equal(groundAt(level, 2, 1), null, 'nor the rock behind it');
 });

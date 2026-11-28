@@ -1,4 +1,4 @@
-import { world, q, isActivePlayer, Team } from '../world';
+import { world, q, isActivePlayer, isMob, Team } from '../world';
 import type { Entity, Player } from '../world';
 import type { Level } from '../level/Level';
 import { GAME_WIDTH, VIEW_HEIGHT } from '../render/Camera';
@@ -22,6 +22,14 @@ import { heroSavingThrow } from './FeatureSystem';
 import { hurtPlayer } from './CombatSystem';
 import { impactOf, playBurstArt, playCastArt, playStrikeArt } from './SpellSystem';
 import { chargesWater, conducted, electrifyArea } from './LastingSpells';
+import { notePressed } from './CloseQuarters';
+import { isBackingOff } from '../ai/execution/skirmish';
+import { sightObscured, unseenBy } from '../ai/perception/obscured';
+import { igniteGrease } from './Surfaces';
+import { heldIn, hexHero, incapacitated, takes } from './SpellHolds';
+import { STALK_TICKS, castSeeInvisibility, makeInvisible, revealOnAct, seesInvisible } from './Invisibility';
+import { dropAlong, gustFrom } from './GustOfWind';
+import type { SpellId } from '../rules/Spells';
 
 /**
  * Enemies that fight from afar: goblins with a bow or crossbow, and the spellcasters (the red ghost a sorcerer, the evil
@@ -60,7 +68,7 @@ function onTheirScreen(hero: Player, x: number, y: number): boolean {
 }
 
 /** The nearest hero within `reach` who can see the enemy (line of sight, on their screen). */
-function targetFor(level: Level, mob: Shooter, reach: number): Player | null {
+export function targetFor(level: Level, mob: Shooter, reach: number): Player | null {
   let best: Player | null = null;
   let bestD = reach;
   for (const hero of q.players) {
@@ -68,6 +76,8 @@ function targetFor(level: Level, mob: Shooter, reach: number): Player | null {
     const d = Math.hypot(hero.position.x - mob.position.x, hero.position.y - mob.position.y);
     if (d > bestD || !onTheirScreen(hero, mob.position.x, mob.position.y)) continue;
     if (!level.checkLineOfSight(mob.position.x, mob.position.y, hero.position.x, hero.position.y)) continue;
+    // A hero in fog, or behind it, is not seen (ai/perception/obscured.ts); nor by a blinded foe, nor an invisible hero.
+    if (sightObscured(mob.position.x, mob.position.y, hero.position.x, hero.position.y) || unseenBy(mob, hero)) continue;
     best = hero;
     bestD = d;
   }
@@ -114,14 +124,18 @@ function shoot(level: Level, mob: Shooter): boolean {
   if ((mob.attackCooldown ?? 0) > 0) return true;
   mob.attackCooldown = SHOT_PERIOD;
   mob.attackTime = SHOT_PERIOD / 2;
-  createArrow(mob.position.x, mob.position.y, dir.x, dir.y, monsterAttack(mob.mobType, mob.mobWeapon), world.id(mob), reach, Team.Mob);
+  revealOnAct(mob);
+  const arrow = createArrow(mob.position.x, mob.position.y, dir.x, dir.y, monsterAttack(mob.mobType, mob.mobWeapon), world.id(mob), reach, Team.Mob);
+  notePressed(arrow, mob);
   sound.playSound('bow_shot', mob.position.x, mob.position.y);
   return true;
 }
 
-/** How far a spell reaches from its caster: a bolt as far as it flies, a burst its range plus its breadth. */
+/** How far a spell reaches from its caster: a bolt as far as it flies, a hex or gust its range, a burst its range plus its breadth. */
 function spellReach(def: SpellDef): number {
   if (def.kind === 'bolt' || def.kind === 'missiles') return SPELL_STATS.boltSpeed * SPELL_STATS.boltLife;
+  if (def.kind === 'hex' || def.kind === 'gust') return def.range;
+  if (def.kind === 'buff') return 0;
   return areaReach(def);
 }
 
@@ -139,14 +153,33 @@ function burstCentre(mob: Shooter, def: SpellDef, hero: Player): Point {
   return areaCentre(def, mob.position, hero.position, centreAt);
 }
 
-/** The harm a spell would do now: its mean damage, times the darts it looses or the heroes its burst catches. */
-function spellValue(mob: Shooter, def: SpellDef, hero: Player): number {
+/**
+ * What a spell would be worth now: its mean damage, times the darts it looses or the heroes its burst catches; holding a hero
+ * not yet held (Hold Person) as much as a strong blow; a gust of wind only where it would blow a hero over a brink.
+ */
+function spellValue(level: Level, mob: Shooter, def: SpellDef, hero: Player): number {
   const mean = diceRange(def.damage).average;
   if (def.kind === 'bolt') return mean;
   if (def.kind === 'missiles') return mean * def.count;
+  if (def.kind === 'hex') return def.condition && def.condition !== 'charmed' && !heldIn(hero, def.condition) && takes(def, def.condition, hero) ? HEX_WORTH : 0;
+  if (def.kind === 'gust') return gustWorth(level, mob, def, hero);
   if (def.kind !== 'burst') return 0;
   const centre = burstCentre(mob, def, hero);
   return mean * heroesCaught(mob, def, centre);
+}
+
+/** Holding a hero (paralysed: every blow at them has advantage, a critical from close by) is worth this much harm. */
+const HEX_WORTH = 14;
+/** Blowing a hero over the brink of a drop is worth this much (they fall). */
+const DROP_WORTH = 40;
+
+/** A gust at the hero is worth casting only if it would blow them (in its line, beyond the caster) over a drop. */
+function gustWorth(level: Level, mob: Shooter, def: SpellDef, hero: Player): number {
+  const dx = hero.position.x - mob.position.x;
+  const dy = hero.position.y - mob.position.y;
+  const d = Math.hypot(dx, dy);
+  if (d === 0 || d > def.range) return 0;
+  return dropAlong(level, hero.position.x, hero.position.y, dx / d, dy / d, def.push) ? DROP_WORTH : 0;
 }
 
 type Caster = NonNullable<Entity['mobCaster']>;
@@ -174,7 +207,7 @@ function scaledSpell(base: SpellDef, level: number): SpellDef {
 }
 
 /** The spell (its index) that does the most harm at a hero now, of those recovered, known at its level and in reach. */
-function bestSpell(mob: Shooter, caster: Caster, hero: Player): { index: number; def: SpellDef } | null {
+function bestSpell(level: Level, mob: Shooter, caster: Caster, hero: Player): { index: number; def: SpellDef } | null {
   const maxLevel = Math.min(MAX_SPELL_LEVEL, Math.ceil(caster.level / LEVELS_PER_SPELL_LEVEL));
   const d = Math.hypot(hero.position.x - mob.position.x, hero.position.y - mob.position.y);
   let best = -1;
@@ -184,7 +217,7 @@ function bestSpell(mob: Shooter, caster: Caster, hero: Player): { index: number;
     const base = SPELLS[caster.spells[index]];
     if (caster.recovery[index] > 0 || base.level > maxLevel) continue;
     const def = scaledSpell(base, caster.level);
-    const value = d > spellReach(def) ? 0 : spellValue(mob, def, hero);
+    const value = d > spellReach(def) ? 0 : spellValue(level, mob, def, hero);
     if (value <= bestValue) continue;
     bestValue = value;
     best = index;
@@ -206,6 +239,7 @@ function burstReaches(mob: Shooter, def: SpellDef, centre: Point, hero: Player, 
  */
 function burstOnHeroes(mob: Shooter, def: SpellDef, centre: Point, dc: number): void {
   playBurstArt(mob, def, centre);
+  if (def.damageType === 'fire') igniteGrease(centre.x, centre.y, def.radius, world.id(mob) ?? -1);
   const wet = chargesWater(def.damageType) && electrifyArea(def, mob.position, centre) > 0;
   for (const hero of q.players) {
     if (!burstReaches(mob, def, centre, hero, wet)) continue;
@@ -224,8 +258,10 @@ function cast(level: Level, mob: Shooter): boolean {
   let reach = 0;
   for (const id of caster.spells) reach = Math.max(reach, spellReach(SPELLS[id]));
   const hero = targetFor(level, mob, reach);
+  // Spells on itself first: See Invisibility when an invisible hero is near, Invisibility as it first notices the heroes.
+  if (castOnSelf(mob, caster, hero)) return true;
   if (!hero) return false;
-  const pick = bestSpell(mob, caster, hero);
+  const pick = bestSpell(level, mob, caster, hero);
   if (!pick) return false;
   const dir = aimAt(mob, hero, SPELL_STATS.boltSpeed);
   standAndAim(mob, dir);
@@ -236,8 +272,55 @@ function cast(level: Level, mob: Shooter): boolean {
   mob.attackCooldown = CAST_PERIOD;
   mob.attackTime = CAST_PERIOD / 2;
   sound.playSound(SPELL_SOUNDS[def.id] ?? MOB_CRIES[mob.mobType].attack, mob.position.x, mob.position.y);
+  // Casting a spell at the heroes ends its invisibility (systems/Invisibility.ts).
+  revealOnAct(mob);
   release(mob, def, dir, hero, { attackBonus: attack, damage: def.damage, mode: 'normal' }, dc);
   return true;
+}
+
+/** The index of a spell the caster knows, has recovered and can cast at its level, else -1. */
+function readySpell(caster: Caster, id: SpellId): number {
+  const index = caster.spells.indexOf(id);
+  const maxLevel = Math.min(MAX_SPELL_LEVEL, Math.ceil(caster.level / LEVELS_PER_SPELL_LEVEL));
+  return index >= 0 && caster.recovery[index] <= 0 && SPELLS[id].level <= maxLevel ? index : -1;
+}
+
+/** Whether an invisible hero stands within See Invisibility's reach of the enemy. */
+function invisibleHeroNear(mob: Shooter): boolean {
+  const reach = SPELLS.see_invisibility.radius;
+  for (const hero of q.players) {
+    if (isActivePlayer(hero) && hero.invisible && Math.hypot(hero.position.x - mob.position.x, hero.position.y - mob.position.y) <= reach) return true;
+  }
+  return false;
+}
+
+/**
+ * A caster's spells on itself: See Invisibility once an invisible hero is near and it cannot see them; Invisibility when it
+ * sees a hero and is not invisible yet, then it stalks them unseen a while before it strikes. Returns whether it cast.
+ */
+function castOnSelf(mob: Shooter, caster: Caster, hero: Player | null): boolean {
+  if ((mob.attackCooldown ?? 0) > 0) return false;
+  const see = readySpell(caster, 'see_invisibility');
+  if (see >= 0 && !seesInvisible(mob) && invisibleHeroNear(mob)) {
+    selfCast(mob, caster, see);
+    castSeeInvisibility(mob, SPELLS.see_invisibility);
+    return true;
+  }
+  const hide = readySpell(caster, 'invisibility');
+  if (hide < 0 || mob.invisible || !hero) return false;
+  selfCast(mob, caster, hide);
+  makeInvisible(mob, world.id(mob) ?? -1, SPELLS.invisibility.durationTicks);
+  mob.attackCooldown = STALK_TICKS;
+  return true;
+}
+
+/** The caster spends a spell on itself: its recovery runs, and its sound. */
+function selfCast(mob: Shooter, caster: Caster, index: number): void {
+  const def = SPELLS[caster.spells[index]];
+  caster.recovery[index] = Math.max(def.recoveryTicks, CAST_PERIOD);
+  mob.attackCooldown = CAST_PERIOD;
+  mob.attackTime = CAST_PERIOD / 2;
+  sound.playSound(SPELL_SOUNDS[def.id], mob.position.x, mob.position.y);
 }
 
 /** The spell goes off: its bolt or darts fly (the enemy's own, striking heroes), or its burst bursts among them. */
@@ -246,11 +329,21 @@ function release(mob: Shooter, def: SpellDef, dir: typeof aim, hero: Player, att
     burstOnHeroes(mob, def, burstCentre(mob, def, hero), dc);
     return;
   }
+  // Hold Person on the hero; a gust of wind blowing them back along it (systems/GustOfWind.ts).
+  if (def.kind === 'hex') {
+    hexHero(mob, def, hero, dc);
+    return;
+  }
+  if (def.kind === 'gust') {
+    gustFrom(mob, def, dir.x, dir.y, dc);
+    return;
+  }
   playCastArt(mob, def, dir.x, dir.y);
   const darts = def.kind === 'missiles' ? def.count : 1;
   for (let i = 0; i < darts; i++) {
-    createSpellBolt(mob.position.x, mob.position.y, dir.x, dir.y, attack, world.id(mob), mob.character?.def,
+    const bolt = createSpellBolt(mob.position.x, mob.position.y, dir.x, dir.y, attack, world.id(mob), mob.character?.def,
       { spell: def.id, impact: impactOf(def), castLevel: def.level, team: Team.Mob, autoHit: def.kind === 'missiles', wait: i * DART_GAP });
+    if (def.kind === 'bolt') notePressed(bolt, mob, def.id);
   }
 }
 
@@ -267,8 +360,10 @@ function recover(caster: Caster | undefined): void {
 export function updateEnemyRanged(level: Level): void {
   for (const mob of ranged) {
     recover(mob.mobCaster);
-    if (mob.removed || mob.health.current <= 0 || mob.falling || (mob.freezeTime ?? 0) > 0) continue;
+    if (mob.removed || mob.health.current <= 0 || mob.falling || (mob.freezeTime ?? 0) > 0 || (mob.status?.asleep ?? 0) > 0 || incapacitated(mob)) continue;
     if (mob.ai.state !== 'engage' && mob.ai.state !== 'alert') continue;
+    // Backing off from a hero too close (ai/execution/skirmish.ts): it shoots once it has its distance.
+    if (isMob(mob) && isBackingOff(mob)) continue;
     if (!cast(level, mob)) shoot(level, mob);
   }
 }

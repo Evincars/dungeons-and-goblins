@@ -893,11 +893,15 @@ test('weapons and armour come from their JSON tables alone: D&D stats, the table
   assert.equal(ARMOR_BASES.includes('robe') && ARMOR_BASES.includes('shield') && ARMOR_BASES.includes('tower_shield'), true);
 });
 
-test('a new run starts with one of each weapon, shield and armour the hero is trained in, light enough not to slow them', async () => {
+test('a new run starts with two flasks of Alchemist\'s Fire and one of each weapon, shield and armour the hero is trained in, light enough not to slow them', async () => {
   const { itemTrained, heroClass } = await load('rules/Classes');
   const { MAX_CARRY_KG, LOAD_EASY } = await load('rules/Encumbrance');
   const wizard = playerAt(2, 2, 'wizard');
   giveStartingKit(wizard);
+  const flasks = wizard.inventory.filter((i) => i.type === 'consumable');
+  assert.deepEqual(flasks.map((i) => i.kind), ['alchemists_fire', 'alchemists_fire'], 'two flasks of Alchemist\'s Fire');
+  assert.equal(wizard.inventory[0].kind, 'alchemists_fire', 'at the top of the bag');
+  wizard.inventory = wizard.inventory.filter((i) => i.type !== 'consumable');
   const bases = new Set(wizard.inventory.map((i) => i.base));
   for (const base of ['dagger', 'quarterstaff', 'light_crossbow', 'robe']) assert.ok(bases.has(base), `a wizard has a ${base}`);
   for (const base of ['longsword', 'plate', 'shield']) assert.ok(!bases.has(base), `but no ${base}`);
@@ -908,7 +912,8 @@ test('a new run starts with one of each weapon, shield and armour the hero is tr
   const kg = fighter.inventory.reduce((sum, i) => sum + (i.weight ?? 0), 0);
   assert.ok(kg <= MAX_CARRY_KG * LOAD_EASY, `a fighter's kit is not a burden: ${kg} kg`);
   assert.ok(fighter.inventory.some((i) => i.base === 'longsword'), 'martial arms');
-  assert.notEqual(fighter.inventory[0], HAND_WEAPONS.find((w) => w.base === fighter.inventory[0].base), 'copies, not the catalogue entries');
+  const sword = fighter.inventory.find((i) => i.base === 'longsword');
+  assert.notEqual(sword, HAND_WEAPONS.find((w) => w.base === 'longsword'), 'copies, not the catalogue entries');
 });
 
 test('a load past 80 % of what a hero carries slows them, to a walk at all of it; then they cannot sprint', async () => {
@@ -7034,6 +7039,67 @@ test('a thrown flask flies in an arc to where it was thrown and bursts there', (
   assert.ok(world.entities.some((e) => e.surface?.kind === 'grease' && Math.abs(e.position.x - centre(9)) < 1), 'leaving grease there');
 });
 
+test('a hero throws a potion of healing: it flies to the crosshair and heals everyone its splash wets, a foe too; drunk, it heals the drinker', async () => {
+  const { consumable } = await load('entities/ItemCatalog');
+  const level = arena(16, 8);
+  const hero = playerAt(3, 4);
+  const friend = playerAt(10, 4);
+  const goblin = mobAt(level, 'goblin_grunt', 10, 5);
+  const far = mobAt(level, 'goblin_grunt', 14, 6);
+  for (const body of [friend, goblin, far]) body.health.current = 1;
+  hero.inventory = [consumable('potion_of_healing'), consumable('potion_of_healing')];
+  beginPerception();
+  assert.ok(PlayerActions.throwFromBag(hero, { bag: 0 }, friend.position.x, friend.position.y + 6));
+  assert.equal(hero.inventory[0], null, 'out of the bag');
+  const potion = world.entities.find((e) => e.thrown);
+  assert.equal(potion.thrown.item, 'potion_of_healing');
+  for (let t = 0; t <= potion.thrown.total; t++) Throw.updateThrows(level, 1);
+  assert.equal(friend.health.current, 1 + 10, 'the companion healed (2d4+2 at its top: 10)');
+  assert.equal(goblin.health.current, Math.min(goblin.health.max, 11), 'the goblin in the splash too');
+  assert.equal(far.health.current, 1, 'not one out of it');
+  hero.attackCooldown = 0;
+  hero.health.current = 1;
+  assert.ok(PlayerActions.drinkPotion(hero, { bag: 1 }));
+  assert.equal(hero.health.current, 11, 'drunk, it heals the drinker');
+  assert.equal(hero.inventory.length, 0, 'and is gone');
+});
+
+test('Alchemist\'s Fire splashes 10 feet round, a potion of healing 5; a throw lands no further than the item flies', async () => {
+  const { THROWABLES } = await load('rules/Throwables');
+  const { feetToPx } = await load('rules/Scale');
+  assert.equal(THROWABLES.alchemists_fire.radius, feetToPx(10));
+  assert.equal(THROWABLES.potion_of_healing.radius, feetToPx(5));
+  const out = { x: 0, y: 0 };
+  Throw.landingPoint({ x: 0, y: 0 }, 100, 300, 0, out);
+  assert.deepEqual(out, { x: 100, y: 0 }, 'as far that way as it flies');
+  Throw.landingPoint({ x: 0, y: 0 }, 100, 30, 40, out);
+  assert.deepEqual(out, { x: 30, y: 40 }, 'within reach: where aimed');
+});
+
+test('anything else thrown strikes the foe it lands on, rolled to hit as an improvised weapon (a dagger as its own), and lies where it fell', async () => {
+  const { layDownItems } = await load('entities/LootFactory');
+  const level = arena(16, 8);
+  const hero = playerAt(3, 4);
+  const goblin = mobAt(level, 'goblin_grunt', 7, 4);
+  goblin.health.current = goblin.health.max = 50;
+  const boot = { type: 'boots', name: 'Old Boot', value: 1, weight: 1 };
+  const dagger = HAND_WEAPONS.find((w) => w.base === 'dagger');
+  hero.inventory = [boot, { ...dagger }];
+  beginPerception();
+  const improvised = Throw.objectAttack(hero, boot, 40);
+  assert.equal(improvised.type, 'bludgeoning');
+  assert.equal(improvised.attack.damage.sides, 4, '1d4 + STR');
+  assert.equal(Throw.objectAttack(hero, dagger, 40).type, 'piercing', 'a dagger as its own');
+  assert.equal(Throw.objectAttack(hero, boot, 300).attack.mode, 'disadvantage', 'past 20 feet: with disadvantage');
+  assert.ok(PlayerActions.throwFromBag(hero, { bag: 0 }, goblin.position.x, goblin.position.y));
+  const thrown = world.entities.find((e) => e.thrown);
+  assert.equal(thrown.thrown.item, 'object');
+  for (let t = 0; t <= thrown.thrown.total; t++) Throw.updateThrows(level, 1);
+  assert.ok(goblin.health.current < 50, 'the boot struck the goblin');
+  layDownItems(undefined);
+  assert.ok(world.entities.some((e) => e.item?.name === 'Old Boot'), 'and lies on the floor');
+});
+
 test('grease: half pace in it, a save or a fall on stepping in; fire sets it alight', () => {
   const level = arena(14, 8);
   const hero = playerAt(3, 4);
@@ -7641,6 +7707,24 @@ test('Off Balance is not ended by the blow that laid it, but by the next damage;
   assert.equal(WeaponMarks.marked(goblin, 'off_balance'), false, 'the hurt ended Off Balance');
 });
 
+test('a dead enemy stays where it fell: once its death has played it lies there as a corpse, as many as a level keeps', async () => {
+  const { MAX_CORPSES } = await load('entities/Corpse');
+  const level = arena(12, 8);
+  playerAt(2, 2);
+  const goblin = mobAt(level, 'goblin_grunt', 6, 4);
+  goblin.character.flipX = true;
+  goblin.health.current = 0;
+  for (let t = 0; t < 400 && !goblin.removed; t++) updateDeath(level);
+  const corpse = world.entities.find((e) => e.corpse);
+  assert.ok(corpse, 'a corpse lies there');
+  assert.equal(corpse.corpse.def, goblin.character.def);
+  assert.equal(corpse.corpse.flipX, true, 'facing as it fell');
+  assert.equal(corpse.position.x, centre(6));
+  assert.equal(world.entities.includes(goblin), false, 'the goblin itself is gone');
+  assert.equal(corpse.health, undefined, 'nothing to strike');
+  assert.ok(MAX_CORPSES >= 40);
+});
+
 test('Gust of Wind blows out the wall torches and campfires along its line, and no others', () => {
   const near = createTorch(centre(8), centre(4));
   const far = createTorch(centre(8), centre(12));
@@ -7649,6 +7733,30 @@ test('Gust of Wind blows out the wall torches and campfires along its line, and 
   assert.equal(near.sparks, undefined, 'no more sparks');
   assert.equal(near.visual.sheet, 'torch_out');
   assert.ok(far.torch, 'out of the line, it burns on');
+});
+
+test('the wind blows out candles too, and fire lights every flame it blew out again, sparks and light and all', async () => {
+  const { createProp } = await load('entities/DungeonFactory');
+  arena(16, 10);
+  const torch = createTorch(centre(8), centre(4));
+  const candle = createProp({ kind: 'candle', tx: 6, ty: 4 });
+  const lantern = createProp({ kind: 'mine_lantern', tx: 7, ty: 4 });
+  Snuff.snuffAlong(centre(3), centre(4), 1, 0);
+  assert.equal(candle.glow, undefined, 'the candle gives no more light');
+  assert.equal(candle.animation, undefined, 'nor flickers');
+  assert.equal(candle.visual.sheet, 'prop_candle_out');
+  assert.ok(lantern.glow, 'a lantern burns behind its glass');
+  assert.equal(Snuff.kindleAround(centre(12), centre(8), 8), 0, 'fire out of reach lights nothing');
+  Surfaces.spreadSurface('fire', torch.position.x, torch.position.y, 12, -1, 0);
+  assert.ok(torch.torch, 'the torch burns again');
+  assert.equal(torch.sparks?.effect, 'torch-sparks', 'throwing its sparks');
+  assert.equal(torch.visual.sheet, 'torch');
+  assert.equal(torch.snuffed, undefined);
+  assert.equal(candle.glow, undefined, 'the candle was out of the fire\'s reach');
+  Surfaces.igniteGrease(candle.position.x, candle.position.y, 8, -1);
+  assert.ok(candle.glow, 'a fire spell lights the candle');
+  assert.ok(candle.animation, 'and its flame flickers again');
+  assert.equal(candle.visual.sheet, 'prop_candle');
 });
 
 

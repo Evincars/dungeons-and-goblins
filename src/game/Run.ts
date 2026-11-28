@@ -2,7 +2,7 @@ import { q } from '../world';
 import type { LevelTheme } from '../level/Theme';
 import { LEVEL_THEMES } from '../level/Theme';
 import type { Entity, InventoryItem, Player } from '../world';
-import { ARMORS, HAND_WEAPONS, SHIELDS, freshCopy } from '../entities/ItemCatalog';
+import { ARMORS, HAND_WEAPONS, SHIELDS, consumable, freshCopy } from '../entities/ItemCatalog';
 import { WEAPON_BASES } from '../rules/WeaponTable';
 import { ARMOR_BASES } from '../rules/ArmorTable';
 import type { ItemBase } from '../rules/Equipment';
@@ -18,17 +18,21 @@ function onePerBase(from: readonly InventoryItem[], bases: readonly ItemBase[]):
   });
 }
 
+/** How many flasks of Alchemist's Fire every hero sets out with. */
+const STARTING_FLASKS = 2;
+
 /**
- * What a hero sets out with: one of each kind of weapon, shield and armour they are trained in (a wizard's dagger,
- * quarterstaff, light crossbow… and robe; a fighter's martial arms and every armour), in that order, as long as the load
- * stays light enough not to slow them (rules/Encumbrance.ts); the rest the trader sells.
+ * What a hero sets out with: two flasks of Alchemist's Fire, then one of each kind of weapon, shield and armour they are
+ * trained in (a wizard's dagger, quarterstaff, light crossbow… and robe; a fighter's martial arms and every armour), in that
+ * order, as long as the load stays light enough not to slow them (rules/Encumbrance.ts); the rest the trader sells.
  */
 export function giveStartingKit(player: Entity): void {
   const cls = heroClass(player.heroClass);
   const trained = [...onePerBase(HAND_WEAPONS, WEAPON_BASES), ...onePerBase(SHIELDS, ARMOR_BASES), ...onePerBase(ARMORS, ARMOR_BASES)]
     .filter((item) => itemTrained(cls, item));
-  const kit: InventoryItem[] = [];
-  let kg = 0;
+  // Two flasks of Alchemist's Fire to throw, at the top of the bag.
+  const kit: InventoryItem[] = Array.from({ length: STARTING_FLASKS }, () => consumable('alchemists_fire'));
+  let kg = kit.reduce((sum, item) => sum + (item.weight ?? 0), 0);
   for (const item of trained) {
     const weight = item.weight ?? 0;
     if (kg + weight > MAX_CARRY_KG * LOAD_EASY) continue;

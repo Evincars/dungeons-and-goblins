@@ -2,6 +2,7 @@ import { q, QUICK_ROW, QUICK_SLOTS } from '../world';
 import { GAME_WIDTH, GAME_HEIGHT } from '../render/Camera';
 import { bindingFor, QUICK_KEYS } from '../game/Settings';
 import type { ActionName } from '../game/Settings';
+import { cancelThrow, noteThrowClick, readiedThrow } from '../game/ThrowAim';
 
 const LEFT_BUTTON = 0;
 const RIGHT_BUTTON = 2;
@@ -212,6 +213,22 @@ export function initInput(canvas: HTMLCanvasElement): void {
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
+/**
+ * A throw held ready (game/ThrowAim.ts) takes the next press on the world: a left click throws it (and fights nobody while
+ * held), a right click puts it away (and casts nothing).
+ */
+function aimThrow(): void {
+  if (!readiedThrow() || !pointerFree() || panelsOpen) return;
+  if (clicked && !leftForUi) {
+    noteThrowClick();
+    leftForUi = true;
+  }
+  if (rightDown && !rightForUi) {
+    cancelThrow();
+    rightForUi = true;
+  }
+}
+
 /** Turns the keyboard and mouse into each player's input and one-tick intents (the Command pattern). */
 export function updateInput(): void {
   pressed.clear();
@@ -222,6 +239,7 @@ export function updateInput(): void {
   pendingLifts.clear();
   clicked = clickPending && !captured;
   clickPending = false;
+  if (!captured) aimThrow();
   // A quick-bar key picks its square while held, showing where it would go; let go, it casts (a click on a square only picks it).
   if (!captured) holdQuickKey();
   const quickCast = captured ? -1 : quickKeyLetGo();

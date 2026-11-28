@@ -55,12 +55,21 @@ function start(definition: unknown, gameLayer: Container, x: number, y: number, 
   return effect;
 }
 
-/** Drops the sparks of fires that are gone (a new level was built). */
+/**
+ * Drops the sparks of fires that are gone (a new level was built); a fire blown out (systems/Snuff.ts) throws no more, its
+ * last sparks and embers dying away where they are. Lit again, it throws them anew (`lightFires`).
+ */
 function dropStale(gameLayer: Container): void {
   for (const [fire, effect] of loops) {
-    if (world.id(fire) !== undefined && effect.root.parent === gameLayer) continue;
-    vfxRenderer().removeEffect(effect, true);
+    const here = world.id(fire) !== undefined && effect.root.parent === gameLayer;
+    if (here && fire.sparks) continue;
     loops.delete(fire);
+    if (!here) {
+      vfxRenderer().removeEffect(effect, true);
+      continue;
+    }
+    effect.stop();
+    fading.push(effect);
   }
 }
 
@@ -305,7 +314,9 @@ function followLights(gameLayer: Container): void {
     spot.x = flask.position.x;
     spot.y = flask.position.y - (flask.yOffset ?? 0);
     spot.z = flask.position.y + IN_FRONT;
-    follow(flask, 'flask', FLASK_FLIGHT[flask.thrown.item], !flask.removed, spot, gameLayer);
+    // A potion or anything else a hero throws flies as its own picture, with no trail.
+    const trail = FLASK_FLIGHT[flask.thrown.item];
+    if (trail) follow(flask, 'flask', trail, !flask.removed, spot, gameLayer);
   }
 }
 

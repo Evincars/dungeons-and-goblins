@@ -5,7 +5,7 @@ import { lazyTexture, requestArt } from '../assets/LazyArt';
 import { reportRejection } from '../core/errors';
 import { itemIcon, statShort } from '../entities/Items';
 import { text } from '../core/texts';
-import { formatModifier } from '../rules/Dice';
+import { diceRange, formatModifier } from '../rules/Dice';
 import type { Dice } from '../rules/Dice';
 import { armorRule, magicBonus, weaponRule } from '../rules/Equipment';
 import type { ArmorRule } from '../rules/ArmorTable';
@@ -23,6 +23,9 @@ import { DAMAGE_GLYPHS, diceTexture, glyphTexture, weaponGlyph } from './ItemIco
 import type { Glyph } from './ItemIcons';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
+import { THROWABLES, isThrowableId } from '../rules/Throwables';
+import type { ThrowableDef } from '../rules/Throwables';
+import { pxToFeet } from '../rules/Scale';
 
 /**
  * An item's tooltip, laid out as Baldur's Gate lays its own:
@@ -149,9 +152,13 @@ function diceText(dice: Pick<Dice, 'count' | 'sides'>, add: number): string {
 }
 
 /** The kind of item, under its name: "Uncommon Magic Weapon", "Common Armour", "Rare Shield". */
+/** A potion's healing, in green. */
+const HEAL_COLOR = 0x7ee07e;
+
 function subtitleOf(item: InventoryItem): string {
   const rarity = text(`item.rarity.${rarityOf(item)}`);
   const magic = isMagicItem(item);
+  if (item.type === 'consumable') return text('item.sort.consumable', { rarity });
   const sort = weaponRule(item) ? 'weapon' : armorRule(item)?.rule.category === 'shield' ? 'shield' : item.gear === 'head' ? 'head' : armorRule(item) ? 'armor' : 'other';
   return text(magic ? `item.sort.magic_${sort}` : `item.sort.${sort}`, { rarity });
 }
@@ -317,7 +324,34 @@ export class ItemTooltip {
     if (weapon) this.weaponFigures(item, weapon.rule, about, verdicts.damage);
     const armor = armorRule(item);
     if (armor) this.armorFigures(item, armor.rule, verdicts.ac);
+    if (item.type === 'consumable' && isThrowableId(item.kind)) this.flaskFigures(THROWABLES[item.kind]);
     this.y = Math.max(this.y, PAD + PICTURE);
+  }
+
+  /**
+   * A potion's healing or a flask's damage in large figures (with its dice and kind), then how far it is thrown and how wide
+   * it splashes, and what that does: a potion heals everyone it wets, foes too.
+   */
+  private flaskFigures(def: ThrowableDef): void {
+    const dice = def.heal ?? def.damage;
+    if (dice) {
+      const { min, max } = diceRange(dice);
+      const key = def.heal ? 'item.tip.heal_range' : 'item.tip.damage_range';
+      this.label(text(key, { min, max }), def.heal ? HEAL_COLOR : THEME.text, PAD, this.y, HEADLINE_SCALE);
+      this.y += HEADLINE_H + 2;
+      this.sprite(diceTexture(), 0xffffff, PAD, this.y);
+      const x = PAD + DICE_W + GLYPH_GAP;
+      const written = `${diceText(dice, 0)}${dice.bonus ? formatModifier(dice.bonus) : ''}`;
+      if (def.heal) this.label(text('item.tip.healing_dice', { dice: written }), HEAL_COLOR, x, this.y);
+      else this.damageLine(written, def.damageType, x, THEME.text);
+      if (def.heal) this.y += LINE_H;
+    }
+    this.y += 2;
+    this.label(text('item.tip.throw_reach', { range: pxToFeet(def.range), radius: pxToFeet(def.radius) }), THEME.muted, PAD, this.y);
+    this.y += LINE_H;
+    if (!def.heal) return;
+    this.label(text('item.tip.potion_splash'), HEAL_COLOR, PAD, this.y);
+    this.y += LINE_H;
   }
 
   /** The name across the top: runs of letters, those a search matched in their own colour. */
@@ -496,6 +530,10 @@ export class ItemTooltip {
     if (armor) {
       const glyph: Glyph = armor.rule.category === 'shield' ? 'shield' : item.gear === 'head' ? 'helmet' : 'armor';
       return [{ text: armorName(armor.base), color: THEME.text, glyph }, { text: armorCategoryName(armor.rule.category), color: THEME.muted }];
+    }
+    if (item.type === 'consumable') {
+      const drinkable = isThrowableId(item.kind) && THROWABLES[item.kind].heal !== null;
+      return [{ text: text(drinkable ? 'item.tip.potion_use' : 'item.tip.flask_use'), color: THEME.muted }];
     }
     return [{ text: item.kind ?? item.type, color: THEME.muted }];
   }

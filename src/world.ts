@@ -12,7 +12,7 @@ import type { AttackProfile } from './rules/Combat';
 import type { Dice, DieSides } from './rules/Dice';
 import type { SpellId } from './rules/Spells';
 import type { QuickBinding } from './rules/Spellbook';
-import type { ThrowableId } from './rules/Throwables';
+import type { ThrowableId, ThrownKind } from './rules/Throwables';
 import type { DamageType } from './rules/DamageTypes';
 import type { EffectColour, EffectShape } from './assets/Effects';
 import type { HoldKind } from './rules/Conditions';
@@ -48,7 +48,7 @@ export function isStatName(value: unknown): value is StatName {
   return STAT_NAMES.some((stat) => stat === value);
 }
 
-export const ITEM_TYPES = ['weapon', 'shield', 'helmet', 'armor', 'boots', 'ring', 'medal'] as const;
+export const ITEM_TYPES = ['weapon', 'shield', 'helmet', 'armor', 'boots', 'ring', 'medal', 'consumable'] as const;
 export type ItemType = (typeof ITEM_TYPES)[number];
 
 export function isItemType(value: unknown): value is ItemType {
@@ -540,7 +540,7 @@ export type Entity = {
    * A flask in the air (systems/ThrowSystem.ts): what it is, its thrower's entity id and team, where it was thrown from and
    * lands, the ticks it has flown and will fly; it bursts where it lands.
    */
-  thrown?: { item: ThrowableId; owner: number; team: number; fromX: number; fromY: number; toX: number; toY: number; ticks: number; total: number };
+  thrown?: { item: ThrownKind; owner: number; team: number; fromX: number; fromY: number; toX: number; toY: number; ticks: number; total: number };
   /**
    * Dancing Lights (systems/DancingLights.ts): the hovering lights' anchor — its caster's entity id, the ticks the spell
    * lasts, whether the lights circle their caster (else they hover where they were sent), the caster's spell DC (foes nearby
@@ -791,6 +791,17 @@ export type Entity = {
   torch?: { radius: number; color: number; flicker: number };
   /** Sparks fly from its flame (a looping NixieFX effect, systems/VfxSystem.ts), this far above its position (px). */
   sparks?: { effect: VfxEffectId; lift: number };
+  /**
+   * A flame blown out (Gust of Wind, systems/Snuff.ts): the sheet it burnt with and the light, sparks and flicker it had,
+   * given back when fire lights it again.
+   */
+  snuffed?: {
+    sheet: string;
+    torch?: { radius: number; color: number; flicker: number };
+    glow?: Entity['glow'];
+    sparks?: { effect: VfxEffectId; lift: number };
+    animation?: Entity['animation'];
+  };
 
   // --- AI ---
   ai?: MobAI;
@@ -812,6 +823,11 @@ export type Entity = {
    * lies there until the party goes deeper (game/Fallen.ts); a dead enemy is cleared away.
    */
   respawnTicks?: number;
+  /**
+   * A dead enemy left lying where it fell (entities/Corpse.ts): its character, the way it faced, how big it is drawn and the
+   * seed its pool of blood is laid out from (systems/CorpseSystem.ts), so every screen draws the same one.
+   */
+  corpse?: { def: string; flipX: boolean; scale: number; seed: number };
 
   // --- minimap ---
   minimapColor?: number;

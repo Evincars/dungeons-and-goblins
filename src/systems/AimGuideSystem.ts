@@ -1,6 +1,5 @@
 import { Graphics } from 'pixi.js';
 import type { Container } from 'pixi.js';
-import { localPlayer } from '../world';
 import type { Entity, Player } from '../world';
 import { screenToWorld } from '../render/Camera';
 import { heldQuickSlot, pointer, pointerFree } from './InputSystem';
@@ -28,6 +27,10 @@ import { foeAt, hexTargets } from './SpellHolds';
 import { hiddenHere } from './Invisibility';
 import { stepTarget } from './MistyStep';
 import type { Level } from '../level/Level';
+import { q, isActivePlayer, localPlayer } from '../world';
+import type { InventoryItem } from '../world';
+import { readiedThrow } from '../game/ThrowAim';
+import { foeHitAt, landingPoint, throwRadius, throwReach, thrownKindOf } from './ThrowSystem';
 
 /**
  * Where a shot will go, shown faintly while the hero aims. A bolt, darts or an arrow fly straight: a dotted line from the
@@ -73,9 +76,11 @@ const GUIDE_Z = 999_999;
  * the crosshair or wrapped round the caster.
  */
 export type Aim = {
-  reach: number; normal: number; radius: number; landsWhere: 'target' | 'caster' | 'ally' | 'foe' | 'step'; area: AreaShape | null;
+  reach: number; normal: number; radius: number; landsWhere: 'target' | 'caster' | 'ally' | 'foe' | 'step' | 'throw'; area: AreaShape | null;
   /** The spell aimed, for a step (Misty Step: where it lands is worked out as the cast will) or a hex (the foes it takes). */
   spell?: SpellDef;
+  /** The item held ready to throw (the inventory's Throw, game/ThrowAim.ts). */
+  item?: InventoryItem;
 };
 
 let guide: Graphics | null = null;
@@ -127,8 +132,17 @@ function slotAim(player: Player, slot: number): Aim | null {
   return spell ? spellAim(spell) : null;
 }
 
-/** What the hero aims now, if anything: the spell or feature being cast or whose key is held, else the bow in hand. */
+/** The item the hero holds ready to throw, if it is still where it was taken from. */
+function itemToThrow(player: Player): InventoryItem | null {
+  const place = readiedThrow();
+  if (!place) return null;
+  return ('bag' in place ? player.inventory?.[place.bag] : player.equipped?.[place.slot]) ?? null;
+}
+
+/** What the hero aims now, if anything: an item held ready to throw, the spell or feature being cast or whose key is held, else the bow in hand. */
 export function currentAim(player: Player): Aim | null {
+  const item = itemToThrow(player);
+  if (item) return { reach: throwReach(item), normal: throwReach(item), radius: throwRadius(item), landsWhere: 'throw', area: null, item };
   const slot = player.casting ? player.playerInput.spellSlot : heldQuickSlot();
   const aimed = slotAim(player, slot);
   if (aimed) return aimed;
@@ -293,6 +307,46 @@ function guideFoe(g: Graphics, text: PixelLabel, player: Player, a: Aim): void {
   }
 }
 
+/** A companion a thrown potion or flask would wet: a green mark under their feet (a foe's is red). */
+const FRIEND = 0x6ad86a;
+const landed = { x: 0, y: 0 };
+
+/** A mark under a body the throw would reach, in its side's colour. */
+function markBody(g: Graphics, at: Point, colour: number): void {
+  g.ellipse(at.x, at.y, CAUGHT_RX, CAUGHT_RY).fill({ color: colour, alpha: FILL_ALPHA * 2 }).stroke({ color: colour, alpha: CAUGHT_ALPHA, width: 1 });
+}
+
+/**
+ * Something thrown (the inventory's Throw): dots from the hands to where it lands (the crosshair, or as far that way as it
+ * flies), its splash there — a potion's small, a flask's wider — with a mark under everyone it would wet, green under the
+ * heroes and red under foes; anything else, a small ring and a red mark under the foe it would strike. How far, in feet.
+ */
+function guideThrow(g: Graphics, text: PixelLabel, player: Player, a: Aim): void {
+  if (!a.item) return;
+  const from = player.position;
+  const to = landingPoint(from, a.reach, aim.x, aim.y, landed);
+  const dist = Math.hypot(to.x - from.x, to.y - from.y);
+  // From the hands down to where it lands.
+  const handY = from.y - AIM_HEIGHT;
+  const flight = Math.hypot(to.x - from.x, to.y - handY);
+  if (flight > 0) dots(g, from.x, handY, (to.x - from.x) / flight, (to.y - handY) / flight, 0, flight, IN_REACH);
+  g.circle(to.x, to.y, a.radius).stroke({ color: IN_REACH, alpha: HALO_ALPHA, width: HALO_WIDTH })
+    .fill({ color: IN_REACH, alpha: FILL_ALPHA }).stroke({ color: IN_REACH, alpha: RING_ALPHA, width: 1 });
+  showDistance(text, to.x, to.y, dist, IN_REACH);
+  if (thrownKindOf(a.item) === 'object') {
+    const foe = foeHitAt(to.x, to.y, -1);
+    if (foe?.position && !hiddenHere(foe)) markBody(g, foe.position, OUT_OF_REACH);
+    return;
+  }
+  for (const hero of q.players) {
+    if (isActivePlayer(hero) && Math.hypot(hero.position.x - to.x, hero.position.y - to.y) <= a.radius) markBody(g, hero.position, FRIEND);
+  }
+  for (const foe of nearby(to.x, to.y, a.radius + CAUGHT_RX, Sense.mob, caught)) {
+    if (!foe.position || (foe.health?.current ?? 0) <= 0 || hiddenHere(foe)) continue;
+    if (Math.hypot(foe.position.x - to.x, foe.position.y - to.y) <= a.radius) markBody(g, foe.position, OUT_OF_REACH);
+  }
+}
+
 /** Misty Step: dots to where the caster would come out of the mist, a ring there and how far it is; red at the crosshair if nowhere. */
 function guideStep(g: Graphics, text: PixelLabel, player: Player, a: Aim, level: Level | undefined): void {
   const to = level && a.spell ? stepTarget(level, player, a.spell, aim.x, aim.y) : null;
@@ -331,6 +385,10 @@ export function updateAimGuide(gameLayer: Container, level?: Level): void {
   }
   if (a.landsWhere === 'step') {
     guideStep(g, text, player, a, level);
+    return;
+  }
+  if (a.landsWhere === 'throw') {
+    guideThrow(g, text, player, a);
     return;
   }
   // A shot leaves from hand height and flies at the crosshair (the hero's aim is taken from there, MovementSystem.ts), so

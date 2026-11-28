@@ -10,7 +10,7 @@ import type { PropDef, PropKind, PropPlacement } from '../level/Props';
 import { TOMB_GEAR_CHANCE, stashCoins } from './LootFactory';
 import { CHEST_TIERS, rollChestTier } from './Drops';
 import { DUMMY_STILL } from '../systems/DummySystem';
-import { ARMORS, HAND_WEAPONS, MEDALS, SHIELDS, catalogueItem } from './ItemCatalog';
+import { ARMORS, CONSUMABLES, HAND_WEAPONS, MEDALS, SHIELDS, catalogueItem } from './ItemCatalog';
 import type { DoorData, RoomData, TilePos } from '../level/generators/DungeonBuilder';
 
 /**
@@ -82,6 +82,7 @@ export const SHOP_ITEMS: readonly InventoryItem[] = [
   ...onePerBase(ARMORS),
   { type: 'ring',   name: 'Copper Ring',   value: 60,  gear: 'trinket', icon: 'icon_ring', stats: { charisma: 2 }, weight: 0.1 },
   ...MEDALS.map((medal) => ({ ...medal })),
+  ...CONSUMABLES.map((flask) => ({ ...flask })),
 ];
 /** The gold a trader has to buy with at the start of each level. */
 export const TRADER_GOLD = 1000;

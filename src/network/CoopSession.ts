@@ -10,7 +10,7 @@ import { PLAYER_SLOTS, isPlayerSlot } from '../world';
 import type { PlayerSlot } from '../world';
 import { isSfxName, sound } from '../audio/SoundPlayer';
 import { playVfxLocal } from '../render/VfxPlayer';
-import { snuffOnSignal } from '../systems/Snuff';
+import { kindleLocal, snuffOnSignal } from '../systems/Snuff';
 import type { VfxShot } from '../render/VfxPlayer';
 import type { SfxName } from '../audio/SoundPlayer';
 import { cleanName, settings } from '../game/Settings';
@@ -19,7 +19,7 @@ import { NetworkError, StateError, ValidationError, attempt, errorMessage, repor
 import { isRecord } from '../core/guards';
 import { createLog } from '../core/log';
 import {
-  MAX_GUESTS, PROTOCOL_VERSION, inviteLink, isMessage, validCommand, validInput, validRoster, validSound, validStart, validVfxShot,
+  MAX_GUESTS, PROTOCOL_VERSION, inviteLink, isMessage, validCommand, validInput, validRoster, validSound, validStart, validVfxShot, validKindle,
 } from './protocol';
 import type { GuestCommand, InputFrame, Message, RosterEntry } from './protocol';
 import { validateNetState } from './WorldSync';
@@ -301,6 +301,11 @@ export class CoopSession {
         playVfxLocal(message.shot);
         // Torches and campfires are every screen's own: the wind's blast blows out this screen's.
         snuffOnSignal(message.shot);
+        return;
+      case 'kindle':
+        if (!validKindle(message)) throw new NetworkError('Invalid kindle event');
+        // Fire lit the flames the wind blew out: this screen lights its own.
+        kindleLocal(message.x, message.y, message.radius);
         return;
       case 'state':
         if (!Number.isSafeInteger(message.seq) || !validPacket(message.compressed)) throw new NetworkError('Invalid world packet');
@@ -641,6 +646,11 @@ export class CoopSession {
   /** Host: a one-shot particle effect played here, for every guest to render. */
   sendVfx(shot: VfxShot): void {
     this.broadcast({ type: 'vfx', shot });
+  }
+
+  /** Host: fire lit the flames blown out round (x, y), for every guest to light its own. */
+  sendKindle(x: number, y: number, radius: number): void {
+    this.broadcast({ type: 'kindle', x, y, radius });
   }
 
   sendSound(name: SfxName, x?: number, y?: number): void {

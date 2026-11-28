@@ -1,6 +1,6 @@
 import type { SpellId } from '../rules/Spells';
 import type { VfxEffectId } from './Vfx';
-import type { ThrowableId } from '../rules/Throwables';
+import type { ThrownKind } from '../rules/Throwables';
 import type { AfflictionKind } from '../world';
 
 /**
@@ -99,7 +99,7 @@ export const SPELL_VFX: Readonly<Partial<Record<SpellId, SpellVfx>>> = {
 };
 
 /** The flasks' flight, a trail of particles behind them (systems/ThrowSystem.ts). */
-export const FLASK_FLIGHT = { alchemists_fire: 'alchemists-fire-flight', grease_bottle: 'grease-flight' } as const satisfies Readonly<Record<ThrowableId, VfxEffectId>>;
+export const FLASK_FLIGHT: Readonly<Partial<Record<ThrownKind, VfxEffectId>>> = { alchemists_fire: 'alchemists-fire-flight', grease_bottle: 'grease-flight' };
 
 /**
  * The buffs that keep an aura round the hero for as long as they last (`buffs` ticks left), drawn on every screen from the

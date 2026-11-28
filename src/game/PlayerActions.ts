@@ -1,4 +1,7 @@
-import { q, isPlayer } from '../world';
+import { q, isActivePlayer, isPlayer } from '../world';
+import { THROWABLES, isThrowableId } from '../rules/Throwables';
+import { quaff, throwItem } from '../systems/ThrowSystem';
+import { heroHeld } from '../systems/SpellHolds';
 import { bindingActionId, weaponsWithAction } from '../rules/WeaponActions';
 import type { WeaponActionId } from '../rules/WeaponActions';
 import type { BagSquare, EquipSlot, Entity, InventoryItem, Player, PlayerSlot } from '../world';
@@ -111,16 +114,63 @@ export function receiveItem(player: Player, item: InventoryItem): boolean {
   return true;
 }
 
-/** The inventory's "Drop": the item leaves the bag (or the body) and is set down at the hero's feet, to be taken again with E. */
-export function dropItem(player: Player, from: ItemPlace): boolean {
+/** The item on a square of the bag (or worn) taken out of the hero's hands, if there is one there. */
+function takeOut(player: Player, from: ItemPlace): InventoryItem | null {
   const loadout: Loadout = { inventory: [...(player.inventory ?? [])], equipped: { ...player.equipped } };
   const item = itemAt(loadout, from);
-  if (!item) return false;
+  if (!item) return null;
   if ('bag' in from) loadout.inventory[from.bag] = null;
   else delete loadout.equipped[from.slot];
   applyLoadout(player, { inventory: trimmed(loadout.inventory), equipped: loadout.equipped });
+  return item;
+}
+
+/** The inventory's "Drop": the item leaves the bag (or the body) and is set down at the hero's feet, to be taken again with E. */
+export function dropItem(player: Player, from: ItemPlace): boolean {
+  const item = takeOut(player, from);
+  if (!item) return false;
   setDownItem(player.position.x, player.position.y, item);
   return true;
+}
+
+/** Whether the hero can throw or drink now: on their feet, not held by a spell, their arm free of a swing or a throw. */
+function handsFree(player: Player): boolean {
+  return isActivePlayer(player) && !heroHeld(player) && (player.attackCooldown ?? 0) <= 0;
+}
+
+/**
+ * The inventory's "Throw", aimed in the world (game/ThrowAim.ts): the item leaves the hero's hands towards (x, y), as far as
+ * it can be thrown (systems/ThrowSystem.ts). Not while the hero cannot throw. Returns whether it flew.
+ */
+export function throwFromBag(player: Player, from: ItemPlace, x: number, y: number): boolean {
+  if (!handsFree(player)) return false;
+  const item = takeOut(player, from);
+  if (!item) return false;
+  throwItem(player, item, x, y);
+  return true;
+}
+
+/** The inventory's "Drink": a potion of healing heals the hero who drinks it, and is gone. Returns whether it was drunk. */
+export function drinkPotion(player: Player, from: ItemPlace): boolean {
+  const kind = itemAt({ inventory: player.inventory ?? [], equipped: player.equipped ?? {} }, from)?.kind;
+  if (!isThrowableId(kind) || !THROWABLES[kind].heal || !handsFree(player)) return false;
+  if (!takeOut(player, from)) return false;
+  logLine(player, text('roll.drinks', { item: THROWABLES[kind].name }), 'heal');
+  sound.playSound('cast_healing_word', player.position.x, player.position.y);
+  quaff(player, THROWABLES[kind]);
+  return true;
+}
+
+/** "Throw" aimed: at once here, or asked of the host for a guest. */
+export function requestThrow(player: Player, from: ItemPlace, x: number, y: number): void {
+  if (coop.role === 'guest') coop.sendCommand({ kind: 'throw', from, x, y });
+  else throwFromBag(player, from, x, y);
+}
+
+/** "Drink": at once here, or asked of the host for a guest. */
+export function requestDrink(player: Player, from: ItemPlace): void {
+  if (coop.role === 'guest') coop.sendCommand({ kind: 'drink', from });
+  else drinkPotion(player, from);
 }
 
 /** The inventory's "Drop": at once here, or asked of the host for a guest. */
@@ -546,6 +596,14 @@ export function handleGuestCommand(slot: PlayerSlot, command: GuestCommand): voi
   }
   if (command.kind === 'drop') {
     dropItem(player, command.from);
+    return;
+  }
+  if (command.kind === 'throw') {
+    throwFromBag(player, command.from, command.x, command.y);
+    return;
+  }
+  if (command.kind === 'drink') {
+    drinkPotion(player, command.from);
     return;
   }
   if (isCustomizeCommand(command)) {

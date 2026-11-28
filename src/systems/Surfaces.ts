@@ -18,6 +18,7 @@ import { hurtPlayer } from './CombatSystem';
 import { hitMob } from './Hits';
 import { logLine } from './RollLogSystem';
 import { heldIn, holdBody, rooted } from './SpellHolds';
+import { kindleAround } from './Snuff';
 
 /**
  * Grease and fire on the floor (the Grease spell, the flasks enemies throw, systems/ThrowSystem.ts), and what they do to
@@ -92,8 +93,12 @@ const isSurface = (e: Entity): e is Surface => !!e.surface && !!e.position;
 /** Whether a patch burns when fire touches it: grease and webs. */
 const flammable = (surface: Surface): boolean => surface.surface.kind === 'grease' || surface.surface.kind === 'web';
 
-/** Fire reached grease or webs (a fire spell, alchemist's fire, burning floor): every patch of them it touches bursts into flame. */
+/**
+ * Fire reached grease or webs (a fire spell, alchemist's fire, burning floor): every patch of them it touches bursts into
+ * flame, and every torch, campfire or candle the wind blew out within its reach catches again (systems/Snuff.ts).
+ */
 export function igniteGrease(x: number, y: number, radius: number, by: number): void {
+  kindleAround(x, y, radius);
   for (const grease of q.surfaces) {
     if (!flammable(grease) || grease.removed) continue;
     if (Math.hypot(grease.position.x - x, grease.position.y - y) > radius + grease.surface.radius) continue;

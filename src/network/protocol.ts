@@ -69,6 +69,9 @@ export type GuestCommand =
   | { kind: 'give'; from: ItemSquare; to: PlayerSlot }
   /** Drop the item on a square of the inventory at the hero's feet. */
   | { kind: 'drop'; from: ItemSquare }
+  /** Throw the item on a square of the inventory at a point of the world; drink the potion on one. */
+  | { kind: 'throw'; from: ItemSquare; x: number; y: number }
+  | { kind: 'drink'; from: ItemSquare }
   /** Need or Pass on a rare find the party is rolling for (by the id the host gave the roll). */
   | { kind: 'loot'; roll: number; need: boolean }
   /** The hero's bought ability scores, their fighting style, an Ability Score Improvement or a feat (rules/Build.ts). */
@@ -112,6 +115,8 @@ export type Message =
   | { type: 'sound'; name: SfxName; x?: number; y?: number }
   /** A one-shot particle effect the host played (render/VfxPlayer.ts): each guest renders it itself. */
   | { type: 'vfx'; shot: unknown }
+  /** Fire lit the flames the wind blew out within `radius` px of (x, y): each guest lights its own (systems/Snuff.ts). */
+  | { type: 'kindle'; x: unknown; y: unknown; radius: unknown }
   | { type: 'ping' };
 
 const BUTTONS = ['up', 'down', 'left', 'right', 'attack', 'use', 'sprint', 'mouseAiming'] as const satisfies readonly (keyof PlayerInput)[];
@@ -256,7 +261,8 @@ export function validCommand(value: unknown): value is GuestCommand {
   if (value.kind === 'vote_answer') return typeof value.agree === 'boolean' && (value.dice === undefined || isDiceCount(value.dice));
   if (value.kind === 'pause') return typeof value.paused === 'boolean';
   if (value.kind === 'give') return isItemSquare(value.from) && isPlayerSlot(value.to);
-  if (value.kind === 'drop') return isItemSquare(value.from);
+  if (value.kind === 'drop' || value.kind === 'drink') return isItemSquare(value.from);
+  if (value.kind === 'throw') return isItemSquare(value.from) && isFiniteNumber(value.x) && isFiniteNumber(value.y) && Math.abs(value.x) <= MAX_AIM && Math.abs(value.y) <= MAX_AIM;
   if (value.kind === 'loot') return Number.isSafeInteger(value.roll) && Number(value.roll) >= 0 && typeof value.need === 'boolean';
   if (value.kind === 'scores') return validScores(value.scores);
   if (value.kind === 'fighting_style' || value.kind === 'extra_style') return isFightingStyle(value.style);
@@ -275,6 +281,16 @@ export function validCommand(value: unknown): value is GuestCommand {
 
 export function validSound(name: unknown, x: unknown, y: unknown, isSfx: (v: unknown) => v is SfxName): boolean {
   return isSfx(name) && (x === undefined || isFiniteNumber(x)) && (y === undefined || isFiniteNumber(y));
+}
+
+/** No fire the game makes reaches further than this (px): a bigger one is no honest message. */
+const MAX_KINDLE_RADIUS = 1024;
+
+/** Where fire lit flames again: a point within the world and a reach no fire exceeds. */
+export function validKindle(fire: { x: unknown; y: unknown; radius: unknown }): fire is { x: number; y: number; radius: number } {
+  const { x, y, radius } = fire;
+  if (!isFiniteNumber(x) || !isFiniteNumber(y) || !isFiniteNumber(radius)) return false;
+  return Math.abs(x) <= MAX_AIM && Math.abs(y) <= MAX_AIM && radius >= 0 && radius <= MAX_KINDLE_RADIUS;
 }
 
 /** How far a one-shot may go off above its feet, and how far from a unit vector its facing may stray (rounding). */

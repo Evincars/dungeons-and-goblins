@@ -21,7 +21,10 @@ import { SheetInfoPanel } from './SheetInfoPanel';
 import { text } from '../core/texts';
 import { PixelLabel } from './PixelText';
 import { THEME } from './Theme';
-import { INVENTORY_COLS, MAX_CARRY_KG, MAX_INVENTORY, carriedWeight, freeSquare, moveWorn, requestDrop, requestGive, requestLoadout } from '../game/PlayerActions';
+import { INVENTORY_COLS, MAX_CARRY_KG, MAX_INVENTORY, carriedWeight, freeSquare, moveWorn, requestDrink, requestDrop, requestGive, requestLoadout } from '../game/PlayerActions';
+import { readyThrow } from '../game/ThrowAim';
+import { closeInventory } from '../systems/InventorySystem';
+import { THROWABLES, isThrowableId } from '../rules/Throwables';
 import { seatOf } from '../game/Party';
 import { PopupMenu } from './PopupMenu';
 import type { MenuRow } from './PopupMenu';
@@ -256,7 +259,7 @@ const BAG_FILTERS: readonly BagFilter[] = [
   { label: text('inventory.filter.weapons'), types: ['weapon'] },
   { label: text('inventory.filter.armour'), types: ['helmet', 'armor', 'boots'] },
   { label: text('inventory.filter.shields'), types: ['shield'] },
-  { label: text('inventory.filter.other'), types: ['ring', 'medal'] },
+  { label: text('inventory.filter.other'), types: ['ring', 'medal', 'consumable'] },
 ];
 
 /** What the "Equip" menu calls the hands, when a weapon may go in either. */
@@ -1386,6 +1389,9 @@ export class InventoryOverlay {
     const equip = 'bag' in place ? this.equipRow(player, place, item) : null;
     if (equip) rows.push(equip);
     if ('slot' in place && freeSquare(player.inventory ?? []) >= 0) rows.push({ label: text('inventory.menu.take_off'), action: () => this.quickMove(player, place) });
+    // A potion of healing is drunk; anything is thrown, aimed in the world with the inventory put away.
+    if (isThrowableId(item.kind) && THROWABLES[item.kind].heal) rows.push({ label: text('inventory.menu.drink'), action: () => requestDrink(player, place) });
+    rows.push({ label: text('inventory.menu.throw'), action: () => this.aimThrow(place) });
     rows.push(
       { label: text('inventory.menu.drop'), action: () => requestDrop(player, place) },
       { label: text('inventory.menu.compare'), action: null, submenu: this.compareRows(player, item, p.x, p.y) },
@@ -1472,6 +1478,12 @@ export class InventoryOverlay {
     if (!first || !second) return;
     this.tooltip.hide();
     this.compare(first, second, x, y);
+  }
+
+  /** "Throw": the item is held ready and the inventory put away, so the next click on the world says where it goes. */
+  private aimThrow(place: ItemPlace): void {
+    readyThrow(place);
+    closeInventory();
   }
 
   /** "Compare": every other item of the same kind the hero has (weapon with weapon, armour with armour), worn ones marked. */

@@ -18,6 +18,7 @@ import { createPlayer } from '../entities/PlayerFactory';
 import { bindingFor, cleanName, settings } from '../game/Settings';
 import { camera, GAME_HEIGHT, GAME_WIDTH, viewHeight, viewWidth, zoomBy } from '../render/Camera';
 import { TILE_WIDTH, TILE_HEIGHT, FOG_REVEAL_TILES } from '../level/TileType';
+import { cancelThrow } from '../game/ThrowAim';
 import { initInput, pointerFree, resetInput, setInputCaptured, setPanelsOpen } from '../systems/InputSystem';
 import { runCommand } from '../game/Console';
 import { ConsoleView } from '../ui/ConsoleView';
@@ -292,7 +293,7 @@ export class InGameScene implements Scene {
   }
 
   /**
-   * Escape closes one thing a press, the topmost first: a spell waiting for its square, a sub-screen over the pause
+   * Escape closes one thing a press, the topmost first: a spell waiting for its square, a throw held ready, a sub-screen over the pause
    * menu, the pause menu's confirmation and then the menu itself; with no menu, a dialog inside a panel, the panel (the
    * inventory, the shop), the HUD's dialogs and drop-downs. Only with nothing open does it bring up the pause menu.
    */
@@ -307,6 +308,8 @@ export class InGameScene implements Scene {
       cancelBinding();
       return;
     }
+    // A throw held ready is put away.
+    if (cancelThrow()) return;
     if (this.manager.hasOverlay) {
       this.manager.escapeOverlay();
       return;

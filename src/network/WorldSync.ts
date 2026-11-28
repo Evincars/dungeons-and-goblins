@@ -21,7 +21,7 @@ import { validBuild } from '../rules/Build';
 import { isWeaponBase } from '../rules/WeaponTable';
 import { MAX_ROLL_LINES } from '../systems/RollLogSystem';
 import { MAX_LOG_ENTRIES, MAX_LOG_ITEM } from '../systems/CombatLogSystem';
-import { isThrowableId } from '../rules/Throwables';
+import { isThrowableId, isThrownKind } from '../rules/Throwables';
 import { isDamageType } from '../rules/DamageTypes';
 import { isSpellId } from '../rules/Spells';
 import { isDieSides } from '../rules/Dice';
@@ -145,6 +145,7 @@ const SCHEMAS: Readonly<Record<string, Schema>> = {
     senseIn: 'number', stateTicks: 'number', calmTicks: 'number', lastSeenX: 'number', lastSeenY: 'number',
     lastSeenTick: 'number', trailTick: 'number' },
   falling: { age: 'number', duration: 'number' },
+  corpse: { def: 'string', flipX: 'boolean', scale: 'number', seed: 'number' },
   ephemeral: { age: 'number', life: 'number', drop: 'number' },
   room: { id: 'number', type: 'string', bounds: 'object' },
   exitButton: { activated: 'boolean', choices: 'object' },
@@ -282,6 +283,7 @@ function checkDetails(data: EntityState): void {
   ensure(!data.chest || isDropTableId(data.chest.drops), 'Invalid chest');
   ensure(!data.spawner || isMobType(data.spawner.mobType), 'Invalid spawner');
   ensure(!data.character || (hasCharacter(data.character.def) && isCharacterState(data.character.state)), 'Invalid character');
+  ensure(!data.corpse || hasCharacter(data.corpse.def), 'Invalid corpse');
   ensure(!data.ai || (MOB_STATES.includes(data.ai.state) && TACTIC_ROLES.includes(data.ai.role)), 'Invalid enemy state');
   ensure(!data.item || isItemType(data.item.type), 'Invalid item');
   ensure(!data.featuresOff || (Array.isArray(data.featuresOff) && data.featuresOff.length <= MAX_FEATURES && data.featuresOff.every(isFeatureId)), 'Invalid switched-off features');
@@ -307,7 +309,7 @@ function checkDetails(data: EntityState): void {
   ensure(!data.surface || isSurfaceKind(data.surface.kind), 'Invalid puddle');
   ensure(!data.spellHolds || validHolds(data.spellHolds), 'Invalid spell holds');
   ensure(!data.afflicted || isAfflictionKind(data.afflicted.kind), 'Invalid affliction');
-  ensure(!data.thrown || isThrowableId(data.thrown.item), 'Invalid thrown flask');
+  ensure(!data.thrown || isThrownKind(data.thrown.item), 'Invalid thrown flask');
   ensure(!data.mobThrowable || isThrowableId(data.mobThrowable.item), 'Invalid flask');
   ensure(data.lastDamageType === undefined || isDamageType(data.lastDamageType), 'Invalid damage type');
   ensure(!data.spellbook || (isRecoveryList(data.spellbook.recovery) && (data.spellbook.bound === undefined || isBoundList(data.spellbook.bound))), 'Invalid spellbook');

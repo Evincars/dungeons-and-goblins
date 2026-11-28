@@ -124,8 +124,9 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   made by `scripts/iso-sheets.py` into each tileset's `mainlevbuild-isometric.png` copy (keep the two in step); the Wizard's bind table, Bladesong's blades
   and the undead's stats in `src/rules/Schools.ts`, the school features' timings in `src/systems/SchoolSystem.ts`; enemy AI knobs (sight, squad sizes, flanking, trail
   following, how many press in hand to hand at once and where the rest wait, the distance skirmishers keep) in `src/ai/constants.ts`;
-  the flasks enemies throw (Alchemist's Fire, the Grease Bottle: range, splash, save, damage, burning, what they leave on
-  the floor) in `src/data/throwables.json` (`rules/Throwables.ts`); the D&D weapons in `src/data/weapons.json`
+  the flasks and potions (Alchemist's Fire, the Grease Bottle, the potions of healing: range, splash, save, damage, burning,
+  healing, what they leave on the floor, and the item's price, weight and picture from `public/potions`, downloaded by
+  `scripts/download-potion-icons.py` and pixelated by `scripts/potion-icons.sh`) in `src/data/throwables.json` (`rules/Throwables.ts`); the D&D weapons in `src/data/weapons.json`
   (every weapon of both D&D tables: damage, sort, properties, range in feet (every distance the game tells or reads is in feet, `rules/Scale.ts`), versatile dice, price, weight, and its pictures in
   `public/weapons`, one found weapon each, no two kinds sharing a picture) and the armour and robe in `src/data/armors.json` (AC, DEX
   cap, the STR needed to put it on at all, stealth, price, weight; a suit's picture a column of `public/armors.png`, whose first four
@@ -406,10 +407,12 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   right, the trader and both sides' gold between; each column with the inventory's filters and search; a row's icon, a line of
   what it does (`ui/ItemSummary.ts`) and price, the inventory's tooltip under the pointer) asks before each trade; it buys for
   half the price, `SELL_SHARE`, and offers what it bought back once, `shopNpc.resale`. Heroes set out with 10 gold
-  (`STARTING_GOLD`) and one of each weapon, shield and armour they are trained in, as long as it does not slow them
-  (`giveStartingKit`); past 80 % of what they carry they slow, to a walk with no sprint at all of it (`rules/Encumbrance.ts`).
+  (`STARTING_GOLD`), two flasks of Alchemist's Fire (`STARTING_FLASKS`) and one of each weapon, shield and armour they are
+  trained in, as long as it does not slow them (`giveStartingKit`); past 80 % of what they carry they slow, to a walk with no sprint at all of it (`rules/Encumbrance.ts`).
   Blood splashes from a hero or a foe a blow
-  hurts (`entities/Blood.ts`, `public/blood`, small). `src/render/` — sheets, camera, terrain layers.
+  hurts (`entities/Blood.ts`, `public/blood`, small). A dead enemy, its death clip played, lies where it fell as a corpse
+  (`entities/Corpse.ts`, `corpse`, synced; the newest `MAX_CORPSES` kept) on its last death frame over a pool of blood that
+  spreads under it, a few of the splashes' frames darkened, flattened and scattered by the corpse's seed (`systems/CorpseSystem.ts`). `src/render/` — sheets, camera, terrain layers.
 - The picture is 16:9 (`render/Camera.ts`), wider (up to 21:9) only on an ultrawide monitor, by the monitor's shape, not the
   window's; the window shows it as large as fits, with bars. In a level the mouse wheel zooms the world (not the HUD) in and
   out between the picture as made and twice as close (`camera.zoom`, `zoomBy`; `screenToWorld` follows it); the game layer
@@ -485,8 +488,17 @@ All three must pass. `npm run lint:style` (`scripts/check-style.mjs`) enforces r
   `dropAlong`); walking back into it is at half pace. An enemy caster casts it only when it would blow a hero over a drop.
   Misty Step (`kind: teleport`, `systems/MistyStep.ts`) steps to the nearest free place in sight towards the aim within its
   range (`stepTarget`; none: refused before the cast, the aim guide shows where).
-- Gust of Wind blows out the wall torches and campfires along its line (`systems/Snuff.ts`, `torch_out` / `campfire_out`; a
-  guest snuffs its own on the wind's `vfx` signal).
+- Gust of Wind blows out the wall torches, campfires and open-flamed candles (`FLAME_PROPS`, their art without the flame
+  `prop_<kind>_out` made at load) along its line (`systems/Snuff.ts`, `torch_out` / `campfire_out`; their light, sparks and flicker
+  kept in `snuffed`; a guest snuffs its own on the wind's `vfx` signal); fire lights them again — wherever fire sets grease alight
+  (`igniteGrease`: fire spells and bolts, Alchemist's Fire, the Flaming Sphere), `kindleAround`, the host telling guests by a
+  `kindle` message.
+- Heroes throw anything in the bag (its right-click menu's Throw; held ready in `game/ThrowAim.ts`, a left click on the world
+  throws it, a right click or Escape puts it away; `systems/ThrowAimSystem.ts`, the `throw` command): a flask or potion bursts
+  where it lands (`systems/ThrowSystem.ts` `throwItem`), a potion of healing healing every creature its splash wets, foes too
+  (`quaff`; drunk from the menu, `drink`); anything else strikes the foe it lands on (`objectAttack`: a throwing weapon as its
+  table says, else 1d4 + STR improvised, disadvantage past its normal range) and lies where it fell. The aim guide shows the
+  throw's flight, its splash and a mark under each body it would reach, green under heroes, red under foes.
 - Weapon actions (`systems/WeaponActions.ts`): bound as `action:<id>`, used with the main-hand weapon that unlocks them and
   proficiency in it, each once until a short or long rest (`actionsSpent`, hit or miss; Tenacity at will, its square switches
   it). A strike or shot is readied (`weaponAction`) and goes with the next blow, at once if none is under way; Cleave's swing

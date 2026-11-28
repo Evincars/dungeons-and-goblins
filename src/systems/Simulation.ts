@@ -21,10 +21,12 @@ import { updateTraps } from './TrapSystem';
 import { updateMist } from './MistSystem';
 import { updateVfx } from './VfxSystem';
 import { updateAimGuide } from './AimGuideSystem';
+import { updateThrowAim } from './ThrowAimSystem';
 import { updateShop } from './ShopSystem';
 import { animateTraders } from './TraderSystem';
 import { updateRespawns } from './RespawnSystem';
 import { updateSprites } from './SpriteSystem';
+import { updateCorpses } from './CorpseSystem';
 import { updateFx } from './FxSystem';
 import { animateDummies, updateDummies } from './DummySystem';
 import { updateCharacterFacing } from './CharacterFacingSystem';
@@ -95,6 +97,7 @@ export const SIMULATION: readonly System[] = [
   () => beginPerception(),
   ({ dt }) => updateRespawns(dt),
   () => updateInput(),
+  () => updateThrowAim(),
   () => updateTargeting(),
   () => resolveUses(),
   ({ level }) => updateInventory(level),
@@ -157,6 +160,7 @@ export const SIMULATION: readonly System[] = [
 
 export const PRESENTATION: readonly System[] = [
   ({ gameLayer }) => updateSprites(gameLayer),
+  ({ gameLayer }) => updateCorpses(gameLayer),
   () => updateFx(),
   () => animateDummies(),
   () => animateTraders(),

@@ -82,7 +82,7 @@ const FILTERS: readonly ListFilter[] = [
   { label: text('inventory.filter.all'), types: null },
   { label: text('inventory.filter.armour'), types: ['helmet', 'armor', 'boots', 'shield'] },
   { label: text('inventory.filter.weapons'), types: ['weapon'] },
-  { label: text('inventory.filter.other'), types: ['ring', 'medal'] },
+  { label: text('inventory.filter.other'), types: ['ring', 'medal', 'consumable'] },
 ];
 
 /**

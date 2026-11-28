@@ -5,6 +5,8 @@ import { getTexture, hasTexture, setTexture } from './Textures';
 import { loadSheets } from './SpriteSheet';
 import { registerSheet } from '../render/Sheets';
 import { allSheets, registerLazyArt } from './SheetCatalog';
+import { FLAME_PROPS } from '../level/Props';
+import { sheetInfo } from '../render/Sheets';
 import { loadVfx } from '../render/Vfx';
 import {
   BRINK_BLOCK, BRINK_DARKEST_GROUND, CAVE_BRINKS, CAVE_ROCK_CUT, CAVE_SHEET, ROCK_BLACK, ROCK_CUT, SLANT_FACE, SLANT_RIM, SLANT_SHEAR,
@@ -25,6 +27,11 @@ const TORCH_FRAMES = 4;
 const TORCH_FRAME_SIZE = 16;
 /** The flame in each torch frame (above its wall bracket), and where a campfire's three flames stand. */
 const TORCH_FLAME = { x: 6, y: 0, w: 4, h: 7 };
+/** A flame's pixels are at least this bright (0–255, the brightest channel)… */
+const FLAME_BRIGHTNESS = 140;
+/** …and either this saturated and warm, or white-hot: red and green both over this. */
+const FLAME_SATURATION = 0.35;
+const WHITE_HOT = 200;
 const CAMPFIRE_FLAMES: ReadonlyArray<{ x: number; y: number; scale: number; lag: number }> = [
   { x: 6, y: 9, scale: 1, lag: 1 },
   { x: 14, y: 9, scale: 1, lag: 2 },
@@ -90,6 +97,45 @@ function buildCampfireOut(): void {
   const texture = Texture.from(canvas);
   texture.source.scaleMode = 'nearest';
   setTexture('campfire_out', texture);
+}
+
+/** A pixel of flame: bright and warm (yellow to orange), or near white-hot with red and green both high. */
+function isFlamePixel(r: number, g: number, b: number): boolean {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  if (max < FLAME_BRIGHTNESS) return false;
+  const saturation = (max - min) / max;
+  const warm = r >= g && g >= b;
+  return (warm && saturation > FLAME_SATURATION) || (r > WHITE_HOT && g > WHITE_HOT - 10 && saturation <= FLAME_SATURATION);
+}
+
+/** Every pixel of flame in the canvas cleared. */
+function clearFlame(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+  const pixels = ctx.getImageData(0, 0, w, h);
+  const d = pixels.data;
+  for (let i = 0; i < d.length; i += 4) if (isFlamePixel(d[i], d[i + 1], d[i + 2])) d[i + 3] = 0;
+  ctx.putImageData(pixels, 0, 0);
+}
+
+/**
+ * Each open-flamed prop blown out (Gust of Wind, systems/Snuff.ts): the first frame of its animation with its flame's pixels
+ * cleared, the wick and the wax left (`prop_<kind>_out`, one frame the size of the animation's cells).
+ */
+function buildFlamePropsOut(): void {
+  for (const kind of FLAME_PROPS) {
+    const sheet = `prop_${kind}`;
+    const strip = hasTexture(sheet) ? imageOf(getTexture(sheet)) : null;
+    if (!strip) continue;
+    const { frameWidth: w, frameHeight: h } = sheetInfo(sheet);
+    const canvas = createCanvas(w, h);
+    const ctx = context2d(canvas, { willReadFrequently: true });
+    ctx.drawImage(strip, 0, 0, w, h, 0, 0, w, h);
+    clearFlame(ctx, w, h);
+    const texture = Texture.from(canvas);
+    texture.source.scaleMode = 'nearest';
+    setTexture(`${sheet}_out`, texture);
+    registerSheet(`${sheet}_out`, { frameWidth: w, frameHeight: h });
+  }
 }
 
 /**
@@ -243,6 +289,7 @@ export async function loadAllAssets(onProgress?: (done: number, total: number) =
   buildTorchStrip();
   buildCampfireStrip();
   buildCampfireFloor();
+  buildFlamePropsOut();
   buildCaveBrinks();
   buildCaveRockCut();
   buildCaveSlants();
